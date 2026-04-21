@@ -136,7 +136,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-1.5 opacity-60">
                   {isHistory ? "Encerrado" : order.scheduled_at ? "Agendamento" : "Atividade"}
                 </p>
-                <h4 className={`text-lg font-black uppercase tracking-tight italic leading-tight ${isHistory ? 'text-zinc-400' : 'text-white'}`}>
+                <h4 className={`text-lg font-black uppercase tracking-tight leading-tight ${isHistory ? 'text-zinc-400' : 'text-white'}`}>
                   {title}
                 </h4>
                 <div className="flex items-center gap-2 mt-1">
@@ -179,7 +179,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
             </div>
             <div className="text-right shrink-0 flex flex-col justify-end border-l border-white/5 pl-4">
               <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Valor</p>
-              <p className={`text-xl font-black italic ${isHistory ? 'text-zinc-300' : 'text-white'}`}>
+              <p className={`text-xl font-black ${isHistory ? 'text-zinc-300' : 'text-white'}`}>
                 <span className="text-[10px] not-italic mr-1 opacity-50">R$</span>
                 {Number(order.total_price || 0).toFixed(2).replace(".",",")}
               </p>

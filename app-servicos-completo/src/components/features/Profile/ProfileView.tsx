@@ -93,7 +93,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span className="material-symbols-outlined font-black">arrow_back</span>
           </motion.button>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">
+            <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-none">
               Elite <span className="text-yellow-400">Profile</span>
             </h1>
             <div className="flex items-center gap-2 mt-1.5">
@@ -153,13 +153,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {/* Status Badge */}
                 <div className="absolute -bottom-2 translate-x-1/2 right-1/2 bg-black text-yellow-400 px-4 py-1.5 rounded-full border border-yellow-400/30 shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05)] flex items-center gap-1.5 min-w-[100px] justify-center">
                    <span className="material-symbols-outlined text-[12px] fill-1">verified</span>
-                   <span className="text-[10px] font-black uppercase tracking-widest italic">Vip Elite</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest">Vip Elite</span>
                 </div>
               </div>
 
               {/* Identity Section */}
               <div className="text-center space-y-4 w-full">
-                <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none drop-shadow-2xl">
+                <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none drop-shadow-2xl">
                   {userName || "Izi Member"}
                 </h2>
                 
@@ -174,10 +174,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="w-full mt-10 space-y-3">
                 <div className="flex justify-between items-end px-2">
                   <div className="flex flex-col">
-                    <span className="text-yellow-400 font-black text-xs uppercase tracking-tighter italic">Tier Level {userLevel}</span>
+                    <span className="text-yellow-400 font-black text-xs uppercase tracking-tighter">Tier Level {userLevel}</span>
                     <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mt-0.5">Mastery Evolution</span>
                   </div>
-                  <span className="text-sm font-black text-white italic">{userXP} <span className="text-zinc-600 text-[10px] not-italic">/ {nextLevelXP} XP</span></span>
+                  <span className="text-sm font-black text-white">{userXP} <span className="text-zinc-600 text-[10px] not-italic">/ {nextLevelXP} XP</span></span>
                 </div>
                 <div className="h-4 w-full bg-zinc-900 rounded-2xl p-1 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.8)] border border-white/5">
                   <motion.div
@@ -204,11 +204,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="absolute top-0 right-0 size-24 bg-emerald-400/5 blur-3xl -mr-12 -mt-12 group-hover:bg-emerald-400/10 transition-all" />
               <div className="flex items-center gap-3 mb-4">
                  <div className="size-10 rounded-xl bg-emerald-400/10 flex items-center justify-center text-emerald-400 border border-emerald-400/20">
-                    <span className="material-symbols-outlined text-xl italic font-black">payments</span>
+                    <span className="material-symbols-outlined text-xl font-black">payments</span>
                  </div>
                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Saldo Atual</span>
               </div>
-              <h3 className="text-2xl font-black text-white italic tracking-tighter leading-none">R$ {walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</h3>
+              <h3 className="text-2xl font-black text-white tracking-tighter leading-none">R$ {walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</h3>
            </motion.div>
 
            <motion.div
@@ -219,12 +219,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="absolute top-0 right-0 size-24 bg-blue-400/5 blur-3xl -mr-12 -mt-12 group-hover:bg-blue-400/10 transition-all" />
               <div className="flex items-center gap-3 mb-4">
                  <div className="size-10 rounded-xl bg-blue-400/10 flex items-center justify-center text-blue-400 border border-blue-400/20">
-                    <span className="material-symbols-outlined text-xl italic font-black">account_balance_wallet</span>
+                    <span className="material-symbols-outlined text-xl font-black">account_balance_wallet</span>
                  </div>
                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Izi Wallet</span>
               </div>
               <div className="flex items-center justify-between">
-                 <h3 className="text-lg font-black text-white italic tracking-tighter leading-none">Acessar</h3>
+                 <h3 className="text-lg font-black text-white tracking-tighter leading-none">Acessar</h3>
                  <span className="material-symbols-outlined text-zinc-700 group-hover:text-blue-400 transition-colors">arrow_forward</span>
               </div>
            </motion.div>
@@ -257,7 +257,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </span>
                   </div>
                   <div className="text-left">
-                    <h4 className={`text-base font-black italic tracking-tight leading-none ${item.isPremium ? "text-black" : "text-white"}`}>
+                    <h4 className={`text-base font-black tracking-tight leading-none ${item.isPremium ? "text-black" : "text-white"}`}>
                       {item.label}
                     </h4>
                     <p className={`text-[9px] font-bold uppercase tracking-widest mt-1.5 ${item.isPremium ? "text-black/50" : "text-zinc-600"}`}>

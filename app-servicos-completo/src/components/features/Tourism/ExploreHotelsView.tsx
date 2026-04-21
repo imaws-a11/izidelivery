@@ -13,7 +13,7 @@ export const ExploreHotelsView: React.FC<ExploreHotelsViewProps> = ({ onBack, on
         <button onClick={onBack} className="absolute left-6 w-12 h-12 flex items-center justify-center rounded-[20px] bg-zinc-900 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.4)] hover:bg-zinc-800 transition-colors active:scale-95 duration-200 z-[50]">
           <span className="material-symbols-outlined text-yellow-400 text-xl font-black">arrow_back</span>
         </button>
-        <h1 className="w-full text-center text-4xl font-black italic tracking-tighter uppercase drop-shadow-lg text-white">Hospedagens</h1>
+        <h1 className="w-full text-center text-4xl font-black tracking-tighter uppercase drop-shadow-lg text-white">Hospedagens</h1>
       </header>
 
       <main className="pb-20 max-w-full overflow-x-hidden">
@@ -26,11 +26,11 @@ export const ExploreHotelsView: React.FC<ExploreHotelsViewProps> = ({ onBack, on
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-8 w-full flex flex-col items-start">
                 <span className="bg-yellow-400 text-black px-4 py-1.5 rounded-[12px] text-[10px] font-black uppercase tracking-widest mb-4 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.4)]">Destaque da Semana</span>
-                <h2 className="text-white text-4xl font-black italic uppercase tracking-tighter mb-2 leading-none drop-shadow-xl">Resort Celestial</h2>
+                <h2 className="text-white text-4xl font-black uppercase tracking-tighter mb-2 leading-none drop-shadow-xl">Resort Celestial</h2>
                 <p className="text-zinc-300 mb-6 max-w-md font-medium text-sm drop-shadow-md leading-relaxed">Uma experiência imersiva na natureza com todo o luxo e conforto que você merece.</p>
                 <div className="flex items-center justify-between w-full">
                   <div>
-                    <span className="text-yellow-400 text-2xl font-black italic drop-shadow-md">R$ 1.250</span>
+                    <span className="text-yellow-400 text-2xl font-black drop-shadow-md">R$ 1.250</span>
                     <span className="text-zinc-400 text-xs font-black uppercase tracking-widest"> /noite</span>
                   </div>
                   <button onClick={onReserve} className="bg-yellow-400 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] text-black px-8 py-4 rounded-[20px] font-black uppercase tracking-widest text-[10px] flex items-center gap-2 active:scale-95 transition-transform hover:bg-yellow-300">
@@ -46,14 +46,14 @@ export const ExploreHotelsView: React.FC<ExploreHotelsViewProps> = ({ onBack, on
                 <div className="relative w-14 h-14 flex items-center justify-center rounded-[20px] bg-yellow-400 shadow-[4px_4px_10px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] mb-5">
                   <span className="material-symbols-outlined text-black text-2xl font-black" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
                 </div>
-                <h3 className="text-xl font-black italic uppercase tracking-tighter mb-2 text-white drop-shadow-md leading-none">Check-in Seguro</h3>
+                <h3 className="text-xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-md leading-none">Check-in Seguro</h3>
                 <p className="text-zinc-400 font-medium text-xs leading-relaxed">Garantimos sua estadia com os protocolos mais rigorosos de segurança e higiene.</p>
               </div>
               <div className="bg-yellow-400 rounded-[40px] p-8 flex flex-col justify-center flex-1 shadow-[12px_12px_30px_rgba(0,0,0,0.6),inset_4px_4px_8px_rgba(255,255,255,0.5),inset_-4px_-4px_8px_rgba(0,0,0,0.3)] group/info cursor-default hover:scale-[1.02] transition-transform text-black">
                 <div className="relative w-14 h-14 flex items-center justify-center rounded-[20px] bg-zinc-900 shadow-[4px_4px_10px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.5)] mb-5">
                   <span className="material-symbols-outlined text-yellow-400 text-2xl font-black" style={{ fontVariationSettings: "'FILL' 1" }}>savings</span>
                 </div>
-                <h3 className="text-xl font-black italic uppercase tracking-tighter mb-2 text-black drop-shadow-sm leading-none">Melhores Preços</h3>
+                <h3 className="text-xl font-black uppercase tracking-tighter mb-2 text-black drop-shadow-sm leading-none">Melhores Preços</h3>
                 <p className="text-zinc-800 font-bold text-xs leading-relaxed">Tarifas exclusivas para membros Izi Premium com até 30% de desconto imediato.</p>
               </div>
             </div>

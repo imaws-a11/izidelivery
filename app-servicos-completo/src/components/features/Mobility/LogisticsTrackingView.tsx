@@ -168,7 +168,8 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
         <IziTrackingMap
           routePolyline={routePath as any}
           driverLoc={driverLocation}
-          userLoc={originLoc}
+          userLoc={userLocation}
+          originLoc={originLoc}
           vehicleIcon={order?.service_type === "van" ? "airport_shuttle" : "local_shipping"}
           originLabel="COLETA"
           boxed={false}

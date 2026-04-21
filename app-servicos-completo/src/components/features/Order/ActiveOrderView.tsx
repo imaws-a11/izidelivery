@@ -162,7 +162,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               
               <div className="px-4 py-2 rounded-2xl bg-black/10 border border-black/5 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.05)]">
                 <p className="text-[8px] font-black text-black/40 uppercase tracking-widest mb-0.5 text-center">Tempo médio</p>
-                <p className="text-xl font-black text-black italic leading-none">{selectedItem.delivery_time || "15-25"}</p>
+                <p className="text-xl font-black text-black leading-none">{selectedItem.delivery_time || "15-25"}</p>
               </div>
             </div>
           </div>
@@ -293,7 +293,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                   }}
                 />
                 <div className="space-y-0.5">
-                  <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">
+                  <h4 className="text-lg font-black text-white uppercase tracking-tighter leading-none">
                     {selectedItem.driver_id
                       ? selectedItem.driver_name || "Entregador Izi"
                       : selectedItem.merchant_name || "Estabelecimento"}
@@ -363,7 +363,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 {selectedItem.delivery_address?.includes('|') && (
                   <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/5">
                     <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest mb-1">Nota da Entrega</p>
-                    <p className="text-[10px] font-bold text-zinc-400 leading-tight italic">
+                    <p className="text-[10px] font-bold text-zinc-400 leading-tight">
                       {selectedItem.delivery_address.split('|')[1]?.replace(/^\s*OBS:\s*/i, '').trim()}
                     </p>
                   </div>
@@ -386,7 +386,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                       <div>
                         <p className="text-sm font-bold text-white leading-tight">{it.name || it.product_name || 'Produto'}</p>
                         {it.options && it.options.length > 0 && (
-                          <p className="text-[10px] text-zinc-500 font-medium italic mt-1">
+                          <p className="text-[10px] text-zinc-500 font-medium mt-1">
                             + {it.options.map((opt: any) => opt.name).join(', ')}
                           </p>
                         )}
@@ -444,7 +444,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                   {selectedItem.payment_status === 'paid' ? 'Total Pago' : 'Total a Pagar'}
                 </span>
-                <span className="text-2xl font-black text-white italic tracking-tighter">R$ {Number(selectedItem.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                <span className="text-2xl font-black text-white tracking-tighter">R$ {Number(selectedItem.total_price || 0).toFixed(2).replace('.', ',')}</span>
               </div>
               
               <div className="pt-2 flex flex-col gap-1 items-end">
