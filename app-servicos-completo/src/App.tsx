@@ -801,17 +801,27 @@ function App() {
 
     const processCoords = async (latitude: number, longitude: number, accuracy?: number) => {
       try {
+        // 1. ATUALIZA MAPA E ESTADO IMEDIATAMENTE (Sem Lag)
+        setUserLocation(prev => ({ ...prev, lat: latitude, lng: longitude, accuracy }));
+        setTransitData(prev => ({
+          ...prev,
+          origin: { ...prev.origin, lat: latitude, lng: longitude }
+        }));
+
         let address = "";
 
+        // 2. BUSCA ENDEREÇO EM SEGUNDO PLANO
         // Tenta reverse geocode via Google Maps Geocoder (browser)
         if ((window as any).google?.maps) {
-          const geocoder = new google.maps.Geocoder();
-          const response = await geocoder.geocode({
-            location: { lat: latitude, lng: longitude },
-          });
-          if (response.results[0]) {
-            address = response.results[0].formatted_address;
-          }
+          try {
+            const geocoder = new google.maps.Geocoder();
+            const response = await geocoder.geocode({
+              location: { lat: latitude, lng: longitude },
+            });
+            if (response.results[0]) {
+              address = response.results[0].formatted_address;
+            }
+          } catch { /* silent */ }
         }
 
         // Fallback: Places API via fetch
@@ -829,14 +839,19 @@ function App() {
 
         // Fallback: Nominatim (OpenStreetMap)
         if (!address) {
-          const nomRes = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-          );
-          const nomData = await nomRes.json();
-          address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+          try {
+            const nomRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+            );
+            const nomData = await nomRes.json();
+            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+          } catch { /* silent */ }
         }
 
-        setUserLocation({ address, loading: false, lat: latitude, lng: longitude, accuracy });
+        if (!address) address = "Localização atual";
+
+        // 3. ATUALIZA APENAS O ENDEREÇO QUANDO CHEGAR
+        setUserLocation(prev => ({ ...prev, address, loading: false }));
         localStorage.setItem("lastKnownLocation", JSON.stringify({ address, loading: false, lat: latitude, lng: longitude, accuracy }));
         setTransitData((prev) => ({ 
           ...prev, 
