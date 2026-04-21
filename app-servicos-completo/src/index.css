@@ -115,7 +115,7 @@
   }
 
   .izi-coin-symbol {
-    @apply relative inline-flex items-center justify-center font-black italic select-none;
+    @apply relative inline-flex items-center justify-center font-black select-none;
   }
   .izi-coin-symbol::after {
     content: "";

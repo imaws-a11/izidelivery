@@ -59,11 +59,45 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
 
   return (
     <div
-      className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden"
+      className="absolute inset-0 z-[120] bg-[#09090b] text-zinc-100 flex flex-col overflow-hidden"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
 
-      {/* ── MAPA FUNDO (Estilo Uber) ── */}
+      {/* ── HEADER FLUTUANTE DE VERDADE (FIXED) ── */}
+      <header className="fixed top-10 left-0 right-0 z-[150] flex items-center justify-between px-6 pointer-events-none">
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          onClick={() => {
+            if (mobilityStep > 1) setMobilityStep(mobilityStep - 1);
+            else setSubView("none");
+          }}
+          className="size-12 rounded-[22px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-500 pointer-events-auto"
+          style={{
+            boxShadow: "10px 10px 25px rgba(0,0,0,0.7), inset 3px 3px 6px rgba(255,255,255,0.06), inset -3px -3px 6px rgba(0,0,0,0.6)",
+          }}
+        >
+          <Icon name="arrow_back" />
+        </motion.button>
+
+        <div
+          className="text-right px-5 py-3 rounded-[22px] pointer-events-auto"
+          style={{
+            background: "rgba(9,9,11,0.75)",
+            backdropFilter: "blur(20px)",
+            boxShadow: "8px 8px 20px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.5)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <h2 className="text-lg font-black text-white tracking-tighter leading-none uppercase">
+            Izi Mobilidade
+          </h2>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-500 mt-0.5">
+            {transitData.type === 'mototaxi' ? "MotoTáxi Izi" : "Motorista Particular"}
+          </p>
+        </div>
+      </header>
+
+      {/* ── MAPA FUNDO (Full Screen Oculto Atrás do Sheet) ── */}
       <div className="absolute inset-0 z-0">
         <IziTrackingMap
           routePolyline={routePolyline}
@@ -74,304 +108,265 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
           onMyLocationClick={updateLocation}
           boxed={false}
         />
-        {/* Gradiente sutil no topo para visibilidade dos botões */}
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
       </div>
 
-      {/* ── HEADER FLUTUANTE ── */}
-      <header className="absolute top-10 left-0 right-0 z-20 flex items-center justify-between px-6">
+      {/* Botão de Localização do Mapa (Fixed para não sumir no scroll) */}
+      <div className="fixed right-4 bottom-[45vh] z-[120] pointer-events-none">
         <motion.button
-          whileTap={{ scale: 0.88 }}
-          onClick={() => {
-            if (mobilityStep > 1) setMobilityStep(mobilityStep - 1);
-            else setSubView("none");
-          }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => updateLocation()}
+          className="size-12 rounded-xl flex items-center justify-center pointer-events-auto active:scale-95 transition-all text-yellow-500 shadow-2xl"
           style={{
-            boxShadow: "10px 10px 25px rgba(0,0,0,0.7), inset 3px 3px 6px rgba(255,255,255,0.06), inset -3px -3px 6px rgba(0,0,0,0.6)",
+            background: "rgba(20, 20, 22, 1)",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.6), inset 1px 1px 1px rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)",
           }}
-          className="size-12 rounded-[22px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400"
         >
-          <Icon name="arrow_back" />
+          <span className="material-symbols-rounded text-xl font-black">my_location</span>
         </motion.button>
+      </div>
 
-        <div
-          className="text-right px-5 py-3 rounded-[22px]"
-          style={{
-            background: "rgba(9,9,11,0.75)",
-            backdropFilter: "blur(20px)",
-            boxShadow: "8px 8px 20px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.5)",
-            border: "1px solid rgba(255,255,255,0.06)",
-          }}
-        >
-          <h2 className="text-lg font-black text-white tracking-tighter leading-none uppercase italic">
-            {transitData.type === 'mototaxi' ? "MotoTáxi Izi" : "Motorista Particular"}
-          </h2>
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Mobilidade Urbana</p>
-        </div>
-      </header>
+      {/* ── BOTTOM SHEET REAL (DRAGÁVEL) ── */}
+      <IziBottomSheet snapPoints={["40vh", "65vh", "90vh"]} initialSnap={1}>
+        <div className="w-full flex flex-col">
+          <div className="p-6 pb-40 space-y-8 bg-[#09090b] rounded-t-3xl min-h-screen">
+            <AnimatePresence mode="wait">
 
-      {/* ── CHIP DE DISTÂNCIA FLUTUANTE ── */}
-      {routeDistance && (
-        <div className="absolute top-32 right-6 z-20">
-          <div
-            className="px-5 py-3.5 rounded-[26px] flex items-center gap-2 font-black text-[11px] text-black italic"
-            style={{
-              background: "#facc15",
-              boxShadow: "inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(0,0,0,0.2), 0 8px 20px rgba(250,204,21,0.35)",
-            }}
-          >
-            <Icon name="route" size={16} />
-            {routeDistance}
-          </div>
-        </div>
-      )}
-
-      {/* ── BOTTOM SHEET (CONTEÚDO DINÂMICO) ── */}
-      <IziBottomSheet snapPoints={["35vh", "60vh", "90vh"]} initialSnap={0}>
-        <div className="p-6 pb-40 space-y-8">
-          <AnimatePresence mode="wait">
-
-            {/* STEP 1 — Endereços */}
-            {mobilityStep === 1 ? (
-              <motion.section
-                key="step1"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                <div className="flex flex-col gap-1 px-2">
-                  <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.4em] italic">Izi Mobility</p>
-                  <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Trajeto da Viagem</h3>
-                </div>
-
-                <div className="space-y-4 relative">
-                  <div className="absolute left-[31px] top-[56px] bottom-[56px] w-[2px] bg-gradient-to-b from-yellow-400/50 via-zinc-800 to-zinc-800 z-0 opacity-50" />
-
-                  {/* ORIGEM */}
-                  <div
-                    className="relative z-10 flex items-center gap-5 px-6 py-5 rounded-[36px]"
-                    style={{
-                      background: "linear-gradient(145deg, #161618, #0e0e10)",
-                      boxShadow: "15px 15px 35px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(255,255,255,0.03), inset -2px -2px 5px rgba(0,0,0,0.5)",
-                      border: "1.5px solid rgba(255,255,255,0.06)",
-                    }}
-                  >
-                    <div className="relative size-12 shrink-0 flex items-center justify-center rounded-2xl bg-zinc-900/50">
-                      <div className="absolute size-4 rounded-full bg-yellow-400/40 animate-ping" />
-                      <div className="relative size-3.5 rounded-full bg-yellow-400 border-2 border-white shadow-[0_0_12px_rgba(250,204,21,0.6)]" />
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1 italic">Origem</p>
-                        <AddressSearchInput
-                          placeholder="Local de partida..."
-                          onSelect={(addr) => setTransitData((p: any) => ({...p, origin: addr}))}
-                          initialValue={transitData.origin?.address}
-                          className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 italic tracking-tight"
-                        />
-                      </div>
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => updateLocation((addr) => {
-                          setTransitData((p: any) => ({
-                            ...p, 
-                            origin: { 
-                              address: addr,
-                              lat: userLocation.lat,
-                              lng: userLocation.lng
-                            }
-                          }));
-                          showToast("Localização!", "success");
-                        })}
-                        className="size-10 rounded-xl bg-zinc-800/80 border border-white/10 flex items-center justify-center text-yellow-400 shrink-0 shadow-lg"
-                      >
-                        <span className="material-symbols-outlined text-xl">my_location</span>
-                      </motion.button>
-                    </div>
-                  </div>
-
-                  {/* DESTINO */}
-                  <div
-                    className="relative z-10 flex items-center gap-5 px-6 py-5 rounded-[36px]"
-                    style={{
-                      background: "linear-gradient(145deg, #161618, #0e0e10)",
-                      boxShadow: "15px 15px 35px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(255,255,255,0.03), inset -2px -2px 5px rgba(0,0,0,0.5)",
-                      border: "1.5px solid rgba(255,255,255,0.06)",
-                    }}
-                  >
+              {/* STEP 1 — Endereços */}
+              {mobilityStep === 1 ? (
+                <motion.section
+                  key="step1"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  {/* Cards Fixos em Grid */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div
-                      className="size-12 rounded-2xl shrink-0 flex items-center justify-center"
+                      className="p-4 rounded-[28px] flex flex-col gap-2 font-black relative overflow-hidden"
                       style={{
-                        background: "rgba(250,204,21,0.08)",
-                        boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.4)",
+                        background: "linear-gradient(145deg, #facc15, #eab308)",
+                        boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
+                        border: "none",
+                        filter: routeDistance ? "none" : "grayscale(0.5) opacity(0.7)",
                       }}
                     >
-                      <Icon name="flag" size={24} className="text-yellow-400" />
+                      <div className="flex items-center gap-2">
+                         <Icon name="route" size={16} className="text-black/70" />
+                         <span className="text-[9px] text-black/70 uppercase not-italic tracking-widest leading-none">Distância</span>
+                      </div>
+                      <span className="text-lg tracking-tight text-black drop-shadow-sm">{routeDistance ?? "-- km"}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1 italic">Destino</p>
-                      <AddressSearchInput
-                        placeholder="Para onde vamos?"
-                        onSelect={(addr) => setTransitData((p: any) => ({...p, destination: addr}))}
-                        initialValue={transitData.destination?.address}
-                        className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 italic tracking-tight"
-                      />
-                    </div>
-                  </div>
-                </div>
 
-                {/* Card de segurança */}
-                <div
-                  className="flex items-center gap-5 px-7 py-6 rounded-[40px] relative overflow-hidden"
-                  style={{
-                    background: "linear-gradient(145deg, #1a1a1c, #121214)",
-                    boxShadow: "20px 20px 40px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(255,255,255,0.03), inset -3px -3px 8px rgba(0,0,0,0.6)",
-                    border: "1px solid rgba(250,204,21,0.1)",
-                  }}
-                >
-                  <div className="absolute -right-4 -top-4 size-24 bg-yellow-400/5 blur-2xl rounded-full" />
-                  <div
-                    className="size-16 rounded-[24px] flex items-center justify-center shrink-0 rotate-3 shadow-2xl"
-                    style={{
-                      background: "linear-gradient(145deg, #222, #111)",
-                      boxShadow: "8px 8px 16px rgba(0,0,0,0.4), inset 2px 2px 4px rgba(255,255,255,0.05)",
-                    }}
-                  >
-                    <Icon name="shield" size={32} className="text-yellow-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-white font-black text-base uppercase italic leading-none tracking-tighter">Segurança Total</h4>
-                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.15em] italic mt-1.5 leading-relaxed">
-                      Sua viagem é monitorada <br /> 24h em tempo real.
-                    </p>
-                  </div>
-                </div>
-              </motion.section>
-            ) : (
-              /* STEP 2 — Resumo e pagamento */
-              <motion.section
-                key="step2"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="space-y-6"
-              >
-                <div
-                  className="rounded-[44px] p-8 space-y-8 relative overflow-hidden"
-                  style={{
-                    background: "linear-gradient(145deg, #1c1c1e, #121214)",
-                    boxShadow: "25px 25px 50px rgba(0,0,0,0.6), inset 4px 4px 10px rgba(255,255,255,0.05), inset -4px -4px 10px rgba(0,0,0,0.5)",
-                  }}
-                >
-                  <div className="absolute top-0 right-0 w-1/2 h-full bg-yellow-400/[0.02] blur-3xl rounded-full -mr-16" />
-                  
-                  <div className="flex justify-between items-center relative z-10">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="size-14 rounded-2xl flex items-center justify-center"
-                        style={{
-                          background: "rgba(250,204,21,0.12)",
-                          boxShadow: "inset 2px 2px 6px rgba(0,0,0,0.4), 0 10px 20px rgba(250,204,21,0.2)",
-                        }}
-                      >
-                        <Icon name="payments" size={28} className="text-yellow-400" />
+                    <div
+                      className="p-4 rounded-[28px] flex flex-col gap-2 font-black relative overflow-hidden"
+                      style={{
+                        background: "linear-gradient(145deg, #facc15, #eab308)",
+                        boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
+                        border: "none",
+                        filter: totalValue > 0 ? "none" : "grayscale(0.5) opacity(0.7)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                         <Icon name="payments" size={16} className="text-black/70" />
+                         <span className="text-[9px] text-black/70 uppercase not-italic tracking-widest leading-none">Valor Parcial</span>
                       </div>
-                      <div>
-                        <span className="text-white font-black text-sm uppercase italic block leading-none mb-1.5 tracking-tighter">Custo da Viagem</span>
-                        <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Rota otimizada</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-yellow-400 text-4xl font-black italic tracking-tighter drop-shadow-lg">
-                        R$ {totalValue.toFixed(2).replace('.', ',')}
+                      <span className="text-xl tracking-tighter text-black drop-shadow-sm">
+                         {totalValue > 0 ? `R$ ${totalValue.toFixed(2).replace('.', ',')}` : "R$ --"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="h-px bg-white/5 relative z-10" />
+                  <div className="flex flex-col gap-1 px-2 pt-2">
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Trajeto da Viagem</h3>
+                  </div>
 
-                  <div className="space-y-5 relative z-10">
-                    <div className="flex justify-between items-center px-2">
-                       <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Forma de Pagamento</span>
-                       <motion.button
-                         whileTap={{ scale: 0.95 }}
-                         onClick={() => navigateSubView("mobility_payment")}
-                         className="flex items-center gap-3 px-5 py-2.5 rounded-2xl border border-white/10"
-                         style={{
-                           background: "rgba(0,0,0,0.4)",
-                           boxShadow: "6px 6px 15px rgba(0,0,0,0.4), inset 1px 1px 3px rgba(255,255,255,0.05)",
-                         }}
-                       >
-                         <Icon name={paymentMethod === 'online' ? 'credit_card' : 'payments'} size={16} className="text-yellow-400" />
-                         <span className="text-white font-black text-[11px] uppercase italic tracking-tighter">
-                           {paymentMethod === 'online' ? 'Cartão Online' : 'Pagar no Destino'}
-                         </span>
-                       </motion.button>
-                    </div>
+                  {/* Blocos de Endereço */}
+                  <div className="space-y-4 relative">
+                    <div className="absolute left-[31px] top-[56px] bottom-[56px] w-[2px] bg-gradient-to-b from-yellow-500/50 via-zinc-800 to-zinc-800 z-0 opacity-50" />
 
+                    {/* ORIGEM */}
                     <div
-                      className="p-6 rounded-[32px] space-y-4"
+                      className="relative z-10 flex items-center gap-5 px-6 py-5 rounded-[36px]"
                       style={{
-                        background: "rgba(0,0,0,0.3)",
-                        boxShadow: "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 5px rgba(255,255,255,0.02)",
-                        border: "1px solid rgba(255,255,255,0.05)",
+                        background: "linear-gradient(145deg, #161618, #0e0e10)",
+                        boxShadow: "15px 15px 35px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(255,255,255,0.03)",
+                        border: "1.5px solid rgba(255,255,255,0.06)",
                       }}
                     >
-                      <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tight">
-                        <span className="text-zinc-500">Distância Total:</span>
-                        <span className="text-white bg-zinc-800 px-3 py-1 rounded-full border border-white/5">{routeDistance}</span>
+                      <div className="relative size-12 shrink-0 flex items-center justify-center rounded-2xl bg-zinc-900/50">
+                        <div className="absolute size-4 rounded-full bg-yellow-500/40 animate-ping" />
+                        <div className="relative size-3.5 rounded-full bg-yellow-500 border-2 border-white shadow-[0_0_12px_rgba(250,204,21,0.6)]" />
                       </div>
-                      <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tight">
-                        <span className="text-zinc-500">Tempo estimado:</span>
-                        <span className="text-emerald-400">Rápido ⚡</span>
+
+                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1">Origem</p>
+                          <AddressSearchInput
+                            placeholder="Local de partida..."
+                            onSelect={(addr) => setTransitData((p: any) => ({...p, origin: addr}))}
+                            initialValue={transitData.origin?.address}
+                            className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DESTINO */}
+                    <div
+                      className="relative z-10 flex items-center gap-5 px-6 py-5 rounded-[36px]"
+                      style={{
+                        background: "linear-gradient(145deg, #161618, #0e0e10)",
+                        boxShadow: "15px 15px 35px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(255,255,255,0.03)",
+                        border: "1.5px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      <div
+                        className="size-12 rounded-2xl shrink-0 flex items-center justify-center"
+                        style={{
+                          background: "rgba(250,204,21,0.08)",
+                          boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        <Icon name="flag" size={24} className="text-yellow-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1">Destino</p>
+                        <AddressSearchInput
+                          placeholder="Para onde vamos?"
+                          onSelect={(addr) => setTransitData((p: any) => ({...p, destination: addr}))}
+                          initialValue={transitData.destination?.address}
+                          className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
+                        />
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.section>
-            )}
-          </AnimatePresence>
-        </div>
+                </motion.section>
+              ) : (
+                /* STEP 2 — Resumo e pagamento */
+                <motion.section
+                  key="step2"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="space-y-6"
+                >
+                  <div
+                    className="rounded-[44px] p-8 space-y-8 relative overflow-hidden"
+                    style={{
+                      background: "linear-gradient(145deg, #1c1c1e, #121214)",
+                      boxShadow: "25px 25px 50px rgba(0,0,0,0.6), inset 4px 4px 10px rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <div className="absolute top-0 right-0 w-1/2 h-full bg-yellow-500/[0.02] blur-3xl rounded-full -mr-16" />
+                    
+                    <div className="flex justify-between items-center relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="size-14 rounded-2xl flex items-center justify-center"
+                          style={{
+                            background: "rgba(250,204,21,0.12)",
+                            boxShadow: "inset 2px 2px 6px rgba(0,0,0,0.4), 0 10px 20px rgba(250,204,21,0.2)",
+                          }}
+                        >
+                          <Icon name="payments" size={28} className="text-yellow-500" />
+                        </div>
+                        <div>
+                          <span className="text-white font-black text-sm uppercase block leading-none mb-1.5 tracking-tighter">Custo da Viagem</span>
+                          <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Rota otimizada</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-yellow-500 text-4xl font-black tracking-tighter drop-shadow-lg">
+                          R$ {totalValue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    </div>
 
-        {/* ── BOTÃO FIXO (Dentro do Sheet, fixo na base do sheet) ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-32 bg-gradient-to-t from-black via-black/95 to-transparent z-50 pointer-events-none">
-          <div className="pointer-events-auto">
-            <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => {
-              if (mobilityStep === 1) {
-                if (!transitData.origin || !transitData.destination) {
-                  showToast("Escolha os locais", "warning");
-                  return;
-                }
-                setMobilityStep(2);
-              } else {
-                setTransitData((prev: any) => ({ ...prev, estPrice: totalValue }));
-                setPaymentsOrigin("checkout");
-                navigateSubView("mobility_payment");
-              }
-            }}
-            className="w-full h-[74px] rounded-[32px] flex items-center justify-center gap-4 relative overflow-hidden group"
-            style={{
-              background: "linear-gradient(145deg, #facc15, #eab308)",
-              boxShadow: "0 20px 50px rgba(250,204,21,0.25), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
-            
-            <span className="relative z-10 text-black font-black text-xl tracking-tighter uppercase italic drop-shadow-sm">
-              {mobilityStep === 1 ? "Continuar" : "Confirmar Viagem"}
-            </span>
-            <div className="relative z-10 size-10 rounded-2xl bg-black/10 flex items-center justify-center group-hover:translate-x-1.5 transition-transform duration-300 shadow-inner">
-              <Icon
-                name={mobilityStep === 1 ? "arrow_forward" : "two_wheeler"}
-                className="text-black font-black"
-                size={24}
-              />
+                    <div className="h-px bg-white/5 relative z-10" />
+
+                    <div className="space-y-5 relative z-10">
+                      <div className="flex justify-between items-center px-2">
+                         <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Forma de Pagamento</span>
+                         <motion.button
+                           whileTap={{ scale: 0.95 }}
+                           onClick={() => navigateSubView("mobility_payment")}
+                           className="flex items-center gap-3 px-5 py-2.5 rounded-2xl border border-white/10"
+                           style={{
+                             background: "rgba(0,0,0,0.4)",
+                             boxShadow: "6px 6px 15px rgba(0,0,0,0.4), inset 1px 1px 3px rgba(255,255,255,0.05)",
+                           }}
+                         >
+                           <Icon name={paymentMethod === 'online' ? 'credit_card' : 'payments'} size={16} className="text-yellow-500" />
+                           <span className="text-white font-black text-[11px] uppercase tracking-tighter">
+                             {paymentMethod === 'online' ? 'Cartão Online' : 'Pagar no Destino'}
+                           </span>
+                         </motion.button>
+                      </div>
+
+                      <div
+                        className="p-6 rounded-[32px] space-y-4"
+                        style={{
+                          background: "rgba(0,0,0,0.3)",
+                          boxShadow: "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 5px rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.05)",
+                        }}
+                      >
+                        <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-tight">
+                          <span className="text-zinc-500">Distância Total:</span>
+                          <span className="text-white bg-zinc-800 px-3 py-1 rounded-full border border-white/5">{routeDistance}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-tight">
+                          <span className="text-zinc-500">Tempo estimado:</span>
+                          <span className="text-emerald-400">Rápido ⚡</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.section>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* ── BOTÃO FIXO (Dentro do Sheet, mas ancorado no Bottom com Shadow) ── */}
+          <div className="fixed bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-black via-black/95 to-transparent pointer-events-none z-[130]">
+            <div className="pointer-events-auto">
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => {
+                  if (mobilityStep === 1) {
+                    if (!transitData.origin || !transitData.destination) {
+                      showToast("Escolha os locais", "warning");
+                      return;
+                    }
+                    setMobilityStep(2);
+                  } else {
+                    setTransitData((prev: any) => ({ ...prev, estPrice: totalValue }));
+                    setPaymentsOrigin("checkout");
+                    navigateSubView("mobility_payment");
+                  }
+                }}
+                className="w-full h-[74px] rounded-[32px] flex items-center justify-center gap-4 relative overflow-hidden group"
+                style={{
+                  background: "linear-gradient(145deg, #facc15, #eab308)",
+                  boxShadow: "0 20px 50px rgba(250,204,21,0.25), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.15)",
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                
+                <span className="relative z-10 text-black font-black text-xl tracking-tighter uppercase drop-shadow-sm">
+                  {mobilityStep === 1 ? "Continuar" : "Confirmar Viagem"}
+                </span>
+                <div className="relative z-10 size-10 rounded-2xl bg-black/10 flex items-center justify-center group-hover:translate-x-1.5 transition-transform duration-300 shadow-inner">
+                  <Icon
+                    name={mobilityStep === 1 ? "arrow_forward" : "two_wheeler"}
+                    className="text-black font-black"
+                    size={24}
+                  />
+                </div>
+              </motion.button>
             </div>
-          </motion.button>
           </div>
         </div>
       </IziBottomSheet>

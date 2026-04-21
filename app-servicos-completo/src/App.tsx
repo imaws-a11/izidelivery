@@ -796,7 +796,7 @@ function App() {
 
   const isLoaded = true; // Loaded via index.html
 
-  const updateLocation = (onSuccess?: (address: string) => void) => {
+  const updateLocation = (onSuccess?: (address: string, lat: number, lng: number) => void) => {
     setUserLocation((prev) => ({ ...prev, loading: true }));
 
     const processCoords = async (latitude: number, longitude: number, accuracy?: number) => {
@@ -861,8 +861,9 @@ function App() {
             lng: longitude 
           } 
         }));
-        if (onSuccess) onSuccess(address);
-      } catch {
+        if (onSuccess) onSuccess(address, latitude, longitude);
+      } catch (error) {
+        console.error("[GPS] Erro ao processar coordenadas:", error);
         setUserLocation((prev) => ({ ...prev, loading: false }));
       }
     };
@@ -2490,9 +2491,9 @@ const navigateSubView = (target: string) => {
   const [tempQuantity, setTempQuantity] = useState(1);
   const [filterTab, setFilterTab] = useState<"ativos" | "historico">("ativos");
   const [transitData, setTransitData] = useState({
-    origin: "",
-    destination: "",
-    stops: [] as string[],
+    origin: { address: "", lat: null as number | null, lng: null as number | null } as any,
+    destination: { address: "", lat: null as number | null, lng: null as number | null } as any,
+    stops: [] as any[],
     type: "mototaxi" as "mototaxi" | "carro" | "van" | "utilitario" | "frete",
     estPrice: 0,
     scheduled: false,
@@ -2838,19 +2839,14 @@ const navigateSubView = (target: string) => {
   const [userLocation, setUserLocation] = useState<{
     address: string;
     loading: boolean;
-    lat?: number;
-    lng?: number;
+    lat?: number | null;
+    lng?: number | null;
   }>(() => {
-    const saved = localStorage.getItem("lastKnownLocation");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return { ...parsed, loading: false };
-      } catch { /* ignore */ }
-    }
     return {
-      address: "Buscando localização...",
+      address: "Buscando satélite...",
       loading: true,
+      lat: null,
+      lng: null
     };
   });
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
@@ -2865,7 +2861,7 @@ const navigateSubView = (target: string) => {
   const [orderNotes] = useState<string>("");
   const [showPixPayment, setShowPixPayment] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
-  const [driverPos, setDriverPos] = useState({ lat: -23.5505, lng: -46.6333 });
+  const [driverPos, setDriverPos] = useState<{ lat: number | null, lng: number | null }>({ lat: null, lng: null });
   const [adIndex, setAdIndex] = useState(0);
   const [beverageBanners, setBeverageBanners] = useState<any[]>([]);
   const [bevBannerIndex, setBevBannerIndex] = useState(0);

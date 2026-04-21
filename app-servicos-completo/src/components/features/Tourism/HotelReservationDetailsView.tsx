@@ -32,7 +32,7 @@ export const HotelReservationDetailsView: React.FC<HotelReservationDetailsViewPr
               <img alt="Hotel Photo" className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCkTj7oslVYbDlxJPML7V0AIwhKd9onEbXoXgFcoD4QL809xamKca-kRpjEES04_tar74TIJEA4h3v5DJ0IrwAshCuGxeVfBMWKamUEeqJSn8AqgNJZ2sw0x-s3HRMEki7LZs4t9TugjfHQPpvGG35Mwf9FH9kZDE-1U2BpEx201gOCoJiLp8QhLtS0IuPdzqnnCdqnkTHjsI8KByzCCDVERlCSBW7ZUpH3eY_OqhVIQogplMNTTGddoWRvMJMNdDcg_Hy8PnnIeM"/>
               <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent">
                 <span className="inline-block px-3 py-1 bg-yellow-400 text-zinc-950 rounded-[12px] text-[10px] font-black uppercase tracking-widest mb-2 shadow-[2px_2px_4px_rgba(0,0,0,0.3)]">Luxury Stay</span>
-                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white leading-none drop-shadow-xl mb-1">Vila Aurora Boutique</h2>
+                <h2 className="text-3xl font-black uppercase tracking-tighter text-white leading-none drop-shadow-xl mb-1">Vila Aurora Boutique</h2>
                 <div className="flex items-center gap-2 text-zinc-300 text-xs mt-1 drop-shadow-md font-medium">
                   <span className="material-symbols-outlined text-[14px]">location_on</span>
                   <span>Lagoa da Conceição, Florianópolis</span>
@@ -46,18 +46,18 @@ export const HotelReservationDetailsView: React.FC<HotelReservationDetailsViewPr
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-2">
             <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-            <h3 className="text-xl font-black italic tracking-tighter uppercase text-zinc-100">Sua Reserva</h3>
+            <h3 className="text-xl font-black tracking-tighter uppercase text-zinc-100">Sua Reserva</h3>
           </div>
           <div className="bg-zinc-900 rounded-[32px] p-6 shadow-[12px_12px_30px_rgba(0,0,0,0.6),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.4)] border-l-4 border-l-yellow-400 relative">
             <div className="grid grid-cols-2 gap-6 relative z-10">
               <div className="space-y-1">
                 <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-1">Check-in</p>
-                <p className="text-xl font-black text-white italic tracking-tight leading-none">12 Out, 2024</p>
+                <p className="text-xl font-black text-white tracking-tight leading-none">12 Out, 2024</p>
                 <p className="text-zinc-400 text-[11px] font-bold">A partir das 14:00</p>
               </div>
               <div className="space-y-1 text-right">
                 <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-1">Check-out</p>
-                <p className="text-xl font-black text-white italic tracking-tight leading-none">19 Out, 2024</p>
+                <p className="text-xl font-black text-white tracking-tight leading-none">19 Out, 2024</p>
                 <p className="text-zinc-400 text-[11px] font-bold">Até as 11:00</p>
               </div>
             </div>
@@ -68,12 +68,12 @@ export const HotelReservationDetailsView: React.FC<HotelReservationDetailsViewPr
                   <span className="material-symbols-outlined text-yellow-400 text-xl font-black">group</span>
                 </div>
                 <div>
-                  <p className="text-white font-black text-sm uppercase italic">2 Adultos</p>
+                  <p className="text-white font-black text-sm uppercase">2 Adultos</p>
                   <p className="text-zinc-500 text-[9px] font-black uppercase mt-0.5 tracking-widest">Suíte Master com Vista</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-white font-black text-sm uppercase italic">7 Noites</p>
+                <p className="text-white font-black text-sm uppercase">7 Noites</p>
                 <p className="text-zinc-500 text-[9px] font-black uppercase mt-0.5 tracking-widest">Duração Total</p>
               </div>
             </div>
@@ -84,7 +84,7 @@ export const HotelReservationDetailsView: React.FC<HotelReservationDetailsViewPr
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-2">
             <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-            <h3 className="text-xl font-black italic tracking-tighter uppercase text-zinc-100">O Hóspede</h3>
+            <h3 className="text-xl font-black tracking-tighter uppercase text-zinc-100">O Hóspede</h3>
           </div>
           <div className="bg-zinc-900 flex flex-col gap-5 rounded-[32px] p-6 shadow-[12px_12px_30px_rgba(0,0,0,0.6),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.4)] border border-white/5">
             <div className="space-y-2">
@@ -133,7 +133,7 @@ export const HotelReservationDetailsView: React.FC<HotelReservationDetailsViewPr
         <section className="bg-yellow-400 rounded-[32px] p-8 shadow-[12px_12px_40px_rgba(251,191,36,0.2),inset_4px_4px_12px_rgba(255,255,255,0.4),inset_-4px_-4px_12px_rgba(0,0,0,0.2)]">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h3 className="text-black font-black text-2xl tracking-tighter italic uppercase leading-none">Resumo</h3>
+              <h3 className="text-black font-black text-2xl tracking-tighter uppercase leading-none">Resumo</h3>
               <p className="text-zinc-800 text-[9px] font-black uppercase tracking-widest mt-2">Incluindo taxas e impostos</p>
             </div>
             <div className="w-12 h-12 flex items-center justify-center bg-yellow-300 rounded-[20px] shadow-[inset_2px_2px_6px_rgba(255,255,255,0.5),inset_-2px_-2px_6px_rgba(0,0,0,0.1)] border border-yellow-200">
@@ -155,7 +155,7 @@ export const HotelReservationDetailsView: React.FC<HotelReservationDetailsViewPr
             </div>
             <div className="flex justify-between items-end pt-2">
               <span className="text-black font-black text-sm uppercase tracking-widest">Total</span>
-              <span className="text-black font-black text-3xl italic tracking-tighter drop-shadow-sm leading-none">R$ 6.455,00</span>
+              <span className="text-black font-black text-3xl tracking-tighter drop-shadow-sm leading-none">R$ 6.455,00</span>
             </div>
           </div>
         </section>

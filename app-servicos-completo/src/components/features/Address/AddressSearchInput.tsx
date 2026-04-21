@@ -6,7 +6,7 @@ import { GMAPS_KEY } from '../../../config';
 interface AddressSearchInputProps {
   placeholder: string;
   initialValue?: string;
-  onSelect: (addr: { formatted_address: string; lat?: number; lng?: number }) => void;
+  onSelect: (addr: { address?: string; formatted_address: string; lat?: number; lng?: number }) => void;
   onClear?: () => void;
   className?: string;
   /** Localização do usuário para usar como referência de bias nas sugestões */
@@ -192,6 +192,7 @@ export const AddressSearchInput = ({
     }
 
     onSelect({
+      address: description,
       formatted_address: description,
       ...(coords ?? {}),
     });

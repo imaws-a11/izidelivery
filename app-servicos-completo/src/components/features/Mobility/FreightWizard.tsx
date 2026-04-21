@@ -107,6 +107,9 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
           userLoc={(userLocation?.lat && userLocation?.lng)
             ? { lat: userLocation.lat as number, lng: userLocation.lng as number }
             : null}
+          originLoc={(transitData.origin?.lat && transitData.origin?.lng)
+            ? { lat: Number(transitData.origin.lat), lng: Number(transitData.origin.lng) }
+            : null}
           onMyLocationClick={updateLocation}
           boxed={false}
         />
@@ -114,87 +117,130 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
         <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
       </div>
 
-      {/* ── HEADER FLUTUANTE (estilo TaxiWizard) ── */}
-      <header className="absolute top-10 left-0 right-0 z-20 flex items-center justify-between px-6">
+      {/* ── BOTÃO DE LOCALIZAÇÃO (Dark Clay) ── */}
+      <div className="fixed right-6 bottom-96 z-[160] pointer-events-none">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => updateLocation()}
+          className="size-14 rounded-2xl flex items-center justify-center pointer-events-auto active:scale-95 transition-all text-yellow-500"
+          style={{
+            background: "rgba(9, 9, 11, 0.85)",
+            backdropFilter: "blur(24px)",
+            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <span className="material-symbols-rounded text-2xl font-black">my_location</span>
+        </motion.button>
+      </div>
+
+      {/* ── HEADER FLUTUANTE (Dark Clay) ── */}
+      <header className="fixed top-12 left-0 right-0 z-[150] flex items-center justify-between px-6 pointer-events-none">
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => {
             if (mobilityStep > 1) setMobilityStep(mobilityStep - 1);
             else setSubView("none");
           }}
+          className="size-12 rounded-2xl flex items-center justify-center text-yellow-500 pointer-events-auto"
           style={{
-            boxShadow: "10px 10px 25px rgba(0,0,0,0.7), inset 3px 3px 6px rgba(255,255,255,0.06), inset -3px -3px 6px rgba(0,0,0,0.6)",
+            background: "rgba(9, 9, 11, 0.85)",
+            backdropFilter: "blur(24px)",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.4), inset 1px 1px 1px rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.1)",
           }}
-          className="size-12 rounded-[22px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400"
         >
           <Icon name="arrow_back" />
         </motion.button>
 
         <div
-          className="text-right px-5 py-3 rounded-[22px]"
+          className="text-right px-6 py-4 rounded-[28px] pointer-events-auto"
           style={{
-            background: "rgba(9,9,11,0.80)",
-            backdropFilter: "blur(20px)",
-            boxShadow: "8px 8px 20px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.5)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(9, 9, 11, 0.85)",
+            backdropFilter: "blur(24px)",
+            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
-          <h2 className="text-lg font-black text-white tracking-tighter leading-none uppercase italic">
+          <h2 className="text-xl font-black text-white tracking-tighter leading-none uppercase italic">
             Izi Logistics
           </h2>
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-yellow-500 mt-1">
             Frete & Mudanças
           </p>
         </div>
       </header>
 
-      {/* ── CHIPS FLUTUANTES no mapa — km, tempo e valor em tempo real ── */}
-      <div className="absolute top-32 right-6 z-20 flex flex-col gap-2 items-end">
+      {/* ── CHIPS FLUTUANTES (Dark Clay Design) ── */}
+      <div className="fixed top-40 right-6 z-[140] flex flex-col gap-4 items-end pointer-events-none">
         {/* Card de distância */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: routeDistance ? 1 : 0.45, x: 0 }}
-          className="px-5 py-3.5 rounded-[26px] flex items-center gap-2 font-black text-[11px] text-black italic"
+          animate={{ opacity: 1, x: 0 }}
+          className="px-6 py-4 rounded-[28px] flex items-center gap-4 font-black text-xs text-white italic pointer-events-auto"
           style={{
-            background: "#facc15",
-            boxShadow: "inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(0,0,0,0.2)",
-            filter: routeDistance ? "none" : "grayscale(0.4)",
+            background: "rgba(9, 9, 11, 0.85)",
+            backdropFilter: "blur(24px)",
+            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            filter: routeDistance ? "none" : "grayscale(0.5)",
           }}
         >
-          <Icon name="route" size={16} />
-          {distancePart ?? "-- km"}
+          <div className="size-9 rounded-2xl bg-zinc-800/80 flex items-center justify-center border border-white/5 shadow-inner">
+            <Icon name="route" size={20} className="text-yellow-500" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Distância</span>
+            <span className="text-sm tracking-tight text-white">{distancePart ?? "-- km"}</span>
+          </div>
         </motion.div>
 
         {/* Card de tempo do trajeto */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: timePart ? 1 : 0.45, x: 0 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="px-5 py-3.5 rounded-[26px] flex items-center gap-2 font-black text-[11px] text-black italic"
+          className="px-6 py-4 rounded-[28px] flex items-center gap-4 font-black text-xs text-white italic pointer-events-auto"
           style={{
-            background: "#facc15",
-            boxShadow: "inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(0,0,0,0.2), 0 8px 20px rgba(250,204,21,0.35)",
-            filter: timePart ? "none" : "grayscale(0.4)",
+            background: "rgba(9, 9, 11, 0.85)",
+            backdropFilter: "blur(24px)",
+            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            filter: timePart ? "none" : "grayscale(0.5)",
           }}
         >
-          <Icon name="schedule" size={16} />
-          {timePart ?? "-- min"}
+          <div className="size-9 rounded-2xl bg-zinc-800/80 flex items-center justify-center border border-white/5 shadow-inner">
+            <Icon name="schedule" size={20} className="text-yellow-500" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Tempo</span>
+            <span className="text-sm tracking-tight text-white">{timePart ?? "-- min"}</span>
+          </div>
         </motion.div>
 
         {/* Card de valor da corrida em tempo real */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: totalValue > 0 ? 1 : 0.45, x: 0 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="px-5 py-3.5 rounded-[26px] flex items-center gap-2 font-black text-[11px] text-black italic"
+          className="px-6 py-4 rounded-[32px] flex items-center gap-5 font-black text-xs text-white italic pointer-events-auto"
           style={{
-            background: "#facc15",
-            boxShadow: "inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(0,0,0,0.2), 0 8px 20px rgba(250,204,21,0.35)",
-            filter: totalValue > 0 ? "none" : "grayscale(0.4)",
+            background: "rgba(9, 9, 11, 0.85)",
+            backdropFilter: "blur(24px)",
+            boxShadow: "0 20px 45px rgba(0,0,0,0.6), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
+            border: "1.5px solid rgba(251,191,36,0.2)",
+            filter: totalValue > 0 ? "none" : "grayscale(0.5)",
           }}
         >
-          <Icon name="payments" size={16} />
-          {totalValue > 0 ? `R$ ${totalValue.toFixed(2).replace(".", ",")}` : "R$ --,--"}
+          <div className="size-11 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30 shadow-inner">
+            <Icon name="payments" size={24} className="text-yellow-500" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[9px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Valor Estimado</span>
+            <span className="text-2xl tracking-tighter text-yellow-500">
+               {totalValue > 0 ? `R$ ${totalValue.toFixed(2).replace(".", ",")}` : "R$ --,--"}
+            </span>
+          </div>
         </motion.div>
       </div>
 
@@ -214,7 +260,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
               >
                 {/* Cabeçalho da seção */}
                 <div className="flex flex-col gap-1 px-2">
-                  <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.4em] italic">Izi Logistics</p>
+                  <p className="text-yellow-500 font-black text-[10px] uppercase tracking-[0.4em] italic">Izi Logistics</p>
                   <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Configurar Frete</h3>
                 </div>
 
@@ -247,13 +293,13 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                       </div>
                       <motion.button
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => updateLocation((addr) => {
+                        onClick={() => updateLocation((addr, lat, lng) => {
                           setTransitData((p: any) => ({
                             ...p,
                             origin: {
                               address: addr,
-                              lat: userLocation.lat,
-                              lng: userLocation.lng
+                              lat: lat,
+                              lng: lng
                             }
                           }));
                           showToast("Localização capturada!", "success");
@@ -281,7 +327,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                         boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.4)",
                       }}
                     >
-                      <Icon name="flag" size={24} className="text-yellow-400" />
+                      <Icon name="flag" size={24} className="text-yellow-500" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1 italic">Entrega</p>
@@ -494,7 +540,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-yellow-400 text-4xl font-black italic tracking-tighter drop-shadow-lg">
+                      <span className="text-yellow-500 text-4xl font-black italic tracking-tighter drop-shadow-[0_4px_10px_rgba(251,191,36,0.3)]">
                         R$ {totalValue.toFixed(2).replace(".", ",")}
                       </span>
                     </div>
@@ -593,8 +639,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
               }}
               className="w-full h-[74px] rounded-[32px] flex items-center justify-center gap-4 relative overflow-hidden group"
               style={{
-                background: "linear-gradient(145deg, #facc15, #eab308)",
-                boxShadow: "inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.15)",
+                background: "linear-gradient(135deg, #FFD700, #FBBF24)",
+                boxShadow: "0 15px 40px rgba(251, 191, 36, 0.4), inset 4px 4px 8px rgba(255,255,255,0.4)",
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />

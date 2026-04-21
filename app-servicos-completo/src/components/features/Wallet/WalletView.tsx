@@ -757,7 +757,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
               <div className="space-y-6 pt-6 flex flex-col items-center">
                 <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest text-center block">Quanto deseja enviar?</label>
                 <div className="flex items-center justify-center gap-3 w-full max-w-[280px]">
-                  <span className="text-3xl font-black text-yellow-400 italic">Z</span>
+                  <span className="text-3xl font-black text-yellow-400">Z</span>
                   <input 
                     type="text" 
                     inputMode="decimal"
@@ -773,7 +773,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                 </div>
                 <div className="bg-zinc-900/50 px-4 py-2 rounded-full border border-white/5">
                   <p className="text-center text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                    Saldo disponível: <span className="text-white italic">Z {iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")}</span>
+                    Saldo disponível: <span className="text-white">Z {iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")}</span>
                   </p>
                 </div>
               </div>
@@ -819,7 +819,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   <div className="absolute inset-x-0 inset-y-0 z-50 flex items-center justify-center p-6 text-center">
                     <div className="bg-black/80 backdrop-blur-md border border-white/10 p-8 rounded-[40px] shadow-2xl scale-90 md:scale-100">
                       <span className="material-symbols-outlined text-yellow-400 text-5xl mb-4">lock</span>
-                      <h4 className="font-black text-xl uppercase italic tracking-tighter">Acesso Bloqueado</h4>
+                      <h4 className="font-black text-xl uppercase tracking-tighter">Acesso Bloqueado</h4>
                       <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 px-4 leading-relaxed">
                         Você já possui um empréstimo em andamento. <br/>
                         Quite o atual para liberar novo crédito.
@@ -832,7 +832,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-[32px] text-black shadow-xl relative overflow-hidden">
                     <div className="relative z-10">
                       <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Seu Limite Pré-Aprovado</p>
-                      <h2 className="text-3xl font-black italic mt-1">Z {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
+                      <h2 className="text-3xl font-black mt-1">Z {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
                       <div className="mt-6 flex items-center gap-2">
                         <span className="material-symbols-outlined text-sm">info</span>
                         <p className="text-[9px] font-bold uppercase tracking-tight">Taxa de {loanInterestRate}% / mês • Liberação na hora</p>
@@ -922,7 +922,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   <div className="flex justify-between items-start">
                     <div>
                        <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">Dívida Total</p>
-                       <h4 className="text-2xl font-black text-black italic">Z {Number(loan.total_payable).toLocaleString('pt-BR')}</h4>
+                       <h4 className="text-2xl font-black text-black">Z {Number(loan.total_payable).toLocaleString('pt-BR')}</h4>
                     </div>
                      <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-black/10 text-black`}>
                       {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Sob Análise' : loan.status === 'rejected' ? 'Recusado' : 'A pagar'}
@@ -941,7 +941,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   </div>
                   
                   <div className="mt-2 pt-3 border-t border-black/10 flex items-center justify-between">
-                    <span className="text-[9px] font-black text-black/50 uppercase italic tracking-widest">Detalhes do Empréstimo</span>
+                    <span className="text-[9px] font-black text-black/50 uppercase tracking-widest">Detalhes do Empréstimo</span>
                     <div className="size-6 rounded-full bg-black/5 flex items-center justify-center">
                       <span className="material-symbols-outlined text-sm text-black">arrow_forward</span>
                     </div>
@@ -978,7 +978,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                         loanPaymentStep === 'method' ? 'Forma de Pagamento' :
                         loanPaymentStep === 'pix' ? 'Pagamento via PIX' : 'Cartão de Crédito'}
                      </p>
-                     <h2 className="text-3xl font-black text-white italic">Z {Number(selectedLoan.total_payable).toLocaleString('pt-BR')}</h2>
+                     <h2 className="text-3xl font-black text-white">Z {Number(selectedLoan.total_payable).toLocaleString('pt-BR')}</h2>
                    </div>
                    <button 
                     onClick={() => {
@@ -1227,7 +1227,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                 <div className="mt-auto pt-6 border-t border-white/5 space-y-4">
                   <div className="flex justify-between items-center text-white">
                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Selecionado</p>
-                     <p className="text-xl font-black italic">Z {((Number(selectedLoan.total_payable) / selectedLoan.installments_count) * selectedInstallments.length).toLocaleString('pt-BR')}</p>
+                     <p className="text-xl font-black">Z {((Number(selectedLoan.total_payable) / selectedLoan.installments_count) * selectedInstallments.length).toLocaleString('pt-BR')}</p>
                   </div>
                   
                   {loanPaymentStep === 'details' && selectedLoan.status !== 'paid' && (
@@ -1332,13 +1332,13 @@ export const WalletView: React.FC<WalletViewProps> = ({
   }
 
     return (
-    <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32 italic">
+    <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
       {/* HERO SALDO - REDESIGN CLAYMORPHISM PREMIUM */}
       <div className="px-5 pt-14 pb-12 flex flex-col items-center relative overflow-hidden">
         
         <div className="flex items-center gap-3 mb-10 w-full justify-center opacity-80">
           <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />
-          <span className="text-white font-black italic tracking-[0.5em] text-[10px] uppercase">IZI PAY NETWORK</span>
+          <span className="text-white font-black tracking-[0.5em] text-[10px] uppercase">IZI PAY NETWORK</span>
           <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />
         </div>
         
@@ -1372,7 +1372,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
               onClick={() => setShowDepositModal(true)}
               className="mt-12 px-10 py-4 bg-yellow-400 rounded-full flex items-center gap-3 shadow-[0_10_25px_rgba(250,204,21,0.15),inset_4px_4px_8px_rgba(255,255,255,0.7),inset_-4px_-4px_8px_rgba(0,0,0,0.1)] cursor-pointer group"
             >
-              <span className="text-black font-black text-[11px] tracking-[0.2em] uppercase italic">Recarregar Saldo</span>
+              <span className="text-black font-black text-[11px] tracking-[0.2em] uppercase">Recarregar Saldo</span>
               <span className="material-symbols-outlined text-black text-lg font-black group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </motion.div>
           </motion.div>
@@ -1447,7 +1447,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
             >
               <span className={`material-symbols-outlined ${s.color} text-2xl font-black`}>{s.icon}</span>
               <div className="flex flex-col items-center">
-                <p className="font-black text-xl text-white tracking-tighter italic">{s.value}</p>
+                <p className="font-black text-xl text-white tracking-tighter">{s.value}</p>
                 <p className="text-[8px] text-zinc-600 uppercase font-black tracking-[0.2em] mt-1">{s.label}</p>
               </div>
             </div>
@@ -1457,7 +1457,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
         {/* HISTÓRICO - CLAYMOL DESIGN */}
         <section ref={historyRef} className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h2 className="font-black text-lg text-white uppercase tracking-tighter italic">Histórico</h2>
+            <h2 className="font-black text-lg text-white uppercase tracking-tighter">Histórico</h2>
             <button
               onClick={() => setShowAllHistory((prev) => !prev)}
               className="px-5 py-2.5 rounded-full bg-yellow-400 border border-yellow-300 text-[10px] font-black text-black uppercase tracking-widest shadow-[inset_2px_2px_4px_rgba(255,255,255,0.7),inset_-2px_-2px_4px_rgba(0,0,0,0.1)] active:scale-95 transition-all"
@@ -1467,7 +1467,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
           </div>
           <div className="flex flex-col gap-3">
             {walletTransactions.length === 0 ? (
-              <div className="py-20 flex flex-col items-center gap-6 bg-[#0a0a0a] border-2 border-white/5 rounded-[45px] shadow-inner italic">
+              <div className="py-20 flex flex-col items-center gap-6 bg-[#0a0a0a] border-2 border-white/5 rounded-[45px] shadow-inner">
                 <div className="size-16 rounded-[28px] bg-zinc-950 flex items-center justify-center border border-white/5">
                   <span className="material-symbols-outlined text-3xl text-zinc-800">receipt_long</span>
                 </div>
@@ -1491,14 +1491,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white truncate uppercase tracking-tight italic">{t.description || t.type}</p>
+                      <p className="text-sm font-black text-white truncate uppercase tracking-tight">{t.description || t.type}</p>
                       <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mt-1 opacity-60">
                         {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} •{" "}
                         {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`font-black text-sm italic ${isPositive ? "text-emerald-400" : "text-white"}`}>
+                      <p className={`font-black text-sm ${isPositive ? "text-emerald-400" : "text-white"}`}>
                         {isPositive ? "+" : "-"} {Number(t.amount).toLocaleString("pt-BR", { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
                       </p>
                       <p className="text-[8px] text-zinc-800 font-black uppercase tracking-[0.2em] mt-1">IZI COIN</p>
