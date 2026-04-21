@@ -226,12 +226,43 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           </OverlayView>
         )}
 
-        {/* Marcador do Usuário/Lojista - Minimalista Amarelo Pulsante */}
+        {/* Marcador do Usuário — Ponto Pulsante Estilo Google Maps */}
         {isValidCoord(userLoc) && (
           <OverlayView position={userLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -50%)' }}>
-              <div className="absolute size-8 rounded-full bg-yellow-400/20 animate-pulse" />
-              <div className="size-3 rounded-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)] border border-black/20" />
+              {/* Anel externo — pulsa mais devagar */}
+              <div
+                className="absolute rounded-full animate-ping"
+                style={{
+                  width: 40,
+                  height: 40,
+                  background: 'rgba(250,204,21,0.2)',
+                  animationDuration: '1.8s',
+                }}
+              />
+              {/* Anel intermediário — pulsa um pouco mais rápido */}
+              <div
+                className="absolute rounded-full animate-pulse"
+                style={{
+                  width: 24,
+                  height: 24,
+                  background: 'rgba(250,204,21,0.35)',
+                  animationDuration: '1.2s',
+                }}
+              />
+              {/* Ponto central sólido com borda branca */}
+              <div
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: '#facc15',
+                  border: '3px solid white',
+                  boxShadow: '0 0 12px rgba(250,204,21,0.9), 0 2px 6px rgba(0,0,0,0.5)',
+                  position: 'relative',
+                  zIndex: 10,
+                }}
+              />
             </div>
           </OverlayView>
         )}
