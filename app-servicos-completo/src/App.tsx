@@ -27,6 +27,9 @@ import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
 import { IziCoinTrackingView } from "./components/features/Order/IziCoinTrackingView";
 import { EstablishmentListView } from "./components/features/Establishment/EstablishmentListView";
 import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestaurantsView";
+import { ExploreBarsView } from "./components/features/Tourism/ExploreBarsView";
+import { HotelReservationDetailsView } from "./components/features/Tourism/HotelReservationDetailsView";
+import { ExploreHotelsView } from "./components/features/Tourism/ExploreHotelsView";
 import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
 import { MarketExploreView } from "./components/features/Home/MarketExploreView";
@@ -165,6 +168,8 @@ function App() {
     | "card_payment"
     | "izi_coin_tracking"
     | "flash_offers_list"
+    | "explore_bars"
+    | "explore_hotels"
   >("none");
 
   // Reset scroll on subView change
@@ -8190,6 +8195,24 @@ const navigateSubView = (target: string) => {
                     iziBlackCashbackMultiplier={appSettings?.izi_black_cashback_multiplier || 1}
                     paymentMethodsActive={globalSettings?.payment_methods_active}
                   />
+                </motion.div>
+              )}
+
+              {subView === "explore_bars" && (
+                <motion.div key="explore_bars" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  <ExploreBarsView onBack={() => setSubView("none")} />
+                </motion.div>
+              )}
+
+              {subView === "explore_hotels" && (
+                <motion.div key="explore_hotels" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  <ExploreHotelsView onBack={() => setSubView("none")} onReserve={() => setSubView("hotel_reservation")} />
+                </motion.div>
+              )}
+
+              {subView === "hotel_reservation" && (
+                <motion.div key="hotel_reservation" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  <HotelReservationDetailsView onBack={() => setSubView("explore_hotels")} onProceedToPayment={() => setSubView("pix_payment")} />
                 </motion.div>
               )}
 

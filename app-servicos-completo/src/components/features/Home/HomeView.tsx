@@ -1211,6 +1211,106 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           </section>
 
+          {/* NOVA SEÇÃO DE TURISMO (HTML Convertido) */}
+          <div className="pt-8">
+            {/* Hero Section Horizontal Carousel */}
+            <section className="mb-12 px-6">
+              <h2 className="text-zinc-100 font-bold text-4xl mb-6 tracking-tight">Turismo</h2>
+              <div className="flex overflow-x-auto gap-4 no-scrollbar snap-x snap-mandatory -mx-6 px-6">
+                {/* Rio de Janeiro */}
+                <div className="flex-shrink-0 w-[240px] h-[320px] relative rounded-[32px] overflow-hidden group snap-start cursor-pointer shadow-2xl border border-white/5" onClick={() => showToast("Em breve!", "info")}>
+                  <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 brightness-[0.85]" alt="Rio de Janeiro" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2p65n-xY5XwLT1HJaG7-grO2_IX3sUiSM5aF99dGFR3iAhPzBUu7-FGDRAxir5UtMpv6yOp0WbdbGYCkeO1Ig9XUeaDYIW1G5C8SXgTVs4OucSesjxtqC_VWJFU8bksXWW8_fl5NaA444rug4tO3QY0M7lXWKbb2ECz2tbKz2PfwEK7gwfs3GgLFpqJPmqL-LTPuT8HdxwK2TbFCZ97_r3bNt-EnxzuizMQEiFmnxTYuaUpEnIao_UhyitpQ7Lytyd9YKxwkJQZE"/>
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <span className="bg-yellow-400 text-zinc-950 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 inline-block">Destaque</span>
+                    <h3 className="text-white text-2xl font-black uppercase italic tracking-tighter leading-none">Rio de Janeiro</h3>
+                    <p className="text-zinc-300 text-[10px] mt-1.5 font-medium leading-tight">A Cidade Maravilhosa te espera com vistas de tirar o fôlego.</p>
+                  </div>
+                </div>
+                {/* Lençóis */}
+                <div className="flex-shrink-0 w-[240px] h-[320px] relative rounded-[32px] overflow-hidden group snap-start cursor-pointer shadow-2xl border border-white/5" onClick={() => showToast("Em breve!", "info")}>
+                  <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 brightness-[0.85]" alt="Lençois" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9pJtQUFvwTMhb5kOHNQVWVa4scypdDjMI-fzC6Yb5AxrJ9ngRDwIBShljsWaxqjyZwzS5r2TmovVp8S3ZjcsfxhXh53ExX1PKLBVC_BAD4PfuaeIZQhlQ3-qeVWGS2gqHSyQrVfX-2d6SSwy9MogLoHWtAXwu_qcOqjmsJ1RPsEBkQItbwCrNJpST3gTzADr509nhW9iuFTZEo3hH-uU5RvXFiLC9rBO9t6IkRzRn7DfwOxLSlh6sbpA8bTCJyOZUoCI8OKp_u4I"/>
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <h3 className="text-white text-2xl font-black uppercase italic tracking-tighter leading-none">Lençóis</h3>
+                    <p className="text-zinc-300 text-[10px] mt-1.5 font-medium leading-tight">Dunas intermináveis e lagoas cristalinas.</p>
+                  </div>
+                </div>
+                {/* Amazônia */}
+                <div className="flex-shrink-0 w-[240px] h-[320px] relative rounded-[32px] overflow-hidden group snap-start cursor-pointer shadow-2xl border border-white/5" onClick={() => showToast("Em breve!", "info")}>
+                  <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 brightness-[0.85]" alt="Amazônia" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBtt5NYpAq16N5wdors_x3KLtpbg1NdGI4t3QSRDAqOLDNqwoKIYBZBlhojbqT2XIWkg55xUeTWMc-06JQM_0k3r9fOxsYKEUoMVrSh3UR0OCBIjW0l7jp7C_li1o54J-aqQ4UuoDoYwypn9sRV4ohcSxEk076knbWw_az9ggN7nVuyKs3fH8SDi1w8qn68-YAUAXPKRsUKoA7kymmS1BrBp0q7SlVXqK4_5M5DEcv06aCfrGWTI5Kb7aWK0W8H6W_xhtjvyFrQko"/>
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <h3 className="text-white text-2xl font-black uppercase italic tracking-tighter leading-none">Amazônia</h3>
+                    <p className="text-zinc-300 text-[10px] mt-1.5 font-medium leading-tight">A maior biodiversidade do planeta à sua volta.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Categories (Claymorphism Style Standard) */}
+            <section className="mb-12 px-2">
+              <div className="flex justify-between items-end mb-6 px-4">
+                <div>
+                  <p className="text-yellow-400 font-black text-[10px] tracking-[0.2em] uppercase">Categorias</p>
+                  <h2 className="text-zinc-100 font-bold text-2xl italic tracking-tighter leading-none">O que você busca?</h2>
+                </div>
+                <button className="text-zinc-500 hover:text-yellow-400 transition-colors text-[10px] font-black uppercase tracking-widest">Ver todas</button>
+              </div>
+              <div className="grid grid-cols-4 gap-4 px-3">
+                {/* Category Card 1 */}
+                <motion.div 
+                  whileHover={{ y: -6, scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigateSubView("explore_hotels")} 
+                  className="flex flex-col items-center justify-center gap-3 py-5 rounded-[28px] bg-yellow-400 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] hover:bg-yellow-300 transition-all cursor-pointer group/card"
+                >
+                  <div className="relative w-11 h-11 flex items-center justify-center rounded-2xl bg-zinc-900 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.4)]">
+                    <span className="material-symbols-outlined text-xl text-yellow-400 font-black transition-transform group-hover/card:scale-110 duration-300" style={{ fontVariationSettings: "'FILL' 1" }}>bed</span>
+                  </div>
+                  <span className="text-[8px] font-black text-zinc-900 uppercase tracking-widest text-center leading-none">Hospedagens</span>
+                </motion.div>
+                {/* Category Card 2 */}
+                <motion.div 
+                  whileHover={{ y: -6, scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => showToast("Em breve!", "info")} 
+                  className="flex flex-col items-center justify-center gap-3 py-5 rounded-[28px] bg-yellow-400 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] hover:bg-yellow-300 transition-all cursor-pointer group/card"
+                >
+                  <div className="relative w-11 h-11 flex items-center justify-center rounded-2xl bg-zinc-900 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.4)]">
+                    <span className="material-symbols-outlined text-xl text-yellow-400 font-black transition-transform group-hover/card:scale-110 duration-300" style={{ fontVariationSettings: "'FILL' 1" }}>event</span>
+                  </div>
+                  <span className="text-[8px] font-black text-zinc-900 uppercase tracking-widest text-center leading-none">Cultura</span>
+                </motion.div>
+                {/* Category Card 3 (Bares) */}
+                <motion.div 
+                  whileHover={{ y: -6, scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigateSubView("explore_bars")} 
+                  className="flex flex-col items-center justify-center gap-3 py-5 rounded-[28px] bg-yellow-400 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] hover:bg-yellow-300 transition-all cursor-pointer group/card"
+                >
+                  <div className="relative w-11 h-11 flex items-center justify-center rounded-2xl bg-zinc-900 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.4)]">
+                    <span className="material-symbols-outlined text-xl text-yellow-400 font-black transition-transform group-hover/card:scale-110 duration-300" style={{ fontVariationSettings: "'FILL' 1" }}>restaurant</span>
+                  </div>
+                  <span className="text-[8px] font-black text-zinc-900 uppercase tracking-widest text-center leading-none">Bares</span>
+                </motion.div>
+                {/* Category Card 4 */}
+                <motion.div 
+                  whileHover={{ y: -6, scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => showToast("Em breve!", "info")} 
+                  className="flex flex-col items-center justify-center gap-3 py-5 rounded-[28px] bg-yellow-400 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] hover:bg-yellow-300 transition-all cursor-pointer group/card"
+                >
+                  <div className="relative w-11 h-11 flex items-center justify-center rounded-2xl bg-zinc-900 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.4)]">
+                    <span className="material-symbols-outlined text-xl text-yellow-400 font-black transition-transform group-hover/card:scale-110 duration-300" style={{ fontVariationSettings: "'FILL' 1" }}>nightlife</span>
+                  </div>
+                  <span className="text-[8px] font-black text-zinc-900 uppercase tracking-widest text-center leading-none">Noite</span>
+                </motion.div>
+              </div>
+            </section>
+          </div>
+
+
           {/* FAVORITOS */}
           <section className="space-y-6">
             <div className="flex justify-between items-end px-1">
