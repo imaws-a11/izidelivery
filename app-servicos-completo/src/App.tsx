@@ -837,7 +837,14 @@ function App() {
         }
 
         setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
-        setTransitData((prev) => ({ ...prev, origin: address }));
+        setTransitData((prev) => ({ 
+          ...prev, 
+          origin: { 
+            address: address, 
+            lat: latitude, 
+            lng: longitude 
+          } 
+        }));
         if (onSuccess) onSuccess(address);
       } catch {
         setUserLocation((prev) => ({ ...prev, loading: false }));

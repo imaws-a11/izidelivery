@@ -77,7 +77,13 @@ export const AddressSearchInput = ({
         body.locationBias = {
           circle: {
             center: { latitude: userCoords.lat, longitude: userCoords.lng },
-            radius: 5000, // 5km de raio de preferência mais forte
+            radius: 10000, 
+          },
+        };
+        body.locationRestriction = {
+          circle: {
+            center: { latitude: userCoords.lat, longitude: userCoords.lng },
+            radius: 15000,
           },
         };
         body.origin = {
