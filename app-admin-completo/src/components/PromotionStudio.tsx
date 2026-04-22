@@ -998,7 +998,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                   )}
                                   {item.max_usage_per_user && (
                                     <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-500/10 border border-white/10 rounded-full w-fit">
-                                        <span className="material-symbols-outlined text-[14px] text-slate-400">person_limit</span>
+                                        <span className="material-symbols-outlined text-[14px] text-slate-400">person</span>
                                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Limite {item.max_usage_per_user}/CPF</span>
                                     </div>
                                   )}
@@ -1043,24 +1043,24 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
                     {activeTab === 'flash' && flashOffers.map(item => (
                         <motion.div layout key={item.id} className="bg-slate-900 border border-white/5 rounded-[48px] overflow-hidden group hover:border-rose-500/50 transition-all shadow-2xl relative">
-                            {item.product_image && (
-                                <div className="aspect-square relative overflow-hidden bg-black">
-                                    <img src={item.product_image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.product_name} />
-                                    <div className="absolute top-6 left-6">
-                                        <div className="bg-rose-600 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase italic tracking-tighter shadow-2xl flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-sm">bolt</span>
-                                            {item.discount_percent}% OFF
+                            <div className="p-4 space-y-4">
+                                <div className="flex items-center gap-4 bg-white/5 p-3 rounded-[32px] border border-white/5">
+                                    {item.product_image && (
+                                        <div className="size-16 rounded-2xl overflow-hidden bg-black shrink-0 border border-white/10 shadow-inner">
+                                            <img src={item.product_image} className="w-full h-full object-cover" alt={item.product_name} />
                                         </div>
-                                    </div>
-                                    <div className="absolute bottom-6 left-6 right-6">
-                                         <div className="bg-black/60 backdrop-blur-xl p-4 rounded-3xl border border-white/10 flex flex-col">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.admin_users?.store_name}</p>
-                                            <h4 className="text-base font-black text-white italic uppercase tracking-tighter truncate">{item.product_name}</h4>
-                                         </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="bg-rose-500 text-white px-2 py-0.5 rounded-lg text-[8px] font-black uppercase italic tracking-tighter shadow-lg flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[10px]">bolt</span>
+                                                {item.discount_percent}% OFF
+                                            </div>
+                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest truncate">{item.admin_users?.store_name}</p>
+                                        </div>
+                                        <h4 className="text-sm font-black text-white italic uppercase tracking-tighter truncate">{item.product_name}</h4>
                                     </div>
                                 </div>
-                            )}
-                            <div className="p-8 space-y-6">
                                 <div className="flex justify-between items-center bg-white/5 p-4 rounded-3xl border border-white/5">
                                     <div className="flex flex-col">
                                         <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Oferta Agora</p>
@@ -1085,7 +1085,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                         )}
                                         {item.max_usage_per_user && (
                                             <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-500/10 border border-white/10 rounded-lg">
-                                                <span className="material-symbols-outlined text-[12px] text-slate-400">person_limit</span>
+                                                <span className="material-symbols-outlined text-[12px] text-slate-400">person</span>
                                                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Lmt: {item.max_usage_per_user}/CPF</span>
                                             </div>
                                         )}
