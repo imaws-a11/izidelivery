@@ -84,11 +84,25 @@ export const ProductSelectorModal: React.FC<ProductSelectorModalProps> = ({ isOp
                <span className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">Selecionados: <span className="text-yellow-400">{currentSelectionCount}</span></span>
              </div>
              
-             {currentSelectionCount > 0 && (
-               <button onClick={() => setLocalSelection([])} className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-rose-500 transition-colors">
-                 Limpar Combo
+             <div className="flex items-center gap-4">
+               <button 
+                 onClick={() => {
+                   if (localSelection.length === products.length) {
+                     setLocalSelection([]);
+                   } else {
+                     setLocalSelection(products);
+                   }
+                 }} 
+                 className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-yellow-400 transition-colors"
+               >
+                 {localSelection.length === products.length ? "Desmarcar Todos" : "Selecionar Todos"}
                </button>
-             )}
+               {currentSelectionCount > 0 && (
+                 <button onClick={() => setLocalSelection([])} className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-rose-500 transition-colors">
+                   Limpar
+                 </button>
+               )}
+             </div>
            </div>
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
