@@ -14,7 +14,20 @@ export const useAuth = () => {
   const [authInitLoading, setAuthInitLoading] = useState(true);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
 
+  const [rememberMe, setRememberMe] = useState(false);
+
   useEffect(() => {
+    // Carregar dados salvos se existirem
+    const savedEmail = localStorage.getItem("izi_remembered_email");
+    const savedPass = localStorage.getItem("izi_remembered_pass");
+    const isRemembered = localStorage.getItem("izi_remember_me") === "true";
+
+    if (isRemembered) {
+      setRememberMe(true);
+      if (savedEmail) setLoginEmail(savedEmail);
+      if (savedPass) setLoginPassword(savedPass);
+    }
+
     // Check initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
@@ -72,6 +85,18 @@ export const useAuth = () => {
         password: loginPassword,
       });
       if (error) throw error;
+
+      // Persistir se rememberMe estiver ativo
+      if (rememberMe) {
+        localStorage.setItem("izi_remembered_email", loginEmail);
+        localStorage.setItem("izi_remembered_pass", loginPassword);
+        localStorage.setItem("izi_remember_me", "true");
+      } else {
+        localStorage.removeItem("izi_remembered_email");
+        localStorage.removeItem("izi_remembered_pass");
+        localStorage.setItem("izi_remember_me", "false");
+      }
+
     } catch (err: any) {
       console.error("Login error:", err); 
       setLoginError(err.message === 'Invalid login credentials' ? 'Email ou senha inválidos.' : err.message); 
@@ -122,6 +147,12 @@ export const useAuth = () => {
           phone: phone.trim(),
           created_at: new Date().toISOString()
         });
+
+        if (rememberMe) {
+          localStorage.setItem("izi_remembered_email", loginEmail);
+          localStorage.setItem("izi_remembered_pass", loginPassword);
+          localStorage.setItem("izi_remember_me", "true");
+        }
       }
 
     } catch (err: any) {
@@ -148,6 +179,8 @@ export const useAuth = () => {
     setLoginEmail,
     loginPassword,
     setLoginPassword,
+    rememberMe,
+    setRememberMe,
     authMode,
     setAuthMode,
     isLoading,

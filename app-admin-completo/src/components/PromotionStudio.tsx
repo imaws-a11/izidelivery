@@ -48,6 +48,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     is_vip: false,
     is_free_shipping: false,
     merchant_id: merchantId,
+    max_usage_per_user: null,
+    first_order_only: false,
     // Flash specific
     merchant_ids: merchantId ? [merchantId] : [],
     selected_product_ids: [],
@@ -172,6 +174,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       is_vip: formData.is_vip,
       is_free_shipping: formData.is_free_shipping,
       merchant_id: formData.merchant_id,
+      max_usage_per_user: formData.max_usage_per_user ? Number(formData.max_usage_per_user) : null,
+      first_order_only: formData.first_order_only,
       coupon_code: activeTab === 'coupon' ? formData.coupon_code.toUpperCase().trim() : null,
       image_url: (activeTab === 'banner' || activeTab === 'coupon' || activeTab === 'explore') ? formData.image_url : null,
       target_merchants: activeTab === 'coupon' ? formData.merchant_ids : null,
@@ -233,7 +237,9 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
         discounted_price: discountedPrice,
         discount_percent: discountPercent,
         expires_at: expiresAt,
-        is_active: true
+        is_active: true,
+        max_usage_per_user: formData.max_usage_per_user ? Number(formData.max_usage_per_user) : null,
+        first_order_only: formData.first_order_only,
       };
     });
 
@@ -280,6 +286,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       is_vip: false,
       is_free_shipping: false,
       merchant_id: merchantId,
+      max_usage_per_user: null,
+      first_order_only: false,
       merchant_ids: merchantId ? [merchantId] : [],
       selected_product_ids: [],
       target_view: ''
@@ -310,7 +318,9 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
         selected_product_ids: item.product_id ? [item.product_id] : [],
         merchant_id: item.merchant_id,
         is_vip: item.is_vip || false,
-        is_free_shipping: false
+        is_free_shipping: false,
+        max_usage_per_user: item.max_usage_per_user || null,
+        first_order_only: item.first_order_only || false,
       });
     } else {
       setFormData({
@@ -319,6 +329,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
         merchant_ids: item.target_merchants || (item.merchant_id ? [item.merchant_id] : []),
         selected_product_ids: item.target_products || [],
         is_free_shipping: item.is_free_shipping || item.discount_type === 'free_shipping' || false,
+        max_usage_per_user: item.max_usage_per_user || null,
+        first_order_only: item.first_order_only || false,
       });
     }
     setActiveTab(type);
@@ -744,9 +756,45 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                  </div>
                              )}
 
-                             {(activeTab === 'coupon' || activeTab === 'flash') && (
-                                 <>
-                                     <div className="md:col-span-2 pt-4 flex gap-6">
+                              {(activeTab === 'coupon' || activeTab === 'flash') && (
+                                  <>
+                                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                                          <div className="space-y-2">
+                                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Limite por CPF (Opcional)</label>
+                                              <div className="relative">
+                                                  <input 
+                                                      type="number" 
+                                                      placeholder="Ex: 1 (Deixe vazio para ilimitado)"
+                                                      value={formData.max_usage_per_user || ''}
+                                                      onChange={e => setFormData({...formData, max_usage_per_user: e.target.value ? Number(e.target.value) : null})}
+                                                      className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                                                  />
+                                                  <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500">
+                                                      <span className="material-symbols-outlined">person_limit</span>
+                                                  </div>
+                                              </div>
+                                          </div>
+
+                                          <div className="space-y-2">
+                                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Restrição de Uso</label>
+                                              <label className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all h-[70px]">
+                                                  <div className="flex items-center gap-3">
+                                                      <div className="size-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                                          <span className="material-symbols-outlined text-sm">shopping_cart_checkout</span>
+                                                      </div>
+                                                      <p className="text-xs font-black">Apenas Primeira Compra</p>
+                                                  </div>
+                                                  <input 
+                                                      type="checkbox" 
+                                                      checked={formData.first_order_only}
+                                                      onChange={e => setFormData({...formData, first_order_only: e.target.checked})}
+                                                      className="size-6 rounded-lg bg-white/5 border-white/10 text-indigo-500 focus:ring-indigo-500 transition-all" 
+                                                  />
+                                              </label>
+                                          </div>
+                                      </div>
+
+                                      <div className="md:col-span-2 pt-4 flex gap-6">
                                         <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
                                             <div className="flex items-center gap-4">
                                                 <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -942,6 +990,18 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                         <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Exclusivo Izi Black</span>
                                     </div>
                                   )}
+                                  {item.first_order_only && (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full w-fit">
+                                        <span className="material-symbols-outlined text-[14px] text-indigo-400">shopping_cart_checkout</span>
+                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">1ª Compra</span>
+                                    </div>
+                                  )}
+                                  {item.max_usage_per_user && (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-500/10 border border-white/10 rounded-full w-fit">
+                                        <span className="material-symbols-outlined text-[14px] text-slate-400">person_limit</span>
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Limite {item.max_usage_per_user}/CPF</span>
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-xs font-bold text-slate-500 line-clamp-2">{item.description}</p>
                             </div>
@@ -1012,9 +1072,23 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                     <div className="flex items-center gap-2 text-slate-500">
-                                        <span className="material-symbols-outlined text-lg">timer</span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Expira em 24h</span>
+                                     <div className="flex flex-wrap gap-3 flex-1">
+                                        <div className="flex items-center gap-2 text-slate-500">
+                                            <span className="material-symbols-outlined text-lg">timer</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Expira em 24h</span>
+                                        </div>
+                                        {item.first_order_only && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                                                <span className="material-symbols-outlined text-[12px] text-indigo-400">shopping_cart_checkout</span>
+                                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">1ª Compra</span>
+                                            </div>
+                                        )}
+                                        {item.max_usage_per_user && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-500/10 border border-white/10 rounded-lg">
+                                                <span className="material-symbols-outlined text-[12px] text-slate-400">person_limit</span>
+                                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Lmt: {item.max_usage_per_user}/CPF</span>
+                                            </div>
+                                        )}
                                      </div>
                                      <div className="flex gap-2">
                                          <button onClick={() => openEdit(item, 'flash')} className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all"><span className="material-symbols-outlined">edit</span></button>

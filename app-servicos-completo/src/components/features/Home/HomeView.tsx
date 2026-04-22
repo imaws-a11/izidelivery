@@ -255,7 +255,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
     else navigateSubView("generic_list");
   };
 
-  const activeStories = (flashOffers || []).map((offer: any) => {
+  const activeStories = (flashOffers || [])
+    .filter((offer: any) => offer.title !== "Oferta Especial")
+    .map((offer: any) => {
     const expiresAt = new Date(offer.expires_at);
     const now = new Date();
     const diffMs = expiresAt.getTime() - now.getTime();
