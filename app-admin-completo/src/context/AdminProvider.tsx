@@ -663,8 +663,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!idToUse) return;
     if (!silent) setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('products_delivery').select('*').eq('merchant_id', idToUse);
-      if (data) setProductsList(data as Product[]);
+      // Busca produtos e ofertas relâmpago ativas em paralelo
+      const [productsRes, offersRes] = await Promise.all([
+        supabase.from('products_delivery').select('*').eq('merchant_id', idToUse),
+        supabase.from('flash_offers').select('*').eq('merchant_id', idToUse).eq('is_active', true)
+      ]);
+
+      if (productsRes.data) {
+        const productsWithOffers = productsRes.data.map(p => ({
+          ...p,
+          flashOffer: offersRes.data?.find(o => o.product_id === p.id) || null
+        }));
+
+        setProductsList(productsWithOffers as Product[]);
+        if (explicitMerchantId) {
+          setPreviewProducts(productsWithOffers as Product[]);
+        }
+      }
     } finally {
       if (!silent) setIsLoadingList(false);
     }
@@ -769,6 +784,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchStatsRef = useRef(fetchStats);
   const fetchDriversRef = useRef(fetchDrivers);
   const fetchMyDriversRef = useRef(fetchMyDrivers);
+  const fetchProductsRef = useRef(fetchProducts);
+  const fetchMenuCategoriesRef = useRef(fetchMenuCategories);
+
 
 
   const allOrdersRef = useRef(allOrders);
@@ -777,7 +795,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => { fetchStatsRef.current = fetchStats; }, [fetchStats]);
   useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
   useEffect(() => { fetchMyDriversRef.current = fetchMyDrivers; }, [fetchMyDrivers]);
+  useEffect(() => { fetchProductsRef.current = fetchProducts; }, [fetchProducts]);
+  useEffect(() => { fetchMenuCategoriesRef.current = fetchMenuCategories; }, [fetchMenuCategories]);
   useEffect(() => { allOrdersRef.current = allOrders; }, [allOrders]);
+
   
   const merchantProfileRef = useRef(merchantProfile);
 
@@ -891,7 +912,38 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products_delivery' },
+        (payload) => {
+          const currentMID = String(merchantProfileRef.current?.id || '');
+          const previewMID = String(selectedMerchantPreviewRef.current?.id || '');
+          const targetMID = userRole === 'merchant' ? currentMID : previewMID;
+          
+          const changedProduct = (payload.new || payload.old) as any;
+          if (String(changedProduct?.merchant_id) === targetMID) {
+            console.log('⚡ Produto alterado (Realtime):', payload.eventType);
+            fetchProductsRef.current(targetMID, true);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'merchant_categories_delivery' },
+        (payload) => {
+          const currentMID = String(merchantProfileRef.current?.id || '');
+          const previewMID = String(selectedMerchantPreviewRef.current?.id || '');
+          const targetMID = userRole === 'merchant' ? currentMID : previewMID;
+          
+          const changedCat = (payload.new || payload.old) as any;
+          if (String(changedCat?.merchant_id) === targetMID) {
+            console.log('⚡ Categoria alterada (Realtime):', payload.eventType);
+            fetchMenuCategoriesRef.current(targetMID);
+          }
+        }
+      )
       .subscribe((status) => {
+
         console.log(`[REALTIME-STATUS] Canal Pedidos (${channelName}):`, status);
       });
 

@@ -161,6 +161,7 @@ export interface Product {
   featured?: boolean;
   created_at?: string;
   option_groups?: ProductOptionGroup[];
+  flashOffer?: any;
 }
 
 export interface ProductOptionGroup {
