@@ -88,6 +88,12 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const storageKey = `izi-option-library-${merchantId}`;
 
+  // Estados de Desconto / Oferta
+  const [promoPrice, setPromoPrice] = useState<number | ''>('');
+  const [discountValue, setDiscountValue] = useState<number | ''>('');
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [flashOfferId, setFlashOfferId] = useState<string | null>(null);
+
   useEffect(() => {
     setEditingItem({
       ...product,
@@ -95,7 +101,81 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
         ? product.option_groups.map((group: any, index: number) => normalizeOptionGroup(group, index))
         : []
     });
+
+    // Resetar estados de oferta ao mudar de produto
+    setPromoPrice('');
+    setDiscountValue('');
+    setFlashOfferId(null);
   }, [product]);
+
+  // Buscar oferta relâmpago se o produto já existir
+  useEffect(() => {
+    if (product?.id && !product.id.startsWith('new-')) {
+      const fetchFlashOffer = async () => {
+        const { data, error } = await supabase
+          .from('flash_offers')
+          .select('*')
+          .eq('product_id', product.id)
+          .maybeSingle();
+        
+        if (data && !error) {
+          setPromoPrice(toNumber(data.discounted_price, 0));
+          setDiscountValue(toNumber(data.discount_percent, 0));
+          setDiscountType('percentage');
+          setFlashOfferId(data.id);
+        }
+      };
+      fetchFlashOffer();
+    }
+  }, [product?.id]);
+
+  // Re-calcular preço promocional se o preço base mudar
+  useEffect(() => {
+    if (editingItem.price && discountValue !== '') {
+      if (discountType === 'percentage') {
+        const pPrice = Number(editingItem.price) * (1 - (Number(discountValue) / 100));
+        setPromoPrice(Number(pPrice.toFixed(2)));
+      } else {
+        const pPrice = Number(editingItem.price) - Number(discountValue);
+        setPromoPrice(Number(pPrice.toFixed(2)));
+      }
+    }
+  }, [editingItem.price, discountType]);
+
+  // Handlers para cálculo automático de desconto
+  const handlePromoPriceChange = (val: string) => {
+    const pPrice = val === '' ? '' : toNumber(val, 0);
+    setPromoPrice(pPrice);
+    
+    if (pPrice !== '' && editingItem.price && editingItem.price > 0) {
+      if (discountType === 'percentage') {
+        const perc = Math.round((1 - (Number(pPrice) / Number(editingItem.price))) * 100);
+        setDiscountValue(perc);
+      } else {
+        const fixed = Number(editingItem.price) - Number(pPrice);
+        setDiscountValue(fixed);
+      }
+    } else {
+      setDiscountValue('');
+    }
+  };
+
+  const handleDiscountValueChange = (val: string) => {
+    const dVal = val === '' ? '' : toNumber(val, 0);
+    setDiscountValue(dVal);
+
+    if (dVal !== '' && editingItem.price && editingItem.price > 0) {
+      if (discountType === 'percentage') {
+        const pPrice = Number(editingItem.price) * (1 - (Number(dVal) / 100));
+        setPromoPrice(Number(pPrice.toFixed(2)));
+      } else {
+        const pPrice = Number(editingItem.price) - Number(dVal);
+        setPromoPrice(Number(pPrice.toFixed(2)));
+      }
+    } else {
+      setPromoPrice('');
+    }
+  };
 
   useEffect(() => {
     if (product.id && !product.id.startsWith('new-')) {
@@ -266,7 +346,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
         merchantId, 
         editingItemMerchantId: editingItem.merchant_id 
       });
-      toastError('Erro: Nenhum lojista identificado. Não é possível salvar o produto.');
+      toastError('Erro: Nenhum lojista identificado. NÃ£o Ã© possÃ­vel salvar o produto.');
       setIsSaving(false);
       return;
     }
@@ -310,6 +390,31 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           console.error('Erro ao atualizar produto:', error);
           throw error;
         }
+      }
+
+      // --- Lógica de Oferta Relâmpago (Flash Offer) ---
+      if (promoPrice && Number(promoPrice) > 0) {
+        const flashOfferData = {
+          title: 'Oferta Especial',
+          merchant_id: merchantId,
+          product_id: productId,
+          product_name: editingItem.name,
+          product_image: editingItem.image_url,
+          original_price: Number(editingItem.price),
+          discounted_price: Number(promoPrice),
+          discount_percent: Math.round(((Number(editingItem.price) - Number(promoPrice)) / Number(editingItem.price)) * 100),
+          is_active: true,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias padrão
+        };
+
+        if (flashOfferId) {
+          await supabase.from('flash_offers').update(flashOfferData).eq('id', flashOfferId);
+        } else {
+          await supabase.from('flash_offers').insert([flashOfferData]);
+        }
+      } else if (flashOfferId) {
+        // Se limpou o preço promocional, remove a oferta
+        await supabase.from('flash_offers').delete().eq('id', flashOfferId);
       }
 
       if (!isNew) {
@@ -642,10 +747,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                       className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
                       placeholder="Ex: Burger Izi Bacon"
                     />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Preço (R$)</label>
                       <input 
                         type="number" 
@@ -658,17 +761,67 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                       />
                       <p className="text-[10px] font-bold text-slate-500 ml-4 uppercase tracking-widest">Aceita R$ 0,00 quando o valor estiver nos adicionais.</p>
                     </div>
+
                     <div className="space-y-3">
                       <div className="flex justify-between items-center px-4">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
-                        <button 
-                          onClick={() => handleCreateQuickCategory(null)}
-                          className="flex items-center gap-1 text-primary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
-                        >
-                          <span className="material-symbols-outlined text-sm">add_circle</span> Criar
-                        </button>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Oferta Especial / Desconto</label>
+                        <div className="flex bg-white/10 rounded-full p-1 border border-white/5">
+                          <button 
+                            type="button"
+                            onClick={() => setDiscountType('percentage')}
+                            className={`px-3 py-1 text-[8px] font-black uppercase rounded-full transition-all ${discountType === 'percentage' ? 'bg-primary text-slate-950' : 'text-slate-500'}`}
+                          >
+                            %
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => setDiscountType('fixed')}
+                            className={`px-3 py-1 text-[8px] font-black uppercase rounded-full transition-all ${discountType === 'fixed' ? 'bg-primary text-slate-950' : 'text-slate-500'}`}
+                          >
+                            R$
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-2 p-4 bg-white/5 rounded-[32px] border border-white/5 shadow-inner max-h-[140px] overflow-y-auto scrollbar-hide">
+                      <div className="flex gap-3">
+                        <div className="flex-[2] relative">
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            value={promoPrice ?? ''}
+                            onChange={e => handlePromoPriceChange(e.target.value)}
+                            className="w-full bg-white/5 border border-white/5 rounded-3xl px-6 py-5 font-bold text-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white/10 transition-all shadow-inner text-emerald-500"
+                            placeholder="Preço Promo"
+                          />
+                          {promoPrice !== '' && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-500/50 uppercase">OFF</span>}
+                        </div>
+                        <div className="flex-1">
+                          <input 
+                            type="number" 
+                            value={discountValue ?? ''}
+                            onChange={e => handleDiscountValueChange(e.target.value)}
+                            className="w-full bg-white/5 border border-white/5 rounded-3xl px-4 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner text-center"
+                            placeholder={discountType === 'percentage' ? '%' : 'R$'}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-500 ml-4 uppercase tracking-widest">
+                        {promoPrice !== '' ? `Economia de R$ ${(Number(editingItem.price || 0) - Number(promoPrice)).toFixed(2)}` : 'Defina um valor para criar a oferta'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center px-4">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
+                      <button 
+                        type="button"
+                        onClick={() => handleCreateQuickCategory(null)}
+                        className="flex items-center gap-1 text-primary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                      >
+                        <span className="material-symbols-outlined text-sm">add_circle</span> Criar
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 p-4 bg-white/5 rounded-[32px] border border-white/5 shadow-inner max-h-[140px] overflow-y-auto scrollbar-hide">
                         {menuCategoriesList.filter(c => !c.parent_id).length === 0 ? (
                           <p className="w-full text-center py-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Nenhuma categoria</p>
                         ) : (
@@ -756,7 +909,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Descrição</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">DescriÃ§Ã£o</label>
                     <textarea 
                       value={editingItem.description || ''}
                       onChange={e => setEditingItem({...editingItem, description: e.target.value})}
@@ -768,7 +921,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                   <div className="flex items-center gap-6 p-6 bg-white/5 rounded-[32px] border border-white/5 shadow-inner">
                     <div className="flex-1">
                       <p className="text-sm font-black">Item Ativo</p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Habilita no cardápio público</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Habilita no cardÃ¡pio pÃºblico</p>
                     </div>
                     <button
                       onClick={() => setEditingItem({...editingItem, is_available: !editingItem.is_available})}
@@ -781,7 +934,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
 
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Mídia do Produto</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">MÃ­dia do Produto</label>
                     <div className="aspect-square rounded-[48px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
                       {editingItem.image_url ? (
                         <>
@@ -809,7 +962,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                         }}
                       />
                     </div>
-                    <p className="text-[10px] text-center text-slate-500 mt-4 uppercase tracking-[0.2em]">Formatos aceitos: JPG, PNG â�� Máximo 2MB</p>
+                    <p className="text-[10px] text-center text-slate-500 mt-4 uppercase tracking-[0.2em]">Formatos aceitos: JPG, PNG Ã¢€¢ MÃ¡ximo 2MB</p>
                   </div>
                 </div>
               </motion.div>
@@ -828,7 +981,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                     </div>
                     <div>
                       <h4 className="font-black text-lg">Grupos de Adicionais</h4>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Crie variações e complementos</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Crie variaÃ§Ãµes e complementos</p>
                     </div>
                   </div>
                   <button 
@@ -931,7 +1084,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                         <div key={gIdx} className="bg-slate-900/40 rounded-[48px] border border-white/5 overflow-hidden group/group-card">
                           <div className="bg-white/5 p-8 flex flex-wrap items-center gap-6 border-b border-white/5">
                             <div className="flex-1 min-w-[200px] space-y-2">
-                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-2">Título do Grupo</label>
+                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-2">TÃ­tulo do Grupo</label>
                               <input 
                                 type="text"
                                 value={group.name}
@@ -970,7 +1123,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                 onClick={() => updateGroup(gIdx, 'is_required', !group.is_required)}
                                 className={`px-6 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all ${group.is_required ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/5 text-slate-500 border border-white/5'}`}
                               >
-                                Obrigatório
+                                ObrigatÃ³rio
                               </button>
                               
                               <button
@@ -1023,7 +1176,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                   </div>
                                   <div className="w-px h-8 bg-white/5"></div>
                                   <div className="w-24 space-y-1">
-                                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-3">Preço R$</label>
+                                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-3">PreÃ§o R$</label>
                                     <input 
                                       type="number" 
                                       step="0.01"
@@ -1076,7 +1229,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                     try {
                       setIsSaving(true);
                       await supabase.from('products_delivery').delete().eq('id', editingItem.id);
-                      toastSuccess('Produto excluído!');
+                      toastSuccess('Produto excluÃ­do!');
                       onSave();
                       onClose();
                     } catch (err: any) {
@@ -1101,7 +1254,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
             >
               {isSaving ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin">refresh</span> Salvando Estúdio
+                  <span className="material-symbols-outlined animate-spin">refresh</span> Salvando EstÃºdio
                 </>
               ) : (
                 <>
@@ -1138,8 +1291,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                     <h3 className="text-xl font-black">{categoryModal.title}</h3>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                       {categoryModal.mode === 'create' 
-                        ? (categoryModal.parentId ? 'Vincular à categoria selecionada' : 'Nova categoria principal')
-                        : 'Atualize ou remova do cardápio'
+                        ? (categoryModal.parentId ? 'Vincular Ã  categoria selecionada' : 'Nova categoria principal')
+                        : 'Atualize ou remova do cardÃ¡pio'
                       }
                     </p>
                   </div>
