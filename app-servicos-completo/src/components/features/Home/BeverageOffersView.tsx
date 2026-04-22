@@ -97,7 +97,9 @@ export const BeverageOffersView = ({
                          ) : (
                            <>
                              <span className="text-[16px] font-black text-white leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
-                             <span className="text-[11px] text-zinc-500 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                             {item.oldPrice && (
+                                <span className="text-[11px] text-zinc-500 line-through font-bold">R$ {Number(item.oldPrice).toFixed(2).replace(".", ",")}</span>
+                              )}
                            </>
                          )}
                       </div>

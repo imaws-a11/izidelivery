@@ -109,10 +109,14 @@ export const ExploreRestaurantsView = ({
       if (selectedCategory !== "all" && selectedCategory !== "Todos") {
         const catId = selectedCategory.toLowerCase();
         
-        matchesCategory = shopFoodCats.includes(catId) || 
-                         shopType === catId ||
-                         shopFoodCats.some(c => normalize(c).includes(normalize(selectedCategory))) ||
-                         normalize(shop.name).includes(normalize(selectedCategory));
+        if (catId === "promocoes" || catId === "promoções") {
+          matchesCategory = shop.hasPromotions;
+        } else {
+          matchesCategory = shopFoodCats.includes(catId) || 
+                           shopType === catId ||
+                           shopFoodCats.some(c => normalize(c).includes(normalize(selectedCategory))) ||
+                           normalize(shop.name).includes(normalize(selectedCategory));
+        }
                          
         if (!matchesCategory) {
           if (catId === 'burguer' || catId === 'burger' || catId === 'hamburguer') {

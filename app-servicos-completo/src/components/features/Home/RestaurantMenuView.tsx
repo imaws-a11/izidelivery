@@ -133,6 +133,11 @@ export const RestaurantMenuView = ({
                   className="bg-zinc-800 rounded-[28px] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_12px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex flex-col gap-4 group relative active:scale-95 transition-all overflow-hidden"
                 >
                    <div className="relative aspect-square rounded-[22px] overflow-hidden shrink-0 shadow-[4px_4px_10px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
+                      {item.oldPrice && (
+                         <div className="absolute top-2 left-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-lg uppercase tracking-tighter z-10 border border-red-500/30">
+                           OFF
+                         </div>
+                       )}
                       <img 
                         src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} 
                         alt={item.name} 
@@ -165,7 +170,12 @@ export const RestaurantMenuView = ({
                             {item.has_options ? (
                               <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver todos</span>
                             ) : (
-                              <span className="text-[13px] font-black text-yellow-400 tracking-tighter">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
+                              <div className="flex flex-col">
+                                {item.oldPrice && (
+                                  <span className="text-[9px] text-zinc-500 line-through font-bold leading-none mb-0.5">R$ {Number(item.oldPrice).toFixed(2).replace('.', ',')}</span>
+                                )}
+                                <span className="text-[13px] font-black text-yellow-400 tracking-tighter">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
+                              </div>
                             )}
                          </div>
                       </div>

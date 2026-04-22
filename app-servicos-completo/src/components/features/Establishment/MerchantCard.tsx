@@ -31,6 +31,11 @@ export const MerchantCard = ({ shop, onClick, index }: MerchantCardProps) => {
               <span className="text-[8px] font-black text-white uppercase tracking-widest text-center px-2">Fechado</span>
            </div>
         )}
+        {(shop as any).hasPromotions && (
+           <div className="absolute top-1 right-1 bg-yellow-400 text-black text-[7px] font-black px-1.5 py-0.5 rounded-lg shadow-lg uppercase tracking-tighter z-20">
+              Ofertas
+           </div>
+        )}
       </div>
 
       {/* Content */}

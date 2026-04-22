@@ -88,7 +88,9 @@ function App() {
     handleSignUp,
     setIsLoading,
     logout,
-    isAdmin
+    isAdmin,
+    rememberMe,
+    setRememberMe
   } = useAuth();
 
   const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
@@ -1282,28 +1284,44 @@ function App() {
       .trim()
       .toLowerCase();
 
-  const hasBenefitBeenUsed = async (sourceType: "coupon" | "flash_offer", sourceId: string) => {
+  const getBenefitUsageCount = async (sourceType: "coupon" | "flash_offer", sourceId: string) => {
     const filters: string[] = [];
     if (userId) filters.push(`user_id.eq.${userId}`);
 
     const trackedCpf = getBenefitTrackingCpf();
     if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
-    if (filters.length === 0) return false;
+    if (filters.length === 0) return 0;
 
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from("benefit_redemptions_delivery")
-      .select("id")
+      .select("id", { count: "exact", head: true })
       .eq("source_type", sourceType)
       .eq("source_id", sourceId)
-      .or(filters.join(","))
-      .limit(1);
+      .or(filters.join(","));
 
     if (error) {
       console.error(`Erro ao verificar uso de ${sourceType}:`, error);
-      return false;
+      return 0;
     }
 
-    return Boolean(data && data.length > 0);
+    return count || 0;
+  };
+
+  const isUserFirstOrder = async () => {
+    const filters: string[] = [];
+    if (userId) filters.push(`user_id.eq.${userId}`);
+    const trackedCpf = getBenefitTrackingCpf();
+    if (trackedCpf) filters.push(`items->>0:cpf.eq.${trackedCpf}`); // Simple check if CPF is in items metadata or check a specific table
+
+    // Let's use orders_delivery count
+    const { count, error } = await supabase
+      .from("orders_delivery")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .not("status", "eq", "cancelado");
+
+    if (error) return false;
+    return (count || 0) === 0;
   };
 
   const validateCouponRules = async (coupon: any, subtotal: number) => {
@@ -1323,8 +1341,22 @@ function App() {
       return "Este cupom é exclusivo para membros IZI Black.";
     }
 
-    if (coupon.id && await hasBenefitBeenUsed("coupon", coupon.id)) {
-      return "Este cupom já foi utilizado por este CPF/usuário.";
+    if (coupon.first_order_only && !(await isUserFirstOrder())) {
+      return "Este cupom é válido apenas para sua primeira compra.";
+    }
+
+    if (coupon.id) {
+      const usageCount = await getBenefitUsageCount("coupon", coupon.id);
+      const limitPerUser = coupon.max_usage_per_user || 1; // Default to 1 if not specified but rule exists?
+      // Wait, if max_usage_per_user is null/0, it's unlimited.
+      if (coupon.max_usage_per_user && usageCount >= coupon.max_usage_per_user) {
+        return `Você já atingiu o limite de ${coupon.max_usage_per_user} uso(s) deste cupom por CPF.`;
+      }
+      
+      // Keep legacy check for coupons that don't have max_usage_per_user set but were intended for single use
+      if (!coupon.max_usage_per_user && usageCount > 0) {
+        return "Este cupom já foi utilizado por este CPF/usuário.";
+      }
     }
 
     return null;
@@ -1333,9 +1365,20 @@ function App() {
   const validateFlashOfferRules = async (item: any) => {
     const sourceId = getFlashOfferSourceId(item);
     if (!item?.is_flash_offer || !sourceId) return null;
-    if (await hasBenefitBeenUsed("flash_offer", sourceId)) {
+
+    if (item.first_order_only && !(await isUserFirstOrder())) {
+      return "Esta oferta é válida apenas para sua primeira compra.";
+    }
+
+    const usageCount = await getBenefitUsageCount("flash_offer", sourceId);
+    if (item.max_usage_per_user && usageCount >= item.max_usage_per_user) {
+      return `Você já atingiu o limite de ${item.max_usage_per_user} uso(s) desta oferta por CPF.`;
+    }
+
+    if (!item.max_usage_per_user && usageCount > 0) {
       return "Esta oferta já foi utilizada por este CPF/usuário.";
     }
+
     return null;
   };
 
@@ -1366,7 +1409,7 @@ function App() {
       const addonsPrice = Array.isArray(item.addonDetails) 
         ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
         : 0;
-      return sum + basePrice + addonsPrice;
+      return sum + (basePrice + addonsPrice) * (item.quantity || 1);
     }, 0);
 
     if (appliedCoupon) {
@@ -1374,15 +1417,23 @@ function App() {
       if (couponError) return couponError;
     }
 
-    const flashOfferIds = [...new Set(
-      cart
-        .filter((item: any) => item.is_flash_offer)
-        .map((item: any) => getFlashOfferSourceId(item))
-        .filter(Boolean)
-    )];
-    for (const offerId of flashOfferIds) {
-      const flashOfferError = await validateFlashOfferRules({ id: offerId, is_flash_offer: true });
-      if (flashOfferError) return flashOfferError;
+    // Validação de Ofertas Flash com dados completos
+    const flashOfferItems = cart.filter((item: any) => item.is_flash_offer);
+    for (const item of flashOfferItems) {
+      const sourceId = getFlashOfferSourceId(item);
+      if (!sourceId) continue;
+
+      // Buscamos os dados atuais da oferta para garantir que as regras (1ª compra, limite CPF) sejam validadas
+      const { data: fullOffer } = await supabase
+        .from('flash_offers')
+        .select('*')
+        .eq('id', sourceId)
+        .single();
+
+      if (fullOffer) {
+        const flashOfferError = await validateFlashOfferRules(fullOffer);
+        if (flashOfferError) return `${item.name}: ${flashOfferError}`;
+      }
     }
 
     return null;
@@ -2230,35 +2281,12 @@ function App() {
        return;
     }
 
-    // 1. Verificação de Uso Único para Izi Flash (por CPF/ID)
-    const flashOfferItem = cart.find(i => i.is_flash_offer && i.flash_offer_id);
-    if (flashOfferItem) {
-      const trackedCpf = getBenefitTrackingCpf();
-      if (userId || trackedCpf) {
-          const filters = [];
-          if (userId) filters.push(`user_id.eq.${userId}`);
-          if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
-
-          const { data: redemptions } = await supabase
-            .from("benefit_redemptions_delivery")
-            .select("id")
-            .eq("source_id", flashOfferItem.flash_offer_id)
-            .eq("source_type", "flash_offer")
-            .or(filters.join(","));
-
-          if (redemptions && redemptions.length > 0) {
-            toastError("Você já aproveitou esta oferta Izi Flash (uso único por CPF).");
-            setIsLoading(false);
-            return;
-          }
-      }
-      
-      // Também verifica se a oferta ainda é válida (tempo)
-      if (flashOfferItem.expires_at && new Date(flashOfferItem.expires_at) < new Date()) {
-         toastError("Esta oferta Izi Flash expirou. Remova-a da sacola para continuar.");
-         setIsLoading(false);
-         return;
-      }
+    // 1. Verificação Centralizada de Regras de Benefícios (Cupons e Izi Flash)
+    const benefitError = await ensureCartBenefitsAreAvailable();
+    if (benefitError) {
+      toastError(benefitError);
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -2552,16 +2580,7 @@ const navigateSubView = (target: string) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
 
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("savedEmail");
-    const savedPassword = localStorage.getItem("savedPassword");
-    const isRemembered = localStorage.getItem("rememberMe") === "true";
-    if (isRemembered && savedEmail && savedPassword) {
-      setEmail(savedEmail);
-      setPassword(savedPassword);
-      setRememberMe(true);
-    }
-  }, []);
+
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean, mode: string = 'auto') => {
@@ -2637,9 +2656,21 @@ const navigateSubView = (target: string) => {
         const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
       };
+
+      const { data: promoItems } = await supabase
+        .from('products_delivery')
+        .select('merchant_id, title, old_price, price')
+        .eq('is_active', true);
+
+      const promoMerchantIds = new Set(
+        promoItems
+          ?.filter(p => (p.old_price && Number(p.old_price) > Number(p.price)) || (p.title || "").toLowerCase().includes("oferta especial"))
+          .map(p => p.merchant_id) || []
+      );
       
         const realEstabs = data?.map(m => {
           const isOpen = isStoreOpen(m.opening_hours, m.is_open, m.opening_mode);
+          const hasPromotions = promoMerchantIds.has(m.id);
           
           let distKm = 1.5; // fallback
           if (userLocation.lat && userLocation.lng && m.latitude && m.longitude) {
@@ -2675,7 +2706,8 @@ const navigateSubView = (target: string) => {
             latitude: m.latitude,
             longitude: m.longitude,
             coverageMode: m.delivery_coverage_mode || 'radius',
-            zones: zonesByMerchant[m.id] || {}
+            zones: zonesByMerchant[m.id] || {},
+            hasPromotions
           };
         }) || [];
 
@@ -3999,7 +4031,9 @@ const navigateSubView = (target: string) => {
 
   const renderFlashOffersList = () => {
     // Re-computar activeStories similar ao HomeView para consistência
-    const activeStorieslist = (flashOffers || []).map((offer: any) => {
+    const activeStorieslist = (flashOffers || [])
+      .filter((offer: any) => offer.title !== "Oferta Especial")
+      .map((offer: any) => {
       const expiresAt = new Date(offer.expires_at);
       const now = new Date();
       const diffMs = expiresAt.getTime() - now.getTime();
@@ -7178,27 +7212,27 @@ const navigateSubView = (target: string) => {
         <div className="relative w-full h-[40vh] bg-cover bg-center shrink-0" style={{ backgroundImage: "url('" + itemImage + "')" }}>
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-black/20"></div>
           <header className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
-            <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
+            <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-black/40 backdrop-blur-xl rounded-2xl text-white border border-white/10 shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.1)] active:scale-90 transition-all">
               <Icon name="arrow_back" />
-            </button>
-            <button onClick={() => handleFavoriteAction(selectedItem.name)} className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
-              <Icon name="favorite" />
             </button>
           </header>
         </div>
 
-        <div className="relative z-10 -mt-12 bg-zinc-950 rounded-t-[40px] px-8 pt-10 pb-32 space-y-8 flex-1">
+        <div className="relative z-10 -mt-12 bg-zinc-950 rounded-t-[48px] px-8 pt-12 pb-40 space-y-10 flex-1 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/5">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <h2 className="text-3xl font-black text-white tracking-tighter">{selectedItem.name}</h2>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-yellow-400 font-black text-2xl">R$ {selectedItem.price.toFixed(2).replace(".", ",")}</span>
+              <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none">{selectedItem.name}</h2>
+              <div className="flex items-center gap-3 mt-4">
+                {selectedItem.oldPrice && (
+                  <span className="text-zinc-600 line-through font-bold text-lg">R$ {Number(selectedItem.oldPrice).toFixed(2).replace(".", ",")}</span>
+                )}
+                <span className="text-yellow-400 font-black text-3xl tracking-tighter shadow-yellow-400/20 drop-shadow-md">R$ {selectedItem.price.toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
             {selectedShop && (
-               <div className="bg-zinc-900 p-2 rounded-2xl border border-zinc-800 flex flex-col items-center min-w-[64px]">
-                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Loja</span>
-                  <div className="size-8 rounded-lg bg-cover bg-center" style={{ backgroundImage: "url('" + selectedShop.img + "')" }}></div>
+               <div className="bg-zinc-900 p-3 rounded-[24px] border border-white/5 flex flex-col items-center min-w-[72px] shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
+                  <span className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Loja</span>
+                  <div className="size-10 rounded-xl bg-cover bg-center border border-white/10 shadow-lg" style={{ backgroundImage: "url('" + selectedShop.img + "')" }}></div>
                </div>
             )}
           </div>
@@ -7218,13 +7252,49 @@ const navigateSubView = (target: string) => {
                       const qty = getOptionQuantity(group.id, item.id);
                       const isSelected = qty > 0;
                       return (
-                        <div key={item.id} onClick={() => updateOptionQuantity(group, item, 1)}
-                           className={"p-4 rounded-3xl border transition-all flex items-center justify-between cursor-pointer " + (isSelected ? 'bg-yellow-400 border-yellow-400' : 'bg-white/5 border-white/10')}>
-                          <div className="flex items-center gap-4">
-                            <span className={"font-bold " + (isSelected ? 'text-black' : 'text-white')}>{item.name}</span>
+                        <motion.div 
+                          key={item.id} 
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => qty === 0 && updateOptionQuantity(group, item, 1)}
+                          className={"p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer relative overflow-hidden " + 
+                            (isSelected 
+                              ? 'bg-yellow-400 border-yellow-400 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.1)]' 
+                              : 'bg-zinc-900 border-white/5 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]')
+                          }
+                        >
+                          <div className="flex items-center gap-4 relative z-10">
+                            <div className={"size-6 rounded-lg flex items-center justify-center transition-all " + (isSelected ? 'bg-black text-yellow-400 shadow-inner' : 'bg-white/5')}>
+                              {isSelected ? (
+                                <span className="text-[12px] font-black">{qty}</span>
+                              ) : (
+                                <span className="material-symbols-outlined text-[14px] font-black">add</span>
+                              )}
+                            </div>
+                            <span className={"font-black text-[13px] uppercase tracking-tight " + (isSelected ? 'text-black' : 'text-white')}>{item.name}</span>
                           </div>
-                          <span className={"font-black text-xs " + (isSelected ? 'text-black' : 'text-yellow-400')}>+ R$ {item.price.toFixed(2)}</span>
-                        </div>
+                          
+                          <div className="flex items-center gap-3 relative z-10">
+                            {isSelected ? (
+                              <div className="flex items-center gap-2 bg-black/10 p-1 rounded-2xl border border-black/5">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); updateOptionQuantity(group, item, -1); }}
+                                  className="size-8 rounded-xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-md"
+                                >
+                                  <span className="material-symbols-outlined text-sm font-black">remove</span>
+                                </button>
+                                <span className="text-[13px] font-black w-4 text-center text-black">{qty}</span>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); updateOptionQuantity(group, item, 1); }}
+                                  className="size-8 rounded-xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-md"
+                                >
+                                  <span className="material-symbols-outlined text-sm font-black">add</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="font-black text-xs text-yellow-400">+ R$ {item.price.toFixed(2).replace('.', ',')}</span>
+                            )}
+                          </div>
+                        </motion.div>
                       );
                     })}
                   </div>
@@ -7234,22 +7304,49 @@ const navigateSubView = (target: string) => {
           </div>
         </div>
 
-        <div className="fixed bottom-10 left-8 right-8 z-[80]">
-          <button onClick={() => {
-            const details = buildCartItemDetails(selectedItem, selectedOptions);
-            const items = Array.from({ length: tempQuantity }, (_, i) => ({ 
-              ...selectedItem, 
-              ...details,
-              timestamp: Date.now(),
-              cartId: selectedItem.id + "-" + Date.now() + "-" + i 
-            }));
-            setCart([...cart, ...items]);
-            handleBack();
-            showToast("Item adicionado!", "success");
-          }} className="w-full bg-slate-900 text-white p-5 rounded-[28px] flex items-center justify-between">
-            <span className="font-bold text-lg">Adicionar</span>
-            <span className="font-black text-xl bg-white/10 px-4 py-1.5 rounded-2xl">R$ {(totalProductPrice * tempQuantity).toFixed(2)}</span>
-          </button>
+        <div className="fixed bottom-10 left-6 right-6 z-[80]">
+          <div className="w-full h-20 bg-yellow-400 text-black rounded-[32px] flex items-center p-2 shadow-[8px_8px_24px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.1)] relative overflow-hidden group">
+            <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
+            
+            {/* Seletor de Quantidade do Produto */}
+            <div className="flex items-center gap-4 bg-black/10 p-1.5 rounded-[22px] border border-black/5 z-10 ml-1">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setTempQuantity(Math.max(1, tempQuantity - 1)); }}
+                className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
+              >
+                <span className="material-symbols-outlined font-black">remove</span>
+              </button>
+              <span className="font-black text-lg w-6 text-center">{tempQuantity}</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setTempQuantity(tempQuantity + 1); }}
+                className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
+              >
+                <span className="material-symbols-outlined font-black">add</span>
+              </button>
+            </div>
+
+            <button 
+              onClick={() => {
+                const details = buildCartItemDetails(selectedItem, selectedOptions);
+                const items = Array.from({ length: tempQuantity }, (_, i) => ({ 
+                  ...selectedItem, 
+                  ...details,
+                  timestamp: Date.now(),
+                  cartId: selectedItem.id + "-" + Date.now() + "-" + i 
+                }));
+                setCart([...cart, ...items]);
+                handleBack();
+                showToast("Item adicionado!", "success");
+              }} 
+              className="flex-1 h-full flex items-center justify-between px-6 z-10 group/btn"
+            >
+              <span className="font-black text-[13px] uppercase tracking-[0.2em] italic">Adicionar</span>
+              <div className="bg-black text-white px-5 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 group-active/btn:scale-95 transition-all">
+                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">R$</span>
+                <span className="font-black text-xl tracking-tighter">{(totalProductPrice * tempQuantity).toFixed(2).replace('.', ',')}</span>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -8271,7 +8368,7 @@ const navigateSubView = (target: string) => {
 
         {view === "login" && (
           <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-            <LoginView loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginPassword={loginPassword} setLoginPassword={setLoginPassword} authMode={authMode} setAuthMode={setAuthMode} handleLogin={handleLogin} handleSignUp={handleSignUp} isLoading={isLoading} loginError={loginError} phone={phone} setPhone={setPhone} userName={userName} setUserName={setUserName} />
+            <LoginView loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginPassword={loginPassword} setLoginPassword={setLoginPassword} rememberMe={rememberMe} setRememberMe={setRememberMe} authMode={authMode} setAuthMode={setAuthMode} handleLogin={handleLogin} handleSignUp={handleSignUp} isLoading={isLoading} loginError={loginError} phone={phone} setPhone={setPhone} userName={userName} setUserName={setUserName} />
           </motion.div>
         )}
 

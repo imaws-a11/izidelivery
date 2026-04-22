@@ -17,6 +17,8 @@ interface LoginViewProps {
   isLoading: boolean;
   handleLogin: () => void;
   handleSignUp: () => void;
+  rememberMe: boolean;
+  setRememberMe: (val: boolean) => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
@@ -34,14 +36,27 @@ export const LoginView: React.FC<LoginViewProps> = ({
   setLoginError,
   isLoading,
   handleLogin,
-  handleSignUp
+  handleSignUp,
+  rememberMe,
+  setRememberMe
 }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [saveData, setSaveData] = useState(false);
   const logoPremium = "/logo_principal.png";
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#080808] text-zinc-100 items-center justify-center px-6 relative overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-black text-zinc-100 items-center justify-center px-6 relative overflow-hidden">
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: #ffffff !important;
+          transition: background-color 5000s ease-in-out 0s;
+          box-shadow: inset 0 0 20px 20px #0a0a0a20 !important;
+        }
+      `}</style>
+
       {/* Background Decor - Claymorphism Ambient */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-20%] right-[-10%] w-[80%] h-[60%] bg-yellow-400/10 blur-[150px] rounded-full" />
@@ -159,13 +174,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
              <div className="flex items-center justify-between px-2 pt-2">
                 <button 
                   type="button"
-                  onClick={() => setSaveData(!saveData)}
+                  onClick={() => setRememberMe(!rememberMe)}
                   className="flex items-center gap-3 group"
                 >
-                  <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${saveData ? 'bg-yellow-400 border-yellow-400' : 'border-zinc-800 bg-[#0a0a0a]'}`}>
-                    {saveData && <span className="material-symbols-outlined text-[14px] font-black text-black">check</span>}
+                  <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${rememberMe ? 'bg-yellow-400 border-yellow-400' : 'border-zinc-800 bg-[#0a0a0a]'}`}>
+                    {rememberMe && <span className="material-symbols-outlined text-[14px] font-black text-black">check</span>}
                   </div>
-                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${saveData ? 'text-white' : 'text-zinc-600'}`}>Salvar dados</span>
+                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${rememberMe ? 'text-white' : 'text-zinc-600'}`}>Salvar dados</span>
                 </button>
                 
                 {authMode === 'login' && (
