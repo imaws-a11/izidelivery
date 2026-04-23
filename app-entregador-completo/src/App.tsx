@@ -2765,7 +2765,8 @@ function App() {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=minimal'
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(15000)
             });
 
             if (!response.ok) {
@@ -2810,7 +2811,8 @@ function App() {
                         status: 'concluido',
                         description: `Ganhos: Missão #${ordShortId} (Líquido)`,
                         order_id: missionId
-                    })
+                    }),
+                    signal: AbortSignal.timeout(10000)
                 }).catch(err => console.error('[WALLET] Erro ao registrar ganho:', err));
 
                 // 2. INSERIR DÉBITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o dinheiro do cliente)
@@ -2833,7 +2835,8 @@ function App() {
                                 status: 'concluido',
                                 description: `Desconto de pagamento em Dinheiro. (Pedido ${ordShortId})`,
                                 order_id: missionId
-                            })
+                            }),
+                            signal: AbortSignal.timeout(10000)
                         }).catch(err => console.error('[CASH] Erro ao debitar pagamento:', err));
                     }
                 }
