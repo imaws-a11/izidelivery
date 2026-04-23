@@ -422,7 +422,7 @@ const normalizeServiceType = (raw: string | undefined | null): string => {
     if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
     if (['logistica', 'logistics'].includes(t)) return 'logistica';
     if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
-    if (['motoboy', 'courier'].includes(t)) return 'motoboy';
+    if (['motoboy', 'courier', 'moto', 'motoboy_express'].includes(t)) return 'motoboy';
     if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
     return t; // retorna o tipo original se não houver mapeamento
 };
@@ -431,7 +431,7 @@ const getTypeDetails = (rawType: string) => {
     const type = normalizeServiceType(rawType);
     switch (type) {
         case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Envio Express', isFood: false };
-        case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
+        case 'mototaxi': return { icon: 'motorcycle', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
         case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro', isFood: false };
         case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto', isFood: false };
         case 'van': return { icon: 'local_shipping', color: 'text-sky-400', bg: 'bg-sky-400/10', label: 'Van', isFood: false };
@@ -442,8 +442,8 @@ const getTypeDetails = (rawType: string) => {
         case 'pharmacy': return { icon: 'package_2', color: 'text-rose-400', bg: 'bg-rose-400/10', label: 'Farmacia', isFood: false };
         case 'beverages': return { icon: 'package_2', color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Bebidas', isFood: false };
         case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
-        case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
-        default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Servico Express', isFood: false };
+        case 'motoboy': return { icon: 'motorcycle', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
+        default: return { icon: 'motorcycle', color: 'text-primary', bg: 'bg-primary/10', label: 'Servico Express', isFood: false };
     }
 };
 
@@ -456,8 +456,16 @@ const normalizeLookupText = (value: unknown): string =>
 
 const includesAny = (text: string, terms: string[]) => terms.some(term => text.includes(term));
 
-const cleanAddressText = (value: string | undefined | null): string =>
-    String(value || '').split('| OBS:')[0].trim();
+const cleanAddressText = (value: string | undefined | null): string => {
+    let raw = String(value || '').trim();
+    if (raw.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed.address) raw = parsed.address;
+        } catch (e) {}
+    }
+    return raw.split('|')[0].trim();
+};
 
 const getAddressMeta = (value: string | undefined | null): string => {
     const raw = String(value || '');
@@ -501,7 +509,8 @@ const getServicePresentation = (order: any) => {
         else if (includesAny(lookupText, ['motorista particular', 'executivo', 'chauffeur'])) detectedType = 'motorista_particular';
         else detectedType = 'car_ride';
     } else if (includesAny(lookupText, ['frete:', 'carreto', 'mudanca', 'ajudante', 'escada']) || ['frete', 'logistica', 'van', 'utilitario'].includes(normalizedType)) {
-        if (includesAny(lookupText, ['van']) || normalizedType === 'van') detectedType = 'van';
+        if (includesAny(lookupText, ['moto', 'motoboy'])) detectedType = 'motoboy';
+        else if (includesAny(lookupText, ['van']) || normalizedType === 'van') detectedType = 'van';
         else if (includesAny(lookupText, ['utilitario', 'fiorino', 'saveiro', 'strada']) || normalizedType === 'utilitario') detectedType = 'utilitario';
         else if (normalizedType === 'logistica') detectedType = 'logistica';
         else detectedType = 'frete';
@@ -783,26 +792,39 @@ function App() {
     });
     useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
-    // Vigilante de Som (Padrão Lojista)
+    // Vigilante de Som (Padrão Lojista - Alta Confiabilidade)
     const heardOrderIds = useRef<Set<string>>(new Set());
     const isFirstLoad = useRef(true);
 
     useEffect(() => {
-        if (!isAuthenticated || !orders.length) return;
+        if (!isAuthenticated) return;
 
-        // Se for o primeiro carregamento da sessão, apenas absorve os IDs existentes sem tocar som
-        if (isFirstLoad.current) {
-            orders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
-            isFirstLoad.current = false;
-            console.log(`[SOM-WATCHER] Inicializado com ${heardOrderIds.current.size} missões conhecidas.`);
+        // Se a lista estiver vazia, apenas desativamos a flag de primeiro carregamento
+        // Isso garante que quando a PRIMEIRA missão chegar, ela toque o som.
+        if (orders.length === 0) {
+            if (isFirstLoad.current) {
+                isFirstLoad.current = false;
+                console.log('[SOM-WATCHER] Vigilante pronto. Lista inicial vazia.');
+            }
             return;
         }
 
+        // Se for o primeiro carregamento e já houver pedidos (ex: refresh com pedidos na tela)
+        // apenas absorvemos os IDs para não tocar som de pedidos "velhos"
+        if (isFirstLoad.current) {
+            orders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
+            isFirstLoad.current = false;
+            console.log(`[SOM-WATCHER] Vigilante inicializado com ${heardOrderIds.current.size} missões conhecidas.`);
+            return;
+        }
+
+        // Filtrar apenas o que ainda não ouvimos
         const newOrders = orders.filter(o => !heardOrderIds.current.has(o.realId || o.id));
+        
         if (newOrders.length > 0) {
-            console.log(`[SOM-WATCHER] 🔊 ${newOrders.length} novas missões detectadas na lista.`);
+            console.log(`[SOM-WATCHER] 🔊 ${newOrders.length} novas missões detectadas.`);
             
-            // Marcar como conhecidas
+            // Marcar como conhecidas imediatamente
             newOrders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
 
             // Tocar som se estiver online e disponível
@@ -1047,18 +1069,21 @@ function App() {
             try {
                 if (!window.google || !driverCoords) return;
                 
-                // Pontos de interesse
+                // Pontos de interesse - Fallback robusto para lat/lng
                 const isAtDelivery = ['picked_up', 'em_rota', 'saiu_para_entrega'].includes(selectedOrder.status);
                 
                 const targetLat = isAtDelivery 
-                    ? (selectedOrder.customer_lat || selectedOrder.latitude) 
-                    : (selectedOrder.merchant_lat || selectedOrder.pickup_lat);
+                    ? (selectedOrder.customer_lat || selectedOrder.delivery_lat || selectedOrder.latitude) 
+                    : (selectedOrder.merchant_lat || selectedOrder.pickup_lat || selectedOrder.latitude);
                 
                 const targetLng = isAtDelivery 
-                    ? (selectedOrder.customer_lng || selectedOrder.longitude) 
-                    : (selectedOrder.merchant_lng || selectedOrder.pickup_lng);
+                    ? (selectedOrder.customer_lng || selectedOrder.delivery_lng || selectedOrder.longitude) 
+                    : (selectedOrder.merchant_lng || selectedOrder.pickup_lng || selectedOrder.longitude);
                 
-                if (!targetLat || !targetLng) return;
+                if (!targetLat || !targetLng || isNaN(Number(targetLat))) {
+                    console.warn('[DISTANCE] Coordenadas de destino inválidas:', { targetLat, targetLng });
+                    return;
+                }
                 
                 const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
                     method: 'POST',
@@ -1069,7 +1094,7 @@ function App() {
                     },
                     body: JSON.stringify({
                       origin: { location: { latLng: { latitude: driverCoords.lat, longitude: driverCoords.lng } } },
-                      destination: { location: { latLng: { latitude: targetLat, longitude: targetLng } } },
+                      destination: { location: { latLng: { latitude: Number(targetLat), longitude: Number(targetLng) } } },
                       travelMode: 'DRIVE',
                       routingPreference: 'TRAFFIC_AWARE',
                       units: 'METRIC',
@@ -1080,15 +1105,24 @@ function App() {
                 const data = await res.json();
                 if (data.routes?.[0]) {
                     const route = data.routes[0];
-                    setModalRoutePolyline(route.polyline.encodedPolyline);
+                    if (route.polyline?.encodedPolyline) {
+                        setModalRoutePolyline(route.polyline.encodedPolyline);
+                    }
                     
-                    const leg = route.legs[0];
-                    setModalRouteInfo({
-                        start: { lat: leg.startLocation.latLng.latitude, lng: leg.startLocation.latLng.longitude },
-                        end: { lat: leg.endLocation.latLng.latitude, lng: leg.endLocation.latLng.longitude }
-                    });
+                    if (route.legs?.[0]) {
+                        const leg = route.legs[0];
+                        setModalRouteInfo({
+                            start: { lat: leg.startLocation.latLng.latitude, lng: leg.startLocation.latLng.longitude },
+                            end: { lat: leg.endLocation.latLng.latitude, lng: leg.endLocation.latLng.longitude }
+                        });
+                    }
 
-                    setCalculatedDistance((route.distanceMeters / 1000).toFixed(1) + ' km');
+                    if (route.distanceMeters !== undefined) {
+                        setCalculatedDistance((route.distanceMeters / 1000).toFixed(1) + ' km');
+                    }
+                } else {
+                    console.warn('[DISTANCE] Nenhuma rota encontrada');
+                    setCalculatedDistance(selectedOrder.distance || 'Distância indisponível');
                 }
             } catch (err) {
                 console.error('[DISTANCE] Erro ao calcular:', err);
@@ -2211,7 +2245,7 @@ function App() {
                     if (prev.find(x => x.realId === o.id)) return prev;
                     
                     if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
-                        playIziSound('driver');
+                        // O som agora é disparado pelo Vigilante de Som para evitar duplicidade
                         if (Notification.permission === 'granted') {
                             new Notification('🚀 Nova Missão Izi!', { 
                                 body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
@@ -2327,8 +2361,9 @@ function App() {
                             const servicePreview = getServicePresentation(o);
 
                             if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
-                                playIziSound('driver');
+                                // O som agora é disparado pelo Vigilante de Som para evitar duplicidade
                                 if (Notification.permission === 'granted') {
+                                    const servicePreview = getServicePresentation(o);
                                     new Notification('🔔 Pedido Disponível!', { 
                                         body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
                                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
@@ -3395,14 +3430,14 @@ function App() {
                                                             {order.store_name || order.merchant_name || 'Estabelecimento Parceiro'}
                                                         </span>
                                                         <span className="text-white/90 text-[11px] sm:text-xs font-medium leading-relaxed drop-shadow-md break-words">
-                                                            {order.origin || presentation.pickupText || order.pickup_address || 'Endereço de coleta não informado'}
+                                                            {cleanAddressText(order.origin || order.pickup_address) || presentation.pickupText || 'Endereço de coleta não informado'}
                                                         </span>
                                                     </div>
 
                                                     <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2 relative pb-8">
                                                         <span className="text-[8px] sm:text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Destino Final</span>
                                                         <span className="text-white/90 text-[11px] sm:text-xs font-medium leading-relaxed drop-shadow-md break-words pr-12">
-                                                            {order.destination || order.delivery_address || presentation.destinationText || 'Destino não informado'}
+                                                            {cleanAddressText(order.destination || order.delivery_address) || presentation.destinationText || 'Destino não informado'}
                                                         </span>
                                                         
                                                         {/* Floating Distance Badge */}
@@ -3741,7 +3776,7 @@ function App() {
                                         <Icon name="location_on" size={20} className="mt-1" />
                                         <div>
                                             <p className="text-[10px] font-black uppercase opacity-40 mb-1">Ponto de Partida</p>
-                                            <p className="font-bold text-sm leading-tight italic">{order.pickup_address}</p>
+                                            <p className="font-bold text-sm leading-tight italic">{cleanAddressText(order.pickup_address)}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
@@ -3749,7 +3784,7 @@ function App() {
                                         <div>
                                             <p className="text-[10px] font-black uppercase opacity-40 mb-1">Endereço de Entrega</p>
                                             <p className="font-bold text-sm leading-tight italic">
-                                                {(order.delivery_address || 'Destino não informado').split('|')[0].trim()}
+                                                {cleanAddressText(order.delivery_address || 'Destino não informado')}
                                             </p>
                                         </div>
                                     </div>
@@ -4024,7 +4059,7 @@ function App() {
                                                 <Icon name="location_on" size={18} className="opacity-60" />
                                                 <div className="space-y-1">
                                                     <p className="text-[8px] font-black uppercase tracking-widest opacity-50">Rotas de Coleta/Entrega</p>
-                                                    <p className="font-bold text-sm leading-tight italic">{order.pickup_address?.split(',')[0]} → {order.delivery_address?.split(',')[0]}</p>
+                                                    <p className="font-bold text-sm leading-tight italic">{cleanAddressText(order.pickup_address).split(',')[0]} → {cleanAddressText(order.delivery_address).split(',')[0]}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -4438,7 +4473,7 @@ function App() {
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-0.5">{serviceTypeLabel(order.service_type)}</p>
-                                            <p className="text-sm font-black text-white leading-tight italic">{order.delivery_address || order.destination || 'Endereço Indisponível'}</p>
+                                            <p className="text-sm font-black text-white leading-tight italic">{cleanAddressText(order.delivery_address || order.destination || 'Endereço Indisponível')}</p>
                                         </div>
                                     </div>
                                     
@@ -5371,10 +5406,10 @@ function App() {
         const statusDisplay = getStatusDisplay();
         const orderItems = getOrderItems();
         const rawAddr = (activeMission.delivery_address || activeMission.destination || '');
-        let addressOnly = rawAddr.split('| ITENS:')[0].trim();
+        let addressOnly = cleanAddressText(rawAddr);
         if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) { addressOnly += ', Brumadinho - MG'; }
 
-        let pickupOnly = (activeMission.origin || activeMission.pickup_address || '').split('| ITENS:')[0].trim();
+        let pickupOnly = cleanAddressText(activeMission.origin || activeMission.pickup_address || '');
         if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) { pickupOnly += ', Brumadinho - MG'; }
 
         const getMainBtnData = () => {
@@ -5803,7 +5838,7 @@ function App() {
                     >
                         <Icon name="arrow_back" className="text-yellow-400" />
                     </button>
-                    <h1 className="text-yellow-400 font-bold tracking-tight text-xl">Missão em Andamento</h1>
+                    <h1 className="text-yellow-400 font-bold tracking-tight text-xl">Detalhes do Pedido</h1>
                     <button className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
                         <Icon name="more_vert" className="text-yellow-400" />
                     </button>
@@ -5814,19 +5849,21 @@ function App() {
                     <section className={`bg-neutral-900 ${clayCard} rounded-xl p-6 flex items-center gap-4 border border-neutral-800/50`}>
                         <div className="relative">
                             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]">
-                                {selectedOrder.merchant_logo ? (
-                                    <img src={selectedOrder.merchant_logo} alt="Merchant" className="w-full h-full object-cover" />
+                                {driverAvatar ? (
+                                    <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
-                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYxpnY-TE8kq8rAiqIZ0MDJv0whuOcZ68gW9LTX1OLedIkfWL5vyqj8DxA7AWD833Rw_ESqxubctb1TPfarS_LJQGqq4zPrDGqaRGFONH69ahOpOdzQkc85gPFBNrp_kHOvwFGhQeLGaITBQiqQLKgFz0WvBDvcihMOwEnfqknpGE4I6ltHrYedUAzi6mavIOlQdc9RDG1gmjJsJ-rd2_X8kS3y8EoP7xJxJgxu4ce3l4UTh3wyEZVF_eqLrb_7ndw4K6xLtar5no" alt="Rider" className="w-full h-full object-cover" />
+                                    <div className="w-full h-full flex items-center justify-center bg-stone-900/5">
+                                        <Icon name="person" size={40} className="text-stone-950/30" />
+                                    </div>
                                 )}
                             </div>
                             <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase italic">VIP</div>
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight truncate max-w-[120px]">{selectedOrder.merchant_name || 'Rider Yellow'}</h2>
+                            <h2 className="text-xl font-bold text-white tracking-tight truncate max-w-[120px]">{driverName.split(' ')[0] || 'Piloto'}</h2>
                             <p className="text-yellow-400/80 font-semibold text-sm flex items-center gap-1">
                                 <Icon name="star" className="text-sm" fill />
-                                Nível Diamante
+                                Nível {stats.level}
                             </p>
                         </div>
                         <div className="ml-auto text-right">
