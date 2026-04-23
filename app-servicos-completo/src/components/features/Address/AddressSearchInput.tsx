@@ -5,7 +5,7 @@ import { GMAPS_KEY } from '../../../config';
 
 interface AddressSearchInputProps {
   placeholder: string;
-  initialValue?: string;
+  initialValue?: string | any;
   onSelect: (addr: { address?: string; formatted_address: string; lat?: number; lng?: number }) => void;
   onClear?: () => void;
   className?: string;
@@ -23,9 +23,10 @@ export const AddressSearchInput = ({
   className,
   userCoords,
 }: AddressSearchInputProps) => {
-  const [query, setQuery] = useState(initialValue || "");
+  const parsedInitial = typeof initialValue === 'string' ? initialValue : (initialValue?.address || "");
+  const [query, setQuery] = useState(parsedInitial);
   useEffect(() => {
-    setQuery(initialValue || "");
+    setQuery(typeof initialValue === 'string' ? initialValue : (initialValue?.address || ""));
   }, [initialValue]);
 
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -78,12 +79,6 @@ export const AddressSearchInput = ({
           circle: {
             center: { latitude: userCoords.lat, longitude: userCoords.lng },
             radius: 10000, 
-          },
-        };
-        body.locationRestriction = {
-          circle: {
-            center: { latitude: userCoords.lat, longitude: userCoords.lng },
-            radius: 15000,
           },
         };
         body.origin = {

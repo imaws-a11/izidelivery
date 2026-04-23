@@ -2657,14 +2657,25 @@ const navigateSubView = (target: string) => {
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
       };
 
-      const { data: promoItems } = await supabase
-        .from('products_delivery')
-        .select('merchant_id, title, old_price, price')
-        .eq('is_active', true);
+      // Blindagem: Busca de itens em promoção via Fetch Direto
+      const getPromoItems = async () => {
+        try {
+          const sUrl = import.meta.env.VITE_SUPABASE_URL;
+          const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          const res = await fetch(`${sUrl}/rest/v1/products_delivery?select=merchant_id,name,price&is_available=eq.true`, {
+            headers: { 'apikey': sKey, 'Authorization': `Bearer ${sKey}` }
+          });
+          if (res.ok) return await res.json();
+        } catch (e) { console.error("[PROMO] Erro na blindagem de promoções:", e); }
+        return [];
+      };
+
+      const promoItems = await getPromoItems();
+
 
       const promoMerchantIds = new Set(
         promoItems
-          ?.filter(p => (p.old_price && Number(p.old_price) > Number(p.price)) || (p.title || "").toLowerCase().includes("oferta especial"))
+          ?.filter(p => (p.name || "").toLowerCase().includes("oferta especial") || (p.description || "").toLowerCase().includes("promoção"))
           .map(p => p.merchant_id) || []
       );
       
@@ -7807,7 +7818,7 @@ const navigateSubView = (target: string) => {
                       className={`py-8 rounded-[35px] border transition-all flex flex-col items-center justify-center gap-3 ${transitData.operationType === "retirar" ? "bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-800 border-white/5 text-zinc-500 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)]"}`}
                     >
                       <span className="material-symbols-outlined text-3xl">store</span>
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center px-2">Retirar em Loja</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center px-2">Retirar em Loja / Casa</span>
                     </button>
                   </div>
                 ) : (

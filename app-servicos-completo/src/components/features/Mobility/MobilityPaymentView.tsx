@@ -102,10 +102,6 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
             <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-2 opacity-80 leading-none">Checkout Seguro</p>
           </div>
         </div>
-        
-        <div className="size-12 rounded-full bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shadow-inner">
-           <span className="material-symbols-outlined text-yellow-400 text-xl font-black">lock</span>
-        </div>
       </header>
 
       <div className="flex-1 px-8 py-10 space-y-12 pb-32">
@@ -130,7 +126,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
                 </div>
                 <div className="flex-1">
                   <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none mb-2">
-                    {transitData.type === 'mototaxi' ? 'MotoTáxi IZI' : (transitData.type === 'carro' ? 'Particular' : (transitData.type === 'van' ? 'Van IZI Express' : 'Logística / Frete'))}
+                    {transitData.type === 'mototaxi' ? 'MotoTáxi IZI' : (transitData.type === 'carro' ? 'Particular' : (transitData.type === 'van' ? 'Van IZI Express' : (transitData.type === 'utilitario' ? 'Izi Express' : 'Logística / Frete')))}
                   </h4>
                   <div className="flex items-center gap-2">
                      <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black text-zinc-500 uppercase tracking-widest border border-white/5">
