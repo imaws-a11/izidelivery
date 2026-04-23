@@ -1348,9 +1348,13 @@ function App() {
         
         const checkOverlayPermission = async () => {
             if (Capacitor.getPlatform() === 'android') {
-                // Como não há plugin pronto, informamos o usuário ou usamos um intent se possível
-                // Por agora, vamos registrar se o usuário ativou manualmente nas configurações
                 console.log("Verificando permissão de sobreposição...");
+                // Lembrete visual para o motorista sobre a importância da sobreposição para receber chamadas
+                setTimeout(() => {
+                    if (isOnline) {
+                        toast('Dica: Ative a "Sobreposição a outros apps" nas configurações do Android para não perder nenhuma chamada!', 'info');
+                    }
+                }, 5000);
             }
         };
 
@@ -1779,17 +1783,18 @@ function App() {
     const syncMissionWithDB = useCallback(async () => {
         if (!driverId || !isAuthenticated) return;
         setIsSyncingMission(true);
-        toast('Buscando missão no servidor...', 'info');
+        setIsSyncing(true); // Ativa o spinner global de sincronização
+        toast('Sincronizando dados com o servidor...', 'info');
         try {
+            // 0. Recarregar Pedidos Disponíveis e Dados Financeiros
+            await Promise.all([
+                fetchOrders(),
+                refreshFinanceData()
+            ]);
+
             console.log('[SYNC] Sincronizando missão ativa do banco...');
             const dId = String(driverId).trim();
-            const { data: orders, error: qErr } = await supabase.from('orders_delivery')
-                .select('*')
-                .eq('driver_id', dId)
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            if (qErr) throw qErr;
+            const orders = await fetchFromDB('orders_delivery', `driver_id=eq.${dId}&order=created_at.desc&limit=10`);
 
             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
             const activeOrder = orders?.find((o: any) => 
@@ -1810,23 +1815,15 @@ function App() {
                         
                         // 1. Tentar por ID (Mais preciso)
                         if (activeOrder.merchant_id) {
-                            const { data } = await supabase
-                                .from('admin_users')
-                                .select('store_address, latitude, longitude, store_name')
-                                .eq('id', activeOrder.merchant_id)
-                                .maybeSingle();
-                            mData = data;
+                            const data = await fetchFromDB('admin_users', `select=store_address,latitude,longitude,store_name&id=eq.${activeOrder.merchant_id}&limit=1`);
+                            mData = data && data.length > 0 ? data[0] : null;
                         }
                         
                         // 2. Tentar por Nome (Fallback caso ID falhe ou mude)
                         if (!mData && activeOrder.merchant_name) {
-                            const { data } = await supabase
-                                .from('admin_users')
-                                .select('store_address, latitude, longitude, store_name')
-                                .ilike('store_name', `%${activeOrder.merchant_name}%`)
-                                .limit(1)
-                                .maybeSingle();
-                            mData = data;
+                            const encName = encodeURIComponent(`%${activeOrder.merchant_name}%`);
+                            const data = await fetchFromDB('admin_users', `select=store_address,latitude,longitude,store_name&store_name=ilike.${encName}&limit=1`);
+                            mData = data && data.length > 0 ? data[0] : null;
                         }
                         
                         if (mData) {
@@ -1912,6 +1909,7 @@ function App() {
             console.error('[SYNC] Falha ao sincronizar missão:', err.message);
         } finally {
             setIsSyncingMission(false);
+            setIsSyncing(false);
         }
     }, [driverId, isAuthenticated]);
 
@@ -1972,17 +1970,23 @@ function App() {
         
         let token = supabaseKey;
         try {
-            // Tenta obter a sessão oficial para garantir token válido/renovado
-            const { data: { session } } = await supabase.auth.getSession();
+            // Promise.race para evitar deadlock no getSession do Capacitor
+            const sessionPromise = supabase.auth.getSession();
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000));
+            
+            const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
             if (session?.access_token) {
                 token = session.access_token;
             } else {
-                // Fallback para localStorage se o client não tiver a sessão pronta
                 const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
                 if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
             }
         } catch(e) {
-            console.warn('[FETCH] Erro ao recuperar token de sessão:', e);
+            console.warn('[FETCH] getSession demorou muito, usando localStorage fallback:', e);
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch (err) {}
         }
 
         const controller = new AbortController();
@@ -2175,6 +2179,9 @@ function App() {
             // Remove do estado local imediatamente para feedback instantâneo
             setOrders(prev => prev.filter(o => (o.realId || o.id) !== orderId));
             
+            // Parar o som ao recusar
+            stopIziSounds();
+            
             toastSuccess('Missão ocultada com sucesso.');
         } catch (e) {
             console.error('Erro ao recusar pedido:', e);
@@ -2182,7 +2189,7 @@ function App() {
     };
 
     const fetchOrders = useCallback(async () => {
-        if (!isOnline) {
+        if (!isOnlineRef.current) {
             setOrders([]);
             return;
         }
@@ -2231,7 +2238,7 @@ function App() {
                 return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled;
             });
 
-            setOrders(available.map((o: any) => ({
+            const newAvailable = available.map((o: any) => ({
                 ...o,
                 id: o.id.slice(0, 8).toUpperCase(), 
                 realId: o.id, 
@@ -2245,7 +2252,15 @@ function App() {
                 delivery_lng: o.delivery_lng,
                 store_name: o.admin_users?.store_name || o.store_name || 'Loja Parceira',
                 customer: 'Cliente Izi'
-            })));
+            }));
+
+            setOrders(prev => {
+                const hasNew = newAvailable.some(no => !prev.find(po => po.realId === no.realId));
+                if (hasNew && isOnlineRef.current && !activeMissionRef.current && localStorage.getItem('pref_sound') !== 'false') {
+                    playIziSound('driver');
+                }
+                return newAvailable;
+            });
         } catch (err) {
             console.warn('[POLL-ERROR]', err);
         } finally {
@@ -2268,21 +2283,70 @@ function App() {
         if (!isAuthenticated || !driverId) return;
 
         const channel = supabase.channel('realtime_orders')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 if (!isOnlineRef.current) return;
-                const o = payload.new;
-                if (o.scheduled_at) return;
-                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 
+                const eventType = payload.eventType;
+                if (eventType === 'DELETE') {
+                    setOrders(prev => prev.filter(x => x.realId !== payload.old.id));
+                    return;
+                }
+
+                const o = payload.new;
+                const dId = String(driverIdRef.current || '').trim();
+                const currentMission = activeMissionRef.current;
+                const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
+
+                // 1. GESTÃO DA MISSÃO ATIVA DESTE MOTORISTA
+                if (isMyOrder) {
+                    if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase())) {
+                        setActiveMission(null);
+                        localStorage.removeItem('Izi_active_mission');
+                        if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
+                        return;
+                    }
+
+                    const wasPreparing = currentMission?.preparation_status !== 'pronto';
+                    const isNowReady = o.preparation_status === 'pronto';
+                    if (wasPreparing && isNowReady) {
+                        playIziSound('driver');
+                        toastSuccess('🔔 O Pedido está PRONTO para coleta!');
+                    }
+
+                    const mission = { 
+                        ...o, 
+                        realId: o.id, 
+                        type: o.service_type || 'delivery', 
+                        origin: o.pickup_address, 
+                        destination: o.delivery_address, 
+                        price: o.total_price || 0, 
+                        customer: o.user_name || 'Cliente Izi',
+                        store_name: o.store_name || 'Parceiro Izi'
+                    };
+                    setActiveMission(mission);
+                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                    
+                    if (activeTabRef.current !== 'active_mission') {
+                        setActiveTab('active_mission');
+                    }
+                    return;
+                }
+
+                // 2. GESTÃO DO RADAR (Pedidos disponíveis)
+                if (o.scheduled_at) return;
+                
+                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 const isMerchantOrder = !!o.merchant_id;
                 const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
                 
-                if (isMerchantOrder) {
-                    if (!merchantAccepted) return;
-                } else {
-                    if (!p2pAllowed) return;
+                const isAcceptable = isMerchantOrder ? merchantAccepted : p2pAllowed;
+
+                if (!isAcceptable) {
+                    setOrders(prev => prev.filter(x => x.realId !== o.id));
+                    return;
                 }
+
                 if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
                 
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
@@ -2295,11 +2359,26 @@ function App() {
                 const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
                 const servicePreview = getServicePresentation(o);
 
+                const mappedOrder = {
+                    ...o,
+                    id: o.id.slice(0, 8).toUpperCase(), 
+                    realId: o.id, 
+                    type: o.service_type, 
+                    origin: o.pickup_address, 
+                    destination: o.delivery_address, 
+                    price: o.total_price,
+                    store_name: o.store_name || 'Loja Parceira',
+                    customer: o.user_name || 'Cliente Izi'
+                };
+
                 setOrders(prev => {
-                    if (prev.find(x => x.realId === o.id)) return prev;
+                    const exists = prev.find(x => x.realId === o.id);
+                    if (exists) {
+                        return prev.map(x => x.realId === o.id ? mappedOrder : x);
+                    }
                     
                     if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
-                        // O som agora é disparado pelo Vigilante de Som para evitar duplicidade
+                        playIziSound('driver');
                         if (Notification.permission === 'granted') {
                             new Notification('🚀 Nova Missão Izi!', { 
                                 body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
@@ -2307,137 +2386,13 @@ function App() {
                             });
                         }
                     }
-
-                    const mapped = { 
-                        ...o,
-                        id: o.id.slice(0, 8).toUpperCase(), 
-                        realId: o.id, 
-                        type: o.service_type, 
-                        origin: o.pickup_address, 
-                        destination: o.delivery_address, 
-                        price: o.total_price, 
-                        customer: o.user_name || 'Cliente Izi',
-                        pickup_lat: o.pickup_lat,
-                        pickup_lng: o.pickup_lng,
-                        delivery_lat: o.delivery_lat,
-                        delivery_lng: o.delivery_lng,
-                        preparation_status: o.preparation_status
-                    };
-
-                    const currentDriverId = String(driverIdRef.current || '').trim();
-                    if (o.driver_id && String(o.driver_id).trim() === currentDriverId && currentDriverId !== '') {
-                        setActiveMission(mapped);
-                        localStorage.setItem('Izi_active_mission', JSON.stringify(mapped));
-                        setActiveTab('active_mission');
-                        return prev;
-                    }
-
-                    if (o.driver_id && String(o.driver_id).trim() !== '') {
-                        return prev;
-                    }
-
-                    return [mapped, ...prev];
+                    return [mappedOrder, ...prev].slice(0, 20);
                 });
-            })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
-                const o = payload.new as any;
-                if (o.scheduled_at) return;
-                const currentMission = activeMissionRef.current;
-                
-                const dId = String(driverIdRef.current || '').trim();
-                
-                // 1. GESTÃO DA MISSÃO ATIVA DESTE MOTORISTA
-                const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
-                
-                if (isMyOrder) {
-                    // Se a missão foi finalizada ou cancelada, limpamos o estado
-                    if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase())) {
-                        setActiveMission(null);
-                        localStorage.removeItem('Izi_active_mission');
-                        if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
-                        return;
-                    }
-
-                    // Se é a minha missão, atualizamos os detalhes em tempo real
-                    const wasPreparing = currentMission?.preparation_status !== 'pronto';
-                    const isNowReady = o.preparation_status === 'pronto';
-
-                    if (wasPreparing && isNowReady) {
-                        playIziSound('driver');
-                        toastSuccess('🔔 O Pedido está PRONTO para coleta!');
-                    }
-
-                    const mission: any = { 
-                        ...o, 
-                        realId: o.id, 
-                        type: o.service_type || 'delivery', 
-                        origin: o.pickup_address || currentMission?.pickup_address || o.store_address, 
-                        destination: o.delivery_address || 'Destino', 
-                        price: o.total_price || 0, 
-                        customer: o.user_name || 'Cliente Izi',
-                        store_name: o.store_name || currentMission?.store_name || 'Parceiro Izi',
-                        pickup_address: o.pickup_address || currentMission?.pickup_address,
-                        pickup_lat: o.pickup_lat || currentMission?.pickup_lat,
-                        pickup_lng: o.pickup_lng || currentMission?.pickup_lng,
-                        delivery_lat: o.delivery_lat,
-                        delivery_lng: o.delivery_lng
-                    };
-                    
-                    setActiveMission(mission);
-                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                    
-                    if (activeTabRef.current !== 'active_mission') {
-                        setActiveTab('active_mission');
-                    }
-                    return;
-                }
-
-                // 2. GESTÃO DO RADAR (Pedidos disponíveis para qualquer um)
-                // Se o pedido não tem motorista e mudou para um status que permite coleta
-                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                const isMerchantOrder = !!o.merchant_id;
-                const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
-                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
-                const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
-
-                if (statusOk && !(Date.now() - (declinedMap[o.id] || 0) < 1800000)) {
-                    setOrders(prev => {
-                        const isNew = !prev.find(x => x.realId === o.id);
-                        if (isNew) {
-                            const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
-                            if (financialTypes.includes(o.service_type)) return prev;
-
-                            const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
-                            const pStatus = String(o.payment_status || '').toLowerCase();
-                            const pMethod = String(o.payment_method || '').toLowerCase();
-                            const isPaidOrCash = ['cash', 'dinheiro'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus);
-                            const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
-                            const servicePreview = getServicePresentation(o);
-
-                            if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
-                                // O som agora é disparado pelo Vigilante de Som para evitar duplicidade
-                                if (Notification.permission === 'granted') {
-                                    const servicePreview = getServicePresentation(o);
-                                    new Notification('🔔 Pedido Disponível!', { 
-                                        body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
-                                        icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
-                                    });
-                                }
-                            }
-                            return [{ ...o, id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
-                        }
-                        return prev.map(x => x.realId === o.id ? { ...x, ...o } : x);
-                    });
-                } else {
-                    if (!statusOk && (!currentMission || o.id !== currentMission.id)) {
-                        setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
-                    }
-                }
             })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [isAuthenticated, driverId]);
+    }, [isAuthenticated, driverId, getServicePresentation]);
 
     // O som agora é disparado DIRETAMENTE pelo listener Realtime (acima)
     // para maior precisão e evitar disparos duplicados ou atrasados.
