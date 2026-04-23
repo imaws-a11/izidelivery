@@ -83,6 +83,7 @@ function Icon({ name, className = "", size = 20 }: any) {
     'volume_up': BespokeIcons.Notifications,
     'visibility': BespokeIcons.History,
     'arrow_back': BespokeIcons.ChevronLeft,
+    'arrow_forward': BespokeIcons.ChevronRight,
     'sync': BespokeIcons.History,
     'cloud_sync': BespokeIcons.History,
     'qr_code_scanner': BespokeIcons.Bolt,
@@ -947,6 +948,9 @@ function App() {
     const [showBankDetails, setShowBankDetails] = useState(false);
     const [showPreferences, setShowPreferences] = useState(false);
 
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [selectedReceiptUrl, setSelectedReceiptUrl] = useState('');
+
     // Preferências do entregador
     const [prefSoundEnabled, setPrefSoundEnabled] = useState(() => localStorage.getItem('pref_sound') !== 'false');
     const [prefVibrationEnabled, setPrefVibrationEnabled] = useState(() => localStorage.getItem('pref_vibration') !== 'false');
@@ -989,6 +993,8 @@ function App() {
         setShowWithdrawModal(false);
         setAuthPassword('');
         setAuthError('');
+        setShowReceipt(false);
+        setSelectedReceiptUrl('');
 
         // Remove chaves críticas de sessão
         const keysToRemove = [
@@ -1345,17 +1351,20 @@ function App() {
                 }
 
                 // 2. Obter posição IMEDIATA para agilizar a primeira abertura do mapa
-                const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-                await updateLocation(pos.coords.latitude, pos.coords.longitude);
+                const pos = await Geolocation.getCurrentPosition({ 
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 10000
+                }).catch(() => Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 }));
+                
+                if (pos) await updateLocation(pos.coords.latitude, pos.coords.longitude);
 
                 // 3. Assistindo ativamente as coordenadas enviando para o Supabase
                 watchId = await Geolocation.watchPosition(
-                    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
+                    { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
                     (position, err) => {
                         if (position) {
                             updateLocation(position.coords.latitude, position.coords.longitude);
-                        } else if (err) {
-                            console.error("Native GPS Error:", err);
                         }
                     }
                 );
@@ -1778,7 +1787,7 @@ function App() {
 
             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
             const activeOrder = orders?.find((o: any) => 
-                !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue'].includes(o.status) &&
+                !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase()) &&
                 !financialTypes.includes(o.service_type) &&
                 o.driver_id === dId // RIGOROSO: S³ é missão ativa se for MINHA
             );
@@ -1860,27 +1869,36 @@ function App() {
                 console.log('[SYNC] Missão restaurada do banco:', mission.realId);
             } else {
                 console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
-
-                // PROTECAO: So apaga o cache local se a missao for ANTIGA (> 30 min)
-                // Isso evita apagar uma missão que acabou de ser aceita mas ainda não propagou no banco
+                
                 const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
                 if (cachedMissionRaw) {
                     try {
                         const cachedMission = JSON.parse(cachedMissionRaw);
-                        const createdAt = new Date(cachedMission.created_at || 0).getTime();
-                        const ageMs = Date.now() - createdAt;
-                        const thirtyMinutes = 30 * 60 * 1000;
-                        if (ageMs > thirtyMinutes) {
-                            console.log('[SYNC] Missão antiga no cache (> 30 min). Limpando...');
+                        const s = (cachedMission.status || '').toLowerCase();
+                        const isTerminal = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s);
+                        
+                        if (isTerminal) {
+                            console.log('[SYNC] Missão no cache já está finalizada. Limpando...');
                             setActiveMission(null);
                             localStorage.removeItem('Izi_active_mission');
-                        } else {
-                            console.log('[SYNC] Missão recente no cache. Mantendo estado local por precaução.');
+                            return;
+                        }
+
+                        const createdAt = new Date(cachedMission.created_at || 0).getTime();
+                        const ageMs = Date.now() - createdAt;
+                        
+                        // Se a missão não é terminal e é muito recente (< 15s), mantemos por precaução contra delay de propagação
+                        if (ageMs > 15000) {
+                            console.log('[SYNC] Limpando missão local (não ativa no servidor e tempo de proteção expirado).');
+                            setActiveMission(null);
+                            localStorage.removeItem('Izi_active_mission');
                         }
                     } catch {
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
                     }
+                } else {
+                    setActiveMission(null);
                 }
             }
         } catch (err: any) {
@@ -1948,27 +1966,58 @@ function App() {
         
         let token = supabaseKey;
         try {
-            const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-            if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-        } catch(e) {}
+            // Tenta obter a sessão oficial para garantir token válido/renovado
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+                token = session.access_token;
+            } else {
+                // Fallback para localStorage se o client não tiver a sessão pronta
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            }
+        } catch(e) {
+            console.warn('[FETCH] Erro ao recuperar token de sessão:', e);
+        }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // Aumentado para 12s
 
         try {
-            const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${queryParams}`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            const url = `${supabaseUrl}/rest/v1/${table}?${queryParams}`;
+            const res = await fetch(url, {
+                headers: { 
+                    'apikey': supabaseKey, 
+                    'Authorization': `Bearer ${token}`, 
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
-            if (!res.ok) throw new Error(`DB Error: ${res.status}`);
+
+            if (res.status === 401) {
+                console.error('[AUTH] Token expirado ou inválido (401).');
+                // Opcional: Se estiver autenticado e der 401, pode ser necessário forçar logout ou refresh
+                if (isAuthenticated) {
+                    console.log('[AUTH] Tentando recuperar sessão para resolver 401...');
+                    await supabase.auth.refreshSession();
+                }
+                throw new Error('Sessão expirada. Por favor, reinicie o aplicativo.');
+            }
+
+            if (!res.ok) {
+                const errText = await res.text();
+                console.error(`[DB-ERROR] ${res.status}:`, errText);
+                throw new Error(`DB Error: ${res.status}`);
+            }
+
             return await res.json();
         } catch (error: any) {
             clearTimeout(timeoutId);
             if (error.name === 'AbortError') throw new Error('Timeout na conexão com o banco');
             throw error;
         }
-    }, []);
+    }, [isAuthenticated]);
 
     // Monitorar aprovação de vagas dedicadas em tempo real
     useEffect(() => {
@@ -2067,8 +2116,9 @@ function App() {
                         const isMine = o.driver_id && String(o.driver_id).trim() === String(driverId).trim();
                         const isAvailable = !o.driver_id || String(o.driver_id).trim() === '';
                         const openStatuses = ['pendente', 'agendado', 'novo', 'waiting_driver', 'waiting_merchant', 'preparando', 'pronto', 'a_caminho_coleta', 'a_caminho', 'confirmado', 'confirmed'];
-                        const statusOk = openStatuses.includes(o.status);
-                        return isMine || (isAvailable && statusOk);
+                        const statusOk = openStatuses.includes(o.status.toLowerCase());
+                        
+                        return (isMine || isAvailable) && statusOk;
                     });
                     setScheduledOrders(filtered);
                 }
@@ -2094,7 +2144,8 @@ function App() {
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new as any;
                 if (o.scheduled_at) {
-                    if (['concluido', 'cancelado', 'finalizado', 'delivered'].includes(o.status)) {
+                    const s = (o.status || '').toLowerCase();
+                    if (['concluido', 'cancelado', 'finalizado', 'delivered', 'entregue'].includes(s)) {
                         setScheduledOrders(prev => prev.filter(s => s.id !== o.id));
                     } else if (o.driver_id && String(o.driver_id).trim() !== String(driverIdRef.current || '').trim()) {
                         // Se outro motorista aceitou, remove da minha lista
@@ -2297,7 +2348,7 @@ function App() {
                 
                 if (isMyOrder) {
                     // Se a missão foi finalizada ou cancelada, limpamos o estado
-                    if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)) {
+                    if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase())) {
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
                         if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
@@ -2761,12 +2812,14 @@ function App() {
 
             if (!response.ok) {
                 const errorText = await response.text();
+                console.error("[UPDATE_STATUS] Server responded with error:", errorText);
+                
                 // Rollback otimista se falhar
                 if (!isFinishing) {
                     setActiveMission(activeMission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(activeMission));
                 }
-                setIsUpdating(false);
+                setIsAccepting(false);
                 toastError(`Erro ao atualizar status: ${errorText}`);
                 return;
             }
@@ -3884,6 +3937,24 @@ function App() {
                                 );
                             }
 
+                             if (['concluido', 'cancelado', 'finalizado', 'delivered', 'entregue'].includes((order.status || '').toLowerCase())) {
+                                return (
+                                    <button 
+                                        onClick={() => {
+                                            setSelectedScheduledOrder(null);
+                                            setScheduledOrders(prev => prev.filter(s => s.id !== order.id));
+                                            setActiveMission(null);
+                                            localStorage.removeItem('Izi_active_mission');
+                                            setActiveTab('dashboard');
+                                        }}
+                                        className="w-full h-20 bg-zinc-900 text-white rounded-[28px] font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/10"
+                                    >
+                                        <Icon name="check_circle" className="text-emerald-400" />
+                                        Missão Concluída • Fechar
+                                    </button>
+                                );
+                            }
+
                             return (
                                 <button 
                                     onClick={() => {
@@ -3933,7 +4004,10 @@ function App() {
         const myAgenda = scheduledOrders.filter((o: any) => o.driver_id && String(o.driver_id).trim() === String(driverId).trim());
         const availableAgenda = scheduledOrders.filter((o: any) => !o.driver_id || String(o.driver_id).trim() === '');
         
-        const currentList = subTabScheduled === 'confirmed' ? myAgenda : availableAgenda;
+        const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
+        const currentList = (subTabScheduled === 'confirmed' ? myAgenda : availableAgenda).filter(o => 
+            !terminalStatuses.includes((o.status || '').toLowerCase())
+        );
 
         return (
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="pb-32 px-4 max-w-2xl mx-auto space-y-6 pt-4">
@@ -4511,150 +4585,209 @@ function App() {
     );
     };
 
-    const renderEarningsView = () => (
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            className="px-5 space-y-8 pb-48 pt-6 overflow-y-auto no-scrollbar"
-        >
-            {/* Visual Marker for Debugging */}
-            <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
+    const renderEarningsView = () => {
+        const sClayDark: React.CSSProperties = {
+            borderRadius: '35px',
+            background: '#18181b',
+            boxShadow: '12px 12px 24px #09090b, -8px -8px 16px rgba(255,255,255,0.02), inset 4px 4px 8px rgba(255,255,255,0.03)',
+        };
+        const sClayIcon: React.CSSProperties = {
+            background: 'rgba(255,217,0,0.05)',
+            boxShadow: 'inset 2px 22px 4px rgba(255,255,255,0.05), inset -2px -2px 4px rgba(0,0,0,0.3)',
+        };
+        const sClayYellow: React.CSSProperties = {
+            borderRadius: '45px',
+            background: '#facd07',
+            boxShadow: '15px 15px 35px rgba(0,0,0,0.4), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.1)',
+        };
 
-            <header className="flex flex-col gap-1 px-2">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Izi Pay 🚀</p>
-                <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Seus Resultados</h2>
-            </header>
+        return (
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                className="px-5 space-y-8 pb-48 pt-6 overflow-y-auto no-scrollbar"
+            >
+                {/* Visual Marker for Debugging */}
+                <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
 
-            {/* Claymorphic Balance Card Premium */}
-            <div className="clay-card-yellow rounded-[45px] p-8 relative overflow-hidden group border-t-4 border-white/40">
-                <div className="absolute -right-6 -top-6 opacity-20 rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                    <Icon name="account_balance_wallet" size={160} className="text-stone-900" />
-                </div>
-                
-                <div className="relative z-10 space-y-10">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-stone-800 text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Saldo Disponível</p>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-bold text-stone-900 opacity-60">R$</span>
-                                <span className="text-6xl font-black text-stone-950 tracking-tighter italic leading-none">
-                                    {stats.balance.toFixed(2).replace('.', ',')}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <motion.button 
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setShowWithdrawHistory(true)}
-                                className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
-                            >
-                                <Icon name="history" className="text-stone-950" size={20} />
-                            </motion.button>
-                            <motion.button 
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setShowBankDetails(true)}
-                                className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
-                            >
-                                <Icon name="account_balance" className="text-stone-950" size={20} />
-                            </motion.button>
-                        </div>
-                    </div>
+                <header className="flex flex-col gap-1 px-2">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Izi Pay 🚀</p>
+                    <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Seus Resultados</h2>
+                </header>
 
-                    <motion.button 
-                        whileTap={{ scale: 0.96 }}
-                        onClick={handleWithdrawRequest}
-                        className="w-full h-18 bg-stone-950 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(0,0,0,0.3)] active:shadow-none transition-all flex items-center justify-center gap-4 group"
-                    >
-                        <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-primary transition-colors">
-                            <Icon name="payments" size={20} />
-                        </div>
-                        Sacar Ganhos
-                    </motion.button>
-                </div>
-            </div>
-
-            {/* Premium Stats Grid */}
-            <div className="grid grid-cols-2 gap-5 px-1">
-                <div className="clay-card-dark rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 blur-2xl rounded-full" />
-                    <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner border border-primary/20">
-                        <Icon name="today" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
+                {/* Claymorphic Balance Card Premium */}
+                <div className="rounded-[45px] p-8 relative overflow-hidden group border-t-4 border-white/40" style={sClayYellow}>
+                    <div className="absolute -right-6 -top-6 opacity-20 rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                        <Icon name="account_balance_wallet" size={160} className="text-stone-900" />
                     </div>
-                    <div>
-                        <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Ganhos hoje</p>
-                        <p className="text-2xl font-black text-white italic tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
-                    </div>
-                </div>
-                
-                <div className="clay-card-dark rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-secondary/5 blur-2xl rounded-full" />
-                    <div className="size-12 rounded-2xl bg-secondary/10 flex items-center justify-center shadow-inner border border-secondary/20">
-                        <Icon name="local_shipping" size={24} className="text-secondary drop-shadow-[0_0_8px_rgba(100,100,255,0.5)]" />
-                    </div>
-                    <div>
-                        <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Entregas</p>
-                        <p className="text-2xl font-black text-white italic tracking-tighter">{stats.count}</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Performance Chart Claymorphic */}
-            <div className="clay-card-dark rounded-[40px] p-8 space-y-8 border border-white/5 relative overflow-hidden">
-                <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-white font-black text-[10px] uppercase tracking-[0.3em]">Performance</h3>
-                        <p className="text-[9px] text-white/20 font-bold uppercase">Meta semanal: 80%</p>
-                    </div>
-                    <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                        <Icon name="trending_up" size={18} className="text-emerald-400" />
-                    </div>
-                </div>
-                
-                <div className="h-40 flex items-end justify-between gap-3 px-1 pt-4">
-                    {stats.performance.map((val, i) => {
-                        const maxVal = Math.max(...stats.performance, 1);
-                        const h = (val / maxVal) * 100;
-                        const isToday = i === (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
-                        return (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                                <div className="relative w-full flex flex-col items-center">
-                                    <motion.div 
-                                        initial={{ height: 0 }} 
-                                        animate={{ height: `${Math.max(h, 5)}%` }} 
-                                        className={`w-full max-w-[12px] rounded-full transition-all duration-700 ${
-                                            isToday ? 'bg-primary shadow-[0_0_15px_rgba(255,217,0,0.5)]' : 'bg-white/10 group-hover:bg-white/20'
-                                        }`}
-                                    />
-                                    {isToday && (
-                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-black text-[7px] font-black px-1.5 py-0.5 rounded-md shadow-lg">
-                                            HOJE
-                                        </div>
-                                    )}
+                    
+                    <div className="relative z-10 space-y-10">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-stone-800 text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Saldo Disponível</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-bold text-stone-900 opacity-60">R$</span>
+                                    <span className="text-6xl font-black text-stone-950 tracking-tighter italic leading-none">
+                                        {stats.balance.toFixed(2).replace('.', ',')}
+                                    </span>
                                 </div>
-                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{['S','T','Q','Q','S','S','D'][i]}</span>
                             </div>
-                        );
-                    })}
-                </div>
-            </div>
+                            <div className="flex gap-2">
+                                <motion.button 
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setShowWithdrawHistory(true)}
+                                    className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
+                                >
+                                    <Icon name="history" className="text-stone-950" size={20} />
+                                </motion.button>
+                                <motion.button 
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setShowBankDetails(true)}
+                                    className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
+                                >
+                                    <Icon name="account_balance" className="text-stone-950" size={20} />
+                                </motion.button>
+                            </div>
+                        </div>
 
-            {/* Info Message Claymorphic */}
-            <div className="clay-card rounded-[32px] p-6 flex items-center gap-5 border border-white/5 bg-white/[0.02] shadow-inner">
-                <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-lg">
-                    <Icon name="verified" className="text-primary" size={24} />
+                        <motion.button 
+                            whileTap={{ scale: 0.96 }}
+                            onClick={handleWithdrawRequest}
+                            className="w-full h-18 bg-stone-950 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(0,0,0,0.3)] active:shadow-none transition-all flex items-center justify-center gap-4 group"
+                        >
+                            <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-primary transition-colors">
+                                <Icon name="payments" size={20} />
+                            </div>
+                            Sacar Ganhos
+                        </motion.button>
+                    </div>
                 </div>
-                <div className="space-y-1">
-                    <p className="text-[10px] text-white font-black uppercase tracking-widest italic leading-none">Pagamento Seguro</p>
-                    <p className="text-[9px] text-white/30 font-bold leading-relaxed italic">
-                        Solicitações de PIX processadas em até <span className="text-primary/60">24h úteis</span> via auditoria financeira.
-                    </p>
-                </div>
-            </div>
 
-            {/* Placeholder for spacer to ensure visibility */}
-            <div className="h-10" />
-        </motion.div>
-    );
+                {/* Premium Stats Grid */}
+                <div className="grid grid-cols-2 gap-5 px-1">
+                    <div className="rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden" style={sClayDark}>
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 blur-2xl rounded-full" />
+                        <div className="size-12 rounded-2xl flex items-center justify-center border border-primary/20" style={sClayIcon}>
+                            <Icon name="today" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
+                        </div>
+                        <div>
+                            <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Ganhos hoje</p>
+                            <p className="text-2xl font-black text-white italic tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden" style={sClayDark}>
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-secondary/5 blur-2xl rounded-full" />
+                        <div className="size-12 rounded-2xl flex items-center justify-center border border-secondary/20" style={sClayIcon}>
+                            <Icon name="local_shipping" size={24} className="text-secondary drop-shadow-[0_0_8px_rgba(100,100,255,0.5)]" />
+                        </div>
+                        <div>
+                            <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Entregas</p>
+                            <p className="text-2xl font-black text-white italic tracking-tighter">{stats.count}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Performance Chart - CANDLESTICKS */}
+                <div className="rounded-[40px] p-8 space-y-8 border border-white/5 relative overflow-hidden" style={sClayDark}>
+                    <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="text-white font-black text-[10px] uppercase tracking-[0.3em]">Performance Alpha</h3>
+                            <p className="text-[9px] text-white/20 font-bold uppercase">Meta de Trading: 92%</p>
+                        </div>
+                        <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                            <Icon name="monitoring" size={18} className="text-emerald-400" />
+                        </div>
+                    </div>
+                    
+                    <div className="h-44 flex items-end justify-between gap-2 px-1 pt-6 relative">
+                        {/* Grade de fundo do gráfico */}
+                        <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none opacity-[0.03]">
+                            <div className="h-px bg-white w-full" />
+                            <div className="h-px bg-white w-full" />
+                            <div className="h-px bg-white w-full" />
+                            <div className="h-px bg-white w-full" />
+                        </div>
+
+                        {stats.performance.map((val, i) => {
+                            const maxVal = Math.max(...stats.performance, 10);
+                            const baseHeight = (val / maxVal) * 100;
+                            
+                            // Simulação de Candlestick (Abertura, Fechamento, Máxima, Mínima)
+                            const isUp = i % 2 === 0 || i === 6; // Simula tendência
+                            const open = isUp ? baseHeight * 0.7 : baseHeight * 0.9;
+                            const close = isUp ? baseHeight : baseHeight * 0.6;
+                            const high = Math.max(open, close) * 1.15;
+                            const low = Math.min(open, close) * 0.85;
+                            
+                            const isToday = i === (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
+                            const candleColor = isUp ? '#10b981' : '#f43f5e';
+
+                            return (
+                                <div key={i} className="flex-1 flex flex-col items-center gap-4 group relative h-full justify-end">
+                                    <div className="w-full flex flex-col items-center relative h-full justify-end pb-1">
+                                        {/* Pavio (Wick) */}
+                                        <motion.div 
+                                            initial={{ scaleY: 0 }}
+                                            animate={{ scaleY: 1 }}
+                                            style={{ 
+                                                height: `${Math.max(high - low, 10)}%`,
+                                                bottom: `${low}%`,
+                                                backgroundColor: candleColor,
+                                                width: '1px',
+                                                opacity: 0.4
+                                            }}
+                                            className="absolute left-1/2 -translate-x-1/2"
+                                        />
+                                        
+                                        {/* Corpo da Vela */}
+                                        <motion.div 
+                                            initial={{ height: 0 }} 
+                                            animate={{ height: `${Math.max(Math.abs(close - open), 4)}%` }} 
+                                            style={{ 
+                                                bottom: `${Math.min(open, close)}%`,
+                                                backgroundColor: candleColor,
+                                                boxShadow: isToday ? `0 0 15px ${candleColor}66` : 'none'
+                                            }}
+                                            className={`w-full max-w-[10px] rounded-sm transition-all duration-700 relative z-10 ${
+                                                isToday ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'
+                                            }`}
+                                        />
+
+                                        {isToday && (
+                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[7px] font-black px-1.5 py-0.5 rounded-md shadow-lg z-20 whitespace-nowrap">
+                                                LIVE ⚡
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className={`text-[8px] font-black uppercase tracking-widest ${isToday ? 'text-primary' : 'text-white/20'}`}>
+                                        {['S','T','Q','Q','S','S','D'][i]}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Info Message Claymorphic - PAGAMENTO SEGURO */}
+                <div className="rounded-[32px] p-6 flex items-center gap-5 border border-white/5 relative overflow-hidden" style={sClayDark}>
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+                    <div className="size-14 rounded-2xl flex items-center justify-center shrink-0 border border-primary/20 shadow-lg" style={sClayIcon}>
+                        <Icon name="verified_user" className="text-primary" size={24} />
+                    </div>
+                    <div className="space-y-1 relative z-10">
+                        <p className="text-[10px] text-white font-black uppercase tracking-widest italic leading-none">Pagamento Seguro Auditado</p>
+                        <p className="text-[9px] text-white/30 font-bold leading-relaxed italic">
+                            Suas transferências PIX são protegidas por <span className="text-primary/60">criptografia Izi</span> e liberadas em até 24h.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Placeholder for spacer to ensure visibility */}
+                <div className="h-10" />
+            </motion.div>
+        );
+    };
 
     const renderWithdrawHistoryView = () => (
         <motion.div 
@@ -4678,7 +4811,7 @@ function App() {
                     </motion.button>
                 </header>
 
-                <div className="space-y-4">
+                <div className="space-y-4 pb-20">
                     {withdrawHistory.length === 0 ? (
                         <div className="clay-card-dark rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6 border border-white/5 mt-10">
                             <div className="size-20 rounded-full bg-white/5 flex items-center justify-center">
@@ -4696,7 +4829,13 @@ function App() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
-                                className="clay-card-dark rounded-[30px] p-6 border border-white/5 flex items-center gap-5 relative overflow-hidden"
+                                onClick={() => {
+                                    if (tx.receipt_url) {
+                                        setSelectedReceiptUrl(tx.receipt_url);
+                                        setShowReceipt(true);
+                                    }
+                                }}
+                                className={`clay-card-dark rounded-[30px] p-6 border border-white/5 flex items-center gap-5 relative overflow-hidden transition-all ${tx.receipt_url ? 'active:scale-95 cursor-pointer hover:border-primary/30' : ''}`}
                             >
                                 <div className={`size-14 rounded-2xl flex items-center justify-center border shadow-lg ${
                                     tx.status === 'concluido' ? 'bg-emerald-500/10 border-emerald-500/20' : 
@@ -4713,13 +4852,21 @@ function App() {
                                 <div className="flex-1 space-y-1">
                                     <div className="flex items-center justify-between">
                                         <p className="text-white font-black text-xl italic tracking-tighter">R$ {Number(tx.amount).toFixed(2).replace('.', ',')}</p>
-                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${
-                                            tx.status === 'concluido' ? 'bg-emerald-500/20 text-emerald-400' : 
-                                            tx.status === 'recusado' ? 'bg-rose-500/20 text-rose-400' :
-                                            'bg-primary/20 text-primary'
-                                        }`}>
-                                            {tx.status || 'Pendente'}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            {tx.receipt_url && (
+                                                <div className="bg-emerald-500/20 text-emerald-400 text-[7px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                    <Icon name="image" size={10} />
+                                                    RECIBO
+                                                </div>
+                                            )}
+                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                                tx.status === 'concluido' ? 'bg-emerald-500/20 text-emerald-400' : 
+                                                tx.status === 'recusado' ? 'bg-rose-500/20 text-rose-400' :
+                                                'bg-primary/20 text-primary'
+                                            }`}>
+                                                {tx.status || 'Pendente'}
+                                            </span>
+                                        </div>
                                     </div>
                                     <p className="text-[9px] text-white/30 font-bold uppercase truncate max-w-[150px]">
                                         {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -4731,6 +4878,54 @@ function App() {
                         ))
                     )}
                 </div>
+
+                {/* Receipt Viewer Modal */}
+                <AnimatePresence>
+                    {showReceipt && (
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[200] bg-black/95 flex flex-col p-6 items-center justify-center gap-8"
+                        >
+                            <div className="w-full flex justify-between items-center px-2">
+                                <div className="flex flex-col gap-1">
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Transação 🧾</p>
+                                    <h2 className="text-3xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Comprovante</h2>
+                                </div>
+                                <motion.button 
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setShowReceipt(false)}
+                                    className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"
+                                >
+                                    <Icon name="close" className="text-white" size={24} />
+                                </motion.button>
+                            </div>
+
+                            <div className="flex-1 w-full max-w-md bg-white/5 rounded-[40px] border border-white/10 overflow-hidden relative shadow-2xl">
+                                <img 
+                                    src={selectedReceiptUrl} 
+                                    alt="Comprovante de Pagamento" 
+                                    className="w-full h-full object-contain"
+                                />
+                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-8 text-center">
+                                    <p className="text-[10px] text-white/40 font-bold italic">
+                                        Este documento foi emitido pelo sistema IziDelivery e serve como prova de transferência.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <motion.button 
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setShowReceipt(false)}
+                                className="w-full h-16 bg-white text-black rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-3"
+                            >
+                                <Icon name="check" size={20} />
+                                Entendido
+                            </motion.button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </motion.div>
     );
@@ -5413,18 +5608,40 @@ function App() {
         if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) { pickupOnly += ', Brumadinho - MG'; }
 
         const getMainBtnData = () => {
-            const s = activeMission.status || '';
-            if (['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido', 'accepted', 'waiting_driver', 'pending'].includes(s)) 
-                return { label: 'Cheguei na Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
-            if (['chegou_coleta', 'no_local_coleta'].includes(s) || activeMission.status === 'pronto') 
+            const s = (activeMission.status || '').toLowerCase().trim();
+            console.log('[DEBUG] Mission Status:', s);
+
+            // CASO TERMINAL: Se a missão já acabou mas ainda está na tela, o botão serve para fechar.
+            if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s)) {
+                return { 
+                    label: 'Concluído • Fechar', 
+                    action: () => {
+                        setActiveMission(null);
+                        localStorage.removeItem('Izi_active_mission');
+                        setActiveTab('dashboard');
+                    }, 
+                    icon: 'check_circle' 
+                };
+            }
+
+            const isStartable = [
+                'scheduled', 'agendado', 'agendamento', 'a_caminho_coleta', 
+                'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 
+                'atribuido', 'accepted', 'waiting_driver', 'pending', 'novo'
+            ].includes(s);
+            
+            if (isStartable) 
+                return { label: (s === 'scheduled' || s === 'agendado' || s === 'agendamento') ? 'Iniciar Missão' : 'Cheguei na Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
+            if (['chegou_coleta', 'no_local_coleta'].includes(s) || s === 'pronto') 
                 return { label: 'Confirmar Coleta', action: () => handleUpdateStatus('picked_up'), icon: 'inventory_2' };
             if (s === 'picked_up') 
                 return { label: 'Iniciar Entrega', action: () => handleUpdateStatus('a_caminho'), icon: 'moped' };
             if (s === 'a_caminho' || s === 'em_rota') 
-                return { label: 'Cheguei no Destino', action: () => handleUpdateStatus('person_pin_circle'), icon: 'push_pin' };
+                return { label: 'Cheguei no Destino', action: () => handleUpdateStatus('no_local'), icon: 'push_pin' };
             if (s === 'no_local' || s === 'saiu_para_entrega') 
                 return { label: isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega', action: () => handleUpdateStatus('concluido'), icon: 'task_alt' };
-            return { label: 'Prosseguir', action: () => {}, icon: 'arrow_forward' };
+            
+            return { label: 'Prosseguir', action: () => syncMissionWithDB(), icon: 'arrow_forward' };
         };
 
         const btn = getMainBtnData();
