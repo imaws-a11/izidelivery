@@ -7187,12 +7187,6 @@ const navigateSubView = (target: string) => {
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none">{selectedItem.name}</h2>
-              <div className="flex items-center gap-3 mt-4">
-                {selectedItem.oldPrice && (
-                  <span className="text-zinc-600 line-through font-bold text-lg">R$ {Number(selectedItem.oldPrice).toFixed(2).replace(".", ",")}</span>
-                )}
-                <span className="text-yellow-400 font-black text-3xl tracking-tighter shadow-yellow-400/20 drop-shadow-md">R$ {selectedItem.price.toFixed(2).replace(".", ",")}</span>
-              </div>
             </div>
             {selectedShop && (
                <div className="bg-zinc-900 p-3 rounded-[24px] border border-white/5 flex flex-col items-center min-w-[72px] shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
