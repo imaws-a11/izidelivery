@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { toastSuccess, toastError } from '../lib/useToast';
 import type { DashboardData } from '../lib/types';
 
-// Relatórios Financeiros
+// RelatÃ³rios Financeiros
 export default function FinancialTab() {
   const {
     allOrders, dashboardOrders, appSettings, dashboardData: globalDashboardData, 
@@ -15,7 +15,7 @@ export default function FinancialTab() {
   const isMerchantPreview = userRole === 'admin' && selectedMerchantPreview;
   const activeMerchant = isMerchantPreview ? selectedMerchantPreview : (userRole === 'merchant' ? merchantProfile : null);
 
-  // Se for preview, recalculamos os dados para este lojista específico
+  // Se for preview, recalculamos os dados para este lojista especÃ­fico
   const effectiveDashboardData = React.useMemo(() => {
     if (!activeMerchant) return globalDashboardData;
 
@@ -69,18 +69,18 @@ export default function FinancialTab() {
       <div className="flex flex-wrap justify-between items-end gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
-            {(userRole === 'merchant' || isMerchantPreview) ? 'Financeiro da Loja' : 'Relatórios de Faturamento'}
+            {(userRole === 'merchant' || isMerchantPreview) ? 'Financeiro da Loja' : 'RelatÃ³rios de Faturamento'}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-base">
             {(userRole === 'merchant' || isMerchantPreview)
               ? `Acompanhe ganhos e repasses do estabelecimento ${activeMerchant?.store_name}.` 
-              : 'Acompanhe a saúde financeira e o desempenho de vendas da plataforma.'}
+              : 'Acompanhe a saÃºde financeira e o desempenho de vendas da plataforma.'}
           </p>
         </div>
         <div className="flex gap-3">
           <button className="flex items-center justify-center rounded-2xl h-12 px-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
             <span className="material-symbols-outlined text-lg mr-2 text-slate-400">picture_as_pdf</span>
-            Relatório PDF
+            RelatÃ³rio PDF
           </button>
           <button className="flex items-center justify-center rounded-2xl h-12 px-6 bg-primary text-slate-900 hover:brightness-110 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20">
             <span className="material-symbols-outlined text-lg mr-2">download</span>
@@ -95,13 +95,13 @@ export default function FinancialTab() {
           { 
             label: 'Vendas Totais (Bruto)', 
             val: `R$ ${(effectiveDashboardData.totalRevenue || 0).toFixed(2).replace('.', ',')}`, 
-            trend: 'Total histórico', 
+            trend: 'Total histÃ³rico', 
             icon: 'payments', 
             color: 'bg-primary/10 text-primary', 
             trendCol: 'text-slate-500' 
           },
           { 
-            label: 'Pedidos Concluídos', 
+            label: 'Pedidos ConcluÃ­dos', 
             val: effectiveDashboardData.completedOrdersCount || 0, 
             trend: `${(effectiveDashboardData.deliverySuccessRate || 0).toFixed(1)}% de sucesso`, 
             icon: 'check_circle', 
@@ -109,17 +109,17 @@ export default function FinancialTab() {
             trendCol: 'text-emerald-500' 
           },
           { 
-            label: userRole === 'merchant' || isMerchantPreview ? 'Taxas IZI' : 'Comissões Totais', 
+            label: userRole === 'merchant' || isMerchantPreview ? 'Taxas IZI' : 'ComissÃµes Totais', 
             val: `R$ ${(effectiveDashboardData.totalCommission || 0).toFixed(2).replace('.', ',')}`, 
-            trend: userRole === 'merchant' || isMerchantPreview ? 'Comissão da plataforma' : 'Receita da IZI', 
+            trend: userRole === 'merchant' || isMerchantPreview ? 'ComissÃ£o da plataforma' : 'Receita da IZI', 
             icon: 'percent', 
             color: 'bg-red-50 text-red-500', 
             trendCol: 'text-red-500' 
           },
           { 
-            label: userRole === 'merchant' || isMerchantPreview ? 'Líquido a Receber' : 'Lucro Líquido', 
+            label: userRole === 'merchant' || isMerchantPreview ? 'LÃ­quido a Receber' : 'Lucro LÃ­quido', 
             val: `R$ ${(effectiveDashboardData.netProfit || 0).toFixed(2).replace('.', ',')}`, 
-            trend: 'Saldo disponível', 
+            trend: 'Saldo disponÃ­vel', 
             icon: 'account_balance_wallet', 
             color: 'bg-blue-50 text-blue-500', 
             trendCol: 'text-blue-500' 
@@ -141,7 +141,7 @@ export default function FinancialTab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Economy Management Card - Replacing Divisão de Taxas */}
+        {/* Economy Management Card - Replacing DivisÃ£o de Taxas */}
         <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-8 opacity-5">
             <span className="material-symbols-outlined text-8xl">account_balance</span>
@@ -157,10 +157,10 @@ export default function FinancialTab() {
                
                <div className="grid grid-cols-1 gap-4">
                   <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 group-hover:border-primary/20 transition-all">
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Taxa de Comissão</p>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Taxa de ComissÃ£o</p>
                     <div className="flex items-end gap-2">
                       <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{(activeMerchant?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
-                      <span className="text-[10px] font-bold text-slate-400 mb-1.5 whitespace-nowrap">por pedido concluído</span>
+                      <span className="text-[10px] font-bold text-slate-400 mb-1.5 whitespace-nowrap">por pedido concluÃ­do</span>
                     </div>
                   </div>
                   
@@ -210,7 +210,7 @@ export default function FinancialTab() {
             })}
           </div>
           <div className="flex justify-between mt-6 pt-6 border-t border-slate-50 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-            <span>6 dias atrás</span>
+            <span>6 dias atrÃ¡s</span>
             <span>Hoje</span>
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function FinancialTab() {
         <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
           <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
             <span className="material-symbols-outlined text-primary">history_edu</span>
-            Histórico de Pedidos
+            HistÃ³rico de Pedidos
           </h4>
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             {displayOrders.length} pedidos encontrados
@@ -245,7 +245,7 @@ export default function FinancialTab() {
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Bruto</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa IZI</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Líquido</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">LÃ­quido</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
               </tr>
             </thead>
@@ -268,7 +268,7 @@ export default function FinancialTab() {
                     <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">
                       <p className="line-clamp-1">{clientName || 'Cliente IZI'}</p>
                       <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">
-                        {tr.service_type === 'coin_purchase' ? 'ðŸâ��â�� App' : tr.service_type || 'Pedido'}
+                        {tr.service_type === 'coin_purchase' ? 'Ã°Å¸Ã¢€ºÃ¢€™ App' : tr.service_type || 'Pedido'}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">R$ {tr.total_price?.toFixed(2).replace('.', ',')}</td>
@@ -276,154 +276,32 @@ export default function FinancialTab() {
                       {commiss > 0 ? `- R$ ${commiss.toFixed(2).replace('.', ',')}` : <span className="opacity-30">N/A</span>}
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-emerald-500">R$ {net.toFixed(2).replace('.', ',')}</td>
-                    <td className="px-8 py-6 text-right">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                        tr.status === 'concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        tr.status === 'cancelado' ? 'bg-red-50 text-red-600 border-red-100' :
-                        'bg-amber-50 text-amber-600 border-amber-100'
-                      }`}>
-                        {tr.status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
+                                    <td className="px-8 py-6 text-right">
+                  <div className="flex flex-col items-end gap-3">
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-100 dark:border-white/5 w-full max-w-[200px]">
+                      <span className="material-symbols-outlined text-slate-400 text-sm shrink-0">attach_file</span>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setReceiptFiles(prev => ({ ...prev, [r.id]: file }));
+                        }}
+                        className="text-[8px] font-bold text-slate-500 w-full file:hidden cursor-pointer"
+                      />
+                      {receiptFiles[r.id] && (
+                        <span className="material-symbols-outlined text-emerald-500 text-sm animate-pulse">check_circle</span>
+                      )}
+                    </div>
 
-function WithdrawalRequestsSection() {
-  const [requests, setRequests] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [processingId, setProcessingId] = React.useState<string | null>(null);
-
-  const fetchWithdrawals = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      // 1. Get all pending 'saque' transactions
-      // REMOVIDO: nested select 'driver:drivers_delivery' pois causa erro se não houver FK no banco
-      const { data: txs, error } = await supabase
-        .from('wallet_transactions_delivery')
-        .select('*')
-        .eq('type', 'saque')
-        .eq('status', 'pendente')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-          console.warn("[WITHDRAWAL] Erro na query principal:", error.message);
-          throw error;
-      }
-
-      // 2. Map driver names
-      if (txs && txs.length > 0) {
-        const uids = txs.map(t => t.user_id);
-        const { data: drivers } = await supabase
-          .from('drivers_delivery')
-          .select('id, name')
-          .in('id', uids);
-        
-        const mapped = txs.map(t => ({
-          ...t,
-          driver_name: drivers?.find(d => d.id === t.user_id)?.name || 'Piloto IZI'
-        }));
-        setRequests(mapped);
-      } else {
-        setRequests([]);
-      }
-    } catch (e) {
-      console.error("Error fetching withdrawals:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchWithdrawals();
-  }, [fetchWithdrawals]);
-
-  const handleProcessPayment = async (id: string) => {
-    setProcessingId(id);
-    try {
-      const { error } = await supabase
-        .from('wallet_transactions_delivery')
-        .update({ status: 'concluido' })
-        .eq('id', id);
-
-      if (error) throw error;
-      toastSuccess('Pagamento confirmado com sucesso!');
-      fetchWithdrawals();
-    } catch (e: any) {
-      toastError('Erro ao processar pagamento: ' + e.message);
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  if (loading && requests.length === 0) {
-    return (
-      <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm p-20 flex flex-col items-center justify-center gap-4 mb-10">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando Fluxo de Saques...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-10">
-      <div className="p-8 border-b border-slate-50 dark:border-slate-800 bg-amber-50/20 dark:bg-amber-900/10 flex justify-between items-center">
-         <div>
-          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-            <span className="material-symbols-outlined text-amber-500 font-fill">payouts</span>
-            Saques Pendentes (Pilotos)
-          </h4>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {requests.length} solicitações aguardando transferência PIX
-          </p>
-         </div>
-         <button onClick={fetchWithdrawals} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
-            <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
-         </button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/50">
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado em</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Entregador</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Chave PIX / Descrição</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ação</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {requests.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                <td className="px-8 py-6 text-xs text-slate-500 font-bold">
-                  {new Date(r.created_at).toLocaleString('pt-BR')}
-                </td>
-                <td className="px-8 py-6">
-                  <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{r.driver_name}</p>
-                </td>
-                <td className="px-8 py-6">
-                  <p className="text-lg font-black text-red-500">R$ {parseFloat(r.amount).toFixed(2)}</p>
-                </td>
-                <td className="px-8 py-6">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                    {r.description || 'N/A'}
-                  </p>
-                </td>
-                <td className="px-8 py-6 text-right">
-                  <button 
-                    disabled={processingId === r.id}
-                    onClick={() => handleProcessPayment(r.id)}
-                    className="h-10 px-6 rounded-2xl bg-primary text-slate-900 font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
-                  >
-                    {processingId === r.id ? 'Processando...' : 'Confirmar Pagamento'}
-                  </button>
+                    <button 
+                      disabled={processingId === r.id}
+                      onClick={() => handleProcessPayment(r.id)}
+                      className="h-10 px-6 rounded-2xl bg-primary text-slate-900 font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 w-full"
+                    >
+                      {processingId === r.id ? "Processando..." : "Confirmar com Comprovante"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -442,7 +320,7 @@ function WithdrawalRequestsSection() {
                 <td colSpan={5} className="px-8 py-20 text-center">
                   <div className="flex flex-col items-center gap-4">
                     <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buscando solicitações...</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buscando solicitaÃ§Ãµes...</p>
                   </div>
                 </td>
               </tr>
@@ -491,10 +369,10 @@ function ManageLoansSection() {
          <div>
           <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
             <span className="material-symbols-outlined text-emerald-500 font-fill">account_balance</span>
-            Gestão de Empréstimos (Izi Coins)
+            GestÃ£o de EmprÃ©stimos (Izi Coins)
           </h4>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {loans.filter(l => l.status === 'active').length} empréstimos ativos â�� Taxa Global: 10% am
+            {loans.filter(l => l.status === 'active').length} emprÃ©stimos ativos Ã¢€¢ Taxa Global: 10% am
           </p>
          </div>
          <button onClick={fetchLoans} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
@@ -539,7 +417,7 @@ function ManageLoansSection() {
                 </td>
                 <td className="px-8 py-6">
                   <p className={`text-xs font-bold ${l.status === 'active' && new Date(l.due_date) < new Date() ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'}`}>
-                    {l.status === 'pending' ? 'Sob Análise' : new Date(l.due_date).toLocaleDateString('pt-BR')}
+                    {l.status === 'pending' ? 'Sob AnÃ¡lise' : new Date(l.due_date).toLocaleDateString('pt-BR')}
                   </p>
                 </td>
                 <td className="px-8 py-6 text-right">
@@ -559,7 +437,7 @@ function ManageLoansSection() {
                 <td colSpan={6} className="px-8 py-20 text-center">
                   <div className="flex flex-col items-center gap-2 opacity-30">
                     <span className="material-symbols-outlined text-4xl">account_balance</span>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum empréstimo ativo</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum emprÃ©stimo ativo</p>
                   </div>
                 </td>
               </tr>
@@ -592,9 +470,9 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
 
   const handleApprove = async () => {
     const finalAmount = Number(approvedAmount);
-    if (!finalAmount || finalAmount <= 0) return toastError("Defina um valor válido para liberação.");
+    if (!finalAmount || finalAmount <= 0) return toastError("Defina um valor vÃ¡lido para liberaÃ§Ã£o.");
 
-    if (!window.confirm(`Deseja aprovar este crédito? Z ${finalAmount.toLocaleString('pt-BR')} serão enviados ao cliente imediatamente.`)) return;
+    if (!window.confirm(`Deseja aprovar este crÃ©dito? Z ${finalAmount.toLocaleString('pt-BR')} serÃ£o enviados ao cliente imediatamente.`)) return;
     
     setIsProcessing(true);
     try {
@@ -612,14 +490,14 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
       
       const result = rpcData as { success: boolean, error?: string };
       if (result && !result.success) {
-        throw new Error(result.error || 'Erro desconhecido na execução da RPC');
+        throw new Error(result.error || 'Erro desconhecido na execuÃ§Ã£o da RPC');
       }
 
-      toastSuccess("Empréstimo configurado e creditado!");
+      toastSuccess("EmprÃ©stimo configurado e creditado!");
       onUpdate();
       onClose();
     } catch (e: any) {
-      console.error("Erro na aprovação:", e);
+      console.error("Erro na aprovaÃ§Ã£o:", e);
       toastError("Erro ao aprovar: " + (e.message || "Erro desconhecido"));
     } finally {
       setIsProcessing(false);
@@ -627,7 +505,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
   };
 
   const handleReject = async () => {
-    if (!window.confirm("Deseja recusar este pedido de empréstimo?")) return;
+    if (!window.confirm("Deseja recusar este pedido de emprÃ©stimo?")) return;
     
     setIsProcessing(true);
     try {
@@ -648,7 +526,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
   };
 
   const handleLiquidate = async () => {
-    if (!window.confirm("Deseja liquidar este empréstimo manualmente? Isso marcará como Pago no sistema.")) return;
+    if (!window.confirm("Deseja liquidar este emprÃ©stimo manualmente? Isso marcarÃ¡ como Pago no sistema.")) return;
     
     setIsProcessing(true);
     try {
@@ -658,7 +536,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
         .eq('id', loan.id);
       
       if (error) throw error;
-      toastSuccess("Empréstimo liquidado com sucesso!");
+      toastSuccess("EmprÃ©stimo liquidado com sucesso!");
       onUpdate();
       onClose();
     } catch (e: any) {
@@ -681,7 +559,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
               <span className="material-symbols-outlined font-fill">account_balance</span>
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Detalhamento do Crédito</h2>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Detalhamento do CrÃ©dito</h2>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: #{loan.id.slice(0,8)}</p>
             </div>
           </div>
@@ -713,7 +591,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
           {loan.status === 'pending' ? (
             <section className="space-y-6">
                <div className="p-6 rounded-[32px] bg-slate-900 border border-white/5 space-y-6">
-                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Configuração da Liberação (Aprovação)</p>
+                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">ConfiguraÃ§Ã£o da LiberaÃ§Ã£o (AprovaÃ§Ã£o)</p>
                   
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -759,7 +637,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                   </div>
 
                   <div className="pt-4 border-t border-white/5 flex justify-between items-center px-2">
-                     <p className="text-[10px] font-black text-slate-400 uppercase">Projeção de Dívida:</p>
+                     <p className="text-[10px] font-black text-slate-400 uppercase">ProjeÃ§Ã£o de DÃ­vida:</p>
                      <p className="text-xl font-black text-emerald-400 italic">Z {(Number(approvedAmount) * (1 + (interestRate / 100))).toLocaleString('pt-BR')}</p>
                   </div>
                </div>
@@ -786,7 +664,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                       <span className="material-symbols-outlined text-lg">calendar_today</span>
                     </div>
                     <div>
-                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contratação</p>
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ContrataÃ§Ã£o</p>
                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(loan.created_at).toLocaleString('pt-BR')}</p>
                     </div>
                  </div>
@@ -818,7 +696,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                     disabled={isProcessing}
                     className="flex-[2] h-14 rounded-2xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
                   >
-                    {isProcessing ? 'Aprovando...' : 'Aprovar Crédito'}
+                    {isProcessing ? 'Aprovando...' : 'Aprovar CrÃ©dito'}
                   </button>
                 </>
              ) : (
@@ -904,7 +782,7 @@ function PreApprovedLimitsSection() {
                 <span className="material-symbols-outlined font-fill">public</span>
               </div>
               <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Limite Base</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Válido para todos os novos usuários</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">VÃ¡lido para todos os novos usuÃ¡rios</p>
             </div>
             
             <div className="mt-10">
@@ -918,7 +796,7 @@ function PreApprovedLimitsSection() {
                   className="bg-transparent text-4xl font-black text-slate-900 dark:text-white outline-none w-full border-b-2 border-slate-100 dark:border-slate-800 focus:border-primary transition-all pb-2 tabular-nums"
                 />
               </div>
-              <p className="text-[9px] text-slate-500 font-bold italic tracking-tight">Alteração reflete instantaneamente para clientes sem limite customizado</p>
+              <p className="text-[9px] text-slate-500 font-bold italic tracking-tight">AlteraÃ§Ã£o reflete instantaneamente para clientes sem limite customizado</p>
             </div>
           </div>
         </div>
@@ -928,7 +806,7 @@ function PreApprovedLimitsSection() {
           <div className="relative z-10 space-y-8">
             <header className="flex justify-between items-center">
               <div>
-                <h4 className="text-xl font-black text-white uppercase tracking-tight">Gestão Individual</h4>
+                <h4 className="text-xl font-black text-white uppercase tracking-tight">GestÃ£o Individual</h4>
                 <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-1">Busque um cliente para atribuir teto VIP</p>
               </div>
               {loading && <div className="size-5 border-2 border-primary border-t-transparent animate-spin rounded-full" />}
@@ -992,7 +870,7 @@ function PreApprovedLimitsSection() {
                 </div>
               ))}
               {search.length >= 2 && foundUsers.length === 0 && !loading && (
-                <p className="text-center py-6 text-[10px] font-bold text-white/10 uppercase tracking-[0.3em]">Nenhum usuário encontrado</p>
+                <p className="text-center py-6 text-[10px] font-bold text-white/10 uppercase tracking-[0.3em]">Nenhum usuÃ¡rio encontrado</p>
               )}
             </div>
           </div>
@@ -1020,7 +898,7 @@ function MasterFinancialControl() {
     setSaving(true);
     try {
       await handleSaveAppSettings();
-      toastSuccess('Configurações sincronizadas!');
+      toastSuccess('ConfiguraÃ§Ãµes sincronizadas!');
     } catch (err) {
       toastError('Erro ao sincronizar');
     } finally {
@@ -1048,7 +926,7 @@ function MasterFinancialControl() {
           <div className="grid grid-cols-2 gap-3">
              {[
                { id: 'pix', label: 'PIX', icon: 'qrcode', color: 'text-emerald-500' },
-               { id: 'card', label: 'Cartão', icon: 'credit_card', color: 'text-blue-500' },
+               { id: 'card', label: 'CartÃ£o', icon: 'credit_card', color: 'text-blue-500' },
                { id: 'lightning', label: 'Bitcoin', icon: 'currency_bitcoin', color: 'text-amber-500' },
                { id: 'wallet', label: 'Wallet', icon: 'account_balance_wallet', color: 'text-primary' }
              ].map((m) => (
@@ -1076,7 +954,7 @@ function MasterFinancialControl() {
                 <div className="size-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                    <span className="material-symbols-outlined text-base">percent</span>
                 </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de Serviço Global</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de ServiÃ§o Global</span>
              </div>
              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
                <input 
@@ -1112,7 +990,7 @@ function MasterFinancialControl() {
                 <div className="size-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500">
                    <span className="material-symbols-outlined text-base">trending_up</span>
                 </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Juros Empréstimo</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Juros EmprÃ©stimo</span>
              </div>
              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
                <input 
@@ -1151,7 +1029,7 @@ function MasterFinancialControl() {
           </div>
 
           <div className="flex justify-between items-center">
-             <span className="text-[11px] font-bold text-slate-400">Valor Mínimo</span>
+             <span className="text-[11px] font-bold text-slate-400">Valor MÃ­nimo</span>
              <div className="flex items-center gap-2">
                 <span className="text-[10px] text-white/20">R$</span>
                 <input 
