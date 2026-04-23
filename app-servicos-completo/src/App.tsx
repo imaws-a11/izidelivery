@@ -2323,8 +2323,8 @@ function App() {
 
     console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, currentShopId });
 
-    if (total <= 0) {
-       toastError("O valor total do pedido não pode ser R$ 0,00.");
+    if (total < 0) {
+       toastError("O valor total do pedido não pode ser negativo.");
        setIsLoading(false);
        return;
     }
@@ -2354,6 +2354,19 @@ function App() {
           const { status: _, ...restOfOrderBase } = orderBase;
           const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...restOfOrderBase, status: "pendente_pagamento", payment_status: "pending" }).select().single();
           if (insertError) throw insertError;
+
+          // Dedução de Izi Coins se houver desconto aplicado
+          if (useCoins && iziCoins > 0) {
+            const coinValue = globalSettings?.izi_coin_value || 0.01;
+            const discountApplied = (iziCoins * coinValue);
+            const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
+            const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
+            const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
+            const newIziCoins = Number((iziCoins - coinsToDeduct).toFixed(8));
+            
+            await supabase.from("users_delivery").update({ izi_coins: newIziCoins }).eq("id", userId);
+            setIziCoins(newIziCoins);
+          }
 
           console.log("Invocando create-lightning-invoice com total:", total, "orderId:", order.id);
           const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
@@ -2404,6 +2417,19 @@ function App() {
             return;
           }
 
+          // Dedução de Izi Coins se houver desconto aplicado
+          if (useCoins && iziCoins > 0) {
+            const coinValue = globalSettings?.izi_coin_value || 0.01;
+            const discountApplied = (iziCoins * coinValue);
+            const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
+            const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
+            const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
+            const newIziCoins = Number((iziCoins - coinsToDeduct).toFixed(8));
+            
+            await supabase.from("users_delivery").update({ izi_coins: newIziCoins }).eq("id", userId);
+            setIziCoins(newIziCoins);
+          }
+
           setSelectedItem(order);
           
           // Limpeza do carrinho em bloco try/catch isolado para não afetar a criação com sucesso
@@ -2423,8 +2449,10 @@ function App() {
       }
 
       if (paymentMethod === "saldo") {
-        // 1. Validar saldo em R$ (walletBalance), não em IziCoins
-        if (walletBalance < total) {
+        const coinValue = globalSettings?.izi_coin_value || 0.01;
+        const totalBrlAvailable = walletBalance + (iziCoins * coinValue);
+
+        if (totalBrlAvailable < total) {
           toastError("Saldo insuficiente na carteira IZI Pay.");
           setIsLoading(false);
           return;
@@ -2439,16 +2467,51 @@ function App() {
 
         if (orderErr) throw orderErr;
 
-        // 3. Debitar wallet_balance (R$) no banco
-        const newBalance = Number((walletBalance - total).toFixed(2));
+        // 3. Lógica de Débito (Priorizando Coins se Saldo Izi for usado, ou apenas debitando o que foi usado como desconto)
+        let remainingToPay = total;
+        let newIziCoins = iziCoins;
+        let newWalletBalance = walletBalance;
+
+        // Se o usuário usou o toggle "Usar Coins", o 'total' já veio reduzido.
+        // Mas precisamos deduzir os coins que geraram esse desconto!
+        if (useCoins && iziCoins > 0) {
+           const discountApplied = (iziCoins * coinValue);
+           const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
+           const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
+           const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
+           newIziCoins -= coinsToDeduct;
+        }
+
+        // Se o método de pagamento for Saldo, debitamos o 'total' (restante) do saldo/coins
+        if (remainingToPay > 0) {
+           // Tenta debitar do Saldo de Coins primeiro (comum no Izi)
+           const coinsAvailableValue = newIziCoins * coinValue;
+           if (coinsAvailableValue >= remainingToPay) {
+              newIziCoins -= (remainingToPay / coinValue);
+              remainingToPay = 0;
+           } else {
+              remainingToPay -= coinsAvailableValue;
+              newIziCoins = 0;
+           }
+
+           // Se ainda sobrar, debita do wallet_balance (BRL)
+           if (remainingToPay > 0) {
+              newWalletBalance -= remainingToPay;
+              remainingToPay = 0;
+           }
+        }
+
         const { error: updateErr } = await supabase
           .from("users_delivery")
-          .update({ wallet_balance: newBalance })
+          .update({ 
+            wallet_balance: Number(newWalletBalance.toFixed(2)),
+            izi_coins: Number(newIziCoins.toFixed(8))
+          })
           .eq("id", userId);
 
         if (updateErr) throw updateErr;
 
-        // 4. Registrar no histórico com order_id e balance_after
+        // 4. Registrar no histórico
         const { error: walletErr } = await supabase
           .from("wallet_transactions")
           .insert({
@@ -2457,13 +2520,14 @@ function App() {
             amount: total,
             description: `Pedido #${order.id.slice(0, 6).toUpperCase()} em ${shopName}`,
             order_id: order.id,
-            balance_after: newBalance,
+            balance_after: newWalletBalance,
           });
 
         if (walletErr) throw walletErr;
 
         // 5. Atualizar estado local e navegar
-        setWalletBalance(newBalance);
+        setWalletBalance(newWalletBalance);
+        setIziCoins(newIziCoins);
         setSelectedItem(order);
         if (cart.length > 0) await clearCart(order.id);
         navigateSubView("waiting_merchant");
@@ -2478,6 +2542,20 @@ function App() {
               toastError("Erro ao criar pedido. Tente novamente.");
               return;
            }
+
+           // Dedução de Izi Coins se houver desconto aplicado
+           if (useCoins && iziCoins > 0) {
+             const coinValue = globalSettings?.izi_coin_value || 0.01;
+             const discountApplied = (iziCoins * coinValue);
+             const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
+             const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
+             const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
+             const newIziCoins = Number((iziCoins - coinsToDeduct).toFixed(8));
+             
+             await supabase.from("users_delivery").update({ izi_coins: newIziCoins }).eq("id", userId);
+             setIziCoins(newIziCoins);
+           }
+
            handleConfirmSavedCardShortcut(order.id, total, "checkout");
            return;
         }
@@ -4390,6 +4468,20 @@ const navigateSubView = (target: string) => {
             alert("Não foi possível registrar o pedido. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
             setPixConfirmed(false);
             return;
+          }
+
+          // Dedução de Izi Coins se houver desconto aplicado
+          if (useCoins && iziCoins > 0) {
+            const coinValue = globalSettings?.izi_coin_value || 0.01;
+            const discountApplied = (iziCoins * coinValue);
+            // No PixPayment, recalculamos o teto do desconto
+            const subtotalForCoins = subtotal + (selectedItem?.delivery_fee || 0) + (isIziBlackMembership ? 0 : (subtotal * (globalSettings?.service_fee_percent || 0) / 100)) - discount;
+            const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
+            const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
+            const newIziCoins = Number((iziCoins - coinsToDeduct).toFixed(8));
+            
+            await supabase.from("users_delivery").update({ izi_coins: newIziCoins }).eq("id", userId);
+            setIziCoins(newIziCoins);
           }
           orderId = order.id;
           orderRef = order;
