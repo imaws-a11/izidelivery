@@ -30,6 +30,7 @@ interface CheckoutViewProps {
   iziBlackCashback?: number;
   iziBlackCashbackMultiplier?: number;
   paymentMethodsActive?: { pix?: boolean; card?: boolean; lightning?: boolean; wallet?: boolean };
+  walletBalance?: number;
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
@@ -58,7 +59,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   isIziBlack = false,
   iziBlackCashback = 1,
   iziBlackCashbackMultiplier = 1,
-  paymentMethodsActive = { pix: true, card: true, lightning: true, wallet: true }
+  paymentMethodsActive = { pix: true, card: true, lightning: true, wallet: true },
+  walletBalance = 0
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((sum, item) => {
@@ -110,11 +112,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     { id: "pix", icon: "pix", label: "PIX", sub: "Instantâneo", color: "text-emerald-400", active: paymentMethodsActive.pix !== false },
     {
       id: "saldo",
-      icon: "currency_bitcoin",
-      label: "Saldo em IZI Coins",
-      sub: `${iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} coins`,
+      icon: "account_balance_wallet",
+      label: "Saldo Izi",
+      sub: `${iziCoins.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 8 })} coins (R$ ${(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")})`,
       disabled: (iziCoins * iziCoinValue) < total,
-      color: "text-yellow-400",
+      color: "text-emerald-400",
       active: paymentMethodsActive.wallet !== false
     },
     { id: "dinheiro", icon: "payments", label: "Dinheiro", sub: "Na entrega", color: "text-green-400", active: true },

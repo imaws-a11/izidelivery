@@ -276,57 +276,28 @@ export default function FinancialTab() {
                       {commiss > 0 ? `- R$ ${commiss.toFixed(2).replace('.', ',')}` : <span className="opacity-30">N/A</span>}
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-emerald-500">R$ {net.toFixed(2).replace('.', ',')}</td>
-                                    <td className="px-8 py-6 text-right">
-                  <div className="flex flex-col items-end gap-3">
-                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-100 dark:border-white/5 w-full max-w-[200px]">
-                      <span className="material-symbols-outlined text-slate-400 text-sm shrink-0">attach_file</span>
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) setReceiptFiles(prev => ({ ...prev, [r.id]: file }));
-                        }}
-                        className="text-[8px] font-bold text-slate-500 w-full file:hidden cursor-pointer"
-                      />
-                      {receiptFiles[r.id] && (
-                        <span className="material-symbols-outlined text-emerald-500 text-sm animate-pulse">check_circle</span>
-                      )}
-                    </div>
-
-                    <button 
-                      disabled={processingId === r.id}
-                      onClick={() => handleProcessPayment(r.id)}
-                      className="h-10 px-6 rounded-2xl bg-primary text-slate-900 font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 w-full"
-                    >
-                      {processingId === r.id ? "Processando..." : "Confirmar com Comprovante"}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {requests.length === 0 && !loading && (
-              <tr>
-                <td colSpan={5} className="px-8 py-20 text-center">
-                  <div className="flex flex-col items-center gap-2 opacity-30">
-                    <span className="material-symbols-outlined text-4xl">inventory_2</span>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum saque pendente no momento</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-            {loading && requests.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-8 py-20 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buscando solicitaÃ§Ãµes...</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    <td className="px-8 py-6 text-right">
+                      <span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                        tr.status === 'concluido' || tr.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                        tr.status === 'cancelado' || tr.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                        'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                      }`}>
+                        {tr.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {displayOrders.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-8 py-20 text-center text-slate-400 text-sm font-bold">
+                    Nenhum pedido encontrado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -1079,6 +1050,185 @@ function MasterFinancialControl() {
             )}
           </button>
        </div>
+    </div>
+  );
+}
+
+function WithdrawalRequestsSection() {
+  const [requests, setRequests] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [processingId, setProcessingId] = React.useState<string | null>(null);
+  const [receiptFiles, setReceiptFiles] = React.useState<Record<string, File>>({});
+
+  const fetchRequests = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: txs, error } = await supabase
+        .from('wallet_transactions_delivery')
+        .select('*')
+        .eq('type', 'saque')
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (txs && txs.length > 0) {
+        const uids = [...new Set(txs.map((t: any) => t.user_id).filter(Boolean))];
+        const { data: drivers } = await supabase
+          .from('drivers_delivery')
+          .select('id, name, phone, pix_key')
+          .in('id', uids);
+
+        const mapped = txs.map((t: any) => ({
+          ...t,
+          user: drivers?.find((d: any) => d.id === t.user_id) || null,
+        }));
+        setRequests(mapped);
+      } else {
+        setRequests([]);
+      }
+    } catch (e) {
+      console.error('Error fetching withdrawal requests:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  const handleProcessPayment = async (id: string) => {
+    setProcessingId(id);
+    try {
+      let receiptUrl = '';
+      const file = receiptFiles[id];
+
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `receipt_${id}_${Date.now()}.${fileExt}`;
+        const filePath = fileName;
+
+        const { error: uploadError } = await supabase.storage
+          .from('receipts')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('receipts')
+          .getPublicUrl(filePath);
+
+        receiptUrl = publicUrlData.publicUrl;
+      }
+
+      const payload: any = { status: 'concluido' };
+      if (receiptUrl) payload.receipt_url = receiptUrl;
+
+      const { error } = await supabase
+        .from('wallet_transactions_delivery')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+      toastSuccess('Saque aprovado com sucesso!');
+      fetchRequests();
+    } catch (e: any) {
+      toastError('Erro ao processar saque: ' + e.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-10">
+      <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
+        <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+          <span className="material-symbols-outlined text-primary">payments</span>
+          Solicitações de Saque
+        </h4>
+        <button onClick={fetchRequests} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
+          <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/50">
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Motorista</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Chave PIX</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ação</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+            {requests.map((r) => (
+              <tr key={r.id} className="hover:bg-primary/5 transition-colors">
+                <td className="px-8 py-6 text-xs font-bold text-slate-500 dark:text-slate-400">
+                  {new Date(r.created_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300 line-clamp-1">{r.user?.name || 'Motorista'}</p>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{r.user?.phone || '—'}</span>
+                </td>
+                <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-slate-100">
+                  {r.user?.pix_key || 'Não cadastrada'}
+                </td>
+                <td className="px-8 py-6 text-sm font-black text-emerald-500">
+                  R$ {parseFloat(r.amount).toFixed(2).replace('.', ',')}
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-100 dark:border-white/5 w-full max-w-[200px]">
+                      <span className="material-symbols-outlined text-slate-400 text-sm shrink-0">attach_file</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setReceiptFiles(prev => ({ ...prev, [r.id]: f }));
+                        }}
+                        className="text-[8px] font-bold text-slate-500 w-full file:hidden cursor-pointer"
+                      />
+                      {receiptFiles[r.id] && (
+                        <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
+                      )}
+                    </div>
+                    <button
+                      disabled={processingId === r.id}
+                      onClick={() => handleProcessPayment(r.id)}
+                      className="h-9 px-5 rounded-2xl bg-primary text-slate-900 font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 w-full"
+                    >
+                      {processingId === r.id ? 'Enviando...' : 'Aprovar Saque'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!loading && requests.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-8 py-20 text-center">
+                  <div className="flex flex-col items-center gap-2 opacity-30">
+                    <span className="material-symbols-outlined text-4xl">inventory_2</span>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum saque pendente</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {loading && requests.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-8 py-20 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando...</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

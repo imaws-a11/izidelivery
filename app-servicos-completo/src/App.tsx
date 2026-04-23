@@ -1703,6 +1703,7 @@ function App() {
     
     // BENEFÍCIO IZI BLACK: XP Dinâmico
     const baseXP = 50;
+    const xpMult = Number(globalSettings?.izi_black_xp_multiplier || 2);
     const earnedXP = isIziBlackMembership ? (baseXP * xpMult) : baseXP;
     
     await registerPendingBenefitUsages(orderId);
@@ -2376,10 +2377,10 @@ function App() {
 
       if (paymentMethod === "saldo") {
         const coinValue = globalSettings?.izi_coin_value || 0.01;
-        const requiredCoins = Math.ceil(total / coinValue);
+        const requiredCoins = total / coinValue;
 
         if (iziCoins < requiredCoins) {
-          toastError("Saldo de IZI COINS insuficiente.");
+          toastError("Saldo insuficiente.");
           setIsLoading(false);
           return;
         }
@@ -2391,19 +2392,20 @@ function App() {
         if (orderErr) throw orderErr;
 
         if (order) {
-          // Debitar coins
+          // Debitar da carteira (Coins fracionados)
           await supabase.from("users_delivery").update({ 
             izi_coins: iziCoins - requiredCoins 
           }).eq("id", userId);
 
-          // Registrar transacao (valor unitario em coins para o historico)
+          // Registrar transacao
           await supabase.from("wallet_transactions").insert({ 
             user_id: userId, 
             type: "pagamento", 
-            amount: requiredCoins,
-            description: `Pagamento Pedido #${order.id.slice(0,6)}` 
+            amount: total,
+            description: `Pagamento Pedido #${order.id.slice(0,6)} (${requiredCoins.toFixed(8)} IZI)` 
           });
 
+          setIziCoins(prev => prev - requiredCoins);
           setSelectedItem(order);
           if (cart.length > 0) await clearCart(order.id);
           navigateSubView("waiting_merchant");
@@ -3425,6 +3427,11 @@ const navigateSubView = (target: string) => {
           amount: finalPrice,
           description: `Viagem: ${transitData.origin.split(',')[0]} para ${transitData.destination.split(',')[0]}`
         });
+        
+        await supabase.from("users_delivery").update({ 
+          wallet_balance: walletBalance - finalPrice 
+        }).eq("id", userId);
+        
         setWalletBalance(prev => prev - finalPrice);
       }
 
@@ -6236,6 +6243,11 @@ const navigateSubView = (target: string) => {
             });
           if (walletErr) throw walletErr;
           
+          await supabase.from("users_delivery").update({ 
+            wallet_balance: walletBalance - total 
+          }).eq("id", userId);
+          setWalletBalance(prev => prev - total);
+          
       // [Comentario Limpo pelo Sistema]
           await supabase.from("orders_delivery").update({ status: "concluido" }).eq("id", orderData.id);
           
@@ -8329,6 +8341,7 @@ const navigateSubView = (target: string) => {
                     iziBlackCashback={appSettings?.iziBlackCashback || 1}
                     iziBlackCashbackMultiplier={appSettings?.izi_black_cashback_multiplier || 1}
                     paymentMethodsActive={globalSettings?.payment_methods_active}
+                    walletBalance={walletBalance}
                   />
                 </motion.div>
               )}
