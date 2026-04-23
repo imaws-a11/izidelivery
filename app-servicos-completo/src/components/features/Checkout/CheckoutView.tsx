@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Icon } from "../../ui/Icon";
+import { Icon } from "../../common/Icon";
 
 interface CheckoutViewProps {
   cart: any[];
