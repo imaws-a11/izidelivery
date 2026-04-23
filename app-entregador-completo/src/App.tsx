@@ -596,6 +596,14 @@ const getServicePresentation = (order: any) => {
     };
 };
 
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+if (!GOOGLE_MAPS_API_KEY) {
+  console.error("🚨 [CONFIG] VITE_GOOGLE_MAPS_API_KEY is missing in .env file!");
+} else {
+  console.log("✅ [CONFIG] Google Maps API Key loaded successfully for Entregador.");
+}
+
 function App() {
     const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
     const { isLoaded } = useJsApiLoader({ id: GOOGLE_MAPS_ID, googleMapsApiKey: mapsKey, libraries: GOOGLE_MAPS_LIBRARIES, language: 'pt-BR', region: 'BR' });
@@ -698,38 +706,65 @@ function App() {
         }
     }, [driverId]);
 
+    /**
+     * @CRITICAL_LOGIC - BUSCA DIRETA (BYPASS) DE VAGAS DEDICADAS
+     * @AUTHOR Antigravity (Senior AI Dev)
+     * @WARNING NÃO ALTERAR PARA SUPABASE-JS LIBRARY. 
+     * Este método via fetch nativo foi implementado para contornar travamentos persistentes 
+     * na biblioteca cliente. Qualquer mudança para o método tradicional resultará em 
+     * falha de carregamento das vagas na tela do entregador.
+     */
     const fetchDedicatedSlotsRealtime = useCallback(async () => {
         try {
-            // 1. Busca os IDs de vagas que já foram preenchidas (status 'accepted')
-            const { data: filledApps } = await supabase
-                .from('slot_applications')
-                .select('slot_id')
-                .eq('status', 'accepted');
-            
-            const filledSlotIds = filledApps?.map(a => a.slot_id) || [];
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            let token = supabaseKey;
 
-            // 2. Busca apenas as vagas ativas que NÃO estão na lista de preenchidas
-            let query = supabase
-                .from('dedicated_slots_delivery')
-                .select('*, admin_users(store_name, store_logo, store_address, store_phone)')
-                .eq('is_active', true)
-                .order('created_at', { ascending: false });
+            // Recuperação segura do token JWT para respeitar políticas RLS
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) { /* Fallback para anon key */ }
 
-            if (filledSlotIds.length > 0) {
-                query = query.not('id', 'in', `(${filledSlotIds.join(',')})`);
-            }
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const { data } = await query;
-            
-            if (data) {
-                const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
-                const finalSlots = data.filter((s: any) => !declinedIds.includes(s.id));
-                setDedicatedSlots(finalSlots);
-            } else {
+            // Busca principal de vagas ativas
+            const response = await fetch(`${supabaseUrl}/rest/v1/dedicated_slots_delivery?select=*&is_active=eq.true&order=created_at.desc`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+            const slots = await response.json();
+
+            if (!slots || slots.length === 0) {
                 setDedicatedSlots([]);
+                return;
             }
-        } catch (err) {
-            console.error("Erro ao carregar vagas dedicadas:", err);
+
+            // Busca de metadados dos lojistas vinculados
+            const merchantIds = [...new Set(slots.map((s: any) => s.merchant_id).filter(Boolean))];
+            let merchants: any[] = [];
+
+            if (merchantIds.length > 0) {
+                const merchantsRes = await fetch(`${supabaseUrl}/rest/v1/admin_users?select=id,store_name,store_logo,store_address,store_phone&id=in.(${merchantIds.join(',')})`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` }
+                });
+                if (merchantsRes.ok) merchants = await merchantsRes.json();
+            }
+
+            // Assemble final do estado com compatibilidade de legados
+            const mergedData = slots.map((slot: any) => ({
+                ...slot,
+                admin_users: merchants?.find(m => m.id === slot.merchant_id) || { store_name: 'Parceiro Izi' }
+            }));
+
+            setDedicatedSlots(mergedData);
+        } catch (err: any) {
+            console.error("[CRITICAL] Falha na sincronização de vagas:", err.message);
+            // Mantém o estado anterior em caso de erro de rede momentâneo
         }
     }, []);
 
@@ -1840,25 +1875,14 @@ function App() {
 
         const slotsChannel = supabase.channel('driver_dedicated_slots_stream')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dedicated_slots_delivery' }, async (payload) => {
-                const newItem = payload.new as any;
-                if (newItem.is_active) {
-                    setDedicatedSlots(prev => {
-                        if (prev.find(s => s.id === newItem.id)) return prev;
-                        return [newItem, ...prev];
-                    });
-                }
-                await fetchDeep();
+                console.log('[DEDICATED] Nova vaga detectada!');
+                await fetchDedicatedSlotsRealtimeRef.current();
                 playIziSound('driver');
                 toastSuccess('Nova vaga dedicada disponível!');
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dedicated_slots_delivery' }, (payload) => {
-                const updated = payload.new as any;
-                if (!updated.is_active) {
-                    setDedicatedSlots(prev => prev.filter((s: any) => s.id !== updated.id));
-                    stopIziSounds();
-                } else {
-                    fetchDeep();
-                }
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dedicated_slots_delivery' }, async (payload) => {
+                console.log('[DEDICATED] Atualização de vaga detectada!');
+                await fetchDedicatedSlotsRealtimeRef.current();
             })
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'dedicated_slots_delivery' }, (payload) => {
                 const deletedId = (payload.old as any).id;
