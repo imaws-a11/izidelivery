@@ -2893,6 +2893,7 @@ function App() {
 
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
+                setActiveTab('dashboard');
                 setTimeout(() => refreshFinanceData(), 2000); // 2s para garantir propagação no DB
             } else {
                 setTimeout(() => syncMissionWithDB(), 2000);
