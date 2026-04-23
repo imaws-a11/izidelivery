@@ -1572,6 +1572,17 @@ function App() {
     processingItemsRef.current.delete(item.id);
   };
 
+  const handleRemoveOneFromCart = (productId: string) => {
+    setCart((prev: any[]) => {
+      const idx = [...prev].reverse().findIndex(item => item.id === productId);
+      if (idx === -1) return prev;
+      const actualIdx = prev.length - 1 - idx;
+      const newCart = [...prev];
+      newCart.splice(actualIdx, 1);
+      return newCart;
+    });
+  };
+
   const handleShopClick = async (shop: any) => {
     if (!shop.isOpen) {
       toastError(`Desculpe! ${shop.name} está fechado no momento. 🕒`);
@@ -4182,6 +4193,7 @@ const navigateSubView = (target: string) => {
         activeCategory={activeCategory}
         setActiveCategory={setActiveCategory}
         handleAddToCart={handleAddToCart}
+        handleRemoveOneFromCart={handleRemoveOneFromCart}
         navigateSubView={navigateSubView}
         cart={cart}
         iziCoinRate={Number(globalSettings?.izi_coin_rate || 1.0)}
