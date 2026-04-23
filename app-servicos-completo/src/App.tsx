@@ -1672,7 +1672,7 @@ function App() {
       return;
     }
 
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const subtotal = getCartSubtotal();
     const couponErr = await validateCouponRules(data, subtotal);
     if (couponErr) {
       toastError(couponErr);
@@ -1685,7 +1685,7 @@ function App() {
   };
 
   const clearCart = async (orderId?: string) => {
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const subtotal = getCartSubtotal();
     const couponDiscount = appliedCoupon
       ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100)
       : 0;
@@ -1824,6 +1824,15 @@ function App() {
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
+
+  const getCartSubtotal = useCallback(() => {
+    return cart.reduce((sum, item) => {
+      const basePrice = Number(item.price) || 0;
+      const addons = Array.isArray(item.options) ? item.options : (Array.isArray(item.addonDetails) ? item.addonDetails : []);
+      const addonsPrice = addons.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
+      return sum + (basePrice + addonsPrice) * (item.quantity || 1);
+    }, 0);
+  }, [cart]);
 
   // Evitar sobrescrever a nuvem com carrinho vazio de um novo aparelho (Race condition do Login)
   const isFirstEmptySync = useRef(cart.length === 0);
@@ -4249,7 +4258,7 @@ const navigateSubView = (target: string) => {
   };
 
   const renderPixPayment = () => {
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const subtotal = getCartSubtotal();
     const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
     const cartTotal = Math.max(0, subtotal - discount);
     const total = (selectedItem?.total_price) ? Number(selectedItem.total_price) : cartTotal;
@@ -4555,7 +4564,7 @@ const navigateSubView = (target: string) => {
     if (isCoinPurchase || isSubscription) {
       total = selectedItem?.total_price || 0;
     } else {
-      const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+      const subtotal = getCartSubtotal();
       const discountValue = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
       total = Math.max(0, subtotal - discountValue);
     }
@@ -8161,7 +8170,7 @@ const navigateSubView = (target: string) => {
     const navItems = [
       { id: "home", icon: "explore", label: "Inicio" },
       { id: "wallet", icon: "account_balance_wallet", label: "IZI Pay" },
-      { id: "cart", icon: "shopping_cart", label: cart.length > 0 ? `R$ ${cart.reduce((sum: number, item: any) => sum + (item.price || 0), 0).toFixed(2).replace(".", ",")}` : "Carrinho", isCart: true },
+      { id: "cart", icon: "shopping_cart", label: cart.length > 0 ? `R$ ${getCartSubtotal().toFixed(2).replace(".", ",")}` : "Carrinho", isCart: true },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
       { id: "quests", icon: "military_tech", label: "Quests" },
     ];
