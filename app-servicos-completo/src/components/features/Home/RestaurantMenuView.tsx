@@ -224,7 +224,7 @@ export const RestaurantMenuView = ({
                       <div className="flex items-center justify-between mt-auto">
                          <div className="bg-zinc-900/50 px-3 py-1.5 rounded-xl shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_2px_rgba(0,0,0,0.3)]">
                             {item.has_options ? (
-                              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver todos</span>
+                              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver complementos</span>
                             ) : (
                               <div className="flex flex-col">
                                 {item.oldPrice && (
