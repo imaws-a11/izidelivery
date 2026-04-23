@@ -685,6 +685,33 @@ function App() {
         return () => clearTimeout(safetyTimer);
     }, []);
 
+    // Solicitar permissão de sobreposição de apps (Draw over other apps) no Android
+    useEffect(() => {
+        const requestOverlayPermission = async () => {
+            if (!Capacitor.isNativePlatform()) return;
+            const alreadyRequested = localStorage.getItem('izi_overlay_requested') === 'true';
+            if (alreadyRequested) return;
+            try {
+                // Usa o plugin nativo via bridge do Capacitor para abrir configurações de overlay
+                await (Capacitor as any).Plugins?.AndroidPermissions?.checkPermission?.({ permission: 'android.permission.SYSTEM_ALERT_WINDOW' })
+                    .catch(() => null);
+                // Tenta solicitar via Settings Intent (Android 6+)
+                if ((window as any).AndroidInterface?.requestOverlayPermission) {
+                    (window as any).AndroidInterface.requestOverlayPermission();
+                } else if ((Capacitor as any).Plugins?.CapacitorApp) {
+                    // Notifica usuário para habilitar manualmente se necessário
+                    console.log('[OVERLAY] Solicitando permissão de sobreposição...');
+                }
+                localStorage.setItem('izi_overlay_requested', 'true');
+            } catch (e) {
+                console.warn('[OVERLAY] Permissão de sobreposição não disponível:', e);
+            }
+        };
+        // Aguarda splash antes de solicitar
+        const timer = setTimeout(requestOverlayPermission, 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
     const fetchGlobalSettings = useCallback(async () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -5671,7 +5698,16 @@ function App() {
                     <motion.button 
                         whileHover={{ x: -2 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setActiveTab('dashboard')} 
+                        onClick={() => {
+                            const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
+                            const currentStatus = (activeMission?.status || '').toLowerCase().trim();
+                            if (terminalStatuses.includes(currentStatus)) {
+                                // Missão em estado terminal: limpar antes de voltar
+                                setActiveMission(null);
+                                localStorage.removeItem('Izi_active_mission');
+                            }
+                            setActiveTab('dashboard');
+                        }} 
                         className="size-12 bg-black/60 backdrop-blur-xl border border-white/10 p-2 rounded-[18px] flex items-center justify-center shadow-2xl"
                     >
                         <Icon name="arrow_back" className="text-yellow-400" size={20} />
@@ -5887,26 +5923,34 @@ function App() {
 
                 {/* PREMIUM ACTION DOCK (Fixed at Bottom) */}
                 <div className="fixed bottom-0 left-0 w-full p-8 pb-12 bg-gradient-to-t from-black via-black/95 to-transparent z-[200] flex flex-col gap-4">
-                    <motion.button 
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.96 }}
-                        onClick={btn.action}
-                        disabled={isAccepting}
-                        className="w-full h-22 bg-yellow-400 rounded-[35px] flex items-center justify-center shadow-[0_30px_60px_rgba(250,204,21,0.25),inset_8px_8px_16px_rgba(255,255,255,0.5),inset_-8px_-8px_16px_rgba(0,0,0,0.15)] disabled:opacity-50 border-t border-yellow-300/40 relative overflow-hidden group" 
-                        style={sClayYellow}
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                        <div className="flex items-center gap-4">
-                            {isAccepting ? (
-                                <div className="size-7 border-4 border-black/20 border-t-black rounded-full animate-spin" />
-                            ) : (
-                                <Icon name={btn.icon} size={28} className="text-black group-hover:scale-110 transition-transform" />
-                            )}
-                            <span className="text-black font-black text-xl uppercase italic tracking-tighter">
-                                {isAccepting ? 'Sincronizando...' : btn.label}
-                            </span>
-                        </div>
-                    </motion.button>
+                    {(() => {
+                        // Para status terminal (concluído/cancelado), o botão nunca deve ser bloqueado por isAccepting
+                        const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
+                        const isTerminal = terminalStatuses.includes((activeMission.status || '').toLowerCase().trim());
+                        const isDisabled = isTerminal ? false : isAccepting;
+                        return (
+                            <motion.button 
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.96 }}
+                                onClick={btn.action}
+                                disabled={isDisabled}
+                                className="w-full h-22 bg-yellow-400 rounded-[35px] flex items-center justify-center shadow-[0_30px_60px_rgba(250,204,21,0.25),inset_8px_8px_16px_rgba(255,255,255,0.5),inset_-8px_-8px_16px_rgba(0,0,0,0.15)] disabled:opacity-50 border-t border-yellow-300/40 relative overflow-hidden group" 
+                                style={sClayYellow}
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                <div className="flex items-center gap-4">
+                                    {(isAccepting && !isTerminal) ? (
+                                        <div className="size-7 border-4 border-black/20 border-t-black rounded-full animate-spin" />
+                                    ) : (
+                                        <Icon name={btn.icon} size={28} className="text-black group-hover:scale-110 transition-transform" />
+                                    )}
+                                    <span className="text-black font-black text-xl uppercase italic tracking-tighter">
+                                        {(isAccepting && !isTerminal) ? 'Sincronizando...' : btn.label}
+                                    </span>
+                                </div>
+                            </motion.button>
+                        );
+                    })()}
                     
                     {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
                         <button 
