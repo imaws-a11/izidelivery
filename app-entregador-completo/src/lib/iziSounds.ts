@@ -1,5 +1,5 @@
 // Sistema de som Izi Delivery - App Entregador
-// Usa AudioContext sintético como método principal (100% confiável, sem dependência externa)
+// Uso de múltiplas camadas de fallback para garantir 100% de confiabilidade
 
 let audioCtxInstance: AudioContext | null = null;
 
@@ -7,9 +7,6 @@ const getAudioContext = (): AudioContext | null => {
   try {
     if (!audioCtxInstance || audioCtxInstance.state === 'closed') {
       audioCtxInstance = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    if (audioCtxInstance.state === 'suspended') {
-      audioCtxInstance.resume();
     }
     return audioCtxInstance;
   } catch {
@@ -30,90 +27,118 @@ const playTone = (
   osc.type = type;
   osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
   gain.gain.setValueAtTime(volume, ctx.currentTime + startOffset);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startOffset + duration);
   osc.connect(gain);
   gain.connect(ctx.destination);
   osc.start(ctx.currentTime + startOffset);
   osc.stop(ctx.currentTime + startOffset + duration);
 };
 
-export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
+export const playIziSound = async (role: 'merchant' | 'driver' | 'success') => {
+  if (role === 'driver') stopIziSounds();
+  
   const ctx = getAudioContext();
-  if (ctx && ctx.state === 'suspended') ctx.resume();
+  console.log(`[AUDIO-CHECK] playIziSound para: ${role}, State: ${ctx?.state}`);
+  
+  if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
+    try { await ctx.resume(); } catch (e) { console.warn('Falha ao resumir AudioContext:', e); }
+  }
 
-  try {
-    // 1. Vibração (Tátil)
-    if (role === 'driver' && 'vibrate' in navigator) {
-      navigator.vibrate([500, 200, 500]); 
-    } else if (role === 'success' && 'vibrate' in navigator) {
-      navigator.vibrate(100); 
-    }
+  // Beep inicial rápido para "acordar" o sistema e garantir atenção
+  if (ctx) {
+     playTone(ctx, 440, 'sine', 0, 0.1, 0.2);
+  }
 
-    // 2. Audio MP3 (Som principal - Único ativo conforme pedido)
-    const soundUrls = {
-      driver: '/sounds/mission_call.wav',
-      success: 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3',
-      merchant: 'https://cdn.freesound.org/previews/263/263133_2064400-lq.mp3'
-    };
+  // Vibração (Tátil)
+  if (role === 'driver' && 'vibrate' in navigator) {
+    navigator.vibrate([500, 200, 500, 200, 500]); 
+  } else if (role === 'success' && 'vibrate' in navigator) {
+    navigator.vibrate(100); 
+  }
 
-    const audio = new Audio(soundUrls[role]);
-    if (role === 'driver') {
-        audio.loop = false;
-        let count = 0;
-        const maxRepeats = 5; // Aumentado para 5 repetições (aprox. 30-40 segundos de som)
-        audio.addEventListener('ended', () => {
-            if (count < maxRepeats) { 
-                count++;
-                audio.currentTime = 0;
-                audio.play().catch(e => console.error('Erro na repetição do som:', e));
-            }
-        });
-        (window as any)._iziActiveAlarm = audio;
-    }
+  // Lista de URLs prioritárias
+  const soundUrls = {
+    driver: ['/sounds/mission_call.wav', 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
+    success: ['https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
+    merchant: ['https://cdn.freesound.org/previews/263/263133_2064400-lq.mp3']
+  };
+  
+  const urls = soundUrls[role] || [];
 
-    audio.currentTime = 0;
-    audio.load();
-    const playPromise = audio.play();
+  const playFromBuffer = async (index: number): Promise<boolean> => {
+    if (index >= urls.length || !ctx) return false;
     
-    if (playPromise !== undefined) {
-        playPromise.catch((e) => {
-            console.warn(`[iziSounds] Bloqueio de áudio detectado para ${role}:`, e);
-            // Fallback para melodia melódica rítmica se for driver (Certo para alertar)
-            if (ctx && role === 'driver') {
-                const now = ctx.currentTime;
-                // Melodia ascendente tripla (Drip Sound)
-                [440, 660, 880].forEach((freq, index) => {
-                    playTone(ctx, freq, 'triangle', index * 0.15, 0.4, 0.1);
-                    playTone(ctx, freq * 1.5, 'sine', index * 0.15 + 0.05, 0.2, 0.05);
-                });
-            }
-        });
-    }
+    try {
+      const response = await fetch(urls[index]);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
 
-  } catch (e) {
-    console.warn('Erro ao reproduzir som:', e);
+      if (role === 'driver') {
+         source.loop = true; // No driver, queremos que o som continue até ele aceitar ou o alerta acabar
+         (window as any)._iziActiveSource = source;
+      }
+      
+      source.start(0);
+      return true;
+    } catch (err) {
+      console.warn(`[AUDIO] Falha ao carregar ${urls[index]}, tentando próxima...`);
+      return playFromBuffer(index + 1);
+    }
+  };
+
+  const success = await playFromBuffer(0);
+  
+  if (!success && ctx) {
+    console.log('[AUDIO] MP3/WAV falharam. Usando sintetizador local...');
+    playModernChime(ctx, role);
   }
 };
 
 export const stopIziSounds = () => {
-  if ((window as any)._iziActiveAlarm) {
+  if ((window as any)._iziActiveSource) {
     try {
-      (window as any)._iziActiveAlarm.pause();
-      (window as any)._iziActiveAlarm.currentTime = 0;
-      (window as any)._iziActiveAlarm = null;
+      (window as any)._iziActiveSource.stop();
+      (window as any)._iziActiveSource = null;
     } catch (e) {
       console.error('Erro ao parar som:', e);
     }
   }
 };
 
+function playModernChime(ctx: AudioContext, role: string) {
+  try {
+    if (role === 'driver') {
+        // Melodia de alerta persistente
+        for(let i=0; i<5; i++) {
+            playTone(ctx, 880, 'triangle', i * 1.0, 0.8, 0.3);
+            playTone(ctx, 660, 'triangle', i * 1.0 + 0.4, 0.6, 0.2);
+        }
+    } else {
+        playTone(ctx, 880, 'sine', 0, 0.5, 0.3);
+        playTone(ctx, 1318.51, 'sine', 0.1, 0.3, 0.1);
+    }
+  } catch (e) {
+    console.error('[AUDIO] Erro no sintetizador:', e);
+  }
+}
+
 // Habilitar AudioContext após primeira interação do usuário
 if (typeof window !== 'undefined') {
   const enableAudio = () => {
-    getAudioContext();
-    window.removeEventListener('click', enableAudio);
-    window.removeEventListener('touchstart', enableAudio);
+    console.log('[AUDIO] Interação detectada, desbloqueando som...');
+    const ctx = getAudioContext();
+    if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
+      ctx.resume().then(() => {
+        console.log('🔊 [AUDIO] Sistema de áudio desbloqueado e pronto.');
+      });
+    }
   };
-  window.addEventListener('click', enableAudio, { once: true });
-  window.addEventListener('touchstart', enableAudio, { once: true });
+  
+  ['mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => {
+    window.addEventListener(evt, enableAudio, { once: true, capture: true });
+  });
 }

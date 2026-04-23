@@ -326,18 +326,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
   const [previewCategories, setPreviewCategories] = useState<MenuCategory[]>([]);
 
-  // SISTEMA DE SOM REDUNDANTE (Vigilante de Pedidos)
+  // SISTEMA DE SOM REDUNDANTE (Vigilante de Pedidos - Alta Confiabilidade)
   const heardOrderIds = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    if (userRole !== 'merchant' || !allOrders.length) return;
+    if (userRole !== 'merchant') return;
 
-    // Se for o primeiro carregamento da lista, apenas preenchemos os IDs ouvidos e ignoramos o som
+    // Se a lista estiver vazia, apenas desativamos a flag de primeiro carregamento
+    // Isso garante que quando o PRIMEIRA pedido chegar, ele toque o som.
+    if (allOrders.length === 0) {
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+        console.log('[SOM-WATCHER] Vigilante pronto. Lista inicial vazia.');
+      }
+      return;
+    }
+
+    // Se for o primeiro carregamento e já houver pedidos (ex: refresh com pedidos na tela)
+    // apenas absorvemos os IDs para não tocar som de pedidos "velhos"
     if (isFirstLoad.current) {
       allOrders.forEach(order => heardOrderIds.current.add(order.id));
       isFirstLoad.current = false;
-      console.log(`[SOM-WATCHER] Inicializado com ${heardOrderIds.current.size} pedidos conhecidos.`);
+      console.log(`[SOM-WATCHER] Vigilante inicializado com ${heardOrderIds.current.size} pedidos conhecidos.`);
       return;
     }
 

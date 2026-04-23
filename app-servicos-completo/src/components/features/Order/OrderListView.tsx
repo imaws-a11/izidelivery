@@ -60,37 +60,54 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
     cancelado: "Cancelado",
   };
 
-  const isMobility = (o: any) => ["mototaxi", "carro", "van", "utilitario", "frete", "logistica"].includes(o.service_type);
+  const isMobility = (o: any) => ["mototaxi", "carro", "van", "utilitario", "frete", "logistica", "package"].includes(o.service_type);
+
+  const getServicePresentation = (o: any) => {
+    const type = o.service_type;
+    if (['mototaxi', 'carro', 'van'].includes(type)) {
+      return { 
+        label: type === 'mototaxi' ? 'Mobilidade (Moto)' : 'Mobilidade (Carro)',
+        icon: type === 'mototaxi' ? 'two_wheeler' : 'directions_car',
+        color: 'text-blue-400',
+        glow: 'rgba(59,130,246,0.5)',
+        name: o.merchant_name || (type === 'mototaxi' ? 'Izi Moto' : 'Izi Car'),
+        bg: 'bg-blue-400/10'
+      };
+    }
+    if (type === 'utilitario' || type === 'package' || type === 'frete' || type === 'logistica') {
+      return { 
+        label: 'Izi Envios',
+        icon: 'local_shipping',
+        color: 'text-purple-400',
+        glow: 'rgba(168,85,247,0.5)',
+        name: o.merchant_name || 'Entrega de Objeto',
+        bg: 'bg-purple-400/10'
+      };
+    }
+    if (type === 'coin_purchase') {
+      return {
+        label: 'Financeiro',
+        icon: 'payments',
+        color: 'text-emerald-400',
+        glow: 'rgba(16,185,129,0.5)',
+        name: 'Compra de IZI Coins',
+        bg: 'bg-emerald-400/10'
+      };
+    }
+    return { 
+      label: 'Alimentação',
+      icon: 'restaurant',
+      color: 'text-yellow-400',
+      glow: 'rgba(250,205,5,0.5)',
+      name: o.merchant_name || 'Pedido',
+      bg: 'bg-yellow-400/10'
+    };
+  };
 
   const renderClayCard = (order: any, isHistory: boolean = false) => {
-    // Lógicas de tipo
-    const isMobilityOrder = isMobility(order);
+    const presentation = getServicePresentation(order);
     const isCoin = order.service_type === "coin_purchase";
-    
-    let icon = "restaurant";
-    if (isCoin) icon = "payments";
-    else if (isMobilityOrder) {
-      if (order.service_type === "van") icon = "airport_shuttle";
-      else if (order.service_type === "mototaxi") icon = "two_wheeler";
-      else if (order.service_type === "carro") icon = "directions_car";
-      else icon = "local_shipping"; // logistica/frete
-    }
-
-    let title = order.merchant_name || "Pedido";
-    if (isCoin) title = "Compra de IZI Coins";
-    else if (isMobilityOrder) {
-      if (order.service_type === "van") title = "Van de Carga";
-      else if (order.service_type === "mototaxi") title = "Moto";
-      else if (order.service_type === "carro") title = "Carro Particular";
-      else title = "Izi Logistics";
-    }
-
-    let subtitle = "Delivery";
-    if (isCoin) subtitle = "Financeiro";
-    else if (isMobilityOrder) {
-      if (order.service_type === "frete" || order.service_type === "logistica") subtitle = "Frete & Mudanças";
-      else subtitle = "Transporte";
-    }
+    const isMobilityOrder = isMobility(order);
 
     return (
       <motion.div
@@ -111,11 +128,11 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
           boxShadow: isHistory 
             ? "10px 10px 30px rgba(0,0,0,0.4)" 
             : "25px 25px 50px rgba(0,0,0,0.7), -8px -8px 25px rgba(255,255,255,0.02), inset 1.5px 1.5px 0px rgba(255,255,255,0.08), inset -1.5px -1.5px 0px rgba(0,0,0,0.2)",
-          border: `1.5px solid rgba(250,204,21,${isHistory ? '0.05' : '0.22'})`
+          border: `1.5px solid ${isHistory ? 'rgba(250,204,21,0.05)' : presentation.color.includes('yellow') ? 'rgba(250,204,21,0.22)' : presentation.color.includes('blue') ? 'rgba(59,130,246,0.22)' : 'rgba(168,85,247,0.22)'}`
         }}
       >
         {/* PREMIUM DECORATION */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
+        <div className={`absolute top-0 right-0 w-64 h-64 ${presentation.bg} rounded-full blur-[80px] pointer-events-none group-hover:bg-opacity-20 transition-all duration-1000`} />
         
         <div className="relative z-10 p-8 pb-6">
           <div className="flex items-start justify-between mb-8">
@@ -126,8 +143,8 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                   background: "linear-gradient(145deg, #2a2a2e, #1c1c20)",
                 }}
               >
-                <span className={`material-symbols-rounded text-3xl font-black ${isHistory ? 'text-zinc-500' : 'text-yellow-400'} drop-shadow-[0_0_12px_rgba(250,204,21,0.3)]`}>
-                  {icon}
+                <span className={`material-symbols-rounded text-3xl font-black ${isHistory ? 'text-zinc-500' : presentation.color} drop-shadow-[0_0_12px_${presentation.glow}]`}>
+                  {presentation.icon}
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent rounded-[24px]" />
               </div>
@@ -137,11 +154,11 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                   {isHistory ? "Encerrado" : order.scheduled_at ? "Agendamento" : "Atividade"}
                 </p>
                 <h4 className={`text-lg font-black uppercase tracking-tight leading-tight ${isHistory ? 'text-zinc-400' : 'text-white'}`}>
-                  {title}
+                  {presentation.name}
                 </h4>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isHistory ? 'bg-zinc-800 text-zinc-600' : 'bg-yellow-400/10 text-yellow-500 border border-yellow-400/20'}`}>
-                    {subtitle}
+                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isHistory ? 'bg-zinc-800 text-zinc-600' : `${presentation.bg} ${presentation.color} border border-white/5`}`}>
+                    {presentation.label}
                   </span>
                 </div>
               </div>
@@ -150,8 +167,8 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
             <div
               className={`px-4 py-2.5 rounded-2xl flex items-center gap-2 bg-black/40 border border-white/5 shadow-[inset_1px_1px_4px_rgba(0,0,0,0.5)]`}
             >
-              {!isHistory && <div className={`size-1.5 rounded-full ${order.status === 'cancelado' ? 'bg-red-500' : 'bg-yellow-400 animate-pulse'}`} />}
-              <p className={`text-[10px] font-black uppercase tracking-widest ${order.status === 'cancelado' ? 'text-red-400' : 'text-yellow-400'}`}>
+              {!isHistory && <div className={`size-1.5 rounded-full ${order.status === 'cancelado' ? 'bg-red-500' : presentation.color.includes('yellow') ? 'bg-yellow-400 animate-pulse' : presentation.color.includes('blue') ? 'bg-blue-400 animate-pulse' : 'bg-purple-400 animate-pulse'}`} />}
+              <p className={`text-[10px] font-black uppercase tracking-widest ${order.status === 'cancelado' ? 'text-red-400' : isHistory ? 'text-zinc-500' : presentation.color}`}>
                 {statusLabel[order.status] || order.status}
               </p>
             </div>
@@ -161,7 +178,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
             <div className="flex flex-col items-center pt-1 shrink-0">
               <div className="size-2 rounded-full bg-white/20" />
               <div className="w-px flex-1 my-1.5 bg-gradient-to-b from-white/10 to-transparent" />
-              <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_8px_#fbbf24]" />
+              <div className={`size-2 rounded-full ${presentation.color.replace('text-', 'bg-')} shadow-[0_0_8px_${presentation.glow}]`} />
             </div>
             <div className="flex-1 min-w-0 space-y-3">
               <div className="min-w-0">
@@ -172,7 +189,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
               </div>
               <div className="min-w-0">
                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Destino</p>
-                <p className="text-xs font-black text-yellow-400 truncate uppercase tracking-tight">
+                <p className={`text-xs font-black ${presentation.color} truncate uppercase tracking-tight`}>
                   {isCoin ? "Recarga na Carteira" : parseAddressText(order.delivery_address) || "Destino"}
                 </p>
               </div>
@@ -190,7 +207,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
             <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest">
                {order.scheduled_at ? new Date(order.scheduled_at).toLocaleString("pt-BR") : new Date(order.created_at).toLocaleString("pt-BR")}
             </p>
-            <div className={`${isHistory ? 'text-zinc-600' : 'text-yellow-400'} text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:translate-x-1 transition-all`}>
+            <div className={`${isHistory ? 'text-zinc-600' : presentation.color} text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:translate-x-1 transition-all`}>
                DETALHES <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </div>
           </div>
