@@ -2376,40 +2376,50 @@ function App() {
       }
 
       if (paymentMethod === "saldo") {
-        const coinValue = globalSettings?.izi_coin_value || 0.01;
-        const requiredCoins = total / coinValue;
-
-        if (iziCoins < requiredCoins) {
-          toastError("Saldo insuficiente.");
+        // 1. Validar saldo em R$ (walletBalance), não em IziCoins
+        if (walletBalance < total) {
+          toastError("Saldo insuficiente na carteira IZI Pay.");
           setIsLoading(false);
           return;
         }
 
-        const { data: order, error: orderErr } = await supabase.from("orders_delivery")
+        // 2. Criar o pedido com status pago
+        const { data: order, error: orderErr } = await supabase
+          .from("orders_delivery")
           .insert({ ...orderBase, status: "waiting_merchant", payment_status: "paid" })
-          .select().single();
+          .select()
+          .single();
 
         if (orderErr) throw orderErr;
 
-        if (order) {
-          // Debitar da carteira (Coins fracionados)
-          await supabase.from("users_delivery").update({ 
-            izi_coins: iziCoins - requiredCoins 
-          }).eq("id", userId);
+        // 3. Debitar wallet_balance (R$) no banco
+        const newBalance = Number((walletBalance - total).toFixed(2));
+        const { error: updateErr } = await supabase
+          .from("users_delivery")
+          .update({ wallet_balance: newBalance })
+          .eq("id", userId);
 
-          // Registrar transacao
-          await supabase.from("wallet_transactions").insert({ 
-            user_id: userId, 
-            type: "pagamento", 
+        if (updateErr) throw updateErr;
+
+        // 4. Registrar no histórico com order_id e balance_after
+        const { error: walletErr } = await supabase
+          .from("wallet_transactions")
+          .insert({
+            user_id: userId,
+            type: "pagamento",
             amount: total,
-            description: `Pagamento Pedido #${order.id.slice(0,6)} (${requiredCoins.toFixed(8)} IZI)` 
+            description: `Pedido #${order.id.slice(0, 6).toUpperCase()} em ${shopName}`,
+            order_id: order.id,
+            balance_after: newBalance,
           });
 
-          setIziCoins(prev => prev - requiredCoins);
-          setSelectedItem(order);
-          if (cart.length > 0) await clearCart(order.id);
-          navigateSubView("waiting_merchant");
-        }
+        if (walletErr) throw walletErr;
+
+        // 5. Atualizar estado local e navegar
+        setWalletBalance(newBalance);
+        setSelectedItem(order);
+        if (cart.length > 0) await clearCart(order.id);
+        navigateSubView("waiting_merchant");
         return;
       }
 

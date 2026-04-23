@@ -125,6 +125,25 @@ interface Order {
     displayId?: string;
     items?: any[];
     notes?: string;
+    customer_lat?: number;
+    customer_lng?: number;
+    merchant_lat?: number;
+    merchant_lng?: number;
+    latitude?: number;
+    longitude?: number;
+    user_id?: string;
+    merchant_id?: string;
+    merchant_phone?: string;
+    merchant_address?: string;
+    payment_status?: string;
+    change_for?: number;
+    customer_phone?: string;
+    phone?: string;
+    store_name?: string;
+    distance_km?: number;
+    observations?: string;
+    order_notes?: string;
+    service_type?: string;
 }
 const isValidCoord = (c: any) => c && typeof c.lat === 'number' && Math.abs(c.lat) > 0.01;
 
@@ -239,8 +258,6 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
               strokeColor: '#FACD05',
               strokeOpacity: 0.9,
               strokeWeight: 5,
-              lineCap: 'round',
-              lineJoin: 'round'
             }} 
           />
           
@@ -379,8 +396,6 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
               strokeColor: '#FACD05', 
               strokeOpacity: 0.9, 
               strokeWeight: 6,
-              lineCap: 'round',
-              lineJoin: 'round'
             }} 
           />
         )}
@@ -603,6 +618,7 @@ const getServicePresentation = (order: any) => {
         destinationLabel: isMobility ? 'Destino' : isFreight ? 'Descarga' : 'Entrega',
         pickupText,
         destinationText,
+        title: headline,
     };
 };
 
@@ -635,9 +651,32 @@ function App() {
     const [authInitLoading, setAuthInitLoading] = useState(true);
     const [appSettings, setAppSettings] = useState<any>(null);
     const [dynamicRates, setDynamicRates] = useState<any>(null);
-    const [realTimeRoute, setRealTimeRoute] = useState<{distanceText: string, distanceValue: number} | null>(null);
+    const [realTimeRoute, setRealTimeRoute] = useState<{distanceText: string, distanceValue: number, durationText: string} | null>(null);
     const [activeBroadcast, setActiveBroadcast] = useState<any>(null);
     const [showSplash, setShowSplash] = useState(true);
+
+    const ensureDriverRecord = useCallback(async (userId: string, email: string, name: string) => {
+        const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online').eq('id', userId).maybeSingle();
+        if (!data) {
+            await supabase.from('drivers_delivery').upsert({
+                id: userId, 
+                name: name || 'Entregador Izi',
+                email: email, 
+                is_online: true, 
+                is_active: true, 
+                is_deleted: false,
+                vehicle_type: 'mototaxi'
+            });
+        } else {
+            if (data.name) {
+                setDriverName(data.name);
+                localStorage.setItem('izi_driver_name', data.name);
+            }
+            const lat = Number(data.lat);
+            const lng = Number(data.lng);
+            if (isFinite(lat) && isFinite(lng) && lat !== 0 && lng !== 0) setDriverCoords({ lat, lng });
+        }
+    }, []);
 
     useEffect(() => {
         const safetyTimer = setTimeout(() => {
@@ -1076,7 +1115,7 @@ function App() {
                 if (!window.google || !driverCoords) return;
                 
                 // Pontos de interesse - Fallback robusto para lat/lng
-                const isAtDelivery = ['picked_up', 'em_rota', 'saiu_para_entrega'].includes(selectedOrder.status);
+                const isAtDelivery = ['picked_up', 'em_rota', 'saiu_para_entrega'].includes(selectedOrder.status || '');
                 
                 const targetLat = isAtDelivery 
                     ? (selectedOrder.customer_lat || selectedOrder.delivery_lat || selectedOrder.latitude) 
@@ -1293,7 +1332,7 @@ function App() {
                             return prev;
                          });
                      }
-                     toastSuccess(`Nova Chamada: ${notification.title || ''}`, { position: 'top-center' });
+                     toastSuccess(`Nova Chamada: ${notification.title || ''}`);
                  });
 
                  PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
@@ -1336,7 +1375,7 @@ function App() {
           const now = Date.now();
           if (now - lastLocationUpdateRef.current > 15000) {
               lastLocationUpdateRef.current = now;
-              supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId).then(() => {}).catch(() => {});
+              supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
           }
         };
 
@@ -1384,36 +1423,6 @@ function App() {
 
 
     useEffect(() => {
-        const ensureDriverRecord = async (userId: string, email: string, name: string) => {
-            // Busca o registro atual, mesmo que esteja marcado como deletado
-            // Nota: Se houver RLS impedindo a leitura de is_deleted=true, o data virá null
-            const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online').eq('id', userId).maybeSingle();
-            
-            // Se NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O existe o ID no banco OU se o registro existe mas foi deletado, NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O recriamos se o objetivo for deletar
-            // Mas aqui, s³ criamos se for um usuário COMPLETAMENTE novo (sem registro nenhum)
-            if (!data) {
-                await supabase.from('drivers_delivery').upsert({
-                    id: userId, 
-                    name: name || 'Entregador Izi',
-                    email: email, 
-                    is_online: true, 
-                    is_active: true, 
-                    is_deleted: false,
-                    vehicle_type: 'mototaxi'
-                });
-            } else {
-                // Se o registro existe, não fazemos o upsert para não "ressuscitar"
-                if (data.name) {
-                    setDriverName(data.name);
-                    localStorage.setItem('izi_driver_name', data.name);
-                }
-                // REMOVIDO: setIsOnline daqui. O controle de is_online agora
-                // é feito exclusivamente pelo useEffect de restauração de sessão.
-                const lat = Number(data.lat);
-                const lng = Number(data.lng);
-                if (isFinite(lat) && isFinite(lng) && lat !== 0 && lng !== 0) setDriverCoords({ lat, lng });
-            }
-        };
 
         // O listener de transmissões foi movido para um useEffect dedicado abaixo.
 
@@ -1633,8 +1642,7 @@ function App() {
              ForegroundService.startForegroundService({
                 id: 1001,
                 title: "Izi Pilot: Online",
-                body: "Buscando novas chamadas em tempo real...",
-                type: "location"
+                body: "Buscando novas chamadas em tempo real..."
             }).catch(e => console.error("Erro ao restaurar FS:", e));
         }
 
@@ -1724,9 +1732,7 @@ function App() {
                             await ForegroundService.startForegroundService({
                                 id: 1001,
                                 title: "Izi Pilot: Online",
-                                body: "Buscando novas chamadas em tempo real...",
-                                icon: "ic_launcher", // Usando o ícone padrão
-                                type: "location"
+                                body: "Buscando novas chamadas em tempo real..."
                             });
                         } else {
                             await ForegroundService.stopForegroundService();
@@ -2058,10 +2064,7 @@ function App() {
                         
                         setShowApprovedSlotModal(true);
 
-                        toastSuccess("🏁 VAGA CONFIRMADA! Clique para ver os detalhes.", {
-                            position: 'top-center',
-                            duration: 10000
-                        });
+                        toastSuccess("🏁 VAGA CONFIRMADA! Clique para ver os detalhes.");
                     }
                     
                     // Sincroniza estados após qualquer atualização minha
@@ -5885,12 +5888,12 @@ function App() {
                                              </div>
                                              <div className="flex justify-between items-end pt-2 border-t border-white/5">
                                                  <span className="text-white font-black text-xs uppercase italic tracking-widest">Coleta em Dinheiro</span>
-                                                 <span className="text-yellow-400 text-2xl font-black italic tracking-tighter drop-shadow-lg">R$ {parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                 <span className="text-yellow-400 text-2xl font-black italic tracking-tighter drop-shadow-lg">R$ {Number(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                              </div>
                                              {activeMission.change_for > 0 && (
                                                  <div className="mt-2 bg-yellow-400 p-2 rounded-lg flex items-center justify-between shadow-lg">
                                                      <span className="text-black font-black text-[9px] uppercase tracking-tighter">Troco Para</span>
-                                                     <span className="text-black font-black text-sm italic">R$ {parseFloat(activeMission.change_for).toFixed(2).replace('.', ',')}</span>
+                                                     <span className="text-black font-black text-sm italic">R$ {Number(activeMission.change_for || 0).toFixed(2).replace('.', ',')}</span>
                                                  </div>
                                              )}
                                          </div>
@@ -6107,8 +6110,6 @@ function App() {
                                                 strokeColor: '#FACD05',
                                                 strokeWeight: 6,
                                                 strokeOpacity: 0.9,
-                                                lineCap: 'round',
-                                                lineJoin: 'round'
                                             }}
                                         />
                                         {modalRouteInfo?.start && (
