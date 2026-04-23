@@ -1528,6 +1528,27 @@ function App() {
         return;
       }
 
+      // Verificação de Estabelecimento Aberto
+      const merchantId = item.merchant_id;
+      let shop = selectedShop?.id === merchantId ? selectedShop : ESTABLISHMENTS.find(s => s.id === merchantId);
+      
+      if (!shop && merchantId) {
+        // Tentar buscar rápido no banco se não estiver no cache (ex: busca global ou deep link)
+        const { data: m } = await supabase.from('admin_users').select('opening_hours, is_open, opening_mode, store_name').eq('id', merchantId).maybeSingle();
+        if (m) {
+          const isOpen = isStoreOpen(m.opening_hours, m.is_open, m.opening_mode);
+          if (!isOpen) {
+            showToast(`Desculpe! ${m.store_name || "A loja"} está fechada no momento e não pode receber novos pedidos. 🕒`, "error");
+            processingItemsRef.current.delete(item.id);
+            return;
+          }
+        }
+      } else if (shop && !shop.isOpen) {
+        showToast(`Desculpe! ${shop.name || "A loja"} está fechada no momento e não pode receber novos pedidos. 🕒`, "error");
+        processingItemsRef.current.delete(item.id);
+        return;
+      }
+
       // 3. Verificação de Opcionais
       const { data: groups } = await supabase
         .from('product_options_groups_delivery')
@@ -2234,6 +2255,16 @@ function App() {
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
     if (!userId) { alert("Faça login para continuar."); return; }
     if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+
+    // Verificação de Estabelecimento Aberto antes de prosseguir
+    const currentShopId = selectedShop?.id || cart[0]?.merchant_id || cart.find(i => i.merchant_id)?.merchant_id || null;
+    const shopName = selectedShop?.name || cart[0]?.merchant_name || cart[0]?.store || "Estabelecimento";
+    const activeShop = ESTABLISHMENTS.find(e => e.id === currentShopId) || selectedShop;
+
+    if (activeShop && !activeShop.isOpen) {
+      toastError(`Desculpe! ${shopName} está fechado no momento e não pode receber este pedido. 🕒`);
+      return;
+    }
     
     setIsUsingCoins(useCoins);
 
@@ -2259,15 +2290,11 @@ function App() {
     const totalRaw = subtotal + deliveryFee + serviceFeeAmount - couponDiscount - coinDiscount;
     const total = Math.max(0, Number(totalRaw.toFixed(2)));
 
-    // Garantir que shopId seja capturado de qualquer forma (Loja selecionada ou primeiro item do carrinho)
-    const shopId = selectedShop?.id || cart[0]?.merchant_id || cart.find(i => i.merchant_id)?.merchant_id || null;
-    const shopName = selectedShop?.name || cart[0]?.merchant_name || cart[0]?.store || "Estabelecimento";
-    const activeShop = ESTABLISHMENTS.find(e => e.id === shopId) || selectedShop;
     const orderDistance = activeShop?.distKm || 0;
 
     const orderBase = {
       user_id: userId,
-      merchant_id: shopId,
+      merchant_id: currentShopId,
       merchant_name: shopName,
       user_name: userName,
       status: "novo",
@@ -2283,7 +2310,7 @@ function App() {
       route_distance_km: Number(orderDistance.toFixed(2))
     };
 
-    console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, shopId });
+    console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, currentShopId });
 
     if (total <= 0) {
        toastError("O valor total do pedido não pode ser R$ 0,00.");
@@ -2347,7 +2374,7 @@ function App() {
       }
 
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
-        if (!shopId) { 
+        if (!currentShopId) { 
           console.error("[CRITICAL] Checkout abortado: merchant_id não encontrado no carrinho nem na loja.", { cart });
           toastError("Houve um erro técnico: Loja não identificada. Por favor, tente adicionar os itens novamente.");
           setIsLoading(false);
@@ -2604,18 +2631,20 @@ const navigateSubView = (target: string) => {
 
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
 
-  const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean, mode: string = 'auto') => {
-    // 1. Prioridade Máxima: Botão de Override Manual (is_open)
+  const isStoreOpen = useCallback((openingHours: any, manualOpen: any, mode: string = 'auto') => {
+    // 1. Garantir que manualOpen seja tratado corretamente (default true se null)
+    const isManualOpen = manualOpen !== false;
+
+    // 2. Prioridade Máxima: Botão de Override Manual (is_open)
     // Se o lojista DESLIGOU a loja manualmente, ela fica FECHADA independente do modo.
-    // Isso garante que o lojista possa fechar a loja rapidamente em emergências.
-    if (manualOpen === false) return false;
+    if (isManualOpen === false) return false;
 
-    // 2. Se o modo for 'manual' e o botão estiver ligado (true), a loja está ABERTA.
-    if (mode === 'manual') return manualOpen === true;
+    // 3. Se o modo for 'manual' e o botão estiver ligado (true), a loja está ABERTA.
+    if (mode === 'manual') return isManualOpen === true;
 
-    // 3. Modo Automático: Segue o horário programado
-    // Se não houver horários configurados, assume que está aberta (já verificamos manualOpen !== false acima).
-    if (!openingHours || Object.keys(openingHours).length === 0) return true;
+    // 4. Modo Automático: Segue o horário programado
+    // Se não houver horários configurados, assume que está aberta se isManualOpen for true.
+    if (!openingHours || Object.keys(openingHours).length === 0) return isManualOpen;
 
     const now = new Date();
     const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
@@ -2625,6 +2654,8 @@ const navigateSubView = (target: string) => {
     if (!config || !config.active) return false;
 
     try {
+      // Formato esperado: "HH:MM"
+      if (!config.open || !config.close) return isManualOpen;
       const [openH, openM] = config.open.split(':').map(Number);
       const [closeH, closeM] = config.close.split(':').map(Number);
       
@@ -2636,15 +2667,15 @@ const navigateSubView = (target: string) => {
 
       // Suporte para Horário que vira a noite (Ex: 18:00 até 02:00)
       if (closeInMinutes < openInMinutes) {
-        // Se o horário de fechamento for menor que o de abertura, a loja fecha no dia seguinte.
-        // Estamos abertos se: agora >= abertura OU agora <= fechamento
         return nowInMinutes >= openInMinutes || nowInMinutes <= closeInMinutes;
       }
 
+      // Caso especial: 24h (00:00 às 00:00 ou 00:00 às 23:59)
+      if (openInMinutes === closeInMinutes && openInMinutes === 0) return true;
+
       return nowInMinutes >= openInMinutes && nowInMinutes <= closeInMinutes;
     } catch (e) {
-      console.warn("Erro ao processar horário de funcionamento:", e);
-      return true; // Fallback seguro para aberta se houver erro na configuração
+      return true;
     }
   }, []);
 
@@ -2770,26 +2801,57 @@ const navigateSubView = (target: string) => {
 
       // [Comentario Limpo pelo Sistema]
     const channel = supabase
-      .channel('admin_users_updates')
+      .channel('admin_users_status_sync')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'admin_users',
-          filter: 'role=eq.merchant'
+          table: 'admin_users'
         },
-        () => {
-          fetchRealEstablishments();
-        }
-      )
-      .subscribe();
+        (payload: any) => {
+          const updated = payload.new;
+          setESTABLISHMENTS(prev => {
+              const idx = prev.findIndex(e => e.id === updated.id);
+              if (idx === -1) return prev;
+              
+              const newArr = [...prev];
+              const isOpen = isStoreOpen(updated.opening_hours, updated.is_open, updated.opening_mode);
+              
+              console.log(`[REALTIME] Status de ${updated.store_name} atualizado:`, { isOpen, manual: updated.is_open });
+
+              newArr[idx] = {
+                ...newArr[idx],
+                isOpen,
+                tag: isOpen ? "Aberto Agora" : "Fechado",
+                statusTag: isOpen ? "Aberto" : "Fechado",
+                mode: updated.opening_mode,
+                opening_hours: updated.opening_hours,
+                is_open: updated.is_open
+              };
+              
+              // Re-ordenar para manter abertos no topo
+              return newArr.sort((a, b) => (a.isOpen === b.isOpen ? 0 : a.isOpen ? -1 : 1));
+            });
+          }
+        )
+        .subscribe();
 
     return () => {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [fetchRealEstablishments]);
+  }, [fetchRealEstablishments, isStoreOpen]);
+
+  // Sincronizar selectedShop com ESTABLISHMENTS para feedback instantâneo no Menu
+  useEffect(() => {
+    if (selectedShop && subView === "restaurant_menu") {
+      const updated = ESTABLISHMENTS.find(e => e.id === selectedShop.id);
+      if (updated && (updated.isOpen !== selectedShop.isOpen || updated.mode !== selectedShop.mode)) {
+        setSelectedShop(updated);
+      }
+    }
+  }, [ESTABLISHMENTS, selectedShop, subView]);
 
   useEffect(() => {
     if (!userId) return;
@@ -3507,7 +3569,7 @@ const navigateSubView = (target: string) => {
           toastSuccess("Agendamento confirmado com sucesso!");
           setSubView("payment_success");
         } else if (isLogisticsService) {
-          toastSuccess("Solicitação de logística enviada! Buscando motorista...");
+          toastSuccess("Solicitação Izi Express enviada! Buscando motorista...");
           setSubView("logistics_tracking");
         } else {
           toastSuccess("Procurando motorista...");
@@ -4093,6 +4155,7 @@ const navigateSubView = (target: string) => {
         timeLeft,
         img: offer.product_image || offer.admin_users?.store_logo || "",
         isMaster: (userLevel || 0) >= 10 && offer.is_vip,
+        isOpen: ESTABLISHMENTS.find(e => e.id === offer.merchant_id)?.isOpen ?? true,
         offer,
       };
     });
@@ -7195,48 +7258,52 @@ const navigateSubView = (target: string) => {
         </div>
 
         <div className="fixed bottom-10 left-6 right-6 z-[80]">
-          <div className="w-full h-20 bg-yellow-400 text-black rounded-[32px] flex items-center p-2 shadow-[8px_8px_24px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.1)] relative overflow-hidden group">
-            <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
-            
-            {/* Seletor de Quantidade do Produto */}
-            <div className="flex items-center gap-4 bg-black/10 p-1.5 rounded-[22px] border border-black/5 z-10 ml-1">
+          {selectedShop && !selectedShop.isOpen ? (
+            <div className="w-full h-20 bg-zinc-800 text-zinc-500 rounded-[32px] flex items-center justify-center p-2 shadow-lg border border-white/5 opacity-80">
+              <span className="material-symbols-outlined mr-2">block</span>
+              <span className="font-black text-sm uppercase tracking-widest">Loja Fechada</span>
+            </div>
+          ) : (
+            <div className="w-full h-20 bg-yellow-400 text-black rounded-[32px] flex items-center p-2 shadow-[8px_8px_24px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.1)] relative overflow-hidden group">
+              <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
+              
+              {/* Seletor de Quantidade do Produto */}
+              <div className="flex items-center gap-4 bg-black/10 p-1.5 rounded-[22px] border border-black/5 z-10 ml-1">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setTempQuantity(Math.max(1, tempQuantity - 1)); }}
+                  className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
+                >
+                  <span className="material-symbols-outlined font-black">remove</span>
+                </button>
+                <span className="font-black text-lg w-6 text-center">{tempQuantity}</span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setTempQuantity(tempQuantity + 1); }}
+                  className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
+                >
+                  <span className="material-symbols-outlined font-black">add</span>
+                </button>
+              </div>
+
               <button 
-                onClick={(e) => { e.stopPropagation(); setTempQuantity(Math.max(1, tempQuantity - 1)); }}
-                className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
+                className="flex-1 flex flex-col items-center justify-center z-10 h-full"
+                onClick={() => {
+                  const details = buildCartItemDetails(selectedItem, selectedOptions);
+                  const items = Array.from({ length: tempQuantity }, (_, i) => ({ 
+                    ...selectedItem, 
+                    ...details,
+                    timestamp: Date.now(),
+                    cartId: selectedItem.id + "-" + Date.now() + "-" + i 
+                  }));
+                  setCart([...cart, ...items]);
+                  handleBack();
+                  showToast("Item adicionado!", "success");
+                }} 
               >
-                <span className="material-symbols-outlined font-black">remove</span>
-              </button>
-              <span className="font-black text-lg w-6 text-center">{tempQuantity}</span>
-              <button 
-                onClick={(e) => { e.stopPropagation(); setTempQuantity(tempQuantity + 1); }}
-                className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
-              >
-                <span className="material-symbols-outlined font-black">add</span>
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-0.5">Adicionar</span>
+                <span className="font-black text-lg tracking-tighter">R$ {(totalProductPrice * tempQuantity).toFixed(2).replace(".", ",")}</span>
               </button>
             </div>
-
-            <button 
-              onClick={() => {
-                const details = buildCartItemDetails(selectedItem, selectedOptions);
-                const items = Array.from({ length: tempQuantity }, (_, i) => ({ 
-                  ...selectedItem, 
-                  ...details,
-                  timestamp: Date.now(),
-                  cartId: selectedItem.id + "-" + Date.now() + "-" + i 
-                }));
-                setCart([...cart, ...items]);
-                handleBack();
-                showToast("Item adicionado!", "success");
-              }} 
-              className="flex-1 h-full flex items-center justify-between px-6 z-10 group/btn"
-            >
-              <span className="font-black text-[13px] uppercase tracking-[0.2em] italic">Adicionar</span>
-              <div className="bg-black text-white px-5 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 group-active/btn:scale-95 transition-all">
-                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">R$</span>
-                <span className="font-black text-xl tracking-tighter">{(totalProductPrice * tempQuantity).toFixed(2).replace('.', ',')}</span>
-              </div>
-            </button>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -8241,661 +8308,403 @@ const navigateSubView = (target: string) => {
   };
 
   return (
-    <div className="min-h-screen bg-black selection:bg-yellow-400/30">
-      <AnimatePresence mode="wait">
-
-        {view === "loading" && !showSplash && (
-          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[1000] bg-black flex flex-col items-center justify-center">
-            <div className="relative">
-              <motion.div animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }} transition={{ duration: 3, repeat: Infinity }} className="size-24 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-black text-yellow-400 italic tracking-tighter">IZI</span>
+    <>
+      <div className="min-h-screen bg-black selection:bg-yellow-400/30">
+        <AnimatePresence mode="wait">
+          {view === "loading" && (
+            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[1000] bg-black flex flex-col items-center justify-center">
+              <div className="relative">
+                <motion.div animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }} transition={{ duration: 3, repeat: Infinity }} className="size-24 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-black text-yellow-400 italic tracking-tighter">IZI</span>
+                </div>
               </div>
-            </div>
-            <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
-          </motion.div>
-        )}
+              <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
+            </motion.div>
+          )}
 
-        {view === "login" && (
-          <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-            <LoginView loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginPassword={loginPassword} setLoginPassword={setLoginPassword} rememberMe={rememberMe} setRememberMe={setRememberMe} authMode={authMode} setAuthMode={setAuthMode} handleLogin={handleLogin} handleSignUp={handleSignUp} isLoading={isLoading} loginError={loginError} phone={phone} setPhone={setPhone} userName={userName} setUserName={setUserName} />
-          </motion.div>
-        )}
+          {view === "login" && (
+            <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+              <LoginView loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginPassword={loginPassword} setLoginPassword={setLoginPassword} authMode={authMode} setAuthMode={setAuthMode} handleLogin={handleLogin} handleSignUp={handleSignUp} isLoading={isLoading} loginError={loginError} phone={phone} setPhone={setPhone} userName={userName} setUserName={setUserName} />
+            </motion.div>
+          )}
 
-        {view === "app" && (
-          <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen relative overflow-hidden bg-black">
-            <AnimatePresence mode="wait">
-              {tab === "home" && (
-                <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                  <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} onOpenDepositModal={() => setShowDepositModal(true)} onReturnToPayment={(order) => {
-                    setSelectedItem(order);
-                    const method = order?.payment_method;
-                    if (method === 'pix') setSubView("pix_payment");
-                    else if (method === 'lightning' || method === 'bitcoin_lightning') setSubView("lightning_payment");
-                    else setSubView("card_payment");
-                  }} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code && c.image_url)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
-                </motion.div>
-              )}
-              {tab === "orders" && (
-                <motion.div key="orders-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <OrderListView myOrders={myOrders} userId={userId} setSubView={setSubView} setSelectedItem={setSelectedItem} navigateSubView={navigateSubView} fetchMyOrders={fetchMyOrders} tab={tab} />
-                </motion.div>
-              )}
-              {tab === "wallet" && (
-                <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <WalletView 
-                     mercadopagoPublicKey={appSettings?.mercadopago_public_key}
-                     walletTransactions={walletTransactions} 
-                     myOrders={myOrders} 
-                     userXP={userXP} 
-                     savedCards={savedCards} 
-                     paymentMethod={paymentMethod} 
-                     setPaymentsOrigin={setPaymentsOrigin} 
-                     setSubView={setSubView} 
-                     showToast={showToast} 
-                     userId={userId} 
-                     userName={userName} 
-                     iziCoins={iziCoins} 
-                     iziCashback={iziCashbackEarned} 
-                     setShowDepositModal={setShowDepositModal} 
-                     iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
-                     iziCoinRate={globalSettings?.izi_coin_value || 1.0} 
-                   />
-                </motion.div>
-              )}
-              {tab === "profile" && (
-                <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-black">
-                   <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} walletBalance={iziCoins} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-              {subView === "cart" && (
-                <motion.div key="cartv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <CartView 
-                    cart={cart} 
-                    setCart={setCart}
-                    handleClearCart={handleClearCart}
-                    setSubView={setSubView} 
-                    navigateSubView={navigateSubView}
-                    merchantProducts={selectedShop?.products || []}
-                    merchantName={selectedShop?.name || ""}
-                    handleAddToCart={handleAddToCart}
-                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
-                    isIziBlack={isIziBlackMembership} 
-                    iziBlackRate={appSettings?.iziBlackCashback || 1}
-                    deliveryFee={calculateDeliveryFee()} 
-                  />
-                </motion.div>
-              )}
-              {subView === "checkout" && (
-                <motion.div key="check" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
-                  <CheckoutView 
-                    cart={cart} 
-                    appliedCoupon={appliedCoupon} 
-                    walletTransactions={walletTransactions} 
-                    savedCards={savedCards} 
-                    userId={userId} 
-                    userLocation={userLocation} 
-                    paymentMethod={paymentMethod} 
-                    setPaymentMethod={(m: any) => setPaymentMethod(m)} 
-                    changeFor={changeFor} 
-                    setChangeFor={setChangeFor} 
-                    selectedCard={selectedCard} 
-                    setSelectedCard={setSelectedCard} 
-                    couponInput={couponInput} 
-                    setCouponInput={setCouponInput} 
-                    handleApplyCoupon={handleApplyCoupon} 
-                    setAppliedCoupon={setAppliedCoupon} 
-                    handlePlaceOrder={handlePlaceOrder} 
-                    setPaymentsOrigin={setPaymentsOrigin} 
-                    setSubView={(v: any) => setSubView(v)} 
-                    iziCoins={iziCoins} 
-                    iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
-                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
-                    deliveryFee={calculateDeliveryFee()} 
-                    serviceFee={globalSettings?.service_fee_percent || 0}
-                    isIziBlack={isIziBlackMembership}
-                    iziBlackCashback={appSettings?.iziBlackCashback || 1}
-                    iziBlackCashbackMultiplier={appSettings?.izi_black_cashback_multiplier || 1}
-                    paymentMethodsActive={globalSettings?.payment_methods_active}
-                    walletBalance={walletBalance}
-                  />
-                </motion.div>
-              )}
-
-              {subView === "explore_bars" && (
-                <motion.div key="explore_bars" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <ExploreBarsView onBack={() => window.history.back()} />
-                </motion.div>
-              )}
-
-              {subView === "explore_hotels" && (
-                <motion.div key="explore_hotels" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <ExploreHotelsView onBack={() => window.history.back()} onReserve={() => setSubView("hotel_reservation")} />
-                </motion.div>
-              )}
-
-              {subView === "hotel_reservation" && (
-                <motion.div key="hotel_reservation" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <HotelReservationDetailsView onBack={() => setSubView("explore_hotels")} onProceedToPayment={() => setSubView("pix_payment")} />
-                </motion.div>
-              )}
-
-              {subView === "explore_restaurants" && (
-                <motion.div key="explore_restaurants" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderExploreRestaurants()}
-                </motion.div>
-              )}
-              {subView === "daily_menus" && (
-                <motion.div key="daily_menus" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderDailyMenus()}
-                </motion.div>
-              )}
-              {subView === "exclusive_offer" && (
-                <motion.div key="exclusive_offer" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
-                  {renderExclusiveOffer()}
-                </motion.div>
-              )}
-              {subView === "market_list" && (
-                <motion.div key="market_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderMarketList()}
-                </motion.div>
-              )}
-              {subView === "beverages_list" && (
-                <motion.div key="beverages_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderBeveragesList()}
-                </motion.div>
-              )}
-              {subView === "beverage_offers" && (
-                <motion.div key="beverage_offers" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderBeverageOffers()}
-                </motion.div>
-              )}
-              {subView === "pharmacy_list" && (
-                <motion.div key="pharmacy_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderPharmacyList()}
-                </motion.div>
-              )}
-              {subView === "all_pharmacies" && (
-                <motion.div key="all_pharmacies" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderAllPharmacies()}
-                </motion.div>
-              )}
-              {subView === "health_plantao" && (
-                <motion.div key="health_plantao" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderHealthPlantao()}
-                </motion.div>
-              )}
-              {subView === "generic_list" && (
-                <motion.div key="generic_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderGenericList()}
-                </motion.div>
-              )}
-              {(subView === "restaurant_menu" || subView === "shop") && (
-                <motion.div key="restaurant_menu" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
-                  {renderRestaurantMenu()}
-                </motion.div>
-              )}
-              {(subView === "product" || subView === "product_detail") && (
-                <motion.div key="product_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
-                  {renderProductDetail()}
-                </motion.div>
-              )}
-              {subView === "order_detail" && (
-                <motion.div key="odetail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                   {renderOrderDetail()}
-                </motion.div>
-              )}
-              {subView === "addresses" && (
-                <motion.div key="addres" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderAddresses()}
-                </motion.div>
-              )}
-              {subView === "payments" && (
-                <motion.div key="payments" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderPayments()}
-                </motion.div>
-              )}
-              {subView === "wallet_internal" && (
-                <motion.div key="wallet" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderWallet()}
-                </motion.div>
-              )}
-              {subView === "explore_envios" && (
-                <motion.div key="exp_envios" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderExploreEnvios()}
-                </motion.div>
-              )}
-              {subView === "shipping_priority" && (
-                <motion.div key="ship_priority" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderIziExpressPriority()}
-                </motion.div>
-              )}
-              {subView === "shipping_details" && (
-                <motion.div key="ship_det" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderShippingDetails()}
-                </motion.div>
-              )}
-              {subView === "order_support" && (
-                <motion.div key="osupport" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderOrderSupportFlow()}
-                </motion.div>
-              )}
-              {subView === "order_feedback" && (
-                <motion.div key="ofeedback" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[160]">
-                  {renderOrderFeedback()}
-                </motion.div>
-              )}
-              {subView === "order_chat" && (
-                <motion.div key="ochat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderOrderChatFlow()}
-                </motion.div>
-              )}
-              {subView === "quest_center" && (
-                <motion.div key="quests" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[190]">
-                  {renderQuestCenter()}
-                </motion.div>
-              )}
-              {subView === "notifications_center" && (
-                <motion.div key="notifs" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[190]">
-                  {renderNotificationsCenter()}
-                </motion.div>
-              )}
-              {subView === "pix_payment" && (
-                <motion.div key="pixpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
-                  {renderPixPayment()}
-                </motion.div>
-              )}
-              {subView === "lightning_payment" && (
-                <motion.div key="lnpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] h-full overflow-hidden bg-black">
-                  {renderLightningPayment()}
-                </motion.div>
-              )}
-              {subView === "card_payment" && (
-                <motion.div key="cardpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] h-full overflow-hidden bg-black">
-                  {renderCardPayment()}
-                </motion.div>
-              )}
-              {subView === "explore_category" && (
-                <motion.div key="expcat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40">
-                  {renderExploreCategory()}
-                </motion.div>
-              )}
-              {subView === "taxi_wizard" && (
-                <motion.div key="taxi_wiz" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderTaxiWizard()}
-                </motion.div>
-              )}
-              {subView === "freight_wizard" && (
-                <motion.div key="freight" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderFreightWizard()}
-                </motion.div>
-              )}
-              {subView === "excursion_wizard" && (
-                <motion.div key="excv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderExcursionWizard()}
-                </motion.div>
-              )}
-              {subView === "excursion_detail" && (
-                <motion.div key="excd" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
-                  {renderExcursionDetail()}
-                </motion.div>
-              )}
-              {subView === "mobility_payment" && (
-                <motion.div key="mob_pay" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[115]">
-                  {renderMobilityPayment()}
-                </motion.div>
-              )}
-              {subView === "active_order" && (
-                <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
-                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} onCancelOrder={handleCancelOrder} />
-                </motion.div>
-              )}
-              {subView === "logistics_tracking" && (
-                <motion.div key="logtrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
-                  <LogisticsTrackingView 
-                    order={selectedItem} 
-                    driverLocation={driverLocation} 
-                    userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
-                    onBack={() => setSubView("none")} 
-                    onCancel={() => handleCancelOrder(selectedItem?.id)}
-                    onUpdateLocation={updateLocation}
-                  />
-                </motion.div>
-              )}
-              {subView === "izi_coin_tracking" && (
-                <motion.div key="izi_coin_tracking" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed inset-0 z-[100] bg-black overflow-hidden h-full">
-                  <IziCoinTrackingView 
-                    order={selectedItem} 
-                    onClose={() => setSubView("none")} 
-                    onGoToWallet={() => { setTab("wallet"); setSubView("none"); }} 
-                    onSupport={() => setSubView("order_support")} 
-                    onReturnToPayment={() => {
-                      const method = selectedItem?.payment_method;
-                      if (method === 'pix') setSubView("pix_payment");
-                      else if (method === 'lightning' || method === 'bitcoin_lightning') setSubView("lightning_payment");
-                      else if (method === 'cartao') setSubView("card_payment");
-                      else setSubView("card_payment"); // fallback final
-                    }}
-                  />
-                </motion.div>
-              )}
-              {subView === "payment_processing" && (
-                <motion.div key="pproc" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
-                  {renderPaymentProcessing()}
-                </motion.div>
-              )}
-              {subView === "payment_error" && (
-                <motion.div key="perr" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
-                  {renderPaymentError()}
-                </motion.div>
-              )}
-              {subView === "payment_success" && (
-                <motion.div key="psuccess" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
-                  {renderPaymentSuccess()}
-                </motion.div>
-              )}
-              {subView === "waiting_merchant" && (
-                <motion.div key="wmerchant" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
-                  {renderWaitingMerchant()}
-                </motion.div>
-              )}
-              {subView === "waiting_driver" && (
-                <motion.div key="wdriver" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
-                  {renderWaitingDriver()}
-                </motion.div>
-              )}
-              {subView === "scheduled_order" && (
-                <motion.div key="wsched" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
-                  {renderScheduledOrder()}
-                </motion.div>
-              )}
-              {subView === "izi_black_purchase" && (
-                <motion.div key="iziblackp" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[180]">
-                  {renderIziBlackPurchase()}
-                </motion.div>
-              )}
-              {subView === "flash_offers_list" && (
-                <motion.div key="flash_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderFlashOffersList()}
-                </motion.div>
-              )}
-              {isAIOpen && (
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                  className="fixed inset-0 z-[160]"
-                >
-                  {renderAIConcierge()}
-                </motion.div>
-              )}
-              {showIziBlackWelcome && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[2000]"
-                >
-                  {renderIziBlackWelcome()}
-                </motion.div>
-              )}
-              {showIziBlackCard && (
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                  className="fixed inset-0 z-[170]"
-                >
-                  {renderIziBlackCard()}
-                </motion.div>
-              )}
-              {showMasterPerks && (
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                  className="fixed inset-0 z-[180]"
-                >
-                  {renderMasterPerks()}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {subView === "none" && <BottomNav />}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Floating Cart Animations */}
-      <AnimatePresence>
-        {cartAnimations.map(anim => (
-          <motion.img
-            key={anim.id}
-            src={anim.img || ""}
-            initial={{ x: anim.x - 30, y: anim.y - 30, scale: 0.8, opacity: 1 }}
-            animate={{ 
-              x: window.innerWidth / 2 - 30,
-              y: window.innerHeight - 80,
-              scale: 0.1,
-              opacity: 0,
-              rotate: 360
-            }}
-            transition={{
-              duration: 0.8,
-              ease: [0.175, 0.885, 0.32, 1.275] // nice curved path feel
-            }}
-            className="fixed z-[9999] size-16 object-cover rounded-full shadow-2xl border-2 border-primary pointer-events-none"
-          />
-        ))}
-      </AnimatePresence>
-
-      {renderMyQRModal()}
-      {renderTransferModal()}
-
-      {renderDepositModal()}
-      {renderBroadcastPopup()}
-
-      {toast && (
-        <motion.div
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -100, opacity: 0 }}
-          className="fixed top-8 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-[400px]"
-        >
-          <div className={`p-5 rounded-[32px] shadow-2xl backdrop-blur-3xl border flex items-center gap-4 ${
-            toast.type === 'success' ? 'bg-emerald-500/90 border-emerald-400 text-white' : 
-            toast.type === 'warning' ? 'bg-amber-500/90 border-amber-400 text-white' :
-            toast.type === 'error' ? 'bg-rose-500/90 border-rose-400 text-white' :
-            'bg-slate-900/90 border-slate-700 text-white'
-          }`}>
-            <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${
-              toast.type === 'success' ? 'bg-white/20' : 'bg-black/20'
-            }`}>
-              <span className="material-symbols-outlined font-black">
-                {toast.type === 'success' ? 'check_circle' : toast.type === 'warning' ? 'warning' : toast.type === 'error' ? 'error_outline' : 'notifications_active'}
-              </span>
-            </div>
-            <p className="text-xs font-black uppercase tracking-tight leading-tight flex-1">{toast.message}</p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* GLOBAL MODALS (DATE, TIME, LOJISTAS) */}
-      <AnimatePresence>
-        {showLojistasModal && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-3xl flex flex-col p-6"
-          >
-            <header className="flex items-center justify-between mb-8 bg-black/40 backdrop-blur-2xl border border-white/10 p-5 rounded-[36px] shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
-              <div className="flex items-center gap-4">
-                 <div className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.03)]">
-                    <span className="material-symbols-outlined text-yellow-400">storefront</span>
-                 </div>
-                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Lojas Parceiras</h3>
-              </div>
-              <button 
-                onClick={() => setShowLojistasModal(false)} 
-                className="size-11 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-400 active:scale-90 transition-all shadow-[6px_6px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.03)]"
-              >
-                <span className="material-symbols-outlined font-black">close</span>
-              </button>
-            </header>
-
-            <div className="relative mb-8 group">
-               <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-yellow-400 transition-colors z-10 text-xl">search</span>
-               <input 
-                 type="text" 
-                 placeholder="Buscar por nome ou região..." 
-                 className="w-full bg-zinc-900 shadow-[10px_10px_20px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border border-white/5 rounded-[26px] py-4.5 pl-14 pr-6 text-sm font-black focus:outline-none text-white placeholder-zinc-700 transition-all" 
-               />
-            </div>
-
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-5 pb-10">
-               {partnerStores.map((store, i) => (
-                  <motion.div 
-                    whileTap={{ scale: 0.97 }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    key={store.id} 
-                    onClick={() => { 
-                      setTransitData(prev => ({
-                        ...prev, 
-                        receiverName: store.name || "", 
-                        receiverPhone: store.phone || store.store_phone || "", 
-                        origin: store.address || store.store_address || ""
-                      })); 
-                      setShowLojistasModal(false); 
-                    }}
-                    className="p-7 rounded-[40px] bg-zinc-800 border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-10px_-10px_30px_rgba(255,255,255,0.01),inset_6px_6px_12px_rgba(255,255,255,0.03),inset_-6px_-6px_12px_rgba(0,0,0,0.4)] hover:border-yellow-400/30 transition-all group cursor-pointer relative overflow-hidden"
-                  >
-                     <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                     
-                     <div className="flex justify-between items-start mb-3 relative z-10">
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 shadow-[inset_1px_1px_2px_rgba(250,204,21,0.1)]">
-                           <div className="size-1 rounded-full bg-yellow-400 animate-pulse" />
-                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">{store.type || "Loja"}</span>
-                        </div>
-                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-zinc-900/50 px-3 py-1.5 rounded-xl shadow-[inset_1px_1px_2px_rgba(0,0,0,0.3)]">{store.hours || "Disponível"}</span>
-                     </div>
-                     <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors uppercase italic tracking-tight relative z-10">{store.name || "Sem Nome"}</h4>
-                     <p className="text-[11px] font-bold text-zinc-400 mt-2 leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity relative z-10">{store.address || store.store_address || "Endereço Coleta Izi"}</p>
-                     
-                     <div className="mt-5 flex items-center justify-end">
-                        <div className="size-10 rounded-[18px] bg-zinc-900 flex items-center justify-center text-zinc-600 group-hover:bg-yellow-400 group-hover:text-black transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.03)] group-hover:shadow-[0_0_15px_rgba(251,191,36,0.2)]">
-                           <span className="material-symbols-outlined text-[18px] font-black">chevron_right</span>
-                        </div>
-                     </div>
+          {view === "app" && (
+            <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen relative overflow-hidden bg-black">
+              <AnimatePresence mode="wait">
+                {tab === "home" && (
+                  <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                    <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
                   </motion.div>
-               ))}
-            </div>
-          </motion.div>
-        )}
+                )}
+                {tab === "orders" && (
+                  <motion.div key="orders-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                     <OrderListView myOrders={myOrders} userId={userId} setSubView={setSubView} setSelectedItem={setSelectedItem} navigateSubView={navigateSubView} fetchMyOrders={fetchMyOrders} tab={tab} />
+                  </motion.div>
+                )}
+                {tab === "wallet" && (
+                  <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                     <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} />
+                  </motion.div>
+                )}
+                {tab === "profile" && (
+                  <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-black">
+                     <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} walletBalance={walletBalance} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-        {showDatePicker && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-zinc-800 border border-white/5 rounded-[50px] p-8 overflow-hidden shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-              <div className="text-center mb-8">
-                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Próximos 30 dias</h3>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mt-1">Selecione uma data</p>
-              </div>
-              <div className="grid grid-cols-1 gap-4 max-h-[45vh] overflow-y-auto no-scrollbar pr-2 py-2">
-                {[...Array(30)].map((_, i) => {
-                  const d = new Date();
-                  d.setDate(d.getDate() + i);
-                  const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
-                  const iso = d.toISOString().split('T')[0];
-                  const isSelected = transitData.scheduledDate === iso;
+              <AnimatePresence>
+                {subView === "cart" && (
+                  <motion.div key="cartv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <CartView 
+                      cart={cart} 
+                      setCart={setCart}
+                      setSubView={(v: any) => setSubView(v)} 
+                      navigateSubView={navigateSubView}
+                      merchantProducts={selectedShop?.products || []}
+                      merchantName={selectedShop?.name || ""}
+                      handleAddToCart={handleAddToCart}
+                      isIziBlack={isIziBlackMembership} 
+                      deliveryFee={calculateDeliveryFee()} 
+                    />
+                  </motion.div>
+                )}
+                {subView === "checkout" && (
+                  <motion.div key="check" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
+                    <CheckoutView 
+                      cart={cart} 
+                      appliedCoupon={appliedCoupon} 
+                      walletTransactions={walletTransactions} 
+                      savedCards={savedCards} 
+                      userId={userId} 
+                      userLocation={userLocation} 
+                      paymentMethod={paymentMethod} 
+                      setPaymentMethod={(m: any) => setPaymentMethod(m)} 
+                      changeFor={changeFor} 
+                      setChangeFor={setChangeFor} 
+                      selectedCard={selectedCard} 
+                      setSelectedCard={setSelectedCard} 
+                      couponInput={couponInput} 
+                      setCouponInput={setCouponInput} 
+                      handleApplyCoupon={handleApplyCoupon} 
+                      setAppliedCoupon={setAppliedCoupon} 
+                      handlePlaceOrder={handlePlaceOrder} 
+                      setPaymentsOrigin={setPaymentsOrigin} 
+                      setSubView={(v: any) => setSubView(v)} 
+                      iziCoins={iziCoins} 
+                      iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 0.01} 
+                      deliveryFee={calculateDeliveryFee()} 
+                      isIziBlack={isIziBlackMembership}
+                    />
+                  </motion.div>
+                )}
 
-                  return (
-                    <button 
-                      key={i} 
-                      onClick={() => { setTransitData({...transitData, scheduledDate: iso}); setShowDatePicker(false); }} 
-                      className={`w-full py-6 rounded-[30px] border transition-all font-black text-xs uppercase tracking-widest active:scale-95 ${
-                        isSelected 
-                          ? "bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" 
-                          : "bg-zinc-800 border-white/5 text-zinc-400 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)] hover:border-zinc-700"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <button 
-                onClick={() => setShowDatePicker(false)} 
-                className="mt-8 w-full py-5 text-zinc-500 font-black uppercase text-[10px] tracking-[0.2em] bg-zinc-900/50 border border-white/5 rounded-[25px] active:scale-95 transition-all shadow-xl"
-              >
-                Fechar
-              </button>
+                {subView === "explore_restaurants" && (
+                  <motion.div key="explore_restaurants" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderExploreRestaurants()}
+                  </motion.div>
+                )}
+                {subView === "daily_menus" && (
+                  <motion.div key="daily_menus" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderDailyMenus()}
+                  </motion.div>
+                )}
+                {subView === "exclusive_offer" && (
+                  <motion.div key="exclusive_offer" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
+                    {renderExclusiveOffer()}
+                  </motion.div>
+                )}
+                {subView === "market_list" && (
+                  <motion.div key="market_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderMarketList()}
+                  </motion.div>
+                )}
+                {subView === "beverages_list" && (
+                  <motion.div key="beverages_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderBeveragesList()}
+                  </motion.div>
+                )}
+                {subView === "beverage_offers" && (
+                  <motion.div key="beverage_offers" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderBeverageOffers()}
+                  </motion.div>
+                )}
+                {subView === "pharmacy_list" && (
+                  <motion.div key="pharmacy_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderPharmacyList()}
+                  </motion.div>
+                )}
+                {subView === "all_pharmacies" && (
+                  <motion.div key="all_pharmacies" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderAllPharmacies()}
+                  </motion.div>
+                )}
+                {subView === "health_plantao" && (
+                  <motion.div key="health_plantao" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderHealthPlantao()}
+                  </motion.div>
+                )}
+                {subView === "generic_list" && (
+                  <motion.div key="generic_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderGenericList()}
+                  </motion.div>
+                )}
+                {(subView === "restaurant_menu" || subView === "shop") && (
+                  <motion.div key="restaurant_menu" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
+                    {renderRestaurantMenu()}
+                  </motion.div>
+                )}
+                {(subView === "product" || subView === "product_detail") && (
+                  <motion.div key="product_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
+                    {renderProductDetail()}
+                  </motion.div>
+                )}
+                {subView === "order_detail" && (
+                  <motion.div key="odetail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                     {renderOrderDetail()}
+                  </motion.div>
+                )}
+                {subView === "addresses" && (
+                  <motion.div key="addres" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                    {renderAddresses()}
+                  </motion.div>
+                )}
+                {subView === "payments" && (
+                  <motion.div key="payments" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                    {renderPayments()}
+                  </motion.div>
+                )}
+                {subView === "wallet_internal" && (
+                  <motion.div key="wallet" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                    {renderWallet()}
+                  </motion.div>
+                )}
+                {subView === "explore_envios" && (
+                  <motion.div key="exp_envios" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderExploreEnvios()}
+                  </motion.div>
+                )}
+                {subView === "shipping_priority" && (
+                  <motion.div key="ship_priority" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderIziExpressPriority()}
+                  </motion.div>
+                )}
+                {subView === "shipping_details" && (
+                  <motion.div key="ship_det" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderShippingDetails()}
+                  </motion.div>
+                )}
+                {subView === "order_support" && (
+                  <motion.div key="osupport" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                    {renderOrderSupportFlow()}
+                  </motion.div>
+                )}
+                {subView === "order_feedback" && (
+                  <motion.div key="ofeedback" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[160]">
+                    {renderOrderFeedback()}
+                  </motion.div>
+                )}
+                {subView === "order_chat" && (
+                  <motion.div key="ochat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderOrderChatFlow()}
+                  </motion.div>
+                )}
+                {subView === "quest_center" && (
+                  <motion.div key="quests" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[190]">
+                    {renderQuestCenter()}
+                  </motion.div>
+                )}
+                {subView === "pix_payment" && (
+                  <motion.div key="pixpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderPixPayment()}
+                  </motion.div>
+                )}
+                {subView === "lightning_payment" && (
+                  <motion.div key="lnpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderLightningPayment()}
+                  </motion.div>
+                )}
+                {subView === "card_payment" && (
+                  <motion.div key="cardpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderCardPayment()}
+                  </motion.div>
+                )}
+                {subView === "explore_category" && (
+                  <motion.div key="expcat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40">
+                    {renderExploreCategory()}
+                  </motion.div>
+                )}
+                {subView === "taxi_wizard" && (
+                  <motion.div key="taxi_wiz" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                    {renderTaxiWizard()}
+                  </motion.div>
+                )}
+                {subView === "freight_wizard" && (
+                  <motion.div key="freight" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderFreightWizard()}
+                  </motion.div>
+                )}
+                {subView === "van_wizard" && (
+                  <motion.div key="vanv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderVanWizard()}
+                  </motion.div>
+                )}
+                {subView === "mobility_payment" && (
+                  <motion.div key="mob_pay" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[115]">
+                    {renderMobilityPayment()}
+                  </motion.div>
+                )}
+                {subView === "active_order" && (
+                  <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
+                    <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} onCancelOrder={handleCancelOrder} />
+                  </motion.div>
+                )}
+                {subView === "payment_processing" && (
+                  <motion.div key="pproc" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderPaymentProcessing()}
+                  </motion.div>
+                )}
+                {subView === "payment_error" && (
+                  <motion.div key="perr" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderPaymentError()}
+                  </motion.div>
+                )}
+                {subView === "payment_success" && (
+                  <motion.div key="psuccess" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderPaymentSuccess()}
+                  </motion.div>
+                )}
+                {subView === "waiting_merchant" && (
+                  <motion.div key="wmerchant" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderWaitingMerchant()}
+                  </motion.div>
+                )}
+                {subView === "waiting_driver" && (
+                  <motion.div key="wdriver" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderWaitingDriver()}
+                  </motion.div>
+                )}
+                {subView === "scheduled_order" && (
+                  <motion.div key="wsched" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderScheduledOrder()}
+                  </motion.div>
+                )}
+                {subView === "izi_black_purchase" && (
+                  <motion.div key="iziblackp" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[180]">
+                    {renderIziBlackPurchase()}
+                  </motion.div>
+                )}
+                {isAIOpen && (
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                    className="fixed inset-0 z-[160]"
+                  >
+                    {renderAIConcierge()}
+                  </motion.div>
+                )}
+                {showIziBlackWelcome && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[2000]"
+                  >
+                    {renderIziBlackWelcome()}
+                  </motion.div>
+                )}
+                {showIziBlackCard && (
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                    className="fixed inset-0 z-[170]"
+                  >
+                    {renderIziBlackCard()}
+                  </motion.div>
+                )}
+                {showMasterPerks && (
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                    className="fixed inset-0 z-[180]"
+                  >
+                    {renderMasterPerks()}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {subView === "none" && <BottomNav />}
             </motion.div>
-          </motion.div>
-        )}
+          )}
+        </AnimatePresence>
 
-        {showTimePicker && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-zinc-800 border border-white/5 rounded-[50px] p-8 overflow-hidden shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-              <div className="text-center mb-8">
-                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Horário</h3>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mt-1">Das 08:00 às 22:00</p>
+        {/* Floating Cart Animations */}
+        <AnimatePresence>
+          {cartAnimations.map(anim => (
+            <motion.img
+              key={anim.id}
+              src={anim.img || ""}
+              initial={{ x: anim.x - 30, y: anim.y - 30, scale: 0.8, opacity: 1 }}
+              animate={{ 
+                x: window.innerWidth / 2 - 30,
+                y: window.innerHeight - 80,
+                scale: 0.1,
+                opacity: 0,
+                rotate: 360
+              }}
+              transition={{
+                duration: 0.8,
+                ease: [0.175, 0.885, 0.32, 1.275]
+              }}
+              className="fixed z-[9999] size-16 object-cover rounded-full shadow-2xl border-2 border-primary pointer-events-none"
+            />
+          ))}
+        </AnimatePresence>
+
+        {renderMyQRModal()}
+        {renderTransferModal()}
+        {renderDepositModal()}
+        {renderBroadcastPopup()}
+
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -100, opacity: 0 }}
+              className="fixed top-8 left-1/2 -translate-x-1/2 z-[2000] w-[90%] max-w-[400px]"
+            >
+              <div className={`px-6 py-4 rounded-[25px] border backdrop-blur-xl flex items-center gap-4 shadow-2xl ${toast.type === 'error' ? 'bg-red-500/10 border-red-500/20' : 'bg-zinc-900/90 border-white/10'}`}>
+                <div className={`size-10 rounded-xl flex items-center justify-center ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-black'}`}>
+                  <span className="material-symbols-outlined text-xl">{toast.type === 'error' ? 'error' : 'check_circle'}</span>
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-bold text-sm">{toast.message}</p>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2 py-2">
-                {(() => {
-                  const slots = [];
-                  for (let h = 8; h <= 22; h++) {
-                    const hh = h < 10 ? `0${h}` : `${h}`;
-                    slots.push(`${hh}:00`);
-                    if (h < 22) slots.push(`${hh}:30`);
-                  }
-                  return slots.map((h) => {
-                    const isSelected = transitData.scheduledTime === h;
-                    return (
-                      <button 
-                        key={h} 
-                        onClick={() => { setTransitData({...transitData, scheduledTime: h}); setShowTimePicker(false); }} 
-                        className={`py-4 rounded-[20px] border transition-all font-black text-xs active:scale-90 ${
-                          isSelected 
-                            ? "bg-yellow-400 border-yellow-400 text-black shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_1px_1px_2px_rgba(255,255,255,0.5)]" 
-                            : "bg-zinc-800 border-white/5 text-zinc-400 shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02)] hover:border-zinc-700"
-                        }`}
-                      >
-                        {h}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-              <button 
-                onClick={() => setShowTimePicker(false)} 
-                className="mt-8 w-full py-5 text-zinc-500 font-black uppercase text-[10px] tracking-[0.2em] bg-zinc-900/50 border border-white/5 rounded-[25px] active:scale-95 transition-all shadow-xl"
-              >
-                Fechar
-              </button>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {showSplash && (
-          <SplashScreenComponent finishLoading={() => setShowSplash(false)} />
-        )}
-      </AnimatePresence>
-    </div>
+        <AnimatePresence>
+          {showSplash && (
+            <SplashScreenComponent finishLoading={() => setShowSplash(false)} />
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }
 
-
 export default App;
+
 
 
 

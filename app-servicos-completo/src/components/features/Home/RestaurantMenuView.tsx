@@ -95,6 +95,23 @@ export const RestaurantMenuView = ({
             </span>
           </div>
         </div>
+
+        {/* AVISO DE LOJA FECHADA */}
+        {!shop.isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-4"
+          >
+             <div className="size-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+               <span className="material-symbols-outlined text-red-500">error</span>
+             </div>
+             <div>
+               <p className="text-red-500 font-black text-[11px] uppercase tracking-widest leading-none mb-1">Loja Fechada no Momento</p>
+               <p className="text-zinc-500 text-[9px] font-bold uppercase tracking-tighter">Este estabelecimento não está aceitando pedidos agora.</p>
+             </div>
+          </motion.div>
+        )}
       </section>
 
       {/* CATEGORY TABS */}
@@ -138,25 +155,27 @@ export const RestaurantMenuView = ({
                            OFF
                          </div>
                        )}
-                      <img 
+                       <img 
                         src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} 
                         alt={item.name} 
-                        className="size-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                        className={"size-full object-cover group-hover:scale-110 transition-transform duration-700 " + (!shop.isOpen ? "grayscale" : "")} 
                       />
                       {/* Carrinho Clay Button */}
                       <motion.button 
-                        whileTap={{ scale: 0.8 }}
+                        whileTap={shop.isOpen ? { scale: 0.8 } : {}}
+                        disabled={!shop.isOpen}
                         onClick={(e) => { 
                           e.stopPropagation(); 
-                          handleAddToCart(item, e); 
+                          if (shop.isOpen) handleAddToCart(item, e); 
                         }}
-                        className="absolute bottom-2 right-2 size-11 rounded-[18px] bg-yellow-400 text-black flex items-center justify-center transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] group/btn overflow-hidden"
+                        className={"absolute bottom-2 right-2 size-11 rounded-[18px] flex items-center justify-center transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] group/btn overflow-hidden " + 
+                          (shop.isOpen ? "bg-yellow-400 text-black" : "bg-zinc-700 text-zinc-500 opacity-50 cursor-not-allowed")}
                       >
                         <motion.span 
                           initial={false}
                           className="material-symbols-outlined text-[20px] z-10 font-black"
                         >
-                          shopping_cart
+                          {shop.isOpen ? "shopping_cart" : "block"}
                         </motion.span>
                       </motion.button>
                    </div>

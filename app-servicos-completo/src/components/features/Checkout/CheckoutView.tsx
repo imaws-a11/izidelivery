@@ -1,5 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Icon } from "../../ui/Icon";
 
 interface CheckoutViewProps {
   cart: any[];
@@ -7,6 +8,7 @@ interface CheckoutViewProps {
   walletTransactions: any[];
   savedCards: any[];
   userId: string | null;
+  userName: string;
   userLocation: { address: string };
   paymentMethod: string;
   setPaymentMethod: (method: string) => void;
@@ -31,6 +33,7 @@ interface CheckoutViewProps {
   iziBlackCashbackMultiplier?: number;
   paymentMethodsActive?: { pix?: boolean; card?: boolean; lightning?: boolean; wallet?: boolean };
   walletBalance?: number;
+  isShopOpen?: boolean;
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
@@ -38,6 +41,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   appliedCoupon,
   walletTransactions,
   savedCards,
+  userId,
+  userName,
   userLocation,
   paymentMethod,
   setPaymentMethod,
@@ -60,12 +65,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   iziBlackCashback = 1,
   iziBlackCashbackMultiplier = 1,
   paymentMethodsActive = { pix: true, card: true, lightning: true, wallet: true },
-  walletBalance = 0
+  walletBalance = 0,
+  isShopOpen = true
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((sum, item) => {
     const basePrice = Number(item.price) || 0;
-    // Tenta 'options' primeiro (usado no handlePlaceOrder), depois 'addonDetails' (usado no checkout)
     const addons = Array.isArray(item.options) ? item.options : (Array.isArray(item.addonDetails) ? item.addonDetails : []);
     const addonsPrice = addons.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
     return sum + (basePrice + addonsPrice) * (item.quantity || 1);
@@ -91,7 +96,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   
   const coinDiscount = useCoins ? (iziCoins || 0) * (iziCoinValue || 0.01) : 0;
   
-  // Taxa de serviço é ZERO para membros Izi Black
   const rawServiceFee = (subtotal * (Number(serviceFee) || 0)) / 100;
   const serviceFeeAmount = isIziBlack ? 0 : rawServiceFee;
   
@@ -140,7 +144,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
   return (
     <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-48">
-      {/* HEADER CLAY */}
       <header className="sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-2xl flex items-center justify-between px-6 py-6 border-b border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-5">
           <motion.button
@@ -161,8 +164,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       </header>
 
       <div className="max-w-xl mx-auto px-6 py-10 w-full space-y-12">
-        
-        {/* ENDEREÇO CLAY */}
         <section className="space-y-6">
           <div className="flex items-center justify-between px-1">
             <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Local de Entrega</h2>
@@ -178,12 +179,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             className="flex items-center gap-5 p-5 rounded-[35px] bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] transition-all group"
           >
             <div className="size-14 rounded-[22px] bg-zinc-900 flex items-center justify-center shrink-0 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]">
-              <span
-                className="material-symbols-outlined text-yellow-400 text-2xl"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                my_location
-              </span>
+              <span className="material-symbols-outlined text-yellow-400 text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white font-black text-[15px] leading-tight group-hover:text-yellow-400 transition-colors uppercase italic truncate">
@@ -198,10 +194,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           </motion.div>
         </section>
 
-        {/* FORMAS DE PAGAMENTO - GRID DE ICONES */}
         <section className="space-y-6">
           <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Como deseja pagar?</h2>
-          
           <div className="grid grid-cols-2 gap-4">
             {paymentOptions.map((m) => (
               <button
@@ -235,7 +229,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <p className={`text-[8px] font-bold mt-1 uppercase tracking-widest ${paymentMethod === m.id ? "text-black/50" : "text-zinc-600"}`}>
                    {m.sub}
                 </p>
-                
                 {paymentMethod === m.id && (
                   <motion.div layoutId="selection" className="absolute top-3 right-3">
                      <span className="material-symbols-outlined text-black text-base">verified</span>
@@ -293,7 +286,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           </AnimatePresence>
         </section>
 
-        {/* RESUMO DO PEDIDO - BORDERLESS */}
         <section className="space-y-8">
            <div className="flex items-center justify-between border-b border-white/5 pb-6">
              <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Seu Pedido</h2>
@@ -314,7 +306,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                       </div>
                     )}
                     <div className="absolute -top-1 -right-1 size-6 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-black shadow-lg">
-                      <span className="text-[9px] font-black text-black leading-none">1</span>
+                      <span className="text-[9px] font-black text-black leading-none">{item.quantity || 1}</span>
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -338,7 +330,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               ))}
            </div>
 
-           {/* CUPOM - DESIGN MODERNO */}
            <div className="pt-6">
              <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between mb-2">
@@ -377,7 +368,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
            </div>
         </section>
 
-        {/* TOTAIS E IZI COINS */}
         <section className="pt-10 border-t border-white/10 space-y-8">
            {iziCoins >= 100 && (
              <div className="bg-gradient-to-br from-zinc-900/40 to-black p-6 rounded-[32px] border border-white/5 flex items-center justify-between">
@@ -399,8 +389,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
              </div>
            )}
 
-           <div className="space-y-4 px-2">
-              <div className="flex justify-between items-center">
+           <div className="bg-zinc-900/50 rounded-[32px] p-6 space-y-4 border border-white/5">
+             {!isShopOpen && (
+               <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 mb-2">
+                 <span className="material-symbols-outlined text-red-500">error</span>
+                 <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">Loja Fechada - Não é possível finalizar</p>
+               </div>
+             )}
+             <div className="flex justify-between items-center text-zinc-400">
                 <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em] italic">Subtotal</span>
                 <span className="text-white font-black text-sm">R$ {subtotal.toFixed(2).replace(".", ",")}</span>
               </div>
@@ -447,7 +443,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                      R$ {total.toFixed(2).replace(".", ",")}
                    </p>
                 </div>
-
                 {estimatedCashbackCoins > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
@@ -467,40 +462,43 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
            </div>
         </section>
 
-        {/* COOKIES/POLICY DISCRETO */}
         <p className="text-zinc-800 text-[9px] text-center font-bold leading-relaxed max-w-[280px] mx-auto opacity-40">
            Tudo pronto para decolar? Ao confirmar, você concorda com nossos Termos de Experiência.
         </p>
-
       </div>
 
-      {/* FOOTER FIXO PREMIUM */}
       <div className="fixed bottom-0 left-0 w-full px-6 pb-12 pt-6 bg-gradient-to-t from-black via-black/95 to-transparent z-50">
         <button
-          onClick={() => handlePlaceOrder(useCoins)}
-          disabled={!paymentMethod}
-          className="w-full h-18 rounded-[30px] flex items-center justify-between px-8 transition-all active:scale-[0.98] relative overflow-hidden group shadow-2xl shadow-yellow-400/10 disabled:opacity-30 disabled:grayscale"
-          style={{
+          onClick={() => isShopOpen && handlePlaceOrder(useCoins)}
+          disabled={!paymentMethod || !isShopOpen}
+          className={"w-full h-18 rounded-[30px] flex items-center justify-between px-8 transition-all active:scale-[0.98] relative overflow-hidden group shadow-2xl " + 
+            (!isShopOpen ? "bg-zinc-800 text-zinc-500 shadow-none cursor-not-allowed grayscale" : "shadow-yellow-400/10")}
+          style={isShopOpen ? {
             background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)",
-          }}
+          } : {}}
         >
           <div className="flex flex-col items-start">
-             <span className="text-[8px] font-black uppercase tracking-[0.3em] text-black/40 leading-none mb-1.5">Confirmar meu</span>
-             <span className="text-black font-black text-base uppercase tracking-widest italic leading-none">Concluir Pedido</span>
+             <span className={"text-[8px] font-black uppercase tracking-[0.3em] leading-none mb-1.5 " + (isShopOpen ? "text-black/40" : "text-zinc-600")}>
+               {isShopOpen ? "Confirmar meu" : "Estabelecimento"}
+             </span>
+             <span className={"font-black text-base uppercase tracking-widest italic leading-none " + (isShopOpen ? "text-black" : "text-zinc-500")}>
+               {isShopOpen ? "Concluir Pedido" : "Fechado agora"}
+             </span>
           </div>
           <div className="flex items-center gap-4">
-             <div className="h-6 w-px bg-black/10" />
+             <div className={"h-6 w-px " + (isShopOpen ? "bg-black/10" : "bg-white/5")} />
              <div className="flex flex-col items-end">
-                <span className="text-black font-black text-xl italic tracking-tighter leading-none">R$ {total.toFixed(2).replace(".", ",")}</span>
+                <span className={"font-black text-xl italic tracking-tighter leading-none " + (isShopOpen ? "text-black" : "text-zinc-400")}>
+                  R$ {total.toFixed(2).replace(".", ",")}
+                </span>
              </div>
-             <span className="material-symbols-outlined text-black text-2xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+             <span className={"material-symbols-outlined text-2xl group-hover:translate-x-1 transition-transform " + (isShopOpen ? "text-black" : "text-zinc-600")}>
+               {isShopOpen ? "arrow_forward" : "block"}
+             </span>
           </div>
-          
           <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
         </button>
       </div>
     </div>
   );
 };
-
-
