@@ -7,6 +7,7 @@ interface RestaurantMenuViewProps {
   activeCategory: string;
   setActiveCategory: (cat: string) => void;
   handleAddToCart: (item: any, e?: any) => void;
+  handleRemoveOneFromCart: (productId: string) => void;
   navigateSubView: (view: any) => void;
   cart: any[];
   iziCoinRate?: number;
@@ -20,6 +21,7 @@ export const RestaurantMenuView = ({
   activeCategory,
   setActiveCategory,
   handleAddToCart,
+  handleRemoveOneFromCart,
   navigateSubView,
   cart,
   iziCoinRate = 0,
@@ -161,23 +163,58 @@ export const RestaurantMenuView = ({
                         className={"size-full object-cover group-hover:scale-110 transition-transform duration-700 " + (!shop.isOpen ? "grayscale" : "")} 
                       />
                       {/* Carrinho Clay Button */}
-                      <motion.button 
-                        whileTap={shop.isOpen ? { scale: 0.8 } : {}}
-                        disabled={!shop.isOpen}
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          if (shop.isOpen) handleAddToCart(item, e); 
-                        }}
-                        className={"absolute bottom-2 right-2 size-11 rounded-[18px] flex items-center justify-center transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] group/btn overflow-hidden " + 
-                          (shop.isOpen ? "bg-yellow-400 text-black" : "bg-zinc-700 text-zinc-500 opacity-50 cursor-not-allowed")}
-                      >
-                        <motion.span 
-                          initial={false}
-                          className="material-symbols-outlined text-[20px] z-10 font-black"
-                        >
-                          {shop.isOpen ? "shopping_cart" : "block"}
-                        </motion.span>
-                      </motion.button>
+                      {(() => {
+                        const itemQty = cart.filter(c => c.id === item.id).length;
+                        
+                        if (!shop.isOpen) {
+                          return (
+                            <div className="absolute bottom-2 right-2 size-11 rounded-[18px] bg-zinc-700 text-zinc-500 opacity-50 flex items-center justify-center shadow-[4px_4px_8px_rgba(0,0,0,0.4)] cursor-not-allowed">
+                              <span className="material-symbols-outlined text-[20px] font-black">block</span>
+                            </div>
+                          );
+                        }
+
+                        if (itemQty > 0) {
+                          return (
+                            <motion.div 
+                              layoutId={`qty-selector-${item.id}`}
+                              className="absolute bottom-2 right-2 h-11 bg-yellow-400 rounded-[18px] flex items-center gap-1 p-1 shadow-[4px_4px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4)] overflow-hidden"
+                            >
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleRemoveOneFromCart(item.id); }}
+                                className="size-9 rounded-[14px] bg-black/10 flex items-center justify-center active:scale-90 transition-all"
+                              >
+                                <span className="material-symbols-outlined text-[18px] font-black text-black">remove</span>
+                              </button>
+                              
+                              <div className="min-w-[20px] flex items-center justify-center">
+                                <span className="text-black font-black text-[13px] italic">{itemQty}</span>
+                              </div>
+
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e); }}
+                                className="size-9 rounded-[14px] bg-black/20 flex items-center justify-center active:scale-90 transition-all"
+                              >
+                                <span className="material-symbols-outlined text-[18px] font-black text-black">add</span>
+                              </button>
+                            </motion.div>
+                          );
+                        }
+
+                        return (
+                          <motion.button 
+                            layoutId={`qty-selector-${item.id}`}
+                            whileTap={{ scale: 0.8 }}
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              handleAddToCart(item, e); 
+                            }}
+                            className="absolute bottom-2 right-2 size-11 rounded-[18px] bg-yellow-400 text-black flex items-center justify-center transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] group/btn overflow-hidden"
+                          >
+                            <span className="material-symbols-outlined text-[20px] z-10 font-black">shopping_cart</span>
+                          </motion.button>
+                        );
+                      })()}
                    </div>
                    <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
