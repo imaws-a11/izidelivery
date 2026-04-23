@@ -74,7 +74,8 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
                 transition={{ delay: i * 0.1 }}
                 key={story.id}
                 onClick={() => {
-                  if (story.isRedeemed) showToast("Você já aproveitou esta oferta!", "info");
+                  if (!story.isOpen) showToast(`Esta loja (${story.merchant}) está fechada no momento. 🕒`, "error");
+                  else if (story.isRedeemed) showToast("Você já aproveitou esta oferta!", "info");
                   else if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
                   else if (story.isMaster) setShowMasterPerks(true);
                   else {

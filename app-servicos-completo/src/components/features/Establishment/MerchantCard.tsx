@@ -26,7 +26,7 @@ export const MerchantCard = ({ shop, onClick, index }: MerchantCardProps) => {
           alt={shop.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
-        {!shop.is_open && (
+        {!shop.isOpen && (
            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
               <span className="text-[8px] font-black text-white uppercase tracking-widest text-center px-2">Fechado</span>
            </div>
