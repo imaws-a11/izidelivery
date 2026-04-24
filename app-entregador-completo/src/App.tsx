@@ -2433,9 +2433,12 @@ function App() {
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
                 
                 const isAcceptable = isMerchantOrder ? merchantAccepted : p2pAllowed;
-
-                if (!isAcceptable) {
-                    setOrders(prev => prev.filter(x => x.realId !== o.id));
+                if (!isAcceptable || (o.driver_id && String(o.driver_id).trim() !== dId)) {
+                    setOrders(prev => {
+                        const newOrders = prev.filter(x => x.realId !== o.id);
+                        if (newOrders.length === 0) stopIziSounds();
+                        return newOrders;
+                    });
                     return;
                 }
 
@@ -3324,6 +3327,7 @@ function App() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isSyncingMission, setIsSyncingMission] = useState(false);
     const [pullY, setPullY] = useState(0);
+    const touchStartY = useRef(0);
 
     const onRefresh = async () => {
         setIsRefreshing(true);
@@ -3349,7 +3353,31 @@ function App() {
                 </div>
             </motion.div>
 
-            <div className="flex-1 overflow-y-auto w-full no-scrollbar pt-6 pb-40">
+            <div 
+                className="flex-1 overflow-y-auto w-full no-scrollbar pt-6 pb-40"
+                onTouchStart={(e) => {
+                    if (e.currentTarget.scrollTop <= 0) {
+                        touchStartY.current = e.touches[0].clientY;
+                    } else {
+                        touchStartY.current = 0;
+                    }
+                }}
+                onTouchMove={(e) => {
+                    if (touchStartY.current === 0 || isRefreshing) return;
+                    const diff = e.touches[0].clientY - touchStartY.current;
+                    if (diff > 0 && e.currentTarget.scrollTop <= 0) {
+                        setPullY(Math.min(diff * 0.4, 100));
+                    }
+                }}
+                onTouchEnd={() => {
+                    if (pullY > 60 && !isRefreshing) {
+                        onRefresh();
+                    } else {
+                        setPullY(0);
+                    }
+                    touchStartY.current = 0;
+                }}
+            >
                 <div className="px-6 space-y-10">
                 {/* New Premium Clay Consolidated Card */}
                 <header className="clay-profile-card rounded-[3.5rem] flex flex-col relative overflow-hidden p-8 gap-8">
