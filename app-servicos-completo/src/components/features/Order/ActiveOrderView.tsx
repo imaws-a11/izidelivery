@@ -64,49 +64,38 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           id: "confirmado",
           label: "Pedido Recebido",
           icon: "check_circle",
-          status: [
-            "novo", "pendente", "aceito", "confirmado", "atribuido", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
-          ],
+          status: ["novo", "confirmado"],
         },
         {
-          id: "preparando",
-          label: "Preparando seu Pedido",
-          icon: "restaurant",
-          status: [
-            "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
-          ],
+          id: "procurando_entregador",
+          label: "Procurando IZI entregador",
+          icon: "search",
+          status: ["aceito", "preparando", "no_preparo", "pronto", "waiting_driver", "atribuindo"],
         },
         {
-          id: "aceito_ent",
-          label: "Procurando IZI entregador nas proximidades",
+          id: "entregador_a_caminho",
+          label: "Entregador indo para a coleta",
           icon: "moped",
-          status: [
-            "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
-          ],
-        },
-        {
-          id: "coletado",
-          label: "Pedido Coletado",
-          icon: "package_2",
-          status: [
-            "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
-          ],
+          status: ["a_caminho_coleta", "saiu_para_coleta", "chegou_coleta"],
         },
         {
           id: "em_rota",
-          label: "A Caminho",
+          label: "Pedido Coletado / A Caminho",
           icon: "delivery_dining",
-          status: [
-            "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
-          ],
+          status: ["picked_up", "a_caminho", "saiu_para_entrega", "em_rota"],
         },
         {
           id: "no_local",
           label: "No seu Endereço",
           icon: "location_home",
-          status: ["no_local", "concluido"],
+          status: ["no_local"],
         },
-        { id: "entregue", label: "Entregue", icon: "verified", status: ["concluido", "delivered", "finalizado"] },
+        { 
+          id: "entregue", 
+          label: "Entregue", 
+          icon: "verified", 
+          status: ["concluido", "delivered", "finalizado"] 
+        },
       ];
 
   const revIdx = steps

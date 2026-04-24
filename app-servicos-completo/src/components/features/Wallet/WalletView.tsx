@@ -218,7 +218,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
   }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card" | "loans">("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
-  const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "", cvv: "" });
+  const [historyFilter, setHistoryFilter] = useState<"all" | "cashback">("all");
+  const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "" });
   const [isSavingCard, setIsSavingCard] = useState(false);
   const historyRef = useRef<HTMLElement>(null);
 
@@ -1458,12 +1459,20 @@ export const WalletView: React.FC<WalletViewProps> = ({
         <section ref={historyRef} className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="font-black text-lg text-white uppercase tracking-tighter">Histórico</h2>
-            <button
-              onClick={() => setShowAllHistory((prev) => !prev)}
-              className="px-5 py-2.5 rounded-full bg-yellow-400 border border-yellow-300 text-[10px] font-black text-black uppercase tracking-widest shadow-[inset_2px_2px_4px_rgba(255,255,255,0.7),inset_-2px_-2px_4px_rgba(0,0,0,0.1)] active:scale-95 transition-all"
-            >
-              {showAllHistory ? "Recolher" : "Ver Todos"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setHistoryFilter(historyFilter === "all" ? "cashback" : "all")}
+                className={`px-4 py-2.5 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all ${historyFilter === "cashback" ? 'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-zinc-900 border-white/5 text-zinc-500 hover:text-zinc-300'}`}
+              >
+                {historyFilter === "cashback" ? "✓ Cashback" : "Cashback"}
+              </button>
+              <button
+                onClick={() => setShowAllHistory((prev) => !prev)}
+                className="px-5 py-2.5 rounded-full bg-yellow-400 border border-yellow-300 text-[10px] font-black text-black uppercase tracking-widest shadow-[inset_2px_2px_4px_rgba(255,255,255,0.7),inset_-2px_-2px_4px_rgba(0,0,0,0.1)] active:scale-95 transition-all"
+              >
+                {showAllHistory ? "Recolher" : "Ver Todos"}
+              </button>
+            </div>
           </div>
           <div className="flex flex-col gap-3">
             {walletTransactions.length === 0 ? (
@@ -1475,7 +1484,10 @@ export const WalletView: React.FC<WalletViewProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
-              {(showAllHistory ? walletTransactions : walletTransactions.slice(0, 20)).map((t: any, i: number) => {
+              {(showAllHistory 
+                  ? (historyFilter === "cashback" ? walletTransactions.filter(t => t.type === 'venda' || t.description?.toLowerCase().includes('cashback')) : walletTransactions)
+                  : (historyFilter === "cashback" ? walletTransactions.filter(t => t.type === 'venda' || t.description?.toLowerCase().includes('cashback')) : walletTransactions).slice(0, 20)
+                ).map((t: any, i: number) => {
                 const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
                 const isPositive = ["deposito", "reembolso", "venda"].includes(t.type);
                 return (

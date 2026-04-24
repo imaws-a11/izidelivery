@@ -23,6 +23,8 @@ export default function OrdersAdminTab() {
 
   const [localProcessingId, setLocalProcessingId] = React.useState<string | null>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = React.useState<any>(null);
+  const [orderToCancel, setOrderToCancel] = React.useState<any>(null);
+  const [cancelReason, setCancelReason] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('todos');
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -684,11 +686,7 @@ export default function OrdersAdminTab() {
                       <div className="p-8 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 bg-slate-50/50 dark:bg-slate-800/20">
                           <button
                               disabled={localProcessingId === selectedOrderDetails.id}
-                              onClick={() => {
-                                if(confirm('Como ADMIN, deseja forçar o cancelamento deste pedido?')) {
-                                  handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado forçadamente pelo ADMIN');
-                                }
-                              }}
+                              onClick={() => setOrderToCancel(selectedOrderDetails)}
                               className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
                           >
                               {localProcessingId === selectedOrderDetails.id ? '...' : 'Forçar Cancelamento'}
@@ -727,6 +725,89 @@ export default function OrdersAdminTab() {
                   </motion.div>
               </div>
           )}
+      </AnimatePresence>
+
+      {/* MODAL DE CONFIRMAÇÃO DE CANCELAMENTO (ADMIN) */}
+      <AnimatePresence>
+         {orderToCancel && (
+           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => setOrderToCancel(null)}
+               className="absolute inset-0 bg-slate-900/80 backdrop-blur-xl"
+             />
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[48px] shadow-2xl overflow-hidden p-8 border border-slate-200 dark:border-slate-800"
+             >
+               <div className="text-center space-y-6">
+                 <div className="size-20 rounded-[32px] bg-rose-600/10 text-rose-600 flex items-center justify-center mx-auto shadow-inner shadow-rose-600/20">
+                   <span className="material-symbols-outlined text-4xl">gavel</span>
+                 </div>
+                 
+                 <div className="space-y-2">
+                   <h3 className="text-2xl font-black text-slate-900 dark:text-white">Forçar Cancelamento (Admin)</h3>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                     Como administrador, você tem poder total para cancelar este pedido e disparar o estorno financeiro.
+                   </p>
+                 </div>
+
+                 {/* Detalhes do Estorno Automático */}
+                 <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-4">
+                   <div className="flex items-center justify-between">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor a Estornar</span>
+                     <span className="text-lg font-black text-primary italic">R$ {orderToCancel.total_price?.toFixed(2).replace('.', ',')}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gateway / Método</span>
+                     <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase px-3 py-1 rounded-full bg-white dark:bg-slate-700 shadow-sm">
+                       {orderToCancel.payment_method?.toUpperCase()}
+                     </span>
+                   </div>
+                   <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex items-start gap-3 text-left">
+                     <span className="material-symbols-outlined text-amber-500 text-sm">info</span>
+                     <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
+                       Ao confirmar, o sistema tentará realizar o estorno automático via PIX, Cartão ou Crédito em Carteira conforme configurado.
+                     </p>
+                   </div>
+                 </div>
+
+                 <div className="space-y-4 pt-4">
+                   <textarea 
+                     placeholder="Justificativa administrativa para o cancelamento..."
+                     value={cancelReason}
+                     onChange={(e) => setCancelReason(e.target.value)}
+                     className="w-full p-6 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-[32px] text-xs font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-400 min-h-[120px] resize-none"
+                   />
+                   
+                   <div className="flex gap-3">
+                     <button 
+                       onClick={() => setOrderToCancel(null)}
+                       className="flex-1 py-5 rounded-[24px] bg-white dark:bg-slate-800 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:text-slate-600 transition-all"
+                     >
+                       Voltar
+                     </button>
+                     <button 
+                       disabled={localProcessingId === orderToCancel.id}
+                       onClick={() => {
+                         handleAction(orderToCancel.id, 'cancelado', cancelReason || 'Cancelado forçadamente pelo ADMIN');
+                         setOrderToCancel(null);
+                         setCancelReason('');
+                       }}
+                       className="flex-[2] py-5 rounded-[24px] bg-rose-600 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-rose-600/30 hover:bg-rose-700 transition-all flex items-center justify-center gap-2"
+                     >
+                       {localProcessingId === orderToCancel.id ? 'Processando...' : 'Confirmar Cancelamento'}
+                     </button>
+                   </div>
+                 </div>
+               </div>
+             </motion.div>
+           </div>
+         )}
       </AnimatePresence>
     </div>
   );
