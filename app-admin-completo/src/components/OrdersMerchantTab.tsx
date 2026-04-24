@@ -41,6 +41,8 @@ export default function OrdersMerchantTab() {
 
   const [localProcessingId, setLocalProcessingId] = React.useState<string | null>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = React.useState<any>(null);
+  const [orderToCancel, setOrderToCancel] = React.useState<any>(null);
+  const [cancelReason, setCancelReason] = React.useState('');
 
   const handleTogglePreparation = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === 'preparando' ? 'pronto' : 'preparando';
@@ -742,6 +744,201 @@ export default function OrdersMerchantTab() {
                                   <div className="flex items-center gap-3 mb-4">
                                       <span className="material-symbols-outlined text-blue-500">payments</span>
                                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pagamento ({selectedOrderDetails.payment_method})</h4>
+                                      <p className="text-base font-black uppercase tracking-widest">
+                                          {selectedOrderDetails.status === 'pendente_pagamento' ? 'Aguardando Confirmação do Pagamento' :
+                                           selectedOrderDetails.status === 'waiting_merchant' ? 'Aguardando Aprovação' : 
+                                           selectedOrderDetails.status === 'preparando' ? 'Em Preparação' : 
+                                           selectedOrderDetails.status === 'waiting_driver' || selectedOrderDetails.status === 'pending' ? 'Buscando Entregador' : 
+                                           ['accepted', 'a_caminho_coleta', 'no_local_coleta'].includes(selectedOrderDetails.status) ? 'Entregador vindo coletar' :
+                                           selectedOrderDetails.status === 'chegou_coleta' ? 'Entregador no Estabelecimento' :
+                                           ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(selectedOrderDetails.status) ? 'Pedido saiu para entrega' :
+                                           selectedOrderDetails.status === 'concluido' ? 'Pedido Finalizado' : selectedOrderDetails.status}
+                                      </p>
+                                  </div>
+                              </div>
+
+                               {/* Controle de Preparação no Modal */}
+                               <div className="flex items-center gap-2">
+                                  <button
+                                    disabled={localProcessingId === selectedOrderDetails.id}
+                                    onClick={() => handleTogglePreparation(selectedOrderDetails.id, selectedOrderDetails.preparation_status || 'preparando')}
+                                    className={`px-6 py-3 rounded-2xl border-2 flex items-center gap-2 transition-all ${
+                                      selectedOrderDetails.preparation_status === 'pronto'
+                                        ? 'bg-emerald-500 text-white border-emerald-400'
+                                        : 'bg-amber-500 text-white border-amber-400'
+                                    }`}
+                                  >
+                                    <span className={`material-symbols-outlined ${selectedOrderDetails.preparation_status === 'preparando' ? 'animate-pulse' : ''}`}>
+                                      {selectedOrderDetails.preparation_status === 'pronto' ? 'check_circle' : 'restaurant'}
+                                    </span>
+                                    <span className="text-xs font-black uppercase tracking-widest">
+                                      {selectedOrderDetails.preparation_status === 'pronto' ? 'Pronto' : 'Preparando'}
+                                    </span>
+                                  </button>
+                               </div>
+                          </div>
+
+                          {/* Items Section */}
+                          <div>
+                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-1">Itens do Pedido</h4>
+                              <div className="space-y-3">
+                                  {selectedOrderDetails.items && Array.isArray(selectedOrderDetails.items) && selectedOrderDetails.items.length > 0 ? (
+                                      <>
+                                          {selectedOrderDetails.items.map((it: any, idx: number) => (
+                                              <div key={idx} className="flex justify-between items-start p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 group hover:border-primary/20 transition-all">
+                                                  <div className="flex items-start gap-4">
+                                                       <div className="size-8 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center text-[10px] font-black text-primary border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
+                                                           {it.quantity || 1}x
+                                                       </div>
+                                                       <div>
+                                                           <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{it.name || it.product_name || 'Produto'}</p>
+                                                           {((it.options && it.options.length > 0) || (it.addonDetails && it.addonDetails.length > 0)) && (
+                                                               <div className="mt-1 space-y-0.5">
+                                                                   {(it.options || []).map((opt: any, oIdx: number) => (
+                                                                       <p key={oIdx} className="text-[10px] text-slate-400 font-medium italic">
+                                                                           + {opt.name}
+                                                                       </p>
+                                                                   ))}
+                                                                   {(it.addonDetails || []).map((addon: any, aIdx: number) => (
+                                                                       <p key={aIdx} className="text-[10px] text-slate-400 font-medium italic">
+                                                                           {addon.group_name}: {addon.name}
+                                                                       </p>
+                                                                   ))}
+                                                               </div>
+                                                           )}
+                                                       </div>
+                                                  </div>
+                                                  <div className="text-right">
+                                                      <p className="text-sm font-black text-slate-900 dark:text-white">
+                                                          R$ {(
+                                                              (Number(it.price || 0) + 
+                                                              (it.options || []).reduce((acc: number, opt: any) => acc + (Number(opt.price) || 0), 0) +
+                                                              (it.addonDetails || []).reduce((acc: number, ad: any) => acc + (Number(ad.price || ad.unit_price) || 0), 0)
+                                                              ) * (it.quantity || 1)
+                                                          ).toFixed(2).replace('.', ',')}
+                                                      </p>
+                                                      {it.quantity > 1 && (
+                                                          <p className="text-[9px] font-bold text-slate-400 uppercase">
+                                                              Un: R$ {Number(it.price || 0).toFixed(2).replace('.', ',')}
+                                                          </p>
+                                                      )}
+                                                  </div>
+                                              </div>
+                                          ))}
+
+                                          {/* Financial Summary */}
+                                          <div className="mt-6 p-6 rounded-3xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 space-y-3">
+                                               <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                   <span>Subtotal</span>
+                                                   <span>R$ {Number(selectedOrderDetails.total_price - (selectedOrderDetails.delivery_fee || 0) + (selectedOrderDetails.discount || 0)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               {selectedOrderDetails.delivery_fee > 0 && (
+                                                   <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <span>Taxa de Entrega</span>
+                                                       <span className="text-blue-500 font-black">+ R$ {Number(selectedOrderDetails.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               {selectedOrderDetails.discount > 0 && (
+                                                   <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <div className="flex items-center gap-1">
+                                                           <span>Desconto Aplicado</span>
+                                                           {selectedOrderDetails.coupon_code && (
+                                                               <span className="px-1.5 py-0.5 bg-rose-50 text-rose-500 rounded border border-rose-100 text-[8px] font-black">{selectedOrderDetails.coupon_code}</span>
+                                                           )}
+                                                       </div>
+                                                       <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                                                                               <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                                                   <div className="flex items-center gap-1">
+                                                       <span>Comissão IZI ({merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12}%)</span>
+                                                   </div>
+                                                   <span className="text-rose-500 font-black">- R$ {((Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0) - Number(selectedOrderDetails.service_fee || 0)) * ((merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido (Recebe)</span>
+                                                   <span className="text-xl font-black text-emerald-500 italic">R$ {( (Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0) - Number(selectedOrderDetails.service_fee || 0)) * (1 - (merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100) ).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                          </div>
+                                      </>
+                                  ) : parseOrderAddress(selectedOrderDetails.delivery_address).items.length > 0 ? (
+                                      <div className="space-y-3">
+                                          {parseOrderAddress(selectedOrderDetails.delivery_address).items.map((item: string, idx: number) => (
+                                              <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                                  <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                      <span className="material-symbols-outlined text-primary text-xl">fastfood</span>
+                                                  </div>
+                                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item}</p>
+                                              </div>
+                                          ))}
+
+                                          {/* Resumo Financeiro Legado */}
+                                          <div className="mt-6 p-6 rounded-3xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 space-y-3">
+                                               <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                   <span>Subtotal</span>
+                                                   <span>R$ {Number(selectedOrderDetails.total_price - (selectedOrderDetails.delivery_fee || 0) + (selectedOrderDetails.discount || 0)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               {selectedOrderDetails.delivery_fee > 0 && (
+                                                   <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <span>Taxa de Entrega</span>
+                                                       <span className="text-blue-500 font-black">+ R$ {Number(selectedOrderDetails.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               {selectedOrderDetails.discount > 0 && (
+                                                   <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                        <div className="flex items-center gap-1">
+                                                            <span>Desconto</span>
+                                                            {selectedOrderDetails.coupon_code && (
+                                                                <span className="px-1.5 py-0.5 bg-rose-50 text-rose-500 rounded border border-rose-100 text-[8px] font-black">{selectedOrderDetails.coupon_code}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                                                                               <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                                                   <div className="flex items-center gap-1">
+                                                       <span>Comissão IZI ({merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12}%)</span>
+                                                   </div>
+                                                   <span className="text-rose-500 font-black">- R$ {((Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0) - Number(selectedOrderDetails.service_fee || 0)) * ((merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido (Recebe)</span>
+                                                   <span className="text-xl font-black text-emerald-500 italic">R$ {( (Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0) - Number(selectedOrderDetails.service_fee || 0)) * (1 - (merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100) ).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                          </div>
+                                      </div>
+                                  ) : (
+                                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 border-dashed text-center opacity-60">
+                                          <p className="text-xs font-bold text-slate-400">Detalhes dos itens não disponíveis</p>
+                                      </div>
+                                  )}
+                              </div>
+                          </div>
+
+                          {/* Info Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center gap-3 mb-4">
+                                      <span className="material-symbols-outlined text-indigo-500">person</span>
+                                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</h4>
+                                  </div>
+                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-relaxed">
+                                      {selectedOrderDetails.user_name || 'Usuário Izi'}
+                                  </p>
+                              </div>
+                              <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center gap-3 mb-4">
+                                      <span className="material-symbols-outlined text-rose-500">pin_drop</span>
+                                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço de Entrega</h4>
+                                  </div>
+                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-relaxed">
+                                      {parseOrderAddress(selectedOrderDetails.delivery_address).address}
+                                  </p>
+                              </div>
+                              <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center gap-3 mb-4">
+                                      <span className="material-symbols-outlined text-blue-500">payments</span>
+                                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pagamento ({selectedOrderDetails.payment_method})</h4>
                                   </div>
                                   <div className="flex items-end justify-between">
                                        <p className="text-2xl font-black text-emerald-500">R$ {((Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0) - Number(selectedOrderDetails.service_fee || 0)) * (1 - (merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</p>
@@ -764,7 +961,7 @@ export default function OrdersMerchantTab() {
                               <>
                                 <button
                                     disabled={localProcessingId === selectedOrderDetails.id}
-                                    onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado pelo lojista')}
+                                    onClick={() => setOrderToCancel(selectedOrderDetails)}
                                     className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
                                 >
                                     {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
@@ -787,7 +984,7 @@ export default function OrdersMerchantTab() {
                               <>
                                 <button 
                                     disabled={localProcessingId === selectedOrderDetails.id}
-                                    onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Recusado pelo lojista')}
+                                    onClick={() => setOrderToCancel(selectedOrderDetails)}
                                     className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
                                 >
                                     {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
@@ -810,7 +1007,7 @@ export default function OrdersMerchantTab() {
                               <>
                                 <button
                                   disabled={localProcessingId === selectedOrderDetails.id}
-                                  onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado pelo lojista durante o preparo')}
+                                  onClick={() => setOrderToCancel(selectedOrderDetails)}
                                   className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
                                 >
                                   {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
@@ -833,7 +1030,7 @@ export default function OrdersMerchantTab() {
                                <>
                                  <button
                                    disabled={localProcessingId === selectedOrderDetails.id}
-                                   onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado pelo lojista enquanto aguardava entregador')}
+                                   onClick={() => setOrderToCancel(selectedOrderDetails)}
                                    className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
                                  >
                                    {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
@@ -848,6 +1045,91 @@ export default function OrdersMerchantTab() {
                   </motion.div>
               </div>
           )}
+      </AnimatePresence>
+
+      {/* MODAL DE CONFIRMAÇÃO DE CANCELAMENTO E ESTORNO */}
+      <AnimatePresence>
+         {orderToCancel && (
+           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => setOrderToCancel(null)}
+               className="absolute inset-0 bg-slate-900/80 backdrop-blur-xl"
+             />
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[48px] shadow-2xl overflow-hidden p-8 border border-slate-200 dark:border-slate-800"
+             >
+               <div className="text-center space-y-6">
+                 <div className="size-20 rounded-[32px] bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto shadow-inner shadow-rose-500/20">
+                   <span className="material-symbols-outlined text-4xl">cancel</span>
+                 </div>
+                 
+                 <div className="space-y-2">
+                   <h3 className="text-2xl font-black text-slate-900 dark:text-white">Confirmar Cancelamento</h3>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                     Esta ação é irreversível e o cliente será notificado imediatamente.
+                   </p>
+                 </div>
+
+                 {/* Detalhes do Estorno Automático */}
+                 <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-4">
+                   <div className="flex items-center justify-between">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor do Estorno</span>
+                     <span className="text-lg font-black text-primary italic">R$ {orderToCancel.total_price?.toFixed(2).replace('.', ',')}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Método Original</span>
+                     <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase px-3 py-1 rounded-full bg-white dark:bg-slate-700 shadow-sm">
+                       {orderToCancel.payment_method?.toUpperCase()}
+                     </span>
+                   </div>
+                   <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                     <span className="material-symbols-outlined text-emerald-500 text-sm">auto_awesome</span>
+                     <p className="text-[10px] font-bold text-slate-500 text-left leading-relaxed">
+                       {orderToCancel.payment_method === 'dinheiro' 
+                         ? 'Este pedido foi marcado como dinheiro. Nenhum estorno digital será processado.'
+                         : 'O estorno será processado automaticamente pelo gateway de pagamento IZI.'}
+                     </p>
+                   </div>
+                 </div>
+
+                 <div className="space-y-4 pt-4">
+                   <textarea 
+                     placeholder="Motivo do cancelamento (opcional)..."
+                     value={cancelReason}
+                     onChange={(e) => setCancelReason(e.target.value)}
+                     className="w-full p-6 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-[32px] text-xs font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-400 min-h-[120px] resize-none"
+                   />
+                   
+                   <div className="flex gap-3">
+                     <button 
+                       onClick={() => setOrderToCancel(null)}
+                       className="flex-1 py-5 rounded-[24px] bg-white dark:bg-slate-800 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:text-slate-600 transition-all"
+                     >
+                       Voltar
+                     </button>
+                     <button 
+                       disabled={localProcessingId === orderToCancel.id}
+                       onClick={() => {
+                         handleAction(orderToCancel.id, 'cancelado', cancelReason || 'Cancelado pelo lojista');
+                         setOrderToCancel(null);
+                         setCancelReason('');
+                       }}
+                       className="flex-[2] py-5 rounded-[24px] bg-rose-500 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all flex items-center justify-center gap-2"
+                     >
+                       {localProcessingId === orderToCancel.id ? 'Processando...' : 'Confirmar e Estornar'}
+                     </button>
+                   </div>
+                 </div>
+               </div>
+             </motion.div>
+           </div>
+         )}
       </AnimatePresence>
     </div>
   );

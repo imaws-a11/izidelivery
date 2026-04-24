@@ -646,6 +646,7 @@ function App() {
     const [authName, setAuthName] = useState('');
     const [authVehicle, setAuthVehicle] = useState<'mototaxi' | 'carro' | 'bicicleta'>('mototaxi');
     const [authPhone, setAuthPhone] = useState('');
+    const [driverVehicle, setDriverVehicle] = useState<string>(() => localStorage.getItem('izi_driver_vehicle') || 'mototaxi');
     const [authLoading, setAuthLoading] = useState(false);
     const [authError, setAuthError] = useState('');
     const [authInitLoading, setAuthInitLoading] = useState(true);
@@ -656,7 +657,7 @@ function App() {
     const [showSplash, setShowSplash] = useState(true);
 
     const ensureDriverRecord = useCallback(async (userId: string, email: string, name: string) => {
-        const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online').eq('id', userId).maybeSingle();
+        const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online, vehicle_type').eq('id', userId).maybeSingle();
         if (!data) {
             await supabase.from('drivers_delivery').upsert({
                 id: userId, 
@@ -670,6 +671,10 @@ function App() {
         } else {
             if (data.name) {
                 setDriverName(data.name);
+                if (data.vehicle_type) {
+                    setDriverVehicle(data.vehicle_type);
+                    localStorage.setItem('izi_driver_vehicle', data.vehicle_type);
+                }
                 localStorage.setItem('izi_driver_name', data.name);
             }
             const lat = Number(data.lat);
@@ -758,13 +763,15 @@ function App() {
             localStorage.setItem('izi_driver_authenticated', 'true');
             localStorage.setItem('izi_driver_uid', driverId);
             localStorage.setItem('izi_driver_name', driverName);
+            localStorage.setItem('izi_driver_vehicle', driverVehicle);
             fetchGlobalSettings();
         } else if (!authInitLoading) {
             localStorage.removeItem('izi_driver_authenticated');
             localStorage.removeItem('izi_driver_uid');
             localStorage.removeItem('izi_driver_name');
+            localStorage.removeItem('izi_driver_vehicle');
         }
-    }, [isAuthenticated, driverId, driverName, authInitLoading]);
+    }, [isAuthenticated, driverId, driverName, driverVehicle, authInitLoading]);
 
     const refreshMyApplications = useCallback(async () => {
         if (!driverId) return;
@@ -1697,6 +1704,7 @@ function App() {
                     is_active: true 
                 });
                 setDriverName(authName.trim());
+                setDriverVehicle(authVehicle);
             }
         } catch (e: any) {
             setAuthError(e.message?.includes('already registered') ? 'Este email já está cadastrado. Faça login.' : e.message);
@@ -5314,6 +5322,15 @@ function App() {
         };
 
         const toggleMobility = (key: string) => {
+            const compatibilityMap: Record<string, string[]> = {
+                'mototaxi': ['mototaxi'],
+                'carro': ['frete', 'mudanca', 'motorista'],
+                'bicicleta': []
+            };
+            if (!(compatibilityMap[driverVehicle] || []).includes(key)) {
+                toastError("Este serviço não está disponível para sua categoria de veículo");
+                return;
+            }
             const updated = prefServiceTypes.includes(key)
                 ? prefServiceTypes.filter(s => s !== key)
                 : [...prefServiceTypes, key];
@@ -5576,14 +5593,14 @@ function App() {
         );
     };
 
-    const renderActiveMissionView = () => {
+    const renderActiveMissionView = () => { // UPDATED
         if (!activeMission) {
             return (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
                     <div className="size-28 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center mb-8 shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02)]">
                         <Icon name="route" size={48} className="text-white/20" />
                     </div>
-                    <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-3 italic">Sem Missão Ativa</h2>
+                    <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase mb-2">Sem Missões Ativas</h2>
                     <p className="text-sm text-white/40 leading-relaxed mb-10 max-w-xs font-medium">Você não possui nenhuma corrida em andamento. Vá ao Dashboard para aceitar novos desafios e lucrar.</p>
                     
                     <div className="flex flex-col gap-4 w-full max-w-xs">
@@ -5607,7 +5624,7 @@ function App() {
             );
         }
 
-        const isMobility = activeMission.type === 'mototaxi' || activeMission.type === 'car_ride';
+        const isMobility = ['mototaxi', 'car_ride', 'motorista_particular'].includes(activeMission.type || '');
         const getOrderItems = () => {
             if (activeMission.items && Array.isArray(activeMission.items)) return activeMission.items;
             const address = activeMission.delivery_address || activeMission.destination || '';
@@ -5681,14 +5698,14 @@ function App() {
         const driverEarnings = getNetEarnings(activeMission);
 
         const sClayDark: React.CSSProperties = {
-            background: '#0c0f10',
+            background: 'linear-gradient(145deg, #1c1c1e, #121214)',
             boxShadow: '15px 15px 35px rgba(0,0,0,0.6), inset 5px 5px 12px rgba(255,255,255,0.02), inset -5px -5px 12px rgba(0,0,0,0.8)',
-            borderRadius: '2.8rem'
+            borderRadius: '32px'
         };
         const sClayYellow: React.CSSProperties = {
-            background: '#FACD05',
+            background: 'linear-gradient(145deg, #facc15, #eab308)',
             boxShadow: '0 20px 45px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.5), inset -8px -8px 16px rgba(0,0,0,0.15)',
-            borderRadius: '3rem'
+            borderRadius: '32px'
         };
 
         return (
@@ -5775,12 +5792,12 @@ function App() {
 
                 {/* 3. LUXURY BOTTOM SHEET */}
                 <motion.div 
-                    initial={{ y: "52vh" }}
-                    animate={{ y: "52vh" }}
+                    initial={{ y: "85vh" }}
+                    animate={{ y: "45vh" }}
                     drag="y"
                     dragConstraints={{ top: 0, bottom: 400 }}
                     dragElastic={0.05}
-                    className="fixed inset-0 z-[150] bg-[#0c0f10] border-t border-white/5 shadow-[0_-30px_70px_rgba(0,0,0,0.9)] flex flex-col rounded-t-[50px] shadow-[inset_10px_10px_20px_rgba(255,255,255,0.01)]"
+                    className="fixed inset-0 z-[150] bg-[#0c0f10] border-t border-white/10 shadow-[0_-40px_80px_rgba(0,0,0,0.95)] flex flex-col rounded-t-[40px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
                 >
                     {/* Drag Handle */}
                     <div className="w-full flex justify-center py-5 shrink-0">
@@ -5790,9 +5807,9 @@ function App() {
                     <div className="flex-1 overflow-y-auto px-6 pb-[480px] space-y-8 no-scrollbar pt-2">
                         
                         {/* Status Imersivo - Clay Card */}
-                        <section className="bg-zinc-900 border border-white/5 p-6 flex flex-col gap-5" style={sClayDark}>
+                        <section className="rounded-[32px] p-6 flex flex-col gap-6" style={sClayDark}>
                             <div className="flex items-center gap-5">
-                                <div className="size-16 rounded-[22px] overflow-hidden border-2 border-yellow-400/30 shadow-2xl bg-zinc-800 flex items-center justify-center relative">
+                                <div className="size-16 rounded-[24px] overflow-hidden border border-white/10 shadow-2xl bg-zinc-800 flex items-center justify-center relative">
                                     {driverAvatar ? (
                                         <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
                                     ) : (
@@ -5801,7 +5818,7 @@ function App() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-lg font-black text-white truncate italic tracking-tighter">{driverName}</h2>
+                                    <h2 className="text-xl font-black text-white truncate italic tracking-tighter leading-tight">{driverName.split(' ')[0]}</h2>
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
                                             <div className="size-1.5 rounded-full bg-emerald-400" />
@@ -5823,7 +5840,7 @@ function App() {
                             
                             <div className="h-px bg-white/5 w-full" />
                             
-                            <div className="flex justify-between items-center bg-black/40 p-4 rounded-[22px] border border-white/5 shadow-inner">
+                            <div className="flex justify-between items-center bg-black/40 p-5 rounded-[28px] border border-white/5 shadow-inner">
                                 <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-xl bg-white/5 ${statusDisplay.color} ${statusDisplay.glow}`}>
                                         <Icon name={statusDisplay.icon} size={20} />
@@ -5840,7 +5857,7 @@ function App() {
                         {/* Detalhes da Carga/Passageiro */}
                         <section className="space-y-4">
                             <div className="flex justify-between items-end px-2">
-                                <h2 className="text-zinc-600 font-black text-[9px] uppercase tracking-[0.4em]">Detalhes da Missão</h2>
+                                <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em]">Detalhes da Missão</h2>
                                 <span className={isMobility ? "text-cyan-400 font-black text-[9px] uppercase tracking-widest" : "text-yellow-400 font-black text-[9px] uppercase tracking-widest"}>
                                     {isMobility ? 'Mobilidade' : 'Logística'}
                                 </span>

@@ -117,9 +117,17 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
         whileTap={{ scale: 0.98 }}
         onClick={() => {
           setSelectedItem(order);
-          if (isCoin) setSubView("izi_coin_tracking");
-          else if (isMobilityOrder) setSubView(["frete", "logistica", "van", "mototaxi", "carro"].includes(order.service_type) ? "logistics_tracking" : "order_detail");
-          else setSubView("order_detail");
+          const isHistory = ["concluido", "cancelado"].includes(order.status);
+          
+          if (isCoin) {
+            setSubView("izi_coin_tracking");
+          } else if (isHistory) {
+            setSubView("order_detail");
+          } else if (isMobilityOrder) {
+            setSubView(["frete", "logistica", "van", "mototaxi", "carro"].includes(order.service_type) ? "logistics_tracking" : "active_order");
+          } else {
+            setSubView("active_order");
+          }
         }}
         className={`relative overflow-hidden rounded-[40px] cursor-pointer group ${isHistory ? 'mb-4 scale-95 origin-left opacity-90' : 'mb-8'}`}
         style={{

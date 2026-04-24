@@ -24,6 +24,7 @@ import { WalletView } from "./components/features/Wallet/WalletView";
 import { CartView } from "./components/features/Cart/CartView";
 import { CheckoutView } from "./components/features/Checkout/CheckoutView";
 import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
+import { OrderDetailView } from "./components/features/Order/OrderDetailView";
 import { IziCoinTrackingView } from "./components/features/Order/IziCoinTrackingView";
 import { EstablishmentListView } from "./components/features/Establishment/EstablishmentListView";
 import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestaurantsView";
@@ -174,6 +175,7 @@ function App() {
     | "flash_offers_list"
     | "explore_bars"
     | "explore_hotels"
+    | "order_detail"
   >("none");
 
   // Reset scroll on subView change
@@ -2183,8 +2185,9 @@ function App() {
     if (!activeShop) return 0;
 
     if (activeShop) {
-      // Prioridade Máxima: Frete Grátis do Lojista (Configurado no Painel do Lojista via Toggle ou Taxa Zero explícita)
-      const isExplicitlyFree = activeShop.free_delivery === true || activeShop.freeDelivery === true || (activeShop.service_fee !== null && Number(activeShop.service_fee) === 0);
+      // Prioridade Máxima: Frete Grátis do Lojista (Configurado no Painel do Lojista via Toggle)
+      // Removido o check de (activeShop.service_fee === 0) para evitar frete grátis forçado quando o lojista desativa o toggle mas a taxa está zerada por padrão.
+      const isExplicitlyFree = activeShop.free_delivery === true || activeShop.freeDelivery === true;
       
       if (isExplicitlyFree) {
         console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${activeShop.name}`);
@@ -2916,7 +2919,10 @@ const navigateSubView = (target: string) => {
                 statusTag: isOpen ? "Aberto" : "Fechado",
                 mode: updated.opening_mode,
                 opening_hours: updated.opening_hours,
-                is_open: updated.is_open
+                is_open: updated.is_open,
+                free_delivery: updated.free_delivery,
+                freeDelivery: updated.free_delivery,
+                service_fee: updated.service_fee
               };
               
               // Re-ordenar para manter abertos no topo
@@ -8458,6 +8464,7 @@ const navigateSubView = (target: string) => {
                     <CartView 
                       cart={cart} 
                       setCart={setCart}
+                      handleClearCart={handleClearCart}
                       setSubView={(v: any) => setSubView(v)} 
                       navigateSubView={navigateSubView}
                       merchantProducts={selectedShop?.products || []}
