@@ -1378,7 +1378,7 @@ function App() {
                           id: 'mission_calls',
                           name: 'Chamadas de Missão',
                           description: 'Canal para alertas de novos pedidos e missões',
-                          sound: 'mission_call',
+                          sound: 'notification',
                           importance: 5,
                           visibility: 1,
                           vibration: true
@@ -1409,6 +1409,10 @@ function App() {
                                  // Tenta trazer o app para frente
                                  await ForegroundService.moveToForeground();
                                  console.log('[PUSH] App trazido para o primeiro plano com sucesso.');
+                                 
+                                 // Garante que o som toque mesmo que o sistema de notificações demore
+                                 const audio = new Audio('/sounds/notification.mp3');
+                                 audio.play().catch(e => console.warn('Erro ao tocar som manual:', e));
                              } catch (err) {
                                  console.warn('[PUSH] Falha ao trazer para o primeiro plano. Talvez falte permissão de sobreposição:', err);
                              }

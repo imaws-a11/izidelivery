@@ -193,7 +193,7 @@ interface WalletViewProps {
   iziCoinRate?: number;
   iziBlackRate?: number;
   setIziCoins?: React.Dispatch<React.SetStateAction<number>>;
-  mercadopagoPublicKey?: string;
+  isIziBlack?: boolean;
 }
 
 export const WalletView: React.FC<WalletViewProps> = ({
@@ -215,6 +215,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     setPaymentsOrigin,
     setSubView,
     mercadopagoPublicKey,
+    isIziBlack: initialIsIziBlack = false,
   }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card" | "loans">("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
@@ -246,12 +247,19 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [isGeneratingPix, setIsGeneratingPix] = useState(false);
   const [preApprovedLimit, setPreApprovedLimit] = useState(1000); // Default fallback
   const [loanInterestRate, setLoanInterestRate] = useState(10); // Default 10%
+  const [isIziBlack, setIsIziBlack] = useState(initialIsIziBlack);
+  const [blackCashbackRate, setBlackCashbackRate] = useState(iziBlackRate || 5);
 
   // Estados de Animação Real-time
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationType, setAnimationType] = useState<"sent" | "received">("sent");
   const [doneTransferAmount, setDoneTransferAmount] = useState(0);
   const lastCoinValue = useRef(iziCoins);
+
+  // Estados para Detalhes da Transação (Novo)
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [selectedTransactionOrder, setSelectedTransactionOrder] = useState<any>(null);
+  const [isFetchingOrder, setIsFetchingOrder] = useState(false);
 
   // Monitorar recebimento de moedas em tempo real para disparar animação
   useEffect(() => {
@@ -300,22 +308,54 @@ export const WalletView: React.FC<WalletViewProps> = ({
         // 2. Busca configurações globais (limite base e juros)
         const { data: globalData } = await supabase
           .from("admin_settings_delivery")
-          .select("global_pre_approved_limit, loan_interest_rate")
+          .select("global_pre_approved_limit, loan_interest_rate, izi_black_cashback")
+          .single();
+
+        const { data: userDataExtended } = await supabase
+          .from("users_delivery")
+          .select("is_izi_black")
+          .eq("id", userId)
           .single();
 
         const userLimit = Number(userData?.pre_approved_limit || 0);
         const globalLimit = Number(globalData?.global_pre_approved_limit || 0);
         const globalInterest = Number(globalData?.loan_interest_rate || 10);
+        const globalBlackCashback = Number(globalData?.izi_black_cashback || 5);
 
         // Prioridade: Limite Individual (se definido e > 0), senão usa o Global
         setPreApprovedLimit(userLimit > 0 ? userLimit : globalLimit);
         setLoanInterestRate(globalInterest);
+        setBlackCashbackRate(globalBlackCashback);
+        if (userDataExtended) setIsIziBlack(userDataExtended.is_izi_black);
       } catch (err) {
         console.error("Erro ao carregar configurações econômicas:", err);
       }
     };
     fetchLimit();
   }, [userId, walletMode]);
+
+  const handleTransactionClick = async (transaction: any) => {
+    setSelectedTransaction(transaction);
+    if (transaction.order_id) {
+      setIsFetchingOrder(true);
+      try {
+        const { data, error } = await supabase
+          .from("orders_delivery")
+          .select("*")
+          .eq("id", transaction.order_id)
+          .single();
+        
+        if (error) throw error;
+        setSelectedTransactionOrder(data);
+      } catch (err) {
+        console.error("Erro ao buscar pedido:", err);
+        showToast?.("Não foi possível carregar detalhes do pedido", "error");
+      } finally {
+        setIsFetchingOrder(false);
+      }
+    }
+  };
+
 
   const walletBalance = walletTransactions.reduce(
     (acc: number, t: any) =>
@@ -1495,9 +1535,10 @@ export const WalletView: React.FC<WalletViewProps> = ({
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     key={t.id || i} 
-                    className="flex items-center gap-5 p-5 bg-[#0e0e0e] border-2 border-white/5 rounded-[30px] hover:border-yellow-400/20 transition-all cursor-pointer group shadow-[10px_10px_20px_rgba(0,0,0,0.2)]"
+                    onClick={() => handleTransactionClick(t)}
+                    className="flex items-center gap-5 p-5 bg-[#0e0e0e] border-2 border-white/5 rounded-[30px] hover:border-yellow-400/20 active:scale-[0.98] transition-all cursor-pointer group shadow-[10px_10px_20px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.02)]"
                   >
-                    <div className={`size-14 rounded-[22px] flex items-center justify-center shrink-0 shadow-inner bg-zinc-950 border border-white/5`}>
+                    <div className={`size-14 rounded-[22px] flex items-center justify-center shrink-0 shadow-inner bg-zinc-950 border border-white/5 shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4)]`}>
                       <span className={`material-symbols-outlined text-2xl font-black ${tx.color} group-hover:scale-110 transition-transform`}>
                         {tx.icon}
                       </span>
@@ -1587,6 +1628,141 @@ export const WalletView: React.FC<WalletViewProps> = ({
                 </div>
                 <p className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mt-2">{animationType === "sent" ? "Criptomoeda Izi Processada" : "Saldo Atualizado em Tempo Real"}</p>
              </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE DETALHES DA TRANSAÇÃO - DESIGN CLAYMORPHIC PREMIUM */}
+      <AnimatePresence>
+        {selectedTransaction && (
+          <div className="fixed inset-0 z-[2000] flex items-end justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setSelectedTransaction(null); setSelectedTransactionOrder(null); }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-lg bg-[#0a0a0a] rounded-[50px] border-2 border-white/5 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              <div className="p-8 space-y-8 overflow-y-auto no-scrollbar">
+                {/* Header do Modal */}
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div className="size-20 rounded-[30px] bg-yellow-400 flex items-center justify-center shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7),0_10px_20px_rgba(250,204,21,0.2)]">
+                    <span className="material-symbols-outlined text-4xl text-black font-black">
+                      {txIcon[selectedTransaction.type]?.icon || "payments"}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
+                      {selectedTransaction.description || selectedTransaction.type}
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.3em] mt-1">
+                      {new Date(selectedTransaction.created_at).toLocaleString("pt-BR", { dateStyle: 'long', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Valor Central */}
+                <div className="bg-[#0e0e0e] rounded-[40px] p-8 border border-white/5 shadow-[inset_6px_6px_12px_rgba(0,0,0,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.02)] flex flex-col items-center gap-1">
+                   <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest opacity-60">Valor da Transação</p>
+                   <h4 className={`text-4xl font-black tracking-tighter ${['deposito', 'reembolso', 'venda', 'cashback'].includes(selectedTransaction.type) ? "text-emerald-400" : "text-white"}`}>
+                     {['deposito', 'reembolso', 'venda', 'cashback'].includes(selectedTransaction.type) ? "+" : "-"} {Number(selectedTransaction.amount).toLocaleString("pt-BR", { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                   </h4>
+                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">IZI COINS (Z)</p>
+                </div>
+
+                {/* Detalhes Adicionais / Pedido */}
+                <div className="space-y-6">
+                  {isFetchingOrder ? (
+                    <div className="flex flex-col items-center py-10 gap-4">
+                      <div className="size-10 border-2 border-yellow-400 border-t-transparent animate-spin rounded-full" />
+                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Sincronizando Pedido...</p>
+                    </div>
+                  ) : selectedTransactionOrder ? (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between px-2">
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Itens do Pedido</p>
+                        <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">#{selectedTransactionOrder.id.slice(-6).toUpperCase()}</p>
+                      </div>
+                      
+                      <div className="bg-white/5 rounded-[32px] p-6 space-y-4 border border-white/5">
+                        {selectedTransactionOrder.items?.map((item: any, idx: number) => {
+                          const quantity = item.quantity || item.qty || 1;
+                          const options = item.addonDetails || item.options || [];
+                          const itemPrice = Number(item.price || 0);
+                          
+                          return (
+                            <div key={idx} className="space-y-2">
+                              <div className="flex justify-between items-start">
+                                <div className="flex flex-col">
+                                  <p className="text-xs font-black text-white uppercase tracking-tight">
+                                    {quantity}x {item.name}
+                                  </p>
+                                  {options.map((opt: any, oidx: number) => (
+                                    <p key={oidx} className="text-[9px] text-zinc-500 font-bold uppercase ml-3">
+                                      • {opt.quantity || 1}x {opt.name} {opt.price > 0 ? `(+ R$ ${Number(opt.price).toFixed(2)})` : ''}
+                                    </p>
+                                  ))}
+                                </div>
+                                <p className="text-xs font-black text-zinc-400">
+                                  R$ {(itemPrice * quantity + options.reduce((acc: number, o: any) => acc + (Number(o.price || 0) * (o.quantity || 1)), 0)).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                        <div className="pt-4 border-t border-white/5 flex flex-col gap-2">
+                          <div className="flex justify-between items-center">
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Total do Pedido</p>
+                            <p className="text-sm font-black text-white">R$ {Number(selectedTransactionOrder.total_price || 0).toFixed(2)}</p>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <p className="text-[10px] font-black text-white uppercase tracking-widest">Estabelecimento</p>
+                            <p className="text-[10px] font-black text-zinc-400 uppercase">{selectedTransactionOrder.merchant_name}</p>
+                          </div>
+                        </div>
+
+                        {/* Cashback Info */}
+                        {isIziBlack && (
+                          <div className="pt-4 flex justify-between items-center text-emerald-400 bg-emerald-500/5 -mx-6 px-6 py-4 rounded-b-[32px]">
+                            <div className="flex items-center gap-2">
+                               <span className="material-symbols-outlined text-sm">redeem</span>
+                               <p className="text-[10px] font-black uppercase tracking-widest">Cashback Ganho</p>
+                            </div>
+                            <p className="text-sm font-black">
+                              + {selectedTransaction.type === 'cashback' 
+                                 ? Number(selectedTransaction.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
+                                 : ((Number(selectedTransactionOrder.total_price) * (blackCashbackRate / 100)) / (iziCoinValue || 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              } Z
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white/5 rounded-[32px] p-6 flex flex-col items-center gap-3 text-center">
+                       <span className="material-symbols-outlined text-zinc-700 text-3xl">info</span>
+                       <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest leading-relaxed">Esta transação não possui vínculo direto com um pedido rastreável no momento.</p>
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={() => { setSelectedTransaction(null); setSelectedTransactionOrder(null); }}
+                  className="w-full py-6 bg-zinc-900 rounded-[30px] font-black text-white uppercase tracking-widest active:scale-95 transition-all shadow-[inset_4px_4px_8px_rgba(255,255,255,0.02)]"
+                >
+                  Fechar Detalhes
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

@@ -143,7 +143,7 @@ export default function IziBlackTab() {
         {[
           { label: 'Total Membros', val: usersList.filter(u => u.is_izi_black).length, icon: 'group', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20' },
           { label: 'Recompensas Ativas', val: promotionsList.filter(p => p.is_vip && p.is_active).length, icon: 'redeem', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20' },
-          { label: 'Preço Black', val: `R$ ${(appSettings.iziBlackFee || 29.90).toFixed(2).replace('.', ',')}`, icon: 'payments', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' },
+          { label: 'Preço Black', val: `R$ ${Number(appSettings.iziBlackFee || 29.90).toFixed(2).replace('.', ',')}`, icon: 'payments', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' },
           { label: 'Cashback Distribuído', val: `R$ ${usersList.reduce((acc, u) => acc + (u.cashback_earned || 0), 0).toFixed(0)}`, icon: 'monetization_on', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
         ].map((s, i) => (
           <motion.div key={i} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.07 }}
@@ -340,7 +340,7 @@ export default function IziBlackTab() {
                         {o.status === 'concluido' ? 'Pago & Ativo' : 'Aguardando'}
                       </span>
                     </td>
-                    <td className="px-8 py-6 font-black text-slate-900 dark:text-white">R$ {(o.total_price || 0).toFixed(2).replace('.', ',')}</td>
+                    <td className="px-8 py-6 font-black text-slate-900 dark:text-white">R$ {Number(o.total_price || 0).toFixed(2).replace('.', ',')}</td>
                     <td className="px-8 py-6 font-bold text-slate-500 text-xs">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
@@ -582,7 +582,7 @@ export default function IziBlackTab() {
                                           <span className="material-symbols-outlined text-sm font-black italic">monetization_on</span>
                                        </div>
                                        <div>
-                                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-tighter italic">R$ {(user.cashback_earned || 0).toFixed(2).replace('.', ',')}</p>
+                                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-tighter italic">R$ {Number(user.cashback_earned || 0).toFixed(2).replace('.', ',')}</p>
                                           <p className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Cashback Ganho</p>
                                        </div>
                                     </div>
