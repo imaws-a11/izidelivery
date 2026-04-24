@@ -86,7 +86,7 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'success') => {
 
   // Lista de URLs prioritárias
   const soundUrls = {
-    driver: ['/sounds/mission_call.wav', 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
+    driver: ['/sounds/notification.mp3', '/sounds/mission_call.wav', 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
     success: ['https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
     merchant: ['https://cdn.freesound.org/previews/263/263133_2064400-lq.mp3']
   };
