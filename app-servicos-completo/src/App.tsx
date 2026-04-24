@@ -2179,24 +2179,18 @@ function App() {
   };
 
   const calculateDeliveryFee = () => {
-    // [Comentario Limpo pelo Sistema]
-    // 1. Identificar o Lojista Atual (Prioridade para selectedShop, fallback mapeando pelo carrinho para persistência pós-refresh)
+    // 1. Identificar o Lojista Atual
     const activeShop = selectedShop || (cart.length > 0 ? ESTABLISHMENTS.find(e => e.id === cart[0].merchant_id || e.id === cart[0].store_id) : null);
     if (!activeShop) return 0;
 
-    if (activeShop) {
-      // Prioridade Máxima: Frete Grátis do Lojista (Configurado no Painel do Lojista via Toggle)
-      // Removido o check de (activeShop.service_fee === 0) para evitar frete grátis forçado quando o lojista desativa o toggle mas a taxa está zerada por padrão.
-      const isExplicitlyFree = activeShop.free_delivery === true || activeShop.freeDelivery === true;
-      
-      if (isExplicitlyFree) {
-        console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${activeShop.name}`);
-        return 0;
-      }
+    // 2. Frete Grátis do Lojista (toggle explícito no painel)
+    const isExplicitlyFree = activeShop.free_delivery === true || activeShop.freeDelivery === true;
+    if (isExplicitlyFree) {
+      console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${activeShop.name}`);
+      return 0;
     }
 
-    // 2. IZI Black (Benefício do Usuário)
-    // Verificamos se o usuário é IZI Black e se atingiu o pedido mínimo (se houver)
+    // 3. IZI Black (Benefício do Usuário)
     if (isIziBlackMembership) {
        const minOrderIziBlack = Number(appSettings?.iziBlackMinOrderFreeShipping || 0);
        const subtotal = cart.reduce((sum, item: any) => {
@@ -2206,12 +2200,12 @@ function App() {
        }, 0);
        
        if (minOrderIziBlack === 0 || subtotal >= minOrderIziBlack) {
-         console.log(`[DELIVERY] Frete Grátis aplicado via Izi Black Master (Subtotal: ${subtotal} >= Min: ${minOrderIziBlack})`);
+         console.log(`[DELIVERY] Frete Grátis via Izi Black (Subtotal: R$${subtotal.toFixed(2)} >= Mín: R$${minOrderIziBlack})`);
          return 0;
        }
     }
 
-    // 3. Fallback: Taxa de Entrega informada no item (Legado/Compatibilidade)
+    // 4. Fallback legado: Frete grátis no item do carrinho
     if (cart.length > 0) {
        const first = cart[0];
        if (first.merchant_free_delivery === true || first.free_delivery === true) {
@@ -2219,10 +2213,9 @@ function App() {
        }
     }
 
-    // 4. PADRÃO: Modo Lojista (Raio vs Bairros)
+    // 5. PADRÃO: Modo Bairros
     if (activeShop.coverageMode === 'neighborhoods' && activeShop.zones) {
        const userAddrLower = (userLocation.address || "").toLowerCase();
-       // Simplest match: verifica se algum bairro ativo está na string de endereço
        const matchedZone = Object.entries(activeShop.zones as Record<string, {active: boolean, price: number}>)
            .find(([zName, cfg]) => cfg.active && userAddrLower.includes(zName.toLowerCase()));
            
@@ -2232,40 +2225,67 @@ function App() {
        }
     }
 
-    // 5. MODO RAIO (Taxa Base + KM) ou Fallback
+    // 6. MODO RAIO — Cálculo proporcional por KM + metros
     const bv = marketConditions.settings.baseValues;
     const surge = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
     
-    const typeMapping: Record<string, {min: string, km: string, int: string}> = {
-      "restaurant": { min: 'food_min', km: 'food_km', int: 'food_km_interval' },
-      "market": { min: 'market_min', km: 'market_km', int: 'market_km_interval' },
-      "pharmacy": { min: 'pharmacy_min', km: 'pharmacy_km', int: 'pharmacy_km_interval' },
-      "beverages": { min: 'beverage_min', km: 'beverage_km', int: 'beverage_km_interval' },
+    const typeMapping: Record<string, {min: string, km: string}> = {
+      "restaurant": { min: 'food_min', km: 'food_km' },
+      "market":     { min: 'market_min', km: 'market_km' },
+      "pharmacy":   { min: 'pharmacy_min', km: 'pharmacy_km' },
+      "beverages":  { min: 'beverages_min', km: 'beverages_km' },
     };
     
     const metric = typeMapping[activeShop.type] || typeMapping["restaurant"];
     const fallbackBase = globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90;
     
-    // Usa os valores do Admin, ou fallback
-    const baseFare = parseFloat(String(bv[metric.min] ?? fallbackBase));
-    const distRate = parseFloat(String(bv[metric.km] ?? 2.5));
-    const distInt  = Math.max(0.1, parseFloat(String(bv[metric.int] ?? 1.0)));
-    
-    let distKm = activeShop.distKm || 1.5;
-    
-    // Se a loja não usar frete do app (configuração rígida dela de fallback legacy)
-    const fixedShopFee = activeShop.service_fee !== undefined && activeShop.service_fee !== null ? Number(activeShop.service_fee) : null;
-    
-    // Se tiver radius e valores de admin, aplicamos a dinamica
-    const dynamicCalculated = parseFloat((baseFare + (distRate * Math.ceil(distKm / distInt) * surge)).toFixed(2));
-    
-    const finalFee = activeShop.coverageMode === 'radius' ? dynamicCalculated : (fixedShopFee !== null ? fixedShopFee : dynamicCalculated);
+    const baseFare  = parseFloat(String(bv[metric.min] ?? fallbackBase));
+    const distRate  = parseFloat(String(bv[metric.km] ?? 1.0));
 
-    console.log(`[DELIVERY] Aplicando Taxa (Modo: ${activeShop.coverageMode}): R$ ${finalFee}`);
+    // --- Cálculo de Distância Real em Tempo Real ---
+    // Usa lat/lng ATUAL do usuário (pode ter mudado depois do primeiro fetch dos lojistas)
+    let distKm: number;
+    const userLat = userLocation.lat;
+    const userLng = userLocation.lng;
+    const shopLat = activeShop.latitude;
+    const shopLng = activeShop.longitude;
+
+    if (userLat && userLng && shopLat && shopLng) {
+      // Fórmula de Haversine (resultado em km)
+      const R = 6371;
+      const dLat = (shopLat - userLat) * (Math.PI / 180);
+      const dLon = (shopLng - userLng) * (Math.PI / 180);
+      const a = Math.sin(dLat/2)**2 + Math.cos(userLat * Math.PI/180) * Math.cos(shopLat * Math.PI/180) * Math.sin(dLon/2)**2;
+      const straightLine = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      // Multiplicador de rota real vs linha reta (~30% a mais)
+      distKm = straightLine * 1.3;
+      console.log(`[DELIVERY] Distância calculada em tempo real: ${distKm.toFixed(3)} km (linha reta: ${straightLine.toFixed(3)} km)`);
+    } else {
+      // Fallback: distância pré-computada no carregamento dos lojistas ou padrão
+      distKm = activeShop.distKm || 1.5;
+      console.warn(`[DELIVERY] GPS do usuário não disponível. Usando distância estimada de ${distKm.toFixed(1)} km`);
+    }
+
+    // Cálculo PROPORCIONAL (sem arredondamento por km)
+    // Ex: 1.3 km → baseFare + 1.3 * distRate (não cobra 2 km inteiros)
+    const dynamicCalculated = parseFloat((baseFare + (distRate * distKm * surge)).toFixed(2));
+
+    // Se o lojista tem taxa fixa configurada e NÃO está em modo raio, usa a taxa fixa
+    const fixedShopFee = activeShop.service_fee !== undefined && activeShop.service_fee !== null && Number(activeShop.service_fee) > 0
+      ? Number(activeShop.service_fee)
+      : null;
+    
+    const finalFee = activeShop.coverageMode === 'radius'
+      ? dynamicCalculated
+      : (fixedShopFee !== null ? fixedShopFee : dynamicCalculated);
+
+    console.log(`[DELIVERY] Taxa final (Modo: ${activeShop.coverageMode}, Dist: ${distKm.toFixed(3)} km): R$ ${finalFee}`);
     return finalFee;
   };
 
+
   const handlePlaceOrder = async (useCoins = false) => {
+
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
     if (!userId) { alert("Faça login para continuar."); return; }
     if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
@@ -2297,7 +2317,7 @@ function App() {
     
     const coinValue = globalSettings?.izi_coin_value || 0.01;
     const coinDiscount = useCoins ? (iziCoins || 0) * coinValue : 0;
-    const deliveryFee = calculateDeliveryFee();
+    const deliveryFee = currentDeliveryFee;
     const serviceFeePercent = globalSettings?.service_fee_percent || 0;
     const rawServiceFee = (subtotal * serviceFeePercent) / 100;
     const serviceFeeAmount = isIziBlackMembership ? 0 : rawServiceFee;
@@ -2854,10 +2874,10 @@ const navigateSubView = (target: string) => {
             time: m.estimated_time || "30-45 min",
             img: m.store_logo || "",
             banner: m.store_banner || "",
-            freeDelivery: !!m.free_delivery || (m.service_fee !== null && Number(m.service_fee) === 0),
-            free_delivery: !!m.free_delivery || (m.service_fee !== null && Number(m.service_fee) === 0),
+            freeDelivery: !!m.free_delivery,
+            free_delivery: !!m.free_delivery,
             service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : null),
-            fee: m.free_delivery || Number(m.service_fee) === 0 ? "Grátis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
+            fee: m.free_delivery ? "Grátis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
             latitude: m.latitude,
             longitude: m.longitude,
             coverageMode: m.delivery_coverage_mode || 'radius',
@@ -3070,6 +3090,9 @@ const navigateSubView = (target: string) => {
       lng: null
     };
   });
+
+  // Taxa de entrega REATIVA — recalcula quando GPS, carrinho, lojista ou membership mudam.
+
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
   const [changeFor, setChangeFor] = useState("");
   useEffect(() => {
@@ -3126,6 +3149,13 @@ const navigateSubView = (target: string) => {
       }
     }
   });
+
+  // Taxa de entrega REATIVA — recalcula quando GPS, carrinho, lojista, membership ou surge mudam.
+  const currentDeliveryFee = useMemo(
+    () => calculateDeliveryFee(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userLocation.lat, userLocation.lng, cart, selectedShop, isIziBlackMembership, ESTABLISHMENTS, marketConditions]
+  );
 
   const [establishmentTypes, setEstablishmentTypes] = useState<any[]>([]);
 
@@ -8471,7 +8501,7 @@ const navigateSubView = (target: string) => {
                       merchantName={selectedShop?.name || ""}
                       handleAddToCart={handleAddToCart}
                       isIziBlack={isIziBlackMembership} 
-                      deliveryFee={calculateDeliveryFee()} 
+                      deliveryFee={currentDeliveryFee} 
                     />
                   </motion.div>
                 )}

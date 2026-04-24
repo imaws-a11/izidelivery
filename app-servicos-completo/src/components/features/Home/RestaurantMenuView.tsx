@@ -149,7 +149,8 @@ export const RestaurantMenuView = ({
                   initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="bg-zinc-800 rounded-[28px] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_12px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex flex-col gap-4 group relative active:scale-95 transition-all overflow-hidden"
+                  onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e as any); }}
+                  className="bg-zinc-800 rounded-[28px] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_12px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex flex-col gap-4 group relative active:scale-95 transition-all overflow-hidden cursor-pointer"
                 >
                    <div className="relative aspect-square rounded-[22px] overflow-hidden shrink-0 shadow-[4px_4px_10px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
                       {item.oldPrice && (

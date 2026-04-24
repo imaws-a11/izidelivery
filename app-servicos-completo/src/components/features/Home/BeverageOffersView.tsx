@@ -81,6 +81,7 @@ export const BeverageOffersView = ({
                 whileInView={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 }}
                 key={item.id}
+                onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e as any); }}
                 className="bg-zinc-800 shadow-[10px_10px_24px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] rounded-[32px] p-4 flex items-center gap-5 group transition-all duration-500 cursor-pointer relative overflow-hidden"
               >
                 <div className="size-24 rounded-[22px] overflow-hidden shrink-0 shadow-[4px_4px_10px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.1)] relative z-10">
