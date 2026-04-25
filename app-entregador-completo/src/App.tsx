@@ -3455,84 +3455,114 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
-                {/* New Premium Clay Consolidated Card */}
-                <header className="clay-profile-card rounded-[3.5rem] flex flex-col relative overflow-hidden p-8 gap-8">
-                    {/* Background Decorative Element */}
-                    <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/20 rounded-full blur-3xl pointer-events-none" />
-                    
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-5">
-                            <div className="w-20 h-20 rounded-[2rem] border-[6px] border-white/50 overflow-hidden clay-profile-inner shadow-xl relative preserve-3d group">
-                                {driverAvatar ? (
-                                    <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-stone-900/5">
-                                        <Icon name="person" size={40} className="text-stone-950/30" />
-                                    </div>
-                                )}
-                            </div>
-                            <div className="space-y-1">
-                                <h1 className="text-3xl font-black text-stone-950 tracking-tighter leading-none">
-                                    Olá, {driverName.split(' ')[0] || 'Piloto'}
-                                </h1>
-                                <div className="flex items-center gap-1.5 bg-stone-950/10 px-3 py-1 rounded-full w-fit backdrop-blur-sm border border-black/5">
-                                    <Icon name="verified" size={14} className="text-stone-950" />
-                                    <span className="text-stone-900 text-[10px] font-black uppercase tracking-wider">
-                                        {stats.level >= 10 ? 'Nível Elite' : `Nível ${stats.level}`}
-                                    </span>
+                 {/* ─── HEADER CARD — NOVO DESIGN ─── */}
+                <header className="clay-profile-card rounded-[2rem] overflow-hidden relative p-5 flex flex-col gap-0">
+                    {/* Glow decorativo */}
+                    <div className="absolute -top-10 -right-10 w-52 h-52 bg-white/25 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-stone-950/10 rounded-full blur-2xl pointer-events-none" />
+
+                    {/* ── Topo: Avatar + Nome + Semanal ── */}
+                    <div className="flex items-center gap-4 w-full mb-5">
+                        {/* Avatar */}
+                        <div className="w-[60px] h-[60px] shrink-0 rounded-[1.2rem] border-[3px] border-white/60 overflow-hidden shadow-xl clay-profile-inner">
+                            {driverAvatar ? (
+                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <Icon name="person" size={36} className="text-stone-950/30" />
                                 </div>
+                            )}
+                        </div>
+
+                        {/* Nome + nível */}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-stone-950/50 text-[9px] font-black uppercase tracking-[0.3em]">Bem-vindo de volta</p>
+                            <h1 className="text-[1.6rem] font-black text-stone-950 tracking-tighter leading-none uppercase truncate">
+                                {driverName.split(' ')[0] || 'Piloto'}
+                            </h1>
+                            <div className="mt-1 flex items-center gap-1 w-fit bg-stone-950/10 px-2.5 py-0.5 rounded-full border border-black/5">
+                                <Icon name="verified" size={11} className="text-stone-950" />
+                                <span className="text-stone-900 text-[9px] font-black uppercase tracking-wider">
+                                    {stats.level >= 10 ? 'Nível Elite' : `Nível ${stats.level}`}
+                                </span>
                             </div>
                         </div>
 
-                        <div className="clay-profile-inner p-3 rounded-2xl flex flex-col items-center justify-center border border-white/30">
-                           <p className="text-[8px] font-black uppercase text-stone-800 tracking-tighter opacity-70">Semanal</p>
-                           <p className="text-sm font-black text-stone-950">R$ {stats.weekly.toFixed(0)}</p>
+                        {/* Ganho Semanal — canto direito */}
+                        <div className="shrink-0 flex flex-col items-end">
+                            <p className="text-[7px] font-black uppercase text-stone-950/40 tracking-[0.25em]">Semana</p>
+                            <p className="text-[10px] font-black text-stone-950/40">R$</p>
+                            <p className="text-[2rem] font-black text-stone-950 tracking-tighter leading-none -mt-1">
+                                {stats.weekly.toFixed(0)}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center py-2">
-                        <p className="text-stone-950/60 text-[11px] font-black uppercase tracking-[0.2em] mb-2">Ganhos de Hoje</p>
-                        <div className="flex items-start gap-1">
-                            <span className="text-2xl font-black text-stone-950/50 mt-2">R$</span>
-                            <span className="text-7xl font-black text-stone-950 tracking-tighter drop-shadow-sm leading-none">
-                                {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
-                                <small className="text-3xl font-black opacity-40">,{stats.today.toFixed(2).split('.')[1]}</small>
-                            </span>
+                    {/* ── Divisor ── */}
+                    <div className="w-full h-px bg-stone-950/10 mb-5" />
+
+                    {/* ── Centro: Ganho de Hoje dominante ── */}
+                    <div className="flex items-end justify-between w-full mb-5">
+                        <div>
+                            <p className="text-[9px] font-black uppercase text-stone-950/40 tracking-[0.3em] mb-0.5">Ganhos de Hoje</p>
+                            <div className="flex items-start leading-none">
+                                <span className="text-2xl font-black text-stone-950/30 mt-1 mr-0.5">R$</span>
+                                <span className="text-[4.5rem] font-black text-stone-950 tracking-tighter leading-none" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
+                                    {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
+                                </span>
+                                <span className="text-2xl font-black text-stone-950/40 mt-auto mb-1.5 ml-0.5">
+                                    ,{stats.today.toFixed(2).split('.')[1]}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* XP badge compacto */}
+                        <div className="flex flex-col items-end gap-0.5 pb-1">
+                            <p className="text-[7px] font-black text-stone-950/35 uppercase tracking-widest">Reputação</p>
+                            <div className="flex items-baseline gap-0.5">
+                                <span className="text-3xl font-black text-stone-950 leading-none">{stats.xp}</span>
+                                <span className="text-[9px] font-black text-stone-950/30 uppercase">xp</span>
+                            </div>
+                            <p className="text-[7px] font-black text-stone-950/30 uppercase tracking-widest">Lv.{stats.level} → {stats.level + 1}</p>
                         </div>
                     </div>
 
-                    <div className="clay-profile-inner rounded-[2rem] p-5 border border-white/20">
-                        <div className="flex justify-between items-end mb-3">
-                            <div className="space-y-0.5">
-                                <p className="text-stone-950 text-[11px] font-black uppercase tracking-widest">Reputação XP</p>
-                                <p className="text-stone-950/60 text-[9px] font-bold">Progresso para o Lv. {stats.level + 1}</p>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-lg font-black text-stone-950">{stats.xp}</span>
-                                <span className="text-[9px] font-black text-stone-950/40 uppercase ml-1">pts</span>
-                            </div>
-                        </div>
-                        <div className="w-full h-4 bg-stone-950/10 rounded-full relative overflow-hidden p-1 shadow-inner border border-black/5">
-                            <motion.div 
+                    {/* ── Barra XP neon solta ── */}
+                    <div className="w-full">
+                        <div className="w-full h-[6px] bg-stone-950/10 rounded-full overflow-visible">
+                            <motion.div
                                 initial={{ width: 0 }}
-                                animate={{ width: `${(stats.xp % 100)}%` }}
-                                className="h-full bg-stone-950 rounded-full flex items-center justify-end px-1 relative"
+                                animate={{ width: `${Math.min((stats.xp % 100), 98)}%` }}
+                                transition={{ duration: 1.4, ease: 'easeOut' }}
+                                className="h-full rounded-full relative"
+                                style={{
+                                    background: 'linear-gradient(90deg, #1c1917, #44403c, #78350f)',
+                                    boxShadow: '0 0 10px 2px rgba(234,179,8,0.5), 0 0 22px 4px rgba(234,179,8,0.2)'
+                                }}
                             >
-                                <div className="size-1.5 bg-yellow-400 rounded-full shadow-[0_0_8px_white]" />
+                                <div
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-yellow-400"
+                                    style={{ boxShadow: '0 0 10px 4px rgba(250,204,21,1), 0 0 28px 10px rgba(250,204,21,0.5)' }}
+                                />
                             </motion.div>
+                        </div>
+                        <div className="flex justify-between mt-1.5">
+                            <span className="text-[7px] font-black text-stone-950/25 uppercase tracking-widest">0 xp</span>
+                            <span className="text-[7px] font-black text-stone-950/25 uppercase tracking-widest">100 xp · próx. nível</span>
                         </div>
                     </div>
                 </header>
 
+
                 <section className="space-y-2">
                     <p className="text-stone-400 font-medium uppercase tracking-widest text-xs">Disponível para entregas</p>
-                    <h2 className="text-white text-4xl font-extrabold tracking-tight">Missões e <span className="text-yellow-400">Vagas</span></h2>
+                    <h2 className="text-white text-4xl font-extrabold tracking-tight text-center uppercase">Missões e <span className="text-yellow-400">Vagas</span></h2>
                 </section>
 
                 <section className="space-y-6">
-                    <div className="flex justify-between items-end">
-                        <div className="flex items-center gap-3">
-                            <h3 className="text-2xl font-bold text-white tracking-tight">Novos Pedidos</h3>
+                    <div className="flex flex-col items-center justify-center gap-4 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm">Novos Pedidos</h3>
                             <button 
                                 onClick={() => fetchOrders()}
                                 disabled={isSyncing || !isOnline}
@@ -3552,21 +3582,13 @@ function App() {
                                 </motion.div>
                             </button>
                         </div>
-                        <div className="flex items-center gap-2 bg-yellow-400/5 px-3 py-1 rounded-full border border-yellow-400/10">
-                            <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                            <p className="text-yellow-400 font-bold text-[10px] uppercase tracking-widest">Radar Ativo</p>
+                        <div className="flex items-center gap-2 clay-card-dark px-5 py-2.5 rounded-full border border-white/5 shadow-inner">
+                            <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
+                            <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] drop-shadow-sm">Radar Ativo</p>
                         </div>
                     </div>
                     <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar -mx-6 px-6">
-                        {filteredOrders.length === 0 ? (
-                            <div className="flex-shrink-0 w-72 h-56 clay-card-dark rounded-[32px] flex flex-col items-center justify-center gap-4 opacity-50 border-dashed border-white/10 text-center">
-                                <div className="size-16 rounded-full bg-white/5 flex items-center justify-center">
-                                    <Icon name="radar" size={32} className="text-white/10 animate-spin-slow" />
-                                </div>
-                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Rastreando missões...</p>
-                            </div>
-                        ) : (
-                            filteredOrders.map((order) => {
+                        {filteredOrders.map((order) => {
                                 const presentation = getServicePresentation(order);
                                 const isAcceptingThis = isAccepting && (selectedOrder?.realId === (order.realId || order.id) || selectedOrder?.id === order.id);
                                 
@@ -3708,15 +3730,15 @@ function App() {
                                     </motion.div>
                                 );
                             })
-                        )}
+                        }
                     </div>
                 </section>
 
                 {/* Seção de Vagas Dedicadas no Dashboard */}
                 <section className="space-y-6">
-                    <div className="flex justify-between items-end">
-                        <h3 className="text-2xl font-bold text-white tracking-tight">Vagas Dedicadas</h3>
-                        <button onClick={() => setActiveTab('dedicated')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Todas</button>
+                    <div className="flex flex-col items-center justify-center gap-4 text-center">
+                        <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm">Vagas Dedicadas</h3>
+                        <button onClick={() => setActiveTab('dedicated')} className="clay-card-dark flex items-center gap-2 text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm">Ver Todas</button>
                     </div>
                     <div className="grid gap-4">
                         {dedicatedSlots.length === 0 ? (
@@ -3819,9 +3841,9 @@ function App() {
                 {/* Seção de Agendamentos no Dashboard - Filtrado para mostrar APENAS os disponíveis conforme solicitação */}
                 {(isOnline || scheduledOrders.some(o => !o.driver_id)) && (
                     <section className="space-y-6">
-                        <div className="flex justify-between items-end">
-                            <h3 className="text-2xl font-bold text-white tracking-tight">Agendamentos</h3>
-                            <button onClick={() => setActiveTab('scheduled')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Calendário</button>
+                        <div className="flex flex-col items-center justify-center gap-4 text-center">
+                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm">Agendamentos</h3>
+                            <button onClick={() => setActiveTab('scheduled')} className="clay-card-dark flex items-center gap-2 text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm">Ver Calendário</button>
                         </div>
                         {scheduledOrders.filter(o => !o.driver_id).length > 0 ? (
                             <div className="space-y-4">
@@ -3964,7 +3986,7 @@ function App() {
                                 </div>
                             </div>
                             <div className="space-y-6">
-                                <div className="flex items-center gap-5">
+                                <div className="flex flex-col items-center gap-4 w-full text-center">
                                     <div className="size-16 bg-black rounded-2xl flex items-center justify-center shadow-2xl">
                                         <Icon name="calendar_month" size={32} className="text-yellow-400" />
                                     </div>
@@ -3973,7 +3995,7 @@ function App() {
                                         <p className="text-xl font-black uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-5">
+                                <div className="flex flex-col items-center gap-4 w-full text-center">
                                     <div className="size-16 bg-black/5 border border-black/10 rounded-2xl flex items-center justify-center">
                                         <Icon name="schedule" size={32} className="text-black" />
                                     </div>
@@ -4173,7 +4195,7 @@ function App() {
                     <div className="flex flex-col gap-4">
                         <div>
                             <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-1">Planejamento</p>
-                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Agenda de Entregas</h2>
+                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase text-center">Agenda de Entregas</h2>
                         </div>
                         
                         {/* Tab Selector */}
@@ -4324,7 +4346,7 @@ function App() {
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
                     <header>
                         <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Exclusivo</p>
-                        <h2 className="text-3xl font-black text-white tracking-tight mt-1">Vagas Dedicadas</h2>
+                        <h2 className="text-3xl font-black text-white tracking-tight mt-1 text-center uppercase">Vagas Dedicadas</h2>
                         <p className="text-xs text-white/30 mt-1">Seja piloto exclusivo de um parceiro Izi.</p>
                     </header>
 
@@ -4479,7 +4501,7 @@ function App() {
                                     <span className="px-2.5 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/20 text-yellow-400 text-[8px] font-black uppercase tracking-widest">Verificado</span>
                                 </div>
                                 <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
-                                <h2 className="text-4xl font-black text-white tracking-tighter leading-none">{slot.title}</h2>
+                                <h2 className="text-4xl font-black text-white tracking-tighter leading-none text-center uppercase">{slot.title}</h2>
                             </div>
                         </div>
                     </div>
@@ -4647,9 +4669,9 @@ function App() {
 
         return (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
-            <header className="flex flex-col gap-1">
+            <header className="flex flex-col items-center text-center gap-1">
                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Histórico</p>
-                <h2 className="text-3xl font-black text-white tracking-tight">Sua Jornada</h2>
+                <h2 className="text-3xl font-black text-white tracking-tight text-center uppercase">Sua Jornada</h2>
                 <p className="text-xs text-white/40 mt-1">Registro consolidado de suas corridas e ganhos.</p>
             </header>
 
@@ -4768,9 +4790,9 @@ function App() {
                 {/* Visual Marker for Debugging */}
                 <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
 
-                <header className="flex flex-col gap-1 px-2">
+                <header className="flex flex-col items-center text-center gap-1 px-2">
                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Izi Pay ðŸš€</p>
-                    <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase">Seus Resultados</h2>
+                    <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase text-center">Seus Resultados</h2>
                 </header>
 
                 {/* Claymorphic Balance Card Premium */}
@@ -4962,7 +4984,7 @@ function App() {
                 <header className="flex items-center justify-between px-2">
                     <div className="flex flex-col gap-1">
                         <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Saques ðŸ’°</p>
-                        <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase">Histórico</h2>
+                        <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase text-center">Histórico</h2>
                     </div>
                     <motion.button 
                         whileTap={{ scale: 0.9 }}
@@ -5048,7 +5070,7 @@ function App() {
                             <div className="w-full flex justify-between items-center px-2">
                                 <div className="flex flex-col gap-1">
                                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Transação ðŸ§¾</p>
-                                    <h2 className="text-3xl font-black text-white tracking-tighter drop-shadow-lg uppercase">Comprovante</h2>
+                                    <h2 className="text-3xl font-black text-white tracking-tighter drop-shadow-lg uppercase text-center">Comprovante</h2>
                                 </div>
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
@@ -6036,7 +6058,7 @@ function App() {
                         
                         {/* Status Imersivo - Clay Card */}
                         <section className="bg-zinc-900 border border-white/5 rounded-3xl p-6 flex flex-col gap-6">
-                            <div className="flex items-center gap-5">
+                            <div className="flex flex-col items-center gap-4 w-full text-center">
                                 <div className="size-16 rounded-[24px] overflow-hidden border border-white/10 bg-zinc-800 flex items-center justify-center relative">
                                     {driverAvatar ? (
                                         <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
@@ -6744,7 +6766,7 @@ function App() {
                                     />
                                 </motion.div>
                                 
-                                <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none mb-4">
+                                <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none mb-4 text-center">
                                     Candidatura <br />
                                     <span className="text-yellow-400">Enviada com Sucesso!</span>
                                 </h2>
@@ -7157,7 +7179,7 @@ function App() {
                             transition={{ delay: 0.2 }}
                             className="space-y-4"
                         >
-                            <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">
+                            <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none text-center">
                                 Parabéns! <br />
                                 <span className="text-primary">Missão Concluída</span>
                             </h2>
@@ -7323,4 +7345,5 @@ function App() {
 
 export default App;
 
-
+
+
