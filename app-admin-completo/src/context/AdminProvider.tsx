@@ -432,13 +432,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [activeTab]);
 
   const handleLogout = useCallback(async () => {
-    await logout();
      setMerchantProfile(null);
      setDashboardOrders([]);
      setActiveTab('dashboard');
-     localStorage.removeItem('izi_admin_active_tab');
-     localStorage.removeItem('izi_admin_role');
-     localStorage.removeItem('izi_admin_profile');
+     
+     // Remove chaves específicas do admin
+     const adminKeys = [
+       'izi_admin_active_tab',
+       'izi_admin_role',
+       'izi_admin_profile',
+       'izi_admin_merchant_id',
+       'izi_admin_email'
+     ];
+     adminKeys.forEach(k => localStorage.removeItem(k));
+
+     await logout();
   }, [logout]);
 
   const fetchUserRole = useCallback(async (userEmail: string) => {

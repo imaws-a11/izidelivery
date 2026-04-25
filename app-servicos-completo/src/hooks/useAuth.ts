@@ -28,26 +28,37 @@ export const useAuth = () => {
       if (savedPass) setLoginPassword(savedPass);
     }
 
+    // Timer de segurança para evitar carregamento infinito
+    const authTimeout = setTimeout(() => {
+      if (authInitLoading) {
+        console.warn("[AUTH] Timeout de inicialização atingido. Forçando encerramento do loading.");
+        setAuthInitLoading(false);
+      }
+    }, 10000);
+
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error("Erro ao recuperar sessão inicial (auth):", error.message);
-        if (error.message.includes("refresh_token_not_found") || error.message.includes("Invalid Refresh Token")) {
-          // Limpa estado local se a sessão for fatalmente inválida
-          setUser(null);
-          setUserId(null);
-          return;
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Erro ao recuperar sessão inicial (auth):", error.message);
         }
+        const u = session?.user || null;
+        setUser(u);
+        setUserId(u ? u.id : null);
+        if (u) {
+          setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
+          checkRoles(u.id);
+        }
+      } catch (err) {
+        console.error("Exceção fatal no getSession:", err);
+      } finally {
+        setAuthInitLoading(false);
+        clearTimeout(authTimeout);
       }
-      const u = session?.user || null;
-      setUser(u);
-      setUserId(u ? u.id : null);
-      if (u) {
-        setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
-        checkRoles(u.id);
-      }
-      setAuthInitLoading(false);
-    });
+    };
+
+    checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user || null;
@@ -62,7 +73,10 @@ export const useAuth = () => {
       setAuthInitLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(authTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkRoles = async (uid: string) => {
@@ -164,8 +178,32 @@ export const useAuth = () => {
   };
 
   const logout = async () => {
-    setIsUserAdmin(false);
-    await supabase.auth.signOut();
+    try {
+      setIsUserAdmin(false);
+      await supabase.auth.signOut();
+      
+      // Limpeza de chaves de "Lembrar-me"
+      localStorage.removeItem("izi_remembered_email");
+      localStorage.removeItem("izi_remembered_pass");
+      localStorage.removeItem("izi_remember_me");
+
+      // Limpeza agressiva do LocalStorage para chaves do Supabase
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // Limpa dados de sessão de memória
+      setUser(null);
+      setUserId(null);
+
+      // Forçar recarregamento para limpar estados residuais
+      window.location.href = '/';
+    } catch (error) {
+      console.error("[AUTH] Erro no logout:", error);
+      window.location.href = '/';
+    }
   };
 
   return {

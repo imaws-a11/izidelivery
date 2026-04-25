@@ -119,6 +119,17 @@ function App() {
     // Timer de segurança redundante no App.tsx
     const safetyTimer = setTimeout(() => {
       setShowSplash(false);
+      
+      // Se após 5 segundos ainda estivermos em loading (provavelmente travado no Supabase Auth)
+      // forçamos a exibição da tela de login para não travar o usuário.
+      setView(prev => {
+        if (prev === "loading") {
+          console.warn("[APP] Inicialização demorou demais. Forçando tela de login.");
+          return "login";
+        }
+        return prev;
+      });
+
       if (Capacitor.isNativePlatform()) {
         CapacitorSplash.hide();
       }

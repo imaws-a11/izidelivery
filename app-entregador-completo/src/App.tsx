@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from './lib/supabase';
+import { supabase, supabaseUrl } from './lib/supabase';
 import { playIziSound, stopIziSounds } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
@@ -1176,7 +1176,9 @@ function App() {
 
 
     const clearDriverSessionState = useCallback(() => {
-        console.log('[AUTH] Executando limpeza de sessão (Logout)');
+        // Captura o ID atual antes de limpar para remover o cache específico
+        const currentUid = driverId || localStorage.getItem('izi_driver_uid');
+
         setIsMenuOpen(false);
         setIsAuthenticated(false);
         setDriverId(null);
@@ -1204,14 +1206,36 @@ function App() {
             'izi_driver_uid',
             'izi_driver_name',
             'izi_driver_pix',
+            'izi_driver_avatar',
+            'izi_driver_vehicle',
+            'izi_driver_active_tab',
             'Izi_active_mission',
             'Izi_declined_slots',
+            'Izi_declined_timed',
             'Izi_online',
-            `izi_apps_${driverId}` // Limpa o cache de candidaturas também
+            'izi_audio_unlocked'
         ];
+
+        if (currentUid) {
+            keysToRemove.push(`izi_apps_${currentUid}`);
+        }
+
+        // Limpa chaves do Supabase para o projeto atual
+        const project = (supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
+        if (project) {
+            keysToRemove.push(`sb-${project}-auth-token`);
+        }
+
         keysToRemove.forEach(k => localStorage.removeItem(k));
+        
+        // Limpeza agressiva de qualquer chave remanescente do Supabase (opcional mas recomendado)
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                localStorage.removeItem(key);
+            }
+        });
         sessionStorage.clear();
-    }, []);
+    }, [driverId, supabaseUrl]);
 
     const handleScanQR = async () => {
         try {
@@ -1599,23 +1623,30 @@ function App() {
 
 
         // Check initial Supabase session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            const user = session?.user;
-            if (user) {
-                setDriverId(user.id);
-                setIsAuthenticated(true);
-                const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                setDriverName(name);
-                ensureDriverRecord(user.id, user.email || '', name);
-
-            } else {
-                setDriverId(null);
-                setIsAuthenticated(false);
-                setDriverName('Entregador');
+        const checkSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const user = session?.user;
+                if (user) {
+                    setDriverId(user.id);
+                    setIsAuthenticated(true);
+                    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
+                    setDriverName(name);
+                    ensureDriverRecord(user.id, user.email || '', name);
+                } else {
+                    // Se não tem sessão no Supabase, garantimos que o driverId do estado esteja nulo
+                    // Mas NÃO limpamos o localStorage aqui para não interferir com o handleLogout
+                    setDriverId(null);
+                    setIsAuthenticated(false);
+                }
+            } catch (e) {
+                console.error('[AUTH] Erro ao verificar sessão inicial:', e);
+            } finally {
+                setAuthInitLoading(false);
             }
-        }).finally(() => {
-            setAuthInitLoading(false);
-        });
+        };
+
+        checkSession();
 
         const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
@@ -3159,9 +3190,22 @@ function App() {
     };
 
     const handleLogout = useCallback(async () => {
-        localStorage.removeItem('Izi_online');
-        clearDriverSessionState();
-        try { await supabase.auth.signOut(); } finally { window.location.href = '/'; }
+        try {
+            console.log('[AUTH] Iniciando processo de logout...');
+            // 1. Deslogar do Supabase primeiro (limpa cookies/sessão no servidor)
+            await supabase.auth.signOut();
+            
+            // 2. Limpar o estado local e LocalStorage (limpa dados de UI)
+            clearDriverSessionState();
+            
+            // 3. Forçar recarregamento para limpar estados residuais de memória
+            window.location.href = '/';
+        } catch (error) {
+            console.error('[AUTH] Erro durante o logout:', error);
+            // Mesmo com erro no signOut, tentamos limpar localmente
+            clearDriverSessionState();
+            window.location.href = '/';
+        }
     }, [clearDriverSessionState]);
 
     const renderHeader = () => (
@@ -3456,99 +3500,99 @@ function App() {
             >
                 <div className="px-6 space-y-10">
                  {/* ─── HEADER CARD — NOVO DESIGN ─── */}
-                <header className="clay-profile-card rounded-[2rem] overflow-hidden relative p-5 flex flex-col gap-0">
+                <header className="clay-profile-card rounded-[2.5rem] overflow-hidden relative p-6 flex flex-col gap-4 shadow-[20px_20px_40px_rgba(0,0,0,0.4),inset_4px_4px_12px_rgba(255,255,255,0.4),inset_-4px_-4px_12px_rgba(0,0,0,0.1)]">
                     {/* Glow decorativo */}
-                    <div className="absolute -top-10 -right-10 w-52 h-52 bg-white/25 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-stone-950/10 rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/30 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-stone-950/15 rounded-full blur-2xl pointer-events-none" />
 
-                    {/* ── Topo: Avatar + Nome + Semanal ── */}
-                    <div className="flex items-center gap-4 w-full mb-5">
-                        {/* Avatar */}
-                        <div className="w-[60px] h-[60px] shrink-0 rounded-[1.2rem] border-[3px] border-white/60 overflow-hidden shadow-xl clay-profile-inner">
-                            {driverAvatar ? (
-                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <Icon name="person" size={36} className="text-stone-950/30" />
+                    {/* ── Linha Superior: Perfil e Ganhos Semanais ── */}
+                    <div className="flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 shrink-0 rounded-2xl border-[3px] border-white/80 overflow-hidden shadow-lg clay-profile-inner bg-stone-100">
+                                {driverAvatar ? (
+                                    <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Icon name="person" size={32} className="text-stone-950/20" />
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-black text-stone-950 tracking-tighter leading-none uppercase italic">
+                                    {driverName.split(' ')[0] || 'Piloto'}
+                                </h1>
+                                <div className="mt-1 flex items-center gap-1.5 bg-stone-950/10 px-2 py-0.5 rounded-lg border border-black/5">
+                                    <Icon name="military_tech" size={10} className="text-stone-950" />
+                                    <span className="text-stone-950 text-[9px] font-black uppercase tracking-widest">
+                                        Nível {stats.level}
+                                    </span>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Nome + nível */}
-                        <div className="flex-1 min-w-0">
-                            <p className="text-stone-950/50 text-[9px] font-black uppercase tracking-[0.3em]">Bem-vindo de volta</p>
-                            <h1 className="text-[1.6rem] font-black text-stone-950 tracking-tighter leading-none uppercase truncate">
-                                {driverName.split(' ')[0] || 'Piloto'}
-                            </h1>
-                            <div className="mt-1 flex items-center gap-1 w-fit bg-stone-950/10 px-2.5 py-0.5 rounded-full border border-black/5">
-                                <Icon name="verified" size={11} className="text-stone-950" />
-                                <span className="text-stone-900 text-[9px] font-black uppercase tracking-wider">
-                                    {stats.level >= 10 ? 'Nível Elite' : `Nível ${stats.level}`}
-                                </span>
                             </div>
                         </div>
 
-                        {/* Ganho Semanal — canto direito */}
-                        <div className="shrink-0 flex flex-col items-end">
-                            <p className="text-[7px] font-black uppercase text-stone-950/40 tracking-[0.25em]">Semana</p>
-                            <p className="text-[10px] font-black text-stone-950/40">R$</p>
-                            <p className="text-[2rem] font-black text-stone-950 tracking-tighter leading-none -mt-1">
-                                {stats.weekly.toFixed(0)}
-                            </p>
+                        <div className="flex flex-col items-end">
+                            <p className="text-[8px] font-black uppercase text-stone-950/40 tracking-[0.3em]">Esta Semana</p>
+                            <div className="flex items-baseline leading-none">
+                                <span className="text-xs font-black text-stone-950/40 mr-0.5">R$</span>
+                                <span className="text-3xl font-black text-stone-950 tracking-tighter italic">
+                                    {stats.weekly.toFixed(0)}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* ── Divisor ── */}
-                    <div className="w-full h-px bg-stone-950/10 mb-5" />
-
-                    {/* ── Centro: Ganho de Hoje dominante ── */}
-                    <div className="flex items-end justify-between w-full mb-5">
-                        <div>
-                            <p className="text-[9px] font-black uppercase text-stone-950/40 tracking-[0.3em] mb-0.5">Ganhos de Hoje</p>
-                            <div className="flex items-start leading-none">
-                                <span className="text-2xl font-black text-stone-950/30 mt-1 mr-0.5">R$</span>
-                                <span className="text-[4.5rem] font-black text-stone-950 tracking-tighter leading-none" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
-                                    {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
-                                </span>
-                                <span className="text-2xl font-black text-stone-950/40 mt-auto mb-1.5 ml-0.5">
-                                    ,{stats.today.toFixed(2).split('.')[1]}
-                                </span>
-                            </div>
+                    {/* ── Bloco Central: Ganhos de Hoje (Mais Compacto e Impactante) ── */}
+                    <div className="bg-stone-950/5 rounded-3xl p-5 border border-black/5 relative z-10">
+                        <div className="flex justify-between items-center mb-2">
+                             <p className="text-[10px] font-black uppercase text-stone-950/50 tracking-[0.4em]">Ganhos de Hoje</p>
+                             <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
                         </div>
-
-                        {/* XP badge compacto */}
-                        <div className="flex flex-col items-end gap-0.5 pb-1">
-                            <p className="text-[7px] font-black text-stone-950/35 uppercase tracking-widest">Reputação</p>
-                            <div className="flex items-baseline gap-0.5">
-                                <span className="text-3xl font-black text-stone-950 leading-none">{stats.xp}</span>
-                                <span className="text-[9px] font-black text-stone-950/30 uppercase">xp</span>
+                        <div className="flex items-start leading-none">
+                            <span className="text-3xl font-black text-stone-950/20 mt-2 mr-1 italic">R$</span>
+                            <span className="text-[5.5rem] font-black text-stone-950 tracking-tighter leading-none" style={{ textShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+                                {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
+                            </span>
+                            <div className="flex flex-col mt-auto mb-3 ml-1">
+                                <span className="text-3xl font-black text-stone-950/30 leading-none">,{stats.today.toFixed(2).split('.')[1]}</span>
                             </div>
-                            <p className="text-[7px] font-black text-stone-950/30 uppercase tracking-widest">Lv.{stats.level} → {stats.level + 1}</p>
                         </div>
                     </div>
 
-                    {/* ── Barra XP neon solta ── */}
-                    <div className="w-full">
-                        <div className="w-full h-[6px] bg-stone-950/10 rounded-full overflow-visible">
+                    {/* ── Barra XP Neon Solta (Sem fundo de card, apenas a barra) ── */}
+                    <div className="px-1 relative z-10">
+                        <div className="flex justify-between items-end mb-2">
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black text-stone-950 leading-none">{stats.xp}</span>
+                                <span className="text-[10px] font-black text-stone-950/40 uppercase tracking-widest">XP Total</span>
+                            </div>
+                            <p className="text-[9px] font-black text-stone-950/40 uppercase tracking-widest italic">Próximo Nível: {stats.level + 1}</p>
+                        </div>
+                        
+                        <div className="relative h-2 w-full bg-stone-950/10 rounded-full overflow-visible">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${Math.min((stats.xp % 100), 98)}%` }}
-                                transition={{ duration: 1.4, ease: 'easeOut' }}
-                                className="h-full rounded-full relative"
+                                transition={{ duration: 1.5, ease: "circOut" }}
+                                className="h-full rounded-full relative bg-stone-950"
                                 style={{
-                                    background: 'linear-gradient(90deg, #1c1917, #44403c, #78350f)',
-                                    boxShadow: '0 0 10px 2px rgba(234,179,8,0.5), 0 0 22px 4px rgba(234,179,8,0.2)'
+                                    boxShadow: '0 0 15px 2px rgba(0,0,0,0.3), 0 0 5px rgba(255,255,255,0.2)'
                                 }}
                             >
-                                <div
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-yellow-400"
-                                    style={{ boxShadow: '0 0 10px 4px rgba(250,204,21,1), 0 0 28px 10px rgba(250,204,21,0.5)' }}
+                                {/* Brilho Neon na ponta */}
+                                <div 
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 size-4 rounded-full bg-yellow-400"
+                                    style={{ 
+                                        boxShadow: '0 0 15px 5px rgba(250,204,21,0.8), 0 0 30px 10px rgba(250,204,21,0.4)' 
+                                    }}
                                 />
+                                {/* Rastro de luz */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-white/20 rounded-full" />
                             </motion.div>
                         </div>
-                        <div className="flex justify-between mt-1.5">
-                            <span className="text-[7px] font-black text-stone-950/25 uppercase tracking-widest">0 xp</span>
-                            <span className="text-[7px] font-black text-stone-950/25 uppercase tracking-widest">100 xp · próx. nível</span>
+                        
+                        <div className="flex justify-between mt-2">
+                            <span className="text-[8px] font-black text-stone-950/30 uppercase tracking-[0.2em]">Evolução</span>
+                            <span className="text-[8px] font-black text-stone-950/30 uppercase tracking-[0.2em]">{100 - (stats.xp % 100)} XP faltantes</span>
                         </div>
                     </div>
                 </header>
@@ -3562,7 +3606,7 @@ function App() {
                 <section className="space-y-6">
                     <div className="flex flex-col items-center justify-center gap-4 text-center">
                         <div className="flex items-center justify-center gap-3">
-                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm">Novos Pedidos</h3>
+                                                    <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm text-center">Novos Pedidos</h3>
                             <button 
                                 onClick={() => fetchOrders()}
                                 disabled={isSyncing || !isOnline}
@@ -3595,22 +3639,19 @@ function App() {
                                 return (
                                     <motion.div 
                                         key={order.id} 
-                                        initial={{ opacity: 0, x: 50 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className="flex-shrink-0 w-[88vw] max-w-[400px] relative pt-12 pb-4"
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="flex-shrink-0 w-[90vw] max-w-[420px] relative pt-14 pb-4"
                                     >
-                                        <div className="bg-[#1a1a1a] rounded-[32px] p-6 sm:p-8 relative flex flex-col items-center text-center border border-white/5"
+                                        <div className="bg-[#1e1e1e] rounded-[3rem] p-8 relative flex flex-col items-center text-center border border-white/5"
                                              style={{
-                                                 boxShadow: 'inset 4px 4px 12px rgba(255, 255, 255, 0.03), inset -4px -4px 12px rgba(0, 0, 0, 0.5), 0 20px 40px rgba(0,0,0,0.4)'
+                                                 boxShadow: 'inset 8px 8px 16px rgba(255, 255, 255, 0.02), inset -8px -8px 16px rgba(0, 0, 0, 0.4), 0 30px 60px rgba(0,0,0,0.6)'
                                              }}
                                         >
-                                            {/* Floating 3D Icon Overlay */}
-                                            <div className="absolute -top-12 bg-yellow-400 w-24 h-24 rounded-full flex items-center justify-center shadow-2xl transition-all"
-                                                 style={{
-                                                     boxShadow: 'inset 4px 4px 8px rgba(255, 255, 255, 0.4), inset -4px -4px 8px rgba(0, 0, 0, 0.2)'
-                                                 }}
+                                            {/* Floating 3D Icon Overlay — Design Claymorphic Gold */}
+                                            <div className="absolute -top-14 bg-gradient-to-br from-yellow-300 via-yellow-500 to-yellow-600 w-28 h-28 rounded-[2.5rem] flex items-center justify-center shadow-[0_20px_40px_rgba(234,179,8,0.3),inset_4px_4px_12px_rgba(255,255,255,0.6),inset_-4px_-4px_12px_rgba(0,0,0,0.2)] transition-all transform hover:rotate-6 active:scale-95"
                                             >
-                                                <Icon name={presentation.details.icon} className="text-black text-[48px]" />
+                                                <Icon name={presentation.details.icon} className="text-black text-[56px] drop-shadow-lg" />
                                             </div>
 
                                             <div className="mt-8 w-full">
@@ -3737,8 +3778,14 @@ function App() {
                 {/* Seção de Vagas Dedicadas no Dashboard */}
                 <section className="space-y-6">
                     <div className="flex flex-col items-center justify-center gap-4 text-center">
-                        <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm">Vagas Dedicadas</h3>
-                        <button onClick={() => setActiveTab('dedicated')} className="clay-card-dark flex items-center gap-2 text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm">Ver Todas</button>
+                                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm text-center">Vagas Dedicadas</h3>
+                                          <button 
+                    onClick={() => setActiveTab('dedicated')} 
+                    className="clay-card-dark flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm group active:scale-95 transition-all"
+                  >
+                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
+                    <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] drop-shadow-sm">Ver Todas</p>
+                  </button>
                     </div>
                     <div className="grid gap-4">
                         {dedicatedSlots.length === 0 ? (
@@ -3842,8 +3889,14 @@ function App() {
                 {(isOnline || scheduledOrders.some(o => !o.driver_id)) && (
                     <section className="space-y-6">
                         <div className="flex flex-col items-center justify-center gap-4 text-center">
-                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm">Agendamentos</h3>
-                            <button onClick={() => setActiveTab('scheduled')} className="clay-card-dark flex items-center gap-2 text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm">Ver Calendário</button>
+                                                        <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm text-center">Agendamentos</h3>
+                                                        <button 
+                                onClick={() => setActiveTab('scheduled')} 
+                                className="clay-card-dark flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm group active:scale-95 transition-all"
+                            >
+                                <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
+                                <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] drop-shadow-sm">Ver Calendário</p>
+                            </button>
                         </div>
                         {scheduledOrders.filter(o => !o.driver_id).length > 0 ? (
                             <div className="space-y-4">
