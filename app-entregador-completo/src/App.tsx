@@ -662,7 +662,7 @@ const getServicePresentation = (order: any) => {
 
     let summary = '';
     if (itemCount > 0) {
-        summary = itemNames.slice(0, 2).join(' ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ ');
+        summary = itemNames.slice(0, 2).join(' Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ ');
         if (itemCount > 2) summary += ` +${itemCount - 2}`;
     } else if (addressMeta) {
         summary = addressMeta
@@ -699,9 +699,9 @@ const getServicePresentation = (order: any) => {
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 if (!GOOGLE_MAPS_API_KEY) {
-  console.error("🚨 [CONFIG] VITE_GOOGLE_MAPS_API_KEY is missing in .env file!");
+  console.error("ðŸš¨ [CONFIG] VITE_GOOGLE_MAPS_API_KEY is missing in .env file!");
 } else {
-  console.log("✅ [CONFIG] Google Maps API Key loaded successfully for Entregador.");
+  console.log("âœ… [CONFIG] Google Maps API Key loaded successfully for Entregador.");
 }
 
 function App() {
@@ -805,7 +805,7 @@ function App() {
                 if (data && data[0]) setAppSettings(data[0]);
             }
 
-            // Busca taxas din¢micas (especialmente os valores base como food_min)
+            // Busca taxas dinÂ¢micas (especialmente os valores base como food_min)
             const resRates = await fetch(`${supabaseUrl}/rest/v1/dynamic_rates_delivery?type=eq.base_values&select=*`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
@@ -867,7 +867,7 @@ function App() {
     /**
      * @CRITICAL_LOGIC - BUSCA DIRETA (BYPASS) DE VAGAS DEDICADAS
      * @AUTHOR Antigravity (Senior AI Dev)
-     * @WARNING NÃO ALTERAR PARA SUPABASE-JS LIBRARY. 
+     * @WARNING NÃƒO ALTERAR PARA SUPABASE-JS LIBRARY. 
      * Este método via fetch nativo foi implementado para contornar travamentos persistentes 
      * na biblioteca cliente. Qualquer mudança para o método tradicional resultará em 
      * falha de carregamento das vagas na tela do entregador.
@@ -971,7 +971,7 @@ function App() {
         const newOrders = orders.filter(o => !heardOrderIds.current.has(o.realId || o.id));
         
         if (newOrders.length > 0) {
-            console.log(`[SOM-WATCHER] 🔊 ${newOrders.length} novas missões detectadas.`);
+            console.log(`[SOM-WATCHER] ðŸ”Š ${newOrders.length} novas missões detectadas.`);
             
             // Marcar como conhecidas imediatamente
             newOrders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
@@ -981,8 +981,8 @@ function App() {
                 playIziSound('driver');
                 
                 if (window.Notification && Notification.permission === 'granted') {
-                    new Notification('🚀 Nova Missão Izi!', {
-                        body: `R$ ${newOrders[0].price?.toFixed(2) || '0,00'} • ${newOrders[0].origin || 'Entrega nova'}`,
+                    new Notification('ðŸš€ Nova Missão Izi!', {
+                        body: `R$ ${newOrders[0].price?.toFixed(2) || '0,00'} â€¢ ${newOrders[0].origin || 'Entrega nova'}`,
                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'
                     });
                 }
@@ -1006,7 +1006,7 @@ function App() {
 
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
-    const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração s³ ocorrem 1x por sessão
+    const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração sÂ³ ocorrem 1x por sessão
     const lastLocationUpdateRef = useRef<number>(0); // Throttle de update de GPS no banco
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
@@ -1031,7 +1031,7 @@ function App() {
                     setOverlayBannerDismissed(false);
                 }
             } catch {
-                // Sem plugin nativo — verifica via flag no localStorage
+                // Sem plugin nativo â€” verifica via flag no localStorage
                 setOverlayBlocked(true);
             }
         };
@@ -1537,7 +1537,7 @@ function App() {
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
-        // Permite GPS se estiver ONLINE ou em uma MISSÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O ATIVA
+        // Permite GPS se estiver ONLINE ou em uma MISSÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O ATIVA
         if (!isOnline && !activeMission) return;
         
         const updateLocation = (lat: number, lng: number) => {
@@ -1678,12 +1678,12 @@ function App() {
                 setDriverId(user.id);
                 setIsAuthenticated(true);
 
-                // BOOT ÃƒÂ¢Ã¢€¦áNICO: s³ executa restauração completa na primeira vez
+                // BOOT ÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬Â¦áNICO: sÂ³ executa restauração completa na primeira vez
                 if (!hasBootedRef.current) {
                     hasBootedRef.current = true;
                     console.log('[AUTH] Primeiro boot detectado. Carregando perfil...');
 
-                    // Buscar perfil apenas para nome e chave pix (NÃO tocar no is_online aqui)
+                    // Buscar perfil apenas para nome e chave pix (NÃƒO tocar no is_online aqui)
                     const { data: profile } = await supabase
                         .from('drivers_delivery')
                         .select('name, bank_info, avatar_url')
@@ -1706,7 +1706,7 @@ function App() {
                     
                     syncMissionWithDB();
                 } else {
-                    // Renovações de token (TOKEN_REFRESHED): NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O alterar nenhum estado
+                    // Renovações de token (TOKEN_REFRESHED): NÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O alterar nenhum estado
                     console.log('[AUTH] Renovação de token. Ignorando reset de estado.');
                 }
             } else {
@@ -1796,8 +1796,8 @@ function App() {
 
 
     // =====================================================================
-    // RESTAURA¢ÃƒÆ’¢¬áÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
-    // Este é o ÃƒÂ¢Ã¢€¦áNICO lugar onde o is_online é restaurado ap³s login/refresh.
+    // RESTAURAÂ¢ÃƒÆ’Ã†â€™Â¢Â¬áÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
+    // Este é o ÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬Â¦áNICO lugar onde o is_online é restaurado apÂ³s login/refresh.
     // Ele dispara quando driverId e isAuthenticated ficam disponíveis.
     // =====================================================================
     useEffect(() => {
@@ -1883,7 +1883,7 @@ function App() {
     const handleToggleOnline = async () => {
         const nextState = !isOnline;
 
-        // SALVA NO LOCALSTORAGE IMEDIATAMENTE ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ antes de qualquer chamada ao banco
+        // SALVA NO LOCALSTORAGE IMEDIATAMENTE Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ antes de qualquer chamada ao banco
         // Isso garante que F5 sempre restaura o status correto, independente de rede
         localStorage.setItem('Izi_online', nextState.toString());
         setIsOnline(nextState);
@@ -1915,7 +1915,7 @@ function App() {
                 }
             } catch (e: any) {
                 console.warn('[STATUS] Falha ao sincronizar banco (storage preservado):', e.message);
-                // NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O reverte ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ o localStorage já salvou a intenção e o heartbeat sincronizará o banco
+                // NÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O reverte Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ o localStorage já salvou a intenção e o heartbeat sincronizará o banco
             }
         }
     };
@@ -1968,7 +1968,7 @@ function App() {
             const activeOrder = orders?.find((o: any) => 
                 !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase()) &&
                 !financialTypes.includes(o.service_type) &&
-                o.driver_id === dId // RIGOROSO: S³ é missão ativa se for MINHA
+                o.driver_id === dId // RIGOROSO: SÂ³ é missão ativa se for MINHA
             );
 
             if (activeOrder) {
@@ -2114,7 +2114,7 @@ function App() {
                 stopIziSounds();
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'slot_applications' }, (payload) => {
-                console.log('⚡ MUDANÇA EM CANDIDATURAS (Realtime):', payload);
+                console.log('âš¡ MUDANÃ‡A EM CANDIDATURAS (Realtime):', payload);
                 fetchDeep();
                 refreshMyApplicationsRef.current();
 
@@ -2236,7 +2236,7 @@ function App() {
                         
                         setShowApprovedSlotModal(true);
 
-                        toastSuccess("🏁 VAGA CONFIRMADA! Clique para ver os detalhes.");
+                        toastSuccess("ðŸ VAGA CONFIRMADA! Clique para ver os detalhes.");
                     }
                     
                     // Sincroniza estados após qualquer atualização minha
@@ -2465,7 +2465,7 @@ function App() {
                 const currentMission = activeMissionRef.current;
                 const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
 
-                // 1. GESTÃO DA MISSÃO ATIVA DESTE MOTORISTA
+                // 1. GESTÃƒO DA MISSÃƒO ATIVA DESTE MOTORISTA
                 if (isMyOrder) {
                     if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase())) {
                         setActiveMission(null);
@@ -2478,7 +2478,7 @@ function App() {
                     const isNowReady = o.preparation_status === 'pronto';
                     if (wasPreparing && isNowReady) {
                         playIziSound('driver');
-                        toastSuccess('🔔 O Pedido está PRONTO para coleta!');
+                        toastSuccess('ðŸ”” O Pedido está PRONTO para coleta!');
                     }
 
                     const mission = { 
@@ -2500,7 +2500,7 @@ function App() {
                     return;
                 }
 
-                // 2. GESTÃO DO RADAR (Pedidos disponíveis)
+                // 2. GESTÃƒO DO RADAR (Pedidos disponíveis)
                 if (o.scheduled_at) return;
                 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
@@ -2551,8 +2551,8 @@ function App() {
                     if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
                         playIziSound('driver');
                         if (Notification.permission === 'granted') {
-                            new Notification('🚀 Nova Missão Izi!', { 
-                                body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
+                            new Notification('ðŸš€ Nova Missão Izi!', { 
+                                body: `${servicePreview.headline} â€¢ ${servicePreview.pickupText || o.pickup_address}`, 
                                 icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                             });
                         }
@@ -2654,7 +2654,7 @@ function App() {
         console.group('[handleAccept] Processando aceite de pedido');
         
         try {
-            // Validar UUID ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ order.id é o ID curto (8 chars), order.realId é o UUID completo
+            // Validar UUID Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ order.id é o ID curto (8 chars), order.realId é o UUID completo
             const targetId = order.realId || order.id;
             console.log('Target ID Identificado:', targetId, { orderId: order.id, realId: order.realId });
             
@@ -2986,7 +2986,7 @@ function App() {
                     signal: AbortSignal.timeout(10000)
                 }).catch(err => console.error('[WALLET] Erro ao registrar ganho:', err));
 
-                // 2. INSERIR DÉBITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o dinheiro do cliente)
+                // 2. INSERIR DÃ‰BITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o dinheiro do cliente)
                 let cashDiscountAmount = 0;
                 if (paymentConfirmedMode === 'dinheiro') {
                     const totalOrderPrice = Number(activeMission.total_price || activeMission.price || 0);
@@ -3177,7 +3177,7 @@ function App() {
             return;
         }
 
-        // --- TRAVA DE SEGURANÇA: Verificação de duplicados ---
+        // --- TRAVA DE SEGURANÃ‡A: Verificação de duplicados ---
         const alreadyApplied = myApplications.some(app => String(app.slot_id) === String(slot.id) && app.status !== 'rejected');
         
         if (alreadyApplied) {
@@ -3219,7 +3219,7 @@ function App() {
             console.log("Candidatura enviada via REST!");
             setShowSlotAppliedSuccess(true);
             
-            // --- ATUALIZAÇÃO OTIMISTA E INSTANTÂNEA ---
+            // --- ATUALIZAÃ‡ÃƒO OTIMISTA E INSTANTÃ‚NEA ---
             const newApp = {
                 slot_id: slot.id,
                 driver_id: driverId,
@@ -3359,7 +3359,7 @@ function App() {
                                                     <div className="flex items-center gap-1.5">
                                                         {!isAccepted && <div className="size-1 rounded-full bg-primary animate-ping" />}
                                                         <span className={`text-[8px] font-bold uppercase ${isAccepted ? 'opacity-70' : 'text-slate-400'}`}>
-                                                            {isAccepted ? 'VOCÊ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
+                                                            {isAccepted ? 'VOCÃŠ Ã‰ EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -3486,7 +3486,7 @@ function App() {
 
                         <div className="clay-profile-inner p-3 rounded-2xl flex flex-col items-center justify-center border border-white/30">
                            <p className="text-[8px] font-black uppercase text-stone-800 tracking-tighter opacity-70">Semanal</p>
-                           <p className="text-sm font-black text-stone-950 italic">R$ {stats.weekly.toFixed(0)}</p>
+                           <p className="text-sm font-black text-stone-950">R$ {stats.weekly.toFixed(0)}</p>
                         </div>
                     </div>
 
@@ -3494,7 +3494,7 @@ function App() {
                         <p className="text-stone-950/60 text-[11px] font-black uppercase tracking-[0.2em] mb-2">Ganhos de Hoje</p>
                         <div className="flex items-start gap-1">
                             <span className="text-2xl font-black text-stone-950/50 mt-2">R$</span>
-                            <span className="text-7xl font-black text-stone-950 tracking-tighter drop-shadow-sm italic leading-none">
+                            <span className="text-7xl font-black text-stone-950 tracking-tighter drop-shadow-sm leading-none">
                                 {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
                                 <small className="text-3xl font-black opacity-40">,{stats.today.toFixed(2).split('.')[1]}</small>
                             </span>
@@ -3504,11 +3504,11 @@ function App() {
                     <div className="clay-profile-inner rounded-[2rem] p-5 border border-white/20">
                         <div className="flex justify-between items-end mb-3">
                             <div className="space-y-0.5">
-                                <p className="text-stone-950 text-[11px] font-black uppercase tracking-widest italic">Reputação XP</p>
+                                <p className="text-stone-950 text-[11px] font-black uppercase tracking-widest">Reputação XP</p>
                                 <p className="text-stone-950/60 text-[9px] font-bold">Progresso para o Lv. {stats.level + 1}</p>
                             </div>
                             <div className="text-right">
-                                <span className="text-lg font-black text-stone-950 italic">{stats.xp}</span>
+                                <span className="text-lg font-black text-stone-950">{stats.xp}</span>
                                 <span className="text-[9px] font-black text-stone-950/40 uppercase ml-1">pts</span>
                             </div>
                         </div>
@@ -3625,7 +3625,7 @@ function App() {
                                                 <div className="bg-[#121212] rounded-2xl p-4 sm:p-6 border border-white/5 mb-6 sm:mb-8 shadow-inner">
                                                     <p className="text-white/30 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-yellow-400 text-3xl sm:text-4xl font-black drop-shadow-xl italic">
+                                                        <span className="text-yellow-400 text-3xl sm:text-4xl font-black drop-shadow-xl">
                                                             R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}
                                                         </span>
                                                         <Icon name="local_fire_department" className="text-yellow-400 text-2xl sm:text-3xl" />
@@ -3637,7 +3637,7 @@ function App() {
                                                 <div className="grid grid-cols-2 gap-3 sm:gap-4 text-left w-full mb-6 sm:mb-8">
                                                     <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2">
                                                         <span className="text-[8px] sm:text-[9px] uppercase font-bold text-yellow-400/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
-                                                        <span className="text-yellow-400 text-xs sm:text-sm font-black leading-tight uppercase italic mb-1 truncate" title={order.store_name || order.merchant_name}>
+                                                        <span className="text-yellow-400 text-xs sm:text-sm font-black leading-tight uppercase mb-1 truncate" title={order.store_name || order.merchant_name}>
                                                             {order.store_name || order.merchant_name || 'Estabelecimento Parceiro'}
                                                         </span>
                                                         <span className="text-white/90 text-[11px] sm:text-xs font-medium leading-relaxed drop-shadow-md break-words">
@@ -3762,7 +3762,7 @@ function App() {
                                                             {slot.admin_users?.store_name || 'Parceiro Izi'}
                                                         </p>
                                                     </div>
-                                                    <h4 className={`text-lg font-black italic tracking-tight truncate leading-tight mb-1 ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{slot.title}</h4>
+                                                    <h4 className={`text-lg font-black tracking-tight truncate leading-tight mb-1 ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{slot.title}</h4>
                                                     <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
                                                         <Icon name="location_on" className="text-zinc-600" size={10} />
                                                         <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
@@ -3773,7 +3773,7 @@ function App() {
                                             <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-inner">
                                                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
                                                 <div className="flex flex-col items-end">
-                                                    <p className={`text-2xl font-black italic leading-none ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                                    <p className={`text-2xl font-black leading-none ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
                                                         <span className="text-xs mr-0.5 not-italic font-bold opacity-60">R$</span>
                                                         {parseFloat(slot.fee_per_day || 0).toFixed(0)}
                                                     </p>
@@ -3846,7 +3846,7 @@ function App() {
                                                     <div className="size-16 rounded-[24px] bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-[10px_10px_25px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05)] overflow-hidden relative">
                                                         <div className="size-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex flex-col items-center justify-center">
                                                             <p className="text-[10px] font-black text-yellow-500 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.','')}</p>
-                                                            <p className="text-xl font-black text-yellow-400 italic leading-none">{dt.getDate()}</p>
+                                                            <p className="text-xl font-black text-yellow-400 leading-none">{dt.getDate()}</p>
                                                         </div>
                                                         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
                                                     </div>
@@ -3860,7 +3860,7 @@ function App() {
                                                                 {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h
                                                             </p>
                                                         </div>
-                                                        <h4 className="text-lg font-black text-white italic tracking-tight truncate leading-tight mb-1">{order.store_name || order.merchant_name || 'Agendamento Izi'}</h4>
+                                                        <h4 className="text-lg font-black text-white tracking-tight truncate leading-tight mb-1">{order.store_name || order.merchant_name || 'Agendamento Izi'}</h4>
                                                         <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
                                                             <Icon name="location_on" className="text-zinc-600" size={10} />
                                                             <span className="truncate">{order.pickup_address || 'Endereço Indisponível'}</span>
@@ -3869,9 +3869,9 @@ function App() {
                                                 </div>
                                                 
                                                 <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)]">
-                                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">LÍQUIDO</p>
+                                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">LÃQUIDO</p>
                                                     <div className="flex flex-col items-end">
-                                                        <p className="text-xl font-black text-emerald-400 italic leading-none">
+                                                        <p className="text-xl font-black text-emerald-400 leading-none">
                                                             <span className="text-[10px] mr-0.5 not-italic text-emerald-400/60 font-bold">R$</span>
                                                             {getNetEarnings(order).toFixed(2).replace('.', ',')}
                                                         </p>
@@ -3930,7 +3930,7 @@ function App() {
                         <button onClick={() => setSelectedScheduledOrder(null)} className="text-yellow-400 p-2 rounded-full active:scale-95 transition-all">
                             <span className="material-symbols-outlined text-3xl">arrow_back</span>
                         </button>
-                        <h1 className="font-black text-yellow-400 text-xl tracking-tighter uppercase italic">
+                        <h1 className="font-black text-yellow-400 text-xl tracking-tighter uppercase">
                             {isMine ? 'Detalhes do Agendamento' : 'Aceitar Agendamento'}
                         </h1>
                     </div>
@@ -3960,7 +3960,7 @@ function App() {
                                 <div className="bg-black/10 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Detalhes da Escala</div>
                                 <div className="text-right">
                                     <p className="text-[10px] font-black opacity-60 uppercase">Ganho Líquido</p>
-                                    <p className="text-4xl font-black italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+                                    <p className="text-4xl font-black">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
                                 </div>
                             </div>
                             <div className="space-y-6">
@@ -3970,7 +3970,7 @@ function App() {
                                     </div>
                                     <div>
                                         <p className="text-xs font-black uppercase opacity-60 tracking-widest">Data Programada</p>
-                                        <p className="text-xl font-black italic uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
+                                        <p className="text-xl font-black uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-5">
@@ -3979,7 +3979,7 @@ function App() {
                                     </div>
                                     <div>
                                         <p className="text-xs font-black uppercase opacity-60 tracking-widest">Horário de Início</p>
-                                        <p className="text-xl font-black italic uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
+                                        <p className="text-xl font-black uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
                                     </div>
                                 </div>
                                 <div className="p-6 bg-black/5 border border-black/10 rounded-[32px] space-y-4">
@@ -3987,14 +3987,14 @@ function App() {
                                         <Icon name="location_on" size={20} className="mt-1" />
                                         <div>
                                             <p className="text-[10px] font-black uppercase opacity-40 mb-1">Ponto de Partida</p>
-                                            <p className="font-bold text-sm leading-tight italic">{cleanAddressText(order.pickup_address)}</p>
+                                            <p className="font-bold text-sm leading-tight">{cleanAddressText(order.pickup_address)}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
                                         <Icon name="flag" size={20} className="mt-1" />
                                         <div>
                                             <p className="text-[10px] font-black uppercase opacity-40 mb-1">Endereço de Entrega</p>
-                                            <p className="font-bold text-sm leading-tight italic">
+                                            <p className="font-bold text-sm leading-tight">
                                                 {cleanAddressText(order.delivery_address || 'Destino não informado')}
                                             </p>
                                         </div>
@@ -4012,7 +4012,7 @@ function App() {
                                                     <Icon name="chat_bubble" size={20} className="mt-1" />
                                                     <div>
                                                         <p className="text-[10px] font-black uppercase opacity-40 mb-1">Observações do Cliente</p>
-                                                        <p className="font-bold text-sm leading-snug italic text-stone-800">{obsText}</p>
+                                                        <p className="font-bold text-sm leading-snug text-stone-800">{obsText}</p>
                                                     </div>
                                                 </div>
                                             </>
@@ -4031,19 +4031,19 @@ function App() {
                         </div>
                         <ul className="space-y-4">
                             <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                                <span className="text-yellow-400 font-black">â€¢</span> 
                                 Comparecer ao local com 15 min de antecedência.
                             </li>
                             <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                                <span className="text-yellow-400 font-black">â€¢</span> 
                                 Estar com bateria do celular acima de 80%.
                             </li>
                             <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                                <span className="text-yellow-400 font-black">â€¢</span> 
                                 Traje profissional e baú limpo.
                             </li>
-                            <li className="flex gap-4 text-xs text-yellow-400/70 font-black items-start italic leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                            <li className="flex gap-4 text-xs text-yellow-400/70 font-black items-start leading-relaxed uppercase tracking-tight">
+                                <span className="text-yellow-400 font-black">â€¢</span> 
                                 O início da missão só é liberado no horário exato.
                             </li>
                         </ul>
@@ -4088,7 +4088,7 @@ function App() {
                                             <Icon name="schedule" className="text-yellow-400" size={18} />
                                             <span className="text-yellow-400 font-bold uppercase tracking-widest text-[11px]">Início Bloqueado</span>
                                         </div>
-                                        <p className="text-[10px] font-black text-white/50 uppercase tracking-tighter italic">
+                                        <p className="text-[10px] font-black text-white/50 uppercase tracking-tighter">
                                             Disponível em {scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h do dia {scheduledDate.getDate()}/{scheduledDate.getMonth()+1}
                                         </p>
                                     </div>
@@ -4108,7 +4108,7 @@ function App() {
                                         className="w-full h-20 bg-zinc-900 text-white rounded-[28px] font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/10"
                                     >
                                         <Icon name="check_circle" className="text-emerald-400" />
-                                        Missão Concluída • Fechar
+                                        Missão Concluída â€¢ Fechar
                                     </button>
                                 );
                             }
@@ -4173,7 +4173,7 @@ function App() {
                     <div className="flex flex-col gap-4">
                         <div>
                             <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-1">Planejamento</p>
-                            <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">Agenda de Entregas</h2>
+                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Agenda de Entregas</h2>
                         </div>
                         
                         {/* Tab Selector */}
@@ -4268,7 +4268,7 @@ function App() {
                                             </div>
                                             <div className="text-right">
                                                 <p className={`text-[8px] font-black uppercase tracking-widest opacity-60`}>Valor Líquido</p>
-                                                <p className={`text-2xl font-black italic`}>R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+                                                <p className={`text-2xl font-black`}>R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
                                             </div>
                                         </div>
 
@@ -4277,7 +4277,7 @@ function App() {
                                                 <Icon name="calendar_month" size={24} />
                                             </div>
                                             <div>
-                                                <p className="font-black text-lg leading-none italic uppercase tracking-tighter">
+                                                <p className="font-black text-lg leading-none uppercase tracking-tighter">
                                                     {dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }).replace('.', '')}
                                                 </p>
                                                 <p className={`text-sm font-bold mt-1 opacity-70`}>
@@ -4291,7 +4291,7 @@ function App() {
                                                 <Icon name="location_on" size={18} className="opacity-60" />
                                                 <div className="space-y-1">
                                                     <p className="text-[8px] font-black uppercase tracking-widest opacity-50">Rotas de Coleta/Entrega</p>
-                                                    <p className="font-bold text-sm leading-tight italic">{cleanAddressText(order.pickup_address).split(',')[0]} → {cleanAddressText(order.delivery_address).split(',')[0]}</p>
+                                                    <p className="font-bold text-sm leading-tight">{cleanAddressText(order.pickup_address).split(',')[0]} â†’ {cleanAddressText(order.delivery_address).split(',')[0]}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -4324,7 +4324,7 @@ function App() {
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
                     <header>
                         <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Exclusivo</p>
-                        <h2 className="text-3xl font-black text-white tracking-tight mt-1 italic">Vagas Dedicadas</h2>
+                        <h2 className="text-3xl font-black text-white tracking-tight mt-1">Vagas Dedicadas</h2>
                         <p className="text-xs text-white/30 mt-1">Seja piloto exclusivo de um parceiro Izi.</p>
                     </header>
 
@@ -4383,7 +4383,7 @@ function App() {
                                                     {s.admin_users?.store_name || 'Parceiro Exclusivo'}
                                                 </p>
                                             </div>
-                                            <p className={`text-lg font-black tracking-tight leading-tight group-hover:text-primary transition-colors italic ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{s.title}</p>
+                                            <p className={`text-lg font-black tracking-tight leading-tight group-hover:text-primary transition-colors ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{s.title}</p>
                                             <div className="flex items-center gap-3 mt-3">
                                                 <div className="flex items-center gap-1.5 bg-white/[0.05] px-3 py-1 rounded-full border border-white/5">
                                                     <Icon name="schedule" size={12} className="text-primary/60" />
@@ -4397,7 +4397,7 @@ function App() {
                                         </div>
                                         <div className="text-right shrink-0 flex flex-col items-end gap-1">
                                             <div className={`${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-primary/10 border-primary/20'} border px-4 py-2 rounded-2xl shadow-xl transition-all`}>
-                                                <p className={`text-xl font-black italic leading-none ${isAccepted ? 'text-emerald-400' : 'text-primary'}`}>R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
+                                                <p className={`text-xl font-black leading-none ${isAccepted ? 'text-emerald-400' : 'text-primary'}`}>R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
                                                 <p className={`text-[7px] font-black uppercase tracking-tighter text-center ${isAccepted ? 'text-emerald-400/60' : 'text-primary/60'}`}>p/ dia</p>
                                             </div>
                                             {hasApplied && (
@@ -4479,7 +4479,7 @@ function App() {
                                     <span className="px-2.5 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/20 text-yellow-400 text-[8px] font-black uppercase tracking-widest">Verificado</span>
                                 </div>
                                 <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
-                                <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none">{slot.title}</h2>
+                                <h2 className="text-4xl font-black text-white tracking-tighter leading-none">{slot.title}</h2>
                             </div>
                         </div>
                     </div>
@@ -4501,8 +4501,8 @@ function App() {
                                 </div>
                             </div>
                             <div className="flex items-baseline gap-3">
-                                <span className="text-3xl font-black italic opacity-40">R$</span>
-                                <span className="text-8xl font-black tracking-tighter italic leading-none drop-shadow-sm">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
+                                <span className="text-3xl font-black opacity-40">R$</span>
+                                <span className="text-8xl font-black tracking-tighter leading-none drop-shadow-sm">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
                             </div>
                             <div className="mt-8 flex items-center gap-3 bg-white/20 w-fit px-6 py-3 rounded-full border border-white/20 backdrop-blur-md shadow-inner">
                                 <Icon name="schedule" size={16} className="text-zinc-900" />
@@ -4520,7 +4520,7 @@ function App() {
                             </div>
                             <div className="space-y-1 w-full overflow-hidden px-2">
                                 <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Endereço Base</p>
-                                <p className="text-xs font-black text-white italic break-words line-clamp-2 w-full leading-tight uppercase tracking-tight" title={slot.admin_users?.store_address || slot.city}>
+                                <p className="text-xs font-black text-white break-words line-clamp-2 w-full leading-tight uppercase tracking-tight" title={slot.admin_users?.store_address || slot.city}>
                                     {slot.admin_users?.store_address || slot.city || 'Sua Região'}
                                 </p>
                             </div>
@@ -4531,7 +4531,7 @@ function App() {
                             </div>
                             <div className="space-y-1">
                                 <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Após {slot.metadata?.base_deliveries || 0} saídas</p>
-                                <p className="text-sm font-black text-white italic">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')} extra</p>
+                                <p className="text-sm font-black text-white">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')} extra</p>
                             </div>
                         </div>
                     </div>
@@ -4539,7 +4539,7 @@ function App() {
                     {/* Bonus Extra */}
                     {customBenefits.length > 0 && (
                         <section className="space-y-6">
-                            <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                            <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                                 <span className="size-2 rounded-full bg-primary" />
                                 Bônus e Extras
                             </h3>
@@ -4551,7 +4551,7 @@ function App() {
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{ben.label || ben.title || 'Incentivo'}</p>
-                                            <p className="text-lg font-black text-primary italic leading-none">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-lg font-black text-primary leading-none">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -4562,7 +4562,7 @@ function App() {
                     {/* Regiões Extras */}
                     {neighborhoodExtras.length > 0 && (
                         <section className="space-y-6">
-                            <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                            <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                                 <span className="size-2 rounded-full bg-primary" />
                                 Taxas por Região
                             </h3>
@@ -4574,7 +4574,7 @@ function App() {
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{item.label}</p>
-                                            <p className="text-lg font-black text-primary italic leading-none">+ R$ {parseFloat(item.fee || item.value || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-lg font-black text-primary leading-none">+ R$ {parseFloat(item.fee || item.value || 0).toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -4585,7 +4585,7 @@ function App() {
                     {/* Descrição */}
                     {slot.description && (
                         <section className="space-y-6">
-                             <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                             <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                                 <span className="size-2 rounded-full bg-primary" />
                                 Sobre a Vaga
                             </h3>
@@ -4597,14 +4597,14 @@ function App() {
 
                     {/* Requisitos */}
                     <section className="space-y-6">
-                        <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                        <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
                             <span className="size-2 rounded-full bg-primary" />
                             Requisitos
                         </h3>
                         {requirements.length === 0 ? (
                             <div className="p-5 border border-white/5 rounded-[2rem] flex items-center gap-4 opacity-40" style={sClayDark}>
                                 <Icon name="check_circle" size={20} className="text-primary shrink-0" />
-                                <p className="text-xs font-bold text-white/50 uppercase tracking-wide italic">Nenhum requisito específico cadastrado</p>
+                                <p className="text-xs font-bold text-white/50 uppercase tracking-wide">Nenhum requisito específico cadastrado</p>
                             </div>
                         ) : (
                             <div className="grid gap-4">
@@ -4649,8 +4649,8 @@ function App() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
             <header className="flex flex-col gap-1">
                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Histórico</p>
-                <h2 className="text-3xl font-black text-white tracking-tight italic">Sua Jornada</h2>
-                <p className="text-xs text-white/40 mt-1 italic">Registro consolidado de suas corridas e ganhos.</p>
+                <h2 className="text-3xl font-black text-white tracking-tight">Sua Jornada</h2>
+                <p className="text-xs text-white/40 mt-1">Registro consolidado de suas corridas e ganhos.</p>
             </header>
 
             <div className="space-y-4">
@@ -4660,7 +4660,7 @@ function App() {
                             <Icon name="history_toggle_off" className="text-4xl text-primary/50" />
                         </div>
                         <div>
-                            <p className="text-sm font-black text-white uppercase tracking-widest italic mb-1">Nenhuma Jornada</p>
+                            <p className="text-sm font-black text-white uppercase tracking-widest mb-1">Nenhuma Jornada</p>
                             <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Você ainda não completou corridas</p>
                         </div>
                     </div>
@@ -4705,14 +4705,14 @@ function App() {
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-0.5">{serviceTypeLabel(order.service_type)}</p>
-                                            <p className="text-sm font-black text-white leading-tight italic">{cleanAddressText(order.delivery_address || order.destination || 'Endereço Indisponível')}</p>
+                                            <p className="text-sm font-black text-white leading-tight">{cleanAddressText(order.delivery_address || order.destination || 'Endereço Indisponível')}</p>
                                         </div>
                                     </div>
                                     
                                     <div className="flex items-center gap-3 pt-3 mt-3 border-t border-white/5">
                                         <Icon name="event" size={14} className="text-white/20" />
                                         <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-                                            {new Date(completedAt).toLocaleDateString('pt-BR')} <span className="mx-1 opacity-40">•</span> {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(completedAt).toLocaleDateString('pt-BR')} <span className="mx-1 opacity-40">â€¢</span> {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
                                 </div>
@@ -4726,13 +4726,13 @@ function App() {
                                             {isCashPaid ? 'Dinheiro' : 'Online'}
                                         </span>
                                     </div>
-                                    <span className={`text-xl font-black italic tracking-tighter ${isNegative ? 'text-rose-400 drop-shadow-[0_2px_10px_rgba(251,113,133,0.3)]' : 'text-primary drop-shadow-[0_2px_10px_rgba(250,204,21,0.3)]'}`}>
+                                    <span className={`text-xl font-black tracking-tighter ${isNegative ? 'text-rose-400 drop-shadow-[0_2px_10px_rgba(251,113,133,0.3)]' : 'text-primary drop-shadow-[0_2px_10px_rgba(250,204,21,0.3)]'}`}>
                                         {netEarningsLabel}
                                     </span>
                                 </div>
                                 <div className="bg-white/5 p-4 rounded-[20px] border border-white/10 text-right flex flex-col justify-center shadow-lg">
                                     <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Total Pedido</p>
-                                    <span className="text-sm font-black text-white italic opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                    <span className="text-sm font-black text-white opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                 </div>
                             </div>
                         </div>
@@ -4769,8 +4769,8 @@ function App() {
                 <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
 
                 <header className="flex flex-col gap-1 px-2">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Izi Pay 🚀</p>
-                    <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Seus Resultados</h2>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Izi Pay ðŸš€</p>
+                    <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase">Seus Resultados</h2>
                 </header>
 
                 {/* Claymorphic Balance Card Premium */}
@@ -4789,7 +4789,7 @@ function App() {
                                 <p className="text-stone-800 text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Saldo Disponível</p>
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-2xl font-bold text-stone-900 opacity-60">R$</span>
-                                    <span className="text-6xl font-black text-stone-950 tracking-tighter italic leading-none">
+                                    <span className="text-6xl font-black text-stone-950 tracking-tighter leading-none">
                                         {stats.balance.toFixed(2).replace('.', ',')}
                                     </span>
                                 </div>
@@ -4834,7 +4834,7 @@ function App() {
                         </div>
                         <div>
                             <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Ganhos hoje</p>
-                            <p className="text-2xl font-black text-white italic tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                            <p className="text-2xl font-black text-white tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
                         </div>
                     </div>
                     
@@ -4845,7 +4845,7 @@ function App() {
                         </div>
                         <div>
                             <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Entregas</p>
-                            <p className="text-2xl font-black text-white italic tracking-tighter">{stats.count}</p>
+                            <p className="text-2xl font-black text-white tracking-tighter">{stats.count}</p>
                         </div>
                     </div>
                 </div>
@@ -4918,7 +4918,7 @@ function App() {
 
                                         {isToday && (
                                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[7px] font-black px-1.5 py-0.5 rounded-md shadow-lg z-20 whitespace-nowrap">
-                                                LIVE ⚡
+                                                LIVE âš¡
                                             </div>
                                         )}
                                     </div>
@@ -4938,8 +4938,8 @@ function App() {
                         <Icon name="verified_user" className="text-primary" size={24} />
                     </div>
                     <div className="space-y-1 relative z-10">
-                        <p className="text-[10px] text-white font-black uppercase tracking-widest italic leading-none">Pagamento Seguro Auditado</p>
-                        <p className="text-[9px] text-white/30 font-bold leading-relaxed italic">
+                        <p className="text-[10px] text-white font-black uppercase tracking-widest leading-none">Pagamento Seguro Auditado</p>
+                        <p className="text-[9px] text-white/30 font-bold leading-relaxed">
                             Suas transferências PIX são protegidas por <span className="text-primary/60">criptografia Izi</span> e liberadas em até 24h.
                         </p>
                     </div>
@@ -4961,8 +4961,8 @@ function App() {
             <div className="min-h-screen px-5 pt-8 pb-32 space-y-8">
                 <header className="flex items-center justify-between px-2">
                     <div className="flex flex-col gap-1">
-                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Saques 💰</p>
-                        <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Histórico</h2>
+                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Saques ðŸ’°</p>
+                        <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase">Histórico</h2>
                     </div>
                     <motion.button 
                         whileTap={{ scale: 0.9 }}
@@ -5008,7 +5008,7 @@ function App() {
 
                                 <div className="flex-1 space-y-1">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-white font-black text-xl italic tracking-tighter">R$ {Number(tx.amount).toFixed(2).replace('.', ',')}</p>
+                                        <p className="text-white font-black text-xl tracking-tighter">R$ {Number(tx.amount).toFixed(2).replace('.', ',')}</p>
                                         <div className="flex items-center gap-2">
                                             {tx.receipt_url && (
                                                 <div className="bg-emerald-500/20 text-emerald-400 text-[7px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -5028,7 +5028,7 @@ function App() {
                                     <p className="text-[9px] text-white/30 font-bold uppercase truncate max-w-[150px]">
                                         {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                     </p>
-                                    <p className="text-[8px] text-white/20 font-medium italic line-clamp-1">{tx.description}</p>
+                                    <p className="text-[8px] text-white/20 font-medium line-clamp-1">{tx.description}</p>
                                 </div>
                                 <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.01] blur-3xl -z-10 rounded-full" />
                             </motion.div>
@@ -5047,8 +5047,8 @@ function App() {
                         >
                             <div className="w-full flex justify-between items-center px-2">
                                 <div className="flex flex-col gap-1">
-                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Transação 🧾</p>
-                                    <h2 className="text-3xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Comprovante</h2>
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Transação ðŸ§¾</p>
+                                    <h2 className="text-3xl font-black text-white tracking-tighter drop-shadow-lg uppercase">Comprovante</h2>
                                 </div>
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
@@ -5066,7 +5066,7 @@ function App() {
                                     className="w-full h-full object-contain"
                                 />
                                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-8 text-center">
-                                    <p className="text-[10px] text-white/40 font-bold italic">
+                                    <p className="text-[10px] text-white/40 font-bold">
                                         Este documento foi emitido pelo sistema IziDelivery e serve como prova de transferência.
                                     </p>
                                 </div>
@@ -5109,7 +5109,7 @@ function App() {
                     </button>
                     <div className="text-center">
                         <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Detalhamento</p>
-                        <h2 className="text-xl font-black text-white italic">Fluxo de Saque</h2>
+                        <h2 className="text-xl font-black text-white">Fluxo de Saque</h2>
                     </div>
                     <div className="size-12" />
                 </header>
@@ -5160,14 +5160,14 @@ function App() {
                             <div className="w-full h-[1px] bg-white/5" />
                             <div className="flex flex-col gap-1">
                                 <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Chave PIX Utilizada</span>
-                                <span className="text-xs font-black text-white italic truncate">{pixKey || 'Chave não registrada'}</span>
+                                <span className="text-xs font-black text-white truncate">{pixKey || 'Chave não registrada'}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Breakdown Card */}
                     <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 space-y-6">
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest italic flex items-center gap-2">
+                        <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
                             <Icon name="analytics" size={16} className="text-primary" />
                             Valores e Taxas
                         </h3>
@@ -5192,7 +5192,7 @@ function App() {
 
                             <div className="flex justify-between items-end pt-2">
                                 <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Valor Líquido</span>
-                                <span className="text-3xl font-black text-primary italic drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]">
+                                <span className="text-3xl font-black text-primary drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]">
                                     R$ {netAmount.toFixed(2).replace('.', ',')}
                                 </span>
                             </div>
@@ -5223,7 +5223,7 @@ function App() {
                     )}
                 </div>
 
-                <p className="mt-8 text-center text-[9px] font-bold text-white/20 uppercase tracking-widest italic">
+                <p className="mt-8 text-center text-[9px] font-bold text-white/20 uppercase tracking-widest">
                     Izi Delivery Financial Security
                 </p>
             </motion.div>
@@ -5306,7 +5306,7 @@ function App() {
                 </label>
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
                 <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi • Nível {stats.level}</span>
+                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi â€¢ Nível {stats.level}</span>
                 </div>
                 
                 <div className="flex items-center gap-4 mt-8">
@@ -5355,7 +5355,7 @@ function App() {
                             <Icon name="layers" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-black text-white italic">Sobreposição</span>
+                            <span className="text-sm font-black text-white">Sobreposição</span>
                             <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Ver chamadas sobre outros apps</span>
                         </div>
                     </div>
@@ -5435,7 +5435,7 @@ function App() {
                     </button>
                     <div className="flex flex-col items-end">
                         <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Izi Pay</p>
-                        <h2 className="text-lg font-black text-white italic">Dados Bancários</h2>
+                        <h2 className="text-lg font-black text-white">Dados Bancários</h2>
                     </div>
                 </header>
 
@@ -5452,7 +5452,7 @@ function App() {
                                 <Icon name="pix" className="text-emerald-400 text-[28px] drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter italic">Receba via PIX</h3>
+                                <h3 className="text-2xl font-black text-white tracking-tighter">Receba via PIX</h3>
                                 <p className="text-[11px] text-white/40 leading-relaxed font-bold max-w-[240px] mt-2">
                                     Cadastre a sua chave abaixo. Os seus ganhos serão transferidos automaticamente mediante solicitação de saque.
                                 </p>
@@ -5501,7 +5501,7 @@ function App() {
                         </div>
                         <div className="bg-[#121212] rounded-[24px] p-5 flex gap-4 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.02),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] mt-4">
                             <div className="mt-0.5"><Icon name="shield" size={16} className="text-white/20" /></div>
-                            <p className="text-[9px] font-bold text-white/30 italic flex-1">
+                            <p className="text-[9px] font-bold text-white/30 flex-1">
                                 A chave fornecida será vinculada de forma definitiva ao seu CPF/CNPJ via nossa integradora financeira de segurança. Revise antes de salvar.
                             </p>
                         </div>
@@ -5605,7 +5605,7 @@ function App() {
                     </button>
                     <div className="flex flex-col items-end">
                         <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Configurações</p>
-                        <h2 className="text-lg font-black text-white italic">Preferências</h2>
+                        <h2 className="text-lg font-black text-white">Preferências</h2>
                     </div>
                 </header>
 
@@ -5850,7 +5850,7 @@ function App() {
                     <div className="size-28 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center mb-8 shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02)]">
                         <Icon name="route" size={48} className="text-white/20" />
                     </div>
-                    <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase mb-2">Sem Missões Ativas</h2>
+                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase mb-2">Sem Missões Ativas</h2>
                     <p className="text-sm text-white/40 leading-relaxed mb-10 max-w-xs font-medium">Você não possui nenhuma corrida em andamento. Vá ao Dashboard para aceitar novos desafios e lucrar.</p>
                     
                     <div className="flex flex-col gap-4 w-full max-w-xs">
@@ -5917,7 +5917,7 @@ function App() {
             // CASO TERMINAL: Se a missão já acabou mas ainda está na tela, o botão serve para fechar.
             if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s)) {
                 return { 
-                    label: 'Concluído • Fechar', 
+                    label: 'Concluído â€¢ Fechar', 
                     action: () => {
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
@@ -6003,7 +6003,7 @@ function App() {
                     
                     <div className="pointer-events-auto px-5 py-2 bg-black/60 backdrop-blur-xl rounded-full border border-white/10 shadow-lg flex items-center gap-2">
                         <div className={`size-2 rounded-full animate-pulse ${statusDisplay.color.replace('text-', 'bg-')}`} />
-                        <span className="text-white font-black tracking-widest text-[9px] uppercase italic leading-none">{statusDisplay.label}</span>
+                        <span className="text-white font-black tracking-widest text-[9px] uppercase leading-none">{statusDisplay.label}</span>
                     </div>
 
                     <motion.button 
@@ -6046,7 +6046,7 @@ function App() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-xl font-black text-white truncate italic tracking-tighter leading-tight">{driverName.split(' ')[0]}</h2>
+                                    <h2 className="text-xl font-black text-white truncate tracking-tighter leading-tight">{driverName.split(' ')[0]}</h2>
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
                                             <div className="size-1.5 rounded-full bg-emerald-400" />
@@ -6062,7 +6062,7 @@ function App() {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-zinc-600 text-[8px] uppercase tracking-[0.3em] font-black mb-1">XP HOJE</p>
-                                    <p className="text-xl font-black text-yellow-400 italic tracking-tighter">+{Math.floor(driverEarnings)} pts</p>
+                                    <p className="text-xl font-black text-yellow-400 tracking-tighter">+{Math.floor(driverEarnings)} pts</p>
                                 </div>
                             </div>
                             
@@ -6076,7 +6076,7 @@ function App() {
                                     <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{statusDisplay.label}</span>
                                 </div>
                                 <div className="flex flex-col items-end">
-                                    <span className="text-yellow-400 font-black text-xs italic">{realTimeRoute?.durationText || '-- min'}</span>
+                                    <span className="text-yellow-400 font-black text-xs">{realTimeRoute?.durationText || '-- min'}</span>
                                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Estimado</span>
                                 </div>
                             </div>
@@ -6108,8 +6108,8 @@ function App() {
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="text-white font-black text-xs uppercase italic tracking-tight truncate">{item.name}</h3>
-                                                {item.options && <p className="text-zinc-500 text-[10px] font-bold italic truncate mt-1">{item.options}</p>}
+                                                <h3 className="text-white font-black text-xs uppercase tracking-tight truncate">{item.name}</h3>
+                                                {item.options && <p className="text-zinc-500 text-[10px] font-bold truncate mt-1">{item.options}</p>}
                                                 <div className="flex items-center gap-2 mt-2">
                                                      <div className="size-1.5 rounded-full bg-yellow-400/30" />
                                                      <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Verificado no sistema</span>
@@ -6128,7 +6128,7 @@ function App() {
 
                         {/* Izi Pay Premium Section */}
                         <section className="space-y-4 pb-4">
-                             <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
+                             <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay â€¢ Rendimento</h2>
                              <div className="bg-zinc-900 border border-white/5 p-6 rounded-3xl relative overflow-hidden">
                                  
                                  <div className="flex justify-between items-center relative z-10">
@@ -6137,12 +6137,12 @@ function App() {
                                              <Icon name="payments" size={28} className="text-black" />
                                          </div>
                                          <div>
-                                             <span className="text-white font-black text-[11px] uppercase italic tracking-widest block leading-none">Lucro Real</span>
+                                             <span className="text-white font-black text-[11px] uppercase tracking-widest block leading-none">Lucro Real</span>
                                              <span className="text-yellow-400/40 text-[9px] font-black uppercase tracking-[0.2em] mt-1 block">Líquido Creditado</span>
                                          </div>
                                      </div>
                                      <div className="text-right">
-                                         <span className="text-yellow-400 text-3xl font-black italic tracking-tighter">
+                                         <span className="text-yellow-400 text-3xl font-black tracking-tighter">
                                              R$ {driverEarnings.toFixed(2).replace('.', ',')}
                                          </span>
                                      </div>
@@ -6154,11 +6154,11 @@ function App() {
                                      <div className="flex justify-between items-center bg-black/30 p-4 rounded-2xl border border-white/5">
                                          <div className="flex flex-col">
                                             <span className="text-zinc-500 font-black text-[8px] uppercase tracking-widest mb-1">Método</span>
-                                            <span className="text-white font-black text-[10px] uppercase italic">{activeMission.payment_method === 'online' ? 'Liquidado Online' : 'Pagar no Destino'}</span>
+                                            <span className="text-white font-black text-[10px] uppercase">{activeMission.payment_method === 'online' ? 'Liquidado Online' : 'Pagar no Destino'}</span>
                                          </div>
                                          <div className="bg-yellow-400/10 px-4 py-2 rounded-xl border border-yellow-400/20 flex items-center gap-2">
                                              <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'monetization_on'} size={14} className="text-yellow-400" />
-                                             <span className="text-yellow-400 font-black text-[10px] uppercase italic">{getPaymentLabel(activeMission)}</span>
+                                             <span className="text-yellow-400 font-black text-[10px] uppercase">{getPaymentLabel(activeMission)}</span>
                                          </div>
                                      </div>
 
@@ -6169,13 +6169,13 @@ function App() {
                                                  <span className="text-white/60">R$ {(Number(activeMission.total_price || 0) - Number(activeMission.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
                                              </div>
                                              <div className="flex justify-between items-end pt-2 border-t border-white/5">
-                                                 <span className="text-white font-black text-xs uppercase italic tracking-widest">Coleta em Dinheiro</span>
-                                                 <span className="text-yellow-400 text-2xl font-black italic tracking-tighter drop-shadow-lg">R$ {Number(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                 <span className="text-white font-black text-xs uppercase tracking-widest">Coleta em Dinheiro</span>
+                                                 <span className="text-yellow-400 text-2xl font-black tracking-tighter drop-shadow-lg">R$ {Number(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                              </div>
                                              {activeMission.change_for > 0 && (
                                                  <div className="mt-2 bg-yellow-400 p-2 rounded-lg flex items-center justify-between shadow-lg">
                                                      <span className="text-black font-black text-[9px] uppercase tracking-tighter">Troco Para</span>
-                                                     <span className="text-black font-black text-sm italic">R$ {Number(activeMission.change_for || 0).toFixed(2).replace('.', ',')}</span>
+                                                     <span className="text-black font-black text-sm">R$ {Number(activeMission.change_for || 0).toFixed(2).replace('.', ',')}</span>
                                                  </div>
                                              )}
                                          </div>
@@ -6189,7 +6189,7 @@ function App() {
                                                  <Icon name="check" className="text-black" size={20} />
                                              </div>
                                              <div>
-                                                 <p className="text-emerald-400 font-black text-[10px] uppercase italic tracking-widest">Pagamento Confirmado</p>
+                                                 <p className="text-emerald-400 font-black text-[10px] uppercase tracking-widest">Pagamento Confirmado</p>
                                                  <p className="text-emerald-400/40 text-[8px] font-bold uppercase mt-0.5">Liberado para entrega imediata</p>
                                              </div>
                                          </motion.div>
@@ -6198,7 +6198,7 @@ function App() {
                                      {activeMission.observations && (
                                          <div className="bg-orange-500/5 p-4 rounded-xl border border-orange-500/10 flex items-start gap-3">
                                              <Icon name="warning" className="text-orange-400 mt-0.5" size={16} />
-                                             <p className="text-orange-400/70 text-[9px] leading-relaxed italic font-black uppercase tracking-tight line-clamp-3">
+                                             <p className="text-orange-400/70 text-[9px] leading-relaxed font-black uppercase tracking-tight line-clamp-3">
                                                  "{activeMission.observations}"
                                              </p>
                                          </div>
@@ -6231,7 +6231,7 @@ function App() {
                                     ) : (
                                         <Icon name={btn.icon} size={24} className="text-black group-hover:scale-110 transition-transform" />
                                     )}
-                                    <span className="text-black font-black text-lg uppercase italic tracking-tighter">
+                                    <span className="text-black font-black text-lg uppercase tracking-tighter">
                                         {(isAccepting && !isTerminal) ? 'Sincronizando...' : btn.label}
                                     </span>
                                 </div>
@@ -6311,7 +6311,7 @@ function App() {
                         <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
                     </div>
                 </div>
-                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
+                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 â€¢ Conexão Segura</p>
             </motion.div>
         );
     };
@@ -6367,7 +6367,7 @@ function App() {
                                     </div>
                                 )}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase italic">VIP</div>
+                            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase">VIP</div>
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-white tracking-tight truncate max-w-[120px]">{driverName.split(' ')[0] || 'Piloto'}</h2>
@@ -6424,11 +6424,11 @@ function App() {
                         <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                             <div className="bg-neutral-900/90 backdrop-blur-xl p-3 rounded-xl border border-white/5 shadow-2xl max-w-[65%]">
                                 <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-1">Destino Atual</p>
-                                <p className="text-white font-bold text-xs line-clamp-1 italic">{presentation.destinationText}</p>
+                                <p className="text-white font-bold text-xs line-clamp-1">{presentation.destinationText}</p>
                             </div>
                             <div className={`bg-yellow-400 ${clayYellow} text-black px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 shadow-[0_10px_30px_rgba(250,204,21,0.3)]`}>
                                 <Icon name="navigation" className="text-lg" />
-                                <span className="uppercase italic tracking-tight">{displayDistance}</span>
+                                <span className="uppercase tracking-tight">{displayDistance}</span>
                             </div>
                         </div>
                     </section>
@@ -6461,7 +6461,7 @@ function App() {
                                             </div>
                                             <div>
                                                 <span className="text-white font-bold text-sm block">{presentation.title}</span>
-                                                <span className="text-neutral-500 text-xs italic">Verificar detalhes na coleta</span>
+                                                <span className="text-neutral-500 text-xs">Verificar detalhes na coleta</span>
                                             </div>
                                         </div>
                                     );
@@ -6481,11 +6481,11 @@ function App() {
                                         </div>
                                         <div className="flex-1">
                                             <span className="text-white font-bold text-sm block">{item.name || item.product_name}</span>
-                                            {item.observation && <span className="text-neutral-500 text-xs italic line-clamp-1">{item.observation}</span>}
+                                            {item.observation && <span className="text-neutral-500 text-xs line-clamp-1">{item.observation}</span>}
                                         </div>
                                         <div className="text-right">
                                             <span className="text-yellow-400/60 text-[10px] font-bold block uppercase">Preço</span>
-                                            <span className="text-white font-black text-xs italic">R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',')}</span>
+                                            <span className="text-white font-black text-xs">R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',')}</span>
                                         </div>
                                     </div>
                                 ));
@@ -6503,7 +6503,7 @@ function App() {
                                     <Icon name="stars" className="text-yellow-400" />
                                     <span className="text-white font-black text-xs uppercase tracking-tight">Seu Lucro Estimado</span>
                                 </div>
-                                <span className="text-yellow-400 text-2xl font-black italic">
+                                <span className="text-yellow-400 text-2xl font-black">
                                     R$ {netEarnings.toFixed(2).replace('.', ',')}
                                 </span>
                             </div>
@@ -6533,8 +6533,8 @@ function App() {
                                                 <span className="text-neutral-300">R$ {Number(selectedOrder.delivery_fee || 0).toFixed(2).replace('.', ',')}</span>
                                             </div>
                                             <div className="flex justify-between items-end pt-1">
-                                                <span className="text-white font-black text-xs uppercase italic">Total a Cobrar</span>
-                                                <span className="text-yellow-400 text-xl font-black italic">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                <span className="text-white font-black text-xs uppercase">Total a Cobrar</span>
+                                                <span className="text-yellow-400 text-xl font-black">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                             </div>
                                         </div>
                                     )}
@@ -6563,8 +6563,8 @@ function App() {
                                     <Icon name="description" className="text-yellow-400" />
                                 </div>
                                 <div className="flex-1">
-                                    <span className="text-white font-black text-[11px] uppercase tracking-widest italic opacity-60">Instruções</span>
-                                    <p className="text-neutral-300 text-sm mt-1 leading-relaxed italic">"{selectedOrder.notes || 'Sem observações especiais dos produtos.'}"</p>
+                                    <span className="text-white font-black text-[11px] uppercase tracking-widest opacity-60">Instruções</span>
+                                    <p className="text-neutral-300 text-sm mt-1 leading-relaxed">"{selectedOrder.notes || 'Sem observações especiais dos produtos.'}"</p>
                                 </div>
                             </div>
                         </div>
@@ -6691,8 +6691,8 @@ function App() {
                             <Icon name="visibility" size={18} className="text-white" />
                         </div>
                         <div>
-                            <p className="text-white text-[11px] font-black leading-tight uppercase tracking-wide">⚠️ Ative: Sobrepor a outros apps</p>
-                            <p className="text-white/80 text-[9px] font-bold mt-0.5">Toque aqui → ative o toggle → volte ao app</p>
+                            <p className="text-white text-[11px] font-black leading-tight uppercase tracking-wide">âš ï¸ Ative: Sobrepor a outros apps</p>
+                            <p className="text-white/80 text-[9px] font-bold mt-0.5">Toque aqui â†’ ative o toggle â†’ volte ao app</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -6744,12 +6744,12 @@ function App() {
                                     />
                                 </motion.div>
                                 
-                                <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-4">
+                                <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none mb-4">
                                     Candidatura <br />
                                     <span className="text-yellow-400">Enviada com Sucesso!</span>
                                 </h2>
                                 
-                                <p className="text-white/40 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase italic leading-relaxed">
+                                <p className="text-white/40 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase leading-relaxed">
                                     Seu perfil premium foi enviado para análise. Fique atento às suas notificações!
                                 </p>
 
@@ -6799,7 +6799,7 @@ function App() {
                                                 <div className="size-4 bg-slate-950 rounded-full animate-ping" />
                                                 <div className="flex flex-col items-start">
                                                     <span className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-950/60 leading-none mb-1">Missão Ativa</span>
-                                                    <span className="font-black text-xs uppercase tracking-[0.1em] italic text-slate-950">Continuar Entrega</span>
+                                                    <span className="font-black text-xs uppercase tracking-[0.1em] text-slate-950">Continuar Entrega</span>
                                                 </div>
                                             </div>
                                             <div className="size-12 bg-slate-950/10 rounded-2xl flex items-center justify-center shadow-inner">
@@ -6869,8 +6869,8 @@ function App() {
                             <div className="text-center space-y-1 py-2">
                                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] mb-2 opacity-70">Resgate de Saldo</p>
                                 <div className="flex items-center justify-center gap-2">
-                                    <span className="text-2xl font-black text-white/10 italic">R$</span>
-                                    <span className="text-6xl font-black text-white tracking-tighter italic leading-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+                                    <span className="text-2xl font-black text-white/10">R$</span>
+                                    <span className="text-6xl font-black text-white tracking-tighter leading-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
                                         {stats.balance.toFixed(2).replace('.', ',')}
                                     </span>
                                 </div>
@@ -6882,7 +6882,7 @@ function App() {
                                 <div className="flex justify-between items-center clay-profile-inner p-5 rounded-[24px] border border-white/5 shadow-inner">
                                     <div className="flex flex-col gap-1">
                                         <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Chave PIX Ativa</span>
-                                        <span className="text-xs font-black text-white truncate max-w-[180px] italic tracking-tight">{pixKey}</span>
+                                        <span className="text-xs font-black text-white truncate max-w-[180px] tracking-tight">{pixKey}</span>
                                     </div>
                                     <div className="size-12 rounded-2xl bg-black/20 flex items-center justify-center border border-white/5 shadow-lg">
                                         <Icon name="qr_code_2" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
@@ -6896,7 +6896,7 @@ function App() {
                                                 Taxa Admin
                                                 <span className="px-2 py-0.5 rounded-full bg-white/5 text-[8px] text-white/30 capitalize">{appSettings?.withdrawalfeepercent}%</span>
                                             </span>
-                                            <span className="text-xs font-black text-rose-500 italic">- R$ {(stats.balance * (Number(appSettings?.withdrawalfeepercent) / 100)).toFixed(2).replace('.', ',')}</span>
+                                            <span className="text-xs font-black text-rose-500">- R$ {(stats.balance * (Number(appSettings?.withdrawalfeepercent) / 100)).toFixed(2).replace('.', ',')}</span>
                                         </div>
                                     )}
                                     
@@ -6907,7 +6907,7 @@ function App() {
                                             <span className="text-[10px] font-black text-primary uppercase tracking-widest">Valor Líquido</span>
                                             <span className="text-[8px] font-medium text-white/20 uppercase tracking-wider">Depósito imediato via PIX</span>
                                         </div>
-                                        <span className="text-3xl font-black text-primary italic drop-shadow-[0_0_20px_rgba(255,217,0,0.4)]">
+                                        <span className="text-3xl font-black text-primary drop-shadow-[0_0_20px_rgba(255,217,0,0.4)]">
                                             R$ {(stats.balance * (1 - (Number(appSettings?.withdrawalfeepercent ?? 0) / 100))).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
@@ -6984,7 +6984,7 @@ function App() {
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.2 }}
-                            className="text-3xl font-black text-white uppercase tracking-tighter italic"
+                            className="text-3xl font-black text-white uppercase tracking-tighter"
                         >
                             Saque Solicitado!
                         </motion.h2>
@@ -7033,11 +7033,11 @@ function App() {
                                 <span className="material-symbols-outlined text-primary text-4xl animate-pulse">payments</span>
                             </div>
 
-                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-3 italic">Atenção Piloto!</h3>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-3">Atenção Piloto!</h3>
                             <p className="text-neutral-400 font-bold text-sm leading-relaxed mb-10">
                                 Este pedido ainda <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-4">não foi pago</span> via App. 
                                 <br />Confirme o recebimento de:
-                                <span className="block text-white text-3xl font-black mt-2 italic tracking-tighter">
+                                <span className="block text-white text-3xl font-black mt-2 tracking-tighter">
                                     R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}
                                 </span>
                             </p>
@@ -7127,9 +7127,22 @@ function App() {
                             initial={{ scale: 0.3, opacity: 0, rotate: -20 }}
                             animate={{ scale: 1, opacity: 1, rotate: 0 }}
                             transition={{ type: "spring", damping: 10, stiffness: 100 }}
-                            className="size-36 rounded-[54px] bg-gradient-to-br from-primary to-yellow-500 shadow-[0_20px_80px_rgba(250,204,21,0.4)] flex items-center justify-center mb-10 relative"
+                            className="size-36 rounded-[54px] flex items-center justify-center mb-10 relative"
+                            style={{
+                              background: 'linear-gradient(145deg, #4ade80, #16a34a)',
+                              boxShadow: '0 20px 80px rgba(74,222,128,0.4), inset 6px 6px 16px rgba(255,255,255,0.3), inset -6px -6px 16px rgba(0,0,0,0.2)'
+                            }}
                         >
-                            <span className="material-symbols-outlined text-zinc-950 text-7xl font-black">celebration</span>
+                            {/* Check SVG claymorphism */}
+                            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path 
+                                d="M12 32L26 46L52 18" 
+                                stroke="#052e16" 
+                                strokeWidth="8" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round"
+                              />
+                            </svg>
                             
                             <motion.div 
                                 animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
@@ -7144,7 +7157,7 @@ function App() {
                             transition={{ delay: 0.2 }}
                             className="space-y-4"
                         >
-                            <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
+                            <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">
                                 Parabéns! <br />
                                 <span className="text-primary">Missão Concluída</span>
                             </h2>
@@ -7163,8 +7176,8 @@ function App() {
                                 <div>
                                     <span className="block text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2 text-center">Ganho Líquido (Frete)</span>
                                     <div className="flex items-center justify-center gap-1">
-                                        <span className="text-2xl font-black text-white italic opacity-40 mt-3">R$</span>
-                                        <span className="text-7xl font-black text-white tracking-tighter italic leading-none" style={{ textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                                        <span className="text-2xl font-black text-white opacity-40 mt-3">R$</span>
+                                        <span className="text-7xl font-black text-white tracking-tighter leading-none" style={{ textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
                                             {(finishedMissionData.amount || 0).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
@@ -7173,15 +7186,15 @@ function App() {
                                 <div className="grid grid-cols-2 gap-3 pt-6 border-t border-white/5">
                                     <div className="bg-[#1A1616] p-3 rounded-[24px] border border-white/5 flex flex-col items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
                                         <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total do Pedido</span>
-                                        <span className="text-lg font-black text-slate-300 italic">
+                                        <span className="text-lg font-black text-slate-300">
                                             R$ {(finishedMissionData.grossAmount || 0).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
                                     <div className="bg-[#1A1616] p-3 rounded-[24px] border border-white/5 flex flex-col items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
                                         <span className="block text-[8px] font-black text-primary uppercase tracking-widest mb-1">XP Ganhos</span>
                                         <div className="flex items-center gap-1">
-                                            <span className="text-lg font-black text-primary italic">+{finishedMissionData.xpGained || 15}</span>
-                                            <span className="text-[10px] font-black text-primary/50 italic">XP</span>
+                                            <span className="text-lg font-black text-primary">+{finishedMissionData.xpGained || 15}</span>
+                                            <span className="text-[10px] font-black text-primary/50">XP</span>
                                         </div>
                                     </div>
                                 </div>
@@ -7192,7 +7205,7 @@ function App() {
                                         </div>
                                         <div className="text-left flex-1">
                                             <span className="block text-[9px] font-black text-rose-400 uppercase tracking-widest mb-0.5">Dinheiro Retido</span>
-                                            <span className="text-sm font-black text-rose-300 italic">
+                                            <span className="text-sm font-black text-rose-300">
                                                 - R$ {finishedMissionData.cashDiscount.toFixed(2).replace('.', ',')}
                                             </span>
                                         </div>
@@ -7255,7 +7268,7 @@ function App() {
 
                             <div className="text-center space-y-3">
                                 <h2 className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Parabéns!</h2>
-                                <h3 className="text-3xl font-black text-white italic tracking-tighter leading-none">VAGA CONFIRMADA</h3>
+                                <h3 className="text-3xl font-black text-white tracking-tighter leading-none">VAGA CONFIRMADA</h3>
                                 <p className="text-xs text-white/40 leading-relaxed font-bold px-4">
                                     Você foi selecionado para a vaga de <span className="text-white">{approvedSlotData.title}</span> em <span className="text-white">{approvedSlotData.admin_users?.store_name || 'um novo parceiro'}</span>.
                                 </p>
@@ -7267,7 +7280,7 @@ function App() {
                                 <div className="flex justify-between items-center px-4 py-3 bg-white/5 rounded-[24px]">
                                     <div className="flex flex-col">
                                         <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Garantido</p>
-                                        <p className="text-xl font-black text-primary italic leading-none">R$ {parseFloat(approvedSlotData.fee_per_day || 0).toFixed(0)} <span className="text-[10px] not-italic text-white/20">/ dia</span></p>
+                                        <p className="text-xl font-black text-primary leading-none">R$ {parseFloat(approvedSlotData.fee_per_day || 0).toFixed(0)} <span className="text-[10px] not-italic text-white/20">/ dia</span></p>
                                     </div>
                                     <Icon name="payments" className="text-white/10" size={32} />
                                 </div>
@@ -7310,3 +7323,4 @@ function App() {
 
 export default App;
 
+
