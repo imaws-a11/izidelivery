@@ -11,6 +11,7 @@ import { ForegroundService } from '@capawesome-team/capacitor-android-foreground
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 import SplashScreen from './components/common/SplashScreen';
+import { IziBottomSheet } from './components/common/IziBottomSheet';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -87,6 +88,10 @@ function Icon({ name, className = "", size = 20 }: any) {
     'sync': BespokeIcons.History,
     'cloud_sync': BespokeIcons.History,
     'qr_code_scanner': BespokeIcons.Bolt,
+    'home': BespokeIcons.Home,
+    'storefront': BespokeIcons.Bag,
+    'my_location': BespokeIcons.Pin,
+    'directions': BespokeIcons.Map,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
@@ -147,7 +152,7 @@ interface Order {
 }
 const isValidCoord = (c: any) => c && typeof c.lat === 'number' && Math.abs(c.lat) > 0.01;
 
-function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, driverCoords, onRouteInfo }: { pickup: any, delivery: any, pickupAddress?: string, deliveryAddress?: string, driverCoords?: any, onRouteInfo?: (info: any) => void }) {
+function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, driverCoords, missionPhase = 'to_pickup', onRouteInfo }: { pickup: any, delivery: any, pickupAddress?: string, deliveryAddress?: string, driverCoords?: any, missionPhase?: 'to_pickup' | 'to_delivery', onRouteInfo?: (info: any) => void }) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded } = useJsApiLoader({ 
     id: GOOGLE_MAPS_ID, 
@@ -166,13 +171,36 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
     if (isLoaded && (vPickup || pickupAddress) && (vDelivery || deliveryAddress)) {
       const fetchRoute = async () => {
         try {
-          const originVal = vPickup 
-            ? { location: { latLng: { latitude: vPickup.lat, longitude: vPickup.lng } } } 
-            : { address: (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress) };
+          const isDelivery = missionPhase === 'to_delivery';
+          let originVal, destVal;
           
-          const destVal = vDelivery 
-            ? { location: { latLng: { latitude: vDelivery.lat, longitude: vDelivery.lng } } } 
-            : { address: (deliveryAddress && !deliveryAddress.toLowerCase().includes('brumadinho') ? `${deliveryAddress}, Brumadinho - MG` : deliveryAddress) };
+          if (!isDelivery) {
+            // Fase 1: Trajeto do Motoboy até a Loja (Coleta)
+            if (driverCoords && isValidCoord(driverCoords)) {
+              originVal = { location: { latLng: { latitude: driverCoords.lat, longitude: driverCoords.lng } } };
+            } else {
+              originVal = vPickup 
+                ? { location: { latLng: { latitude: vPickup.lat, longitude: vPickup.lng } } } 
+                : { address: (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress) };
+            }
+            
+            destVal = vPickup 
+              ? { location: { latLng: { latitude: vPickup.lat, longitude: vPickup.lng } } } 
+              : { address: (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress) };
+          } else {
+            // Fase 2: Trajeto do Motoboy/Loja até o Cliente (Entrega)
+            if (driverCoords && isValidCoord(driverCoords)) {
+              originVal = { location: { latLng: { latitude: driverCoords.lat, longitude: driverCoords.lng } } };
+            } else {
+              originVal = vPickup 
+                ? { location: { latLng: { latitude: vPickup.lat, longitude: vPickup.lng } } } 
+                : { address: (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress) };
+            }
+            
+            destVal = vDelivery 
+              ? { location: { latLng: { latitude: vDelivery.lat, longitude: vDelivery.lng } } } 
+              : { address: (deliveryAddress && !deliveryAddress.toLowerCase().includes('brumadinho') ? `${deliveryAddress}, Brumadinho - MG` : deliveryAddress) };
+          }
 
           const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
             method: 'POST',
@@ -215,96 +243,135 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
       };
       fetchRoute();
     }
-  }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress]);
+  }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress, missionPhase]);
 
   const mapStyle = [
-    { "elementType": "geometry", "stylers": [{ "color": "#f8fafc" }] },
+    { "elementType": "geometry", "stylers": [{ "color": "#e2e8f0" }] },
     { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-    { "elementType": "labels.text.fill", "stylers": [{ "color": "#94a3b8" }] },
-    { "elementType": "labels.text.stroke", "stylers": [{ "visibility": "off" }] },
+    { "elementType": "labels.text.fill", "stylers": [{ "color": "#475569" }] },
+    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }, { "weight": 3 }] },
     { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
     { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
     { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "visibility": "off" }] },
-    { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
-    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#f1f5f9" }] }
+    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#94a3b8" }, { "visibility": "on" }, { "weight": 1.5 }] },
+    { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+    { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "color": "#cbd5e1" }, { "visibility": "on" }, { "weight": 2 }] },
+    { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+    { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#94a3b8" }, { "visibility": "on" }, { "weight": 2.5 }] },
+    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#7dd3fc" }] }
   ];
+
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  useEffect(() => {
+    if (map && isLoaded && routePolyline) {
+      const bounds = new window.google.maps.LatLngBounds();
+      let extended = false;
+      if (driverCoords && isValidCoord(driverCoords)) { bounds.extend(driverCoords); extended = true; }
+      if (vPickup) { bounds.extend(vPickup); extended = true; }
+      if (vDelivery) { bounds.extend(vDelivery); extended = true; }
+      
+      if (extended) {
+        const paddingBottom = typeof window !== 'undefined' ? window.innerHeight * 0.45 : 400;
+        map.fitBounds(bounds, { top: 100, bottom: paddingBottom, left: 50, right: 50 });
+      }
+    }
+  }, [map, isLoaded, routePolyline, vPickup?.lat, vDelivery?.lat]);
 
   if (!isLoaded) return <div className="w-full h-full bg-black animate-pulse" />;
 
   const mapCenter = routeInfo?.start || vPickup || vDelivery || { lat: -19.9167, lng: -43.9345 };
 
   return (
-    <GoogleMap
-      mapContainerStyle={{ width: '100%', height: '100%' }}
-      center={mapCenter}
-      zoom={routePolyline ? 15 : 14}
-      options={{
-        disableDefaultUI: true,
-        styles: mapStyle,
-        backgroundColor: '#f8fafc',
-        gestureHandling: 'greedy',
-        zoomControl: false,
-        streetViewControl: false,
-        mapTypeControl: false,
-        fullscreenControl: false
-      }}
-    >
+    <div className="w-full h-full relative">
+      <GoogleMap
+        mapContainerStyle={{ width: '100%', height: '100%' }}
+        center={mapCenter}
+        zoom={routePolyline ? 15 : 14}
+        onLoad={setMap}
+        options={{
+          disableDefaultUI: true,
+          styles: mapStyle,
+          backgroundColor: '#f8fafc',
+          gestureHandling: 'greedy',
+          zoomControl: false,
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false
+        }}
+      >
       {routePolyline && (
-        <>
-          <Polyline 
-            path={window.google.maps.geometry.encoding.decodePath(routePolyline)} 
-            options={{ 
-              strokeColor: '#FACD05',
-              strokeOpacity: 0.9,
-              strokeWeight: 5,
-            }} 
-          />
-          
-          {/* Marcador do Entregador (Piloto) */}
-          {driverCoords && isValidCoord(driverCoords) && (
-            <OverlayView position={driverCoords} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-              <div className="relative flex items-center justify-center">
-                <div className="absolute size-14 rounded-full bg-yellow-400/10 animate-ping duration-[2000ms]" />
-                <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
-                  <div className="size-8 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-inner">
-                    <Icon name="two_wheeler" size={16} className="text-black" />
-                  </div>
-                </div>
-              </div>
-            </OverlayView>
-          )}
-
-          {/* Marcador de Origem (Coleta) */}
-          {routeInfo?.start && (
-            <OverlayView position={routeInfo.start} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-              <div className="relative flex items-center justify-center">
-                <div className="absolute size-14 rounded-full bg-black/5 animate-pulse" />
-                <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
-                  <div className="size-8 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-inner">
-                    <Icon name="storefront" size={16} className="text-black" />
-                  </div>
-                </div>
-              </div>
-            </OverlayView>
-          )}
-
-          {/* Marcador de Destino (Entrega) */}
-          {routeInfo?.end && (
-            <OverlayView position={routeInfo.end} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-              <div className="relative flex items-center justify-center">
-                <div className="absolute size-14 rounded-full bg-black/5 animate-pulse" />
-                <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
-                   <div className="size-8 rounded-2xl bg-black flex items-center justify-center shadow-inner">
-                    <Icon name="home" size={16} className="text-white" />
-                  </div>
-                </div>
-              </div>
-            </OverlayView>
-          )}
-        </>
+        <Polyline 
+          path={window.google.maps.geometry.encoding.decodePath(routePolyline)} 
+          options={{ 
+            strokeColor: '#3b82f6',
+            strokeOpacity: 1.0,
+            strokeWeight: 6,
+          }} 
+        />
       )}
+
+      {/* Marcador do Entregador (Piloto) */}
+      {driverCoords && isValidCoord(driverCoords) && (
+        <OverlayView position={driverCoords} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+          <div className="relative flex items-center justify-center">
+            <div className="absolute size-14 rounded-full bg-yellow-400/10 animate-ping duration-[2000ms]" />
+            <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
+              <div className="size-8 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-inner">
+                <Icon name="two_wheeler" size={16} className="text-black" />
+              </div>
+            </div>
+          </div>
+        </OverlayView>
+      )}
+
+      {/* Marcador de Coleta (Loja) - mostrar sempre */}
+      {vPickup && (
+        <OverlayView position={vPickup} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+          <div className="relative flex items-center justify-center">
+            <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
+              <div className="size-8 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-inner">
+                <Icon name="storefront" size={16} className="text-black" />
+              </div>
+            </div>
+          </div>
+        </OverlayView>
+      )}
+
+      {/* Marcador de Destino (Cliente) - usa routeInfo.end como fallback quando delivery_lat está vazio */}
+      {(() => {
+        const clientPos = (vDelivery && isValidCoord(vDelivery)) ? vDelivery : routeInfo?.end;
+        if (!clientPos) return null;
+        return (
+          <OverlayView position={clientPos} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <div className="relative flex items-center justify-center">
+              <div className="absolute size-14 rounded-full bg-blue-400/20 animate-pulse" />
+              <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
+                <div className="size-8 rounded-2xl bg-blue-600 flex items-center justify-center shadow-inner">
+                  <Icon name="home" size={16} className="text-white" />
+                </div>
+              </div>
+            </div>
+          </OverlayView>
+        );
+      })()}
     </GoogleMap>
+    
+    {/* Botão de Localização Atual (Centraliza no Motorista) */}
+    <motion.button 
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      onClick={() => {
+        if (map) {
+          map.panTo((driverCoords && isValidCoord(driverCoords)) ? driverCoords : mapCenter);
+          map.setZoom(17);
+        }
+      }}
+      className="absolute bottom-[38vh] right-6 size-14 bg-yellow-400 rounded-[20px] flex items-center justify-center shadow-2xl active:scale-90 transition-all z-[120]"
+    >
+      <Icon name="my_location" size={28} className="text-black" />
+    </motion.button>
+    </div>
   );
 }
 
@@ -323,12 +390,19 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
   const mapOptions = {
     disableDefaultUI: true,
     styles: [
-      { "elementType": "geometry", "stylers": [{ "color": "#f8fafc" }] },
+      { "elementType": "geometry", "stylers": [{ "color": "#e2e8f0" }] },
       { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+      { "elementType": "labels.text.fill", "stylers": [{ "color": "#475569" }] },
+      { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }, { "weight": 3 }] },
       { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
+      { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
       { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-      { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "visibility": "off" }] },
-      { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#f1f5f9" }] }
+      { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#94a3b8" }, { "visibility": "on" }, { "weight": 1.5 }] },
+      { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+      { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "color": "#fcd34d" }, { "visibility": "on" }, { "weight": 2 }] },
+      { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#fde047" }] },
+      { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#eab308" }, { "visibility": "on" }, { "weight": 2.5 }] },
+      { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#7dd3fc" }] }
     ],
     gestureHandling: "greedy" as const
   };
@@ -5816,6 +5890,9 @@ function App() {
                 case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-400/15', icon: 'navigation', glow: 'shadow-[0_0_20px_rgba(96,165,250,0.3)]' };
                 case 'no_local_coleta':
                 case 'chegou_coleta': return { label: 'No local de coleta', color: 'text-amber-400', bg: 'bg-amber-400/15', icon: 'location_on', glow: 'shadow-[0_0_20px_rgba(251,191,36,0.3)]' };
+                case 'preparando':
+                case 'no_preparo': return { label: 'Em preparação', color: 'text-purple-400', bg: 'bg-purple-400/15', icon: 'soup_kitchen', glow: 'shadow-[0_0_20px_rgba(168,85,247,0.3)]' };
+                case 'pronto': return { label: 'Pronto para retirada', color: 'text-emerald-400', bg: 'bg-emerald-400/15', icon: 'check_circle', glow: 'shadow-[0_0_20px_rgba(52,211,153,0.3)]' };
                 case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-400', bg: 'bg-emerald-400/15', icon: 'package_2', glow: 'shadow-[0_0_20px_rgba(52,211,153,0.3)]' };
                 case 'a_caminho': 
                 case 'em_rota': return { label: 'Em rota de entrega', color: 'text-yellow-400', bg: 'bg-yellow-400/15', icon: 'moped', glow: 'shadow-[0_0_20px_rgba(250,204,21,0.3)]' };
@@ -5888,27 +5965,50 @@ function App() {
             <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
-                className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden text-[#f5f6f7] font-['Plus_Jakarta_Sans']"
+                className="fixed inset-0 z-[100] bg-[#0c0f10] flex flex-col overflow-hidden text-[#f5f6f7] font-['Plus_Jakarta_Sans']"
             >
                 
-                {/* 1. MAP SECTION (60% Height) */}
-                <div className="absolute top-0 left-0 w-full h-[60vh] z-0">
+                {/* 1. MAP SECTION (Full Height) */}
+                <div className="absolute top-0 left-0 w-full h-[100dvh] z-0">
                     <MissionRouteMap 
                         pickup={{ lat: Number(activeMission.pickup_lat), lng: Number(activeMission.pickup_lng) }}
                         delivery={{ lat: Number(activeMission.delivery_lat), lng: Number(activeMission.delivery_lng) }}
                         pickupAddress={pickupOnly}
                         deliveryAddress={addressOnly}
                         driverCoords={driverCoords}
+                        missionPhase={['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(activeMission.status) ? 'to_delivery' : 'to_pickup'}
                         onRouteInfo={(info) => setRealTimeRoute(info)}
                     />
-                    
-                    {/* Shadow transition to Bottom Sheet */}
-                    <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
-                    
-                    {/* Floating Map Navigation Button */}
+                </div>
+
+                {/* 2. OVERLAY HEADER */}
+                <header className="fixed top-0 w-full z-[300] flex justify-between items-center px-6 py-6 safe-area-top pointer-events-none">
                     <motion.button 
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ x: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                            const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
+                            const currentStatus = (activeMission?.status || '').toLowerCase().trim();
+                            if (terminalStatuses.includes(currentStatus)) {
+                                // Missão em estado terminal: limpar antes de voltar
+                                setActiveMission(null);
+                                localStorage.removeItem('Izi_active_mission');
+                            }
+                            setActiveTab('dashboard');
+                        }} 
+                        className="pointer-events-auto size-12 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-lg"
+                    >
+                        <Icon name="arrow_back" className="text-yellow-400" size={20} />
+                    </motion.button>
+                    
+                    <div className="pointer-events-auto px-5 py-2 bg-black/60 backdrop-blur-xl rounded-full border border-white/10 shadow-lg flex items-center gap-2">
+                        <div className={`size-2 rounded-full animate-pulse ${statusDisplay.color.replace('text-', 'bg-')}`} />
+                        <span className="text-white font-black tracking-widest text-[9px] uppercase italic leading-none">{statusDisplay.label}</span>
+                    </div>
+
+                    <motion.button 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => {
                             const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
                             let lat = Number(isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat);
@@ -5924,68 +6024,20 @@ function App() {
                             const destination = hasValidCoords ? `${lat},${lng}` : encodeURIComponent(String(addr || "Destino").split("| ITENS:")[0].trim());
                             window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                         }}
-                        className="absolute bottom-28 right-8 size-16 bg-yellow-400 rounded-[24px] flex items-center justify-center shadow-[0_15px_35px_rgba(250,204,21,0.4),inset_6px_6px_12px_rgba(255,255,255,0.5),inset_-6px_-6px_12px_rgba(0,0,0,0.1)] active:scale-90 transition-all z-20 group"
+                        className="pointer-events-auto size-12 bg-white rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden"
                     >
-                        <Icon name="navigation" size={28} className="text-black group-hover:rotate-12 transition-transform" />
-                    </motion.button>
-                </div>
-
-                {/* 2. OVERLAY HEADER */}
-                <header className="fixed top-0 w-full z-[300] flex justify-between items-center px-8 py-6 safe-area-top">
-                    <motion.button 
-                        whileHover={{ x: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => {
-                            const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
-                            const currentStatus = (activeMission?.status || '').toLowerCase().trim();
-                            if (terminalStatuses.includes(currentStatus)) {
-                                // Missão em estado terminal: limpar antes de voltar
-                                setActiveMission(null);
-                                localStorage.removeItem('Izi_active_mission');
-                            }
-                            setActiveTab('dashboard');
-                        }} 
-                        className="size-12 bg-black/60 backdrop-blur-xl border border-white/10 p-2 rounded-[18px] flex items-center justify-center shadow-2xl"
-                    >
-                        <Icon name="arrow_back" className="text-yellow-400" size={20} />
-                    </motion.button>
-                    
-                    <div className="px-6 py-2.5 bg-black/60 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl flex items-center gap-3">
-                        <div className={`size-2 rounded-full animate-pulse ${statusDisplay.color.replace('text-', 'bg-')}`} />
-                        <span className="text-white font-black tracking-widest text-[9px] uppercase italic leading-none">{statusDisplay.label}</span>
-                    </div>
-
-                    <motion.button 
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleScanQR} 
-                        className="size-12 bg-yellow-400 p-2 rounded-[18px] flex items-center justify-center shadow-[0_10px_25px_rgba(250,204,21,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4)] relative overflow-hidden"
-                    >
-                        {isScanning && <div className="absolute inset-0 border-2 border-black border-t-transparent rounded-full animate-spin" />}
-                        <Icon name="qr_code_scanner" className="text-black" size={22} />
+                        <Icon name="map" className="text-blue-600" size={22} />
                     </motion.button>
                 </header>
 
-                {/* 3. LUXURY BOTTOM SHEET */}
-                <motion.div 
-                    initial={{ y: "85vh" }}
-                    animate={{ y: "45vh" }}
-                    drag="y"
-                    dragConstraints={{ top: 0, bottom: 400 }}
-                    dragElastic={0.05}
-                    className="fixed inset-0 z-[150] bg-[#0c0f10] border-t border-white/10 shadow-[0_-40px_80px_rgba(0,0,0,0.95)] flex flex-col rounded-t-[40px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
-                >
-                    {/* Drag Handle */}
-                    <div className="w-full flex justify-center py-5 shrink-0">
-                        <div className="w-16 h-1.5 bg-white/10 rounded-full shadow-inner" />
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto px-6 pb-[480px] space-y-8 no-scrollbar pt-2">
+                {/* 3. IZI BOTTOM SHEET */}
+                <IziBottomSheet snapPoints={["35vh", "65vh", "92vh"]} initialSnap={0}>
+                    <div className="px-6 space-y-6 pt-2 pb-8">
                         
                         {/* Status Imersivo - Clay Card */}
-                        <section className="rounded-[32px] p-6 flex flex-col gap-6" style={sClayDark}>
+                        <section className="bg-zinc-900 border border-white/5 rounded-3xl p-6 flex flex-col gap-6">
                             <div className="flex items-center gap-5">
-                                <div className="size-16 rounded-[24px] overflow-hidden border border-white/10 shadow-2xl bg-zinc-800 flex items-center justify-center relative">
+                                <div className="size-16 rounded-[24px] overflow-hidden border border-white/10 bg-zinc-800 flex items-center justify-center relative">
                                     {driverAvatar ? (
                                         <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
                                     ) : (
@@ -6016,7 +6068,7 @@ function App() {
                             
                             <div className="h-px bg-white/5 w-full" />
                             
-                            <div className="flex justify-between items-center bg-black/40 p-5 rounded-[28px] border border-white/5 shadow-inner">
+                            <div className="flex justify-between items-center bg-black/40 p-5 rounded-2xl border border-white/5">
                                 <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-xl bg-white/5 ${statusDisplay.color} ${statusDisplay.glow}`}>
                                         <Icon name={statusDisplay.icon} size={20} />
@@ -6047,11 +6099,11 @@ function App() {
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: idx * 0.1 }}
-                                            className="bg-zinc-900 rounded-[28px] p-5 flex items-center gap-5 border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.01)]"
+                                            className="bg-zinc-900 rounded-2xl p-5 flex items-center gap-5 border border-white/5"
                                         >
-                                            <div className="size-14 bg-black rounded-[20px] flex items-center justify-center border border-white/5 shadow-inner shrink-0 relative">
+                                            <div className="size-14 bg-black rounded-[20px] flex items-center justify-center border border-white/5 shrink-0 relative">
                                                 <Icon name={isMobility ? 'person' : 'package_2'} className="text-yellow-400/40" size={28} />
-                                                <div className="absolute -top-1 -right-1 size-6 bg-yellow-400 rounded-lg flex items-center justify-center shadow-lg">
+                                                <div className="absolute -top-1 -right-1 size-6 bg-yellow-400 rounded-lg flex items-center justify-center">
                                                     <span className="text-black font-black text-[10px]">{item.quantity || 1}x</span>
                                                 </div>
                                             </div>
@@ -6076,13 +6128,12 @@ function App() {
 
                         {/* Izi Pay Premium Section */}
                         <section className="space-y-4 pb-4">
-                             <h2 className="text-zinc-600 font-black text-[9px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
-                             <div className="bg-zinc-900 border-l-[6px] border-yellow-400 p-8 shadow-2xl relative overflow-hidden" style={sClayDark}>
-                                 <div className="absolute top-0 right-0 size-40 bg-yellow-400/5 blur-[50px] rounded-full -mr-20 -mt-20 pointer-events-none" />
+                             <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
+                             <div className="bg-zinc-900 border border-white/5 p-6 rounded-3xl relative overflow-hidden">
                                  
                                  <div className="flex justify-between items-center relative z-10">
                                      <div className="flex items-center gap-4">
-                                         <div className="size-14 rounded-[20px] bg-yellow-400 flex items-center justify-center shadow-[inset_4px_4px_8px_rgba(255,255,255,0.5),inset_-4px_-4px_8px_rgba(0,0,0,0.1)]">
+                                         <div className="size-14 rounded-[20px] bg-yellow-400 flex items-center justify-center">
                                              <Icon name="payments" size={28} className="text-black" />
                                          </div>
                                          <div>
@@ -6091,7 +6142,7 @@ function App() {
                                          </div>
                                      </div>
                                      <div className="text-right">
-                                         <span className="text-yellow-400 text-4xl font-black italic tracking-tighter drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                                         <span className="text-yellow-400 text-3xl font-black italic tracking-tighter">
                                              R$ {driverEarnings.toFixed(2).replace('.', ',')}
                                          </span>
                                      </div>
@@ -6132,9 +6183,9 @@ function App() {
                                          <motion.div 
                                             initial={{ scale: 0.95 }}
                                             animate={{ scale: 1 }}
-                                            className="bg-emerald-500/5 p-5 rounded-[22px] border border-emerald-500/10 flex items-center gap-4 shadow-[0_0_20px_rgba(16,185,129,0.05)]"
+                                            className="bg-emerald-500/5 p-5 rounded-[22px] border border-emerald-500/10 flex items-center gap-4"
                                          >
-                                             <div className="size-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
+                                             <div className="size-10 rounded-full bg-emerald-500 flex items-center justify-center">
                                                  <Icon name="check" className="text-black" size={20} />
                                              </div>
                                              <div>
@@ -6156,10 +6207,10 @@ function App() {
                              </div>
                         </section>
                     </div>
-                </motion.div>
+                </IziBottomSheet>
 
                 {/* PREMIUM ACTION DOCK (Fixed at Bottom) */}
-                <div className="fixed bottom-0 left-0 w-full p-8 pb-12 bg-gradient-to-t from-black via-black/95 to-transparent z-[200] flex flex-col gap-4">
+                <div className="fixed bottom-0 left-0 w-full p-6 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent z-[200] flex flex-col gap-4">
                     {(() => {
                         // Para status terminal (concluído/cancelado), o botão nunca deve ser bloqueado por isAccepting
                         const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
@@ -6171,17 +6222,16 @@ function App() {
                                 whileTap={{ scale: 0.96 }}
                                 onClick={btn.action}
                                 disabled={isDisabled}
-                                className="w-full h-22 bg-yellow-400 rounded-[35px] flex items-center justify-center shadow-[0_30px_60px_rgba(250,204,21,0.25),inset_8px_8px_16px_rgba(255,255,255,0.5),inset_-8px_-8px_16px_rgba(0,0,0,0.15)] disabled:opacity-50 border-t border-yellow-300/40 relative overflow-hidden group" 
-                                style={sClayYellow}
+                                className="w-full h-16 bg-yellow-400 rounded-2xl flex items-center justify-center disabled:opacity-50 relative overflow-hidden group" 
                             >
                                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                     {(isAccepting && !isTerminal) ? (
-                                        <div className="size-7 border-4 border-black/20 border-t-black rounded-full animate-spin" />
+                                        <div className="size-6 border-[3px] border-black/20 border-t-black rounded-full animate-spin" />
                                     ) : (
-                                        <Icon name={btn.icon} size={28} className="text-black group-hover:scale-110 transition-transform" />
+                                        <Icon name={btn.icon} size={24} className="text-black group-hover:scale-110 transition-transform" />
                                     )}
-                                    <span className="text-black font-black text-xl uppercase italic tracking-tighter">
+                                    <span className="text-black font-black text-lg uppercase italic tracking-tighter">
                                         {(isAccepting && !isTerminal) ? 'Sincronizando...' : btn.label}
                                     </span>
                                 </div>
