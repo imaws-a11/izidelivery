@@ -68,7 +68,17 @@ export default function MyDriversTab() {
               <div className="flex items-center gap-4">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total: {myDriversList.length} motoboys</span>
                 <button 
-                  onClick={() => setSelectedDriverStudio({ id: `new-${Date.now()}`, name: '', phone: '', vehicle_type: 'Moto', is_active: true, status: 'active', bank_info: { bank: '', agency: '', account: '', pix_key: '' } } as any)}
+                  onClick={() => {
+                    setEditingItem({ 
+                      name: '', 
+                      phone: '', 
+                      vehicle_type: 'Moto', 
+                      is_active: true, 
+                      status: 'active',
+                      bank_info: { bank: '', agency: '', account: '', pix_key: '' } 
+                    });
+                    setEditType('my_driver');
+                  }}
                   className="flex items-center gap-2 px-3 py-1.5 bg-primary text-slate-900 rounded-lg text-[9px] font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-sm"
                 >
                   <span className="material-symbols-outlined text-xs">add</span> Novo

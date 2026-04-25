@@ -1972,23 +1972,24 @@ function App() {
     pendente_pagamento: "Aguardando Pagamento",
     novo: "Processando",
     waiting_merchant: "Aguardando Loja",
-    waiting_driver: "Pedido em Preparação",
+    waiting_driver: "Buscando Entregador",
     aceito: "Confirmado",
     confirmado: "Confirmado",
     preparando: "Em Preparação",
     no_preparo: "Em Preparação",
     pronto: "Pronto para Retirada",
-    a_caminho_coleta: "Entregador a Caminho da Coleta",
+    a_caminho_coleta: "Entregador Vindo Coletar",
     chegou_coleta: "Entregador no Local de Retirada",
     no_local_coleta: "Entregador no Local de Retirada",
-    a_caminho: "Entregador a Caminho da Entrega",
+    a_caminho: "A Caminho da Entrega",
     picked_up: "Pedido Coletado",
     em_rota: "A Caminho da Entrega",
-    saiu_para_entrega: "Entregador Sugeriu Chegada",
+    saiu_para_entrega: "Pedido Saiu para Entrega",
     no_local: "Entregador no seu Local!",
     concluido: "Concluído",
     cancelado: "Cancelado",
   };
+
 
   const getOrderStatusLabel = (status?: string) =>
     orderStatusLabels[status || ""] || (status ? status.replace(/_/g, " ") : "Em processamento");

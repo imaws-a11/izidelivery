@@ -713,6 +713,7 @@ function App() {
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
     const [driverName, setDriverName] = useState(() => localStorage.getItem('izi_driver_name') || 'Entregador');
     const [driverAvatar, setDriverAvatar] = useState<string | null>(() => localStorage.getItem('izi_driver_avatar') || null);
+    const [driverPlate, setDriverPlate] = useState(() => localStorage.getItem('izi_driver_plate') || '');
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const [authEmail, setAuthEmail] = useState('');
@@ -1148,6 +1149,9 @@ function App() {
     const [bankName, setBankName] = useState(() => localStorage.getItem('izi_driver_bank_name') || '');
     const [isEditingPix, setIsEditingPix] = useState(false);
     const [showBankDetails, setShowBankDetails] = useState(false);
+    const [showPlateModal, setShowPlateModal] = useState(false);
+    const [isEditingPlate, setIsEditingPlate] = useState(false);
+    const [isSavingPlate, setIsSavingPlate] = useState(false);
     const [showPreferences, setShowPreferences] = useState(false);
 
     const [showReceipt, setShowReceipt] = useState(false);
@@ -1717,13 +1721,15 @@ function App() {
                     // Buscar perfil apenas para nome e chave pix (NÃƒO tocar no is_online aqui)
                     const { data: profile } = await supabase
                         .from('drivers_delivery')
-                        .select('name, bank_info, avatar_url')
+                        .select('name, bank_info, avatar_url, license_plate')
                         .eq('id', user.id)
                         .single();
 
                     if (profile) {
                         setDriverName(profile.name || 'Entregador');
                         setPixKey(profile.bank_info?.pix_key || '');
+                        setDriverPlate(profile.license_plate || '');
+                        if (profile.license_plate) localStorage.setItem('izi_driver_plate', profile.license_plate);
                         setDriverAvatar(profile.avatar_url || null);
                         if (profile.avatar_url) localStorage.setItem('izi_driver_avatar', profile.avatar_url);
                         else localStorage.removeItem('izi_driver_avatar');
@@ -3186,6 +3192,32 @@ function App() {
             toastError('Erro ao salvar: ' + (e?.message || 'Desconhecido'));
         } finally {
             setIsSavingPix(false);
+        }
+    };
+
+    const handleSavePlate = async (plateVal: string) => {
+        const val = plateVal.trim().toUpperCase();
+        if (!val) { toastError('Informe a placa do veículo'); return; }
+        if (!driverId) return;
+
+        setIsSavingPlate(true);
+        try {
+            const { error } = await supabase
+                .from('drivers_delivery')
+                .update({ license_plate: val })
+                .eq('id', driverId);
+
+            if (error) throw error;
+
+            setDriverPlate(val);
+            localStorage.setItem('izi_driver_plate', val);
+            setIsEditingPlate(false);
+            toastSuccess('Placa atualizada!');
+        } catch (e: any) {
+            console.error('[PLATE] ERRO:', e);
+            toastError('Erro ao salvar placa');
+        } finally {
+            setIsSavingPlate(false);
         }
     };
 
@@ -5401,6 +5433,7 @@ function App() {
             <div className="space-y-3">
                 {[
                     { label: 'Dados Bancários', icon: 'account_balance', color: 'text-emerald-400' },
+                    { label: 'Veículo & Placa', icon: 'directions_car', color: 'text-yellow-400' },
                     { label: 'Preferências', icon: 'settings', color: 'text-primary' },
                     { label: 'Ajuda & Suporte', icon: 'support_agent', color: 'text-blue-400' }
                 ].map((item, i) => (
@@ -5408,6 +5441,7 @@ function App() {
                         key={i} 
                         onClick={() => {
                             if (item.label === 'Dados Bancários') setShowBankDetails(true);
+                            if (item.label === 'Veículo & Placa') setShowPlateModal(true);
                             if (item.label === 'Preferências') setShowPreferences(true);
                         }}
                         className="w-full bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]"
@@ -5486,6 +5520,97 @@ function App() {
             </div>
         </motion.div>
     );
+
+    const renderPlateEditView = () => {
+        return (
+            <motion.div
+                initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                className="fixed inset-0 z-[250] bg-[#0A0A0A] flex flex-col no-scrollbar overflow-y-auto"
+            >
+                <header className="sticky top-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-white/5">
+                    <button 
+                        onClick={() => {
+                            setShowPlateModal(false);
+                            setDriverPlate(localStorage.getItem('izi_driver_plate') || '');
+                            setIsEditingPlate(false);
+                        }}
+                        className="size-12 rounded-[20px] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center active:scale-95 transition-transform border border-white/5"
+                    >
+                        <Icon name="arrow_back" className="text-white" />
+                    </button>
+                    <div className="flex flex-col items-end">
+                        <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">Izi Pilot</p>
+                        <h2 className="text-lg font-black text-white">Veículo</h2>
+                    </div>
+                </header>
+
+                <div className="px-5 pt-8 pb-32 space-y-8">
+                    <div className="clay-card-dark rounded-[40px] p-8 relative overflow-hidden group">
+                        <div className="absolute -right-8 -bottom-8 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-700">
+                            <Icon name="directions_car" size={180} className="text-white" />
+                        </div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
+                        
+                        <div className="relative z-10 space-y-4">
+                            <div className="size-14 rounded-[20px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.1)]">
+                                <Icon name="badge" className="text-yellow-400 text-[28px] drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-white tracking-tighter">Placa do Veículo</h3>
+                                <p className="text-[11px] text-white/40 leading-relaxed font-bold max-w-[240px] mt-2">
+                                    Mantenha sua placa atualizada para que lojistas e clientes identifiquem seu veículo facilmente.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-2 block text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-2">
+                            <Icon name="tag" size={14} className="text-white/20" /> Placa (Ex: ABC1234 ou ABC1D23)
+                        </label>
+                        <div className="relative">
+                            <input 
+                                type="text"
+                                value={driverPlate}
+                                onChange={(e) => {
+                                    setDriverPlate(e.target.value.toUpperCase());
+                                    setIsEditingPlate(true);
+                                }}
+                                placeholder="ABC1234"
+                                className="w-full h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_8px_rgba(255,255,255,0.02)] border-none rounded-[28px] px-6 text-white font-bold md:text-sm text-base placeholder:text-white/20 focus:ring-2 focus:ring-yellow-400/30 transition-all outline-none"
+                            />
+                            {isEditingPlate && (
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="pt-2">
+                        <button 
+                            onClick={() => handleSavePlate(driverPlate)}
+                            disabled={driverPlate.length < 7 || isSavingPlate}
+                            className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
+                                (driverPlate.length >= 7)
+                                    ? 'bg-primary text-black shadow-[inset_2px_2px_6px_rgba(255,255,255,0.8),inset_-3px_-3px_10px_rgba(0,0,0,0.2),0_10px_30px_rgba(250,204,21,0.4)] hover:scale-[1.02] active:scale-95 border border-yellow-300' 
+                                    : 'bg-[#121212] text-white/20 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] opacity-50 cursor-not-allowed border border-white/5'
+                            }`}
+                        >
+                            {isSavingPlate ? (
+                                <Icon name="sync" className="animate-spin" />
+                            ) : (
+                                <Icon name="task_alt" size={20} />
+                            )}
+                            {isSavingPlate ? 'Salvando...' : 'Atualizar Placa'}
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    };
 
     const renderBankDetailsView = () => {
         return (
@@ -6793,6 +6918,7 @@ function App() {
                         <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
                         <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
                         <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
+                        <AnimatePresence>{showPlateModal && renderPlateEditView()}</AnimatePresence>
                         <AnimatePresence>{showPreferences && renderPreferencesView()}</AnimatePresence>
 
                         {showSlotAppliedSuccess && (

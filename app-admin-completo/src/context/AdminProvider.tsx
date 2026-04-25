@@ -7,7 +7,7 @@ import type {
   Order, Driver, User, Merchant, MerchantProfile, 
   Product, Category, Promotion, DedicatedSlot,
   AuditLog, WalletTransaction, MenuCategory, DynamicRatesState,
-  Tab, UserRole, AppSettings, DashboardData, EstablishmentType
+  Tab, UserRole, AppSettings, DashboardData, EstablishmentType, PartnerStore
 } from '../lib/types';
 import { useAuth } from './AuthContext';
 import { toastSuccess, toastError, toastWarning, showConfirm } from '../lib/useToast';
@@ -868,6 +868,20 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               if (exists) return prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o);
               return [updatedOrder, ...prev];
             });
+
+            // NOTIFICAÇÃO SONORA PARA O LOJISTA
+            if (userRole === 'merchant') {
+              const isNewOrWaiting = updatedOrder.status === 'waiting_merchant' || updatedOrder.status === 'novo';
+              const isStatusUpdate = payload.eventType === 'UPDATE';
+              
+              if (payload.eventType === 'INSERT' && isNewOrWaiting) {
+                playIziSound('merchant');
+                toastInfo(`🔔 Novo Pedido Recebido! (#${updatedOrder.id.slice(0, 8).toUpperCase()})`);
+              } else if (isStatusUpdate && updatedOrder.status === 'waiting_merchant') {
+                playIziSound('merchant');
+                toastInfo(`🔔 Pedido Aguardando Aprovação! (#${updatedOrder.id.slice(0, 8).toUpperCase()})`);
+              }
+            }
 
             // Atualização de estatísticas após mudança no pedido
             setTimeout(() => {
@@ -1840,7 +1854,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setIsSaving(true);
     try {
+      let finalId = editingItem.id;
+
+      // Se for um novo lojista, precisamos criar no Supabase Auth primeiro via Edge Function
+      if (!finalId || (typeof finalId === 'string' && finalId.startsWith('new-'))) {
+        const { data: authData, error: authError } = await supabase.functions.invoke('create-admin-user', {
+          body: {
+            email: editingItem.email,
+            password: editingItem.password,
+            role: 'merchant',
+            metadata: {
+              store_name: editingItem.store_name
+            }
+          }
+        });
+
+        if (authError) throw authError;
+        if (authData?.error) throw new Error(authData.error);
+        
+        finalId = authData.user.id;
+      }
+
       const merchantData: any = {
+        id: finalId,
         store_name: editingItem.store_name,
         store_description: editingItem.store_description,
         store_address: editingItem.store_address,
@@ -1867,19 +1903,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         merchantData.password = editingItem.password;
       }
 
-      let error;
-      if (editingItem.id && typeof editingItem.id === 'string' && !editingItem.id.startsWith('new-')) {
-        const { error: updateError } = await supabase.from('admin_users').update(merchantData).eq('id', editingItem.id);
-        error = updateError;
-      } else {
-        const { error: upsertError } = await supabase.from('admin_users').upsert({
-          ...merchantData,
-          id: editingItem.id || undefined
-        });
-        error = upsertError;
-      }
+      const { error: upsertError } = await supabase.from('admin_users').upsert(merchantData);
       
-      if (error) throw error;
+      if (upsertError) throw upsertError;
       
       await showConfirm({
         title: 'Sucesso!',
