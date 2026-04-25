@@ -1675,8 +1675,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!editingItem || !merchantProfile) return;
     setIsSaving(true);
     try {
+      const { 
+        is_available, // Remove is_available se existir
+        title, // Remove title se existir (usado em promotions)
+        ...cleanData 
+      } = editingItem;
+
       const { error } = await supabase.from('drivers_delivery').upsert({
-        ...editingItem,
+        ...cleanData,
         merchant_id: merchantProfile.id
       });
       if (error) throw error;

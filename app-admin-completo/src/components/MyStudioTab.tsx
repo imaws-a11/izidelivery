@@ -2610,10 +2610,16 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
     </div>
     <button
       type="button"
-      onClick={() => setEditingItem({ ...editingItem, is_available: !editingItem.is_available })}
-      className={`w-16 h-10 rounded-full relative transition-colors ${editingItem.is_available ? 'bg-green-500' : 'bg-slate-300'}`}
+      onClick={() => {
+        if (editType === 'my_product') {
+          setEditingItem({ ...editingItem, is_available: !editingItem.is_available });
+        } else {
+          setEditingItem({ ...editingItem, is_active: !editingItem.is_active });
+        }
+      }}
+      className={`w-16 h-10 rounded-full relative transition-colors ${(editType === 'my_product' ? editingItem.is_available : editingItem.is_active) ? 'bg-green-500' : 'bg-slate-300'}`}
     >
-      <div className={`absolute top-1 w-8 h-8 bg-white rounded-full shadow-md transition-all ${editingItem.is_available ? 'left-7' : 'left-1'}`}></div>
+      <div className={`absolute top-1 w-8 h-8 bg-white rounded-full shadow-md transition-all ${(editType === 'my_product' ? editingItem.is_available : editingItem.is_active) ? 'left-7' : 'left-1'}`}></div>
     </button>
   </div>
 
