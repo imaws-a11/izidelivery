@@ -1026,7 +1026,7 @@ export default function OrdersMerchantTab() {
                                 </button>
                               </>
                           )}
-                          {(selectedOrderDetails.status === 'waiting_driver' || selectedOrderDetails.status === 'accepted') && (
+                          {(selectedOrderDetails.status === 'waiting_driver' || selectedOrderDetails.status === 'accepted' || selectedOrderDetails.status === 'pending') && (
                                <>
                                  <button
                                    disabled={localProcessingId === selectedOrderDetails.id}
@@ -1035,12 +1035,33 @@ export default function OrdersMerchantTab() {
                                  >
                                    {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
                                  </button>
-                                 <div className="flex-[2] flex items-center justify-center p-4 rounded-3xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
-                                     <span className="material-symbols-outlined text-blue-500 animate-spin mr-3">autorenew</span>
-                                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Buscando entregador próximo...</p>
+                                 <div className="flex-[2] flex flex-col gap-2">
+                                     <button 
+                                       disabled={localProcessingId === selectedOrderDetails.id}
+                                       onClick={() => handleAction(selectedOrderDetails.id, 'saiu_para_entrega')}
+                                       className="w-full py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                                     >
+                                       <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                       Despachar (Logística Própria)
+                                     </button>
+                                     <div className="flex items-center justify-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
+                                         <span className="material-symbols-outlined text-blue-500 animate-spin mr-3 text-xs">autorenew</span>
+                                         <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Buscando entregador IZI...</p>
+                                     </div>
                                  </div>
                                </>
                           )}
+                          {(['saiu_para_entrega', 'a_caminho', 'em_rota', 'picked_up'].includes(selectedOrderDetails.status)) && (
+                               <button 
+                                 disabled={localProcessingId === selectedOrderDetails.id}
+                                 onClick={() => handleAction(selectedOrderDetails.id, 'concluido')}
+                                 className="w-full py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                               >
+                                 <span className="material-symbols-outlined text-sm">verified</span>
+                                 Confirmar Entrega e Finalizar
+                               </button>
+                          )}
+
                       </div>
                   </motion.div>
               </div>

@@ -61,6 +61,53 @@ export default function MerchantsTab() {
         
         <div className="flex items-center gap-4">
           <button 
+             onClick={async () => {
+                const confirm = await window.confirm('Deseja sincronizar as credenciais de todos os lojistas? Isso garantirá que todos consigam fazer login.');
+                if (!confirm) return;
+                
+                toastSuccess('Iniciando sincronização em massa...');
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const merchant of merchantsList) {
+                  try {
+                    // Chamando a Edge Function para cada lojista
+                    const { data, error } = await supabase.functions.invoke('create-admin-user', {
+                      body: {
+                        email: merchant.email,
+                        password: merchant.password || 'Jnior19!', // Senha padrão se estiver vazia
+                        role: 'merchant',
+                        metadata: {
+                          store_name: merchant.store_name
+                        }
+                      }
+                    });
+
+                    if (error || data?.error) {
+                      console.error(`Erro ao sincronizar ${merchant.store_name}:`, error || data?.error);
+                      errorCount++;
+                    } else {
+                      successCount++;
+                    }
+                  } catch (err) {
+                    errorCount++;
+                  }
+                }
+
+                if (errorCount === 0) {
+                  toastSuccess(`${successCount} lojistas sincronizados com sucesso!`);
+                } else {
+                  toastSuccess(`${successCount} sincronizados. ${errorCount} falhas.`);
+                }
+             }}
+             className="h-16 px-6 bg-slate-900 text-white rounded-[28px] shadow-xl flex items-center gap-3 hover:bg-slate-800 transition-all group"
+             title="Reparar contas de acesso"
+          >
+             <span className="material-symbols-outlined font-black group-hover:rotate-180 transition-transform duration-500">sync</span>
+             <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block">Sincronizar Acessos</span>
+          </button>
+
+          <button 
              onClick={() => {
                 setEditType('new_merchant');
                 setEditingItem({

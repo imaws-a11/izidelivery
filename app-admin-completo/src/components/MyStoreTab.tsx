@@ -696,31 +696,44 @@ export default function MyStoreTab() {
                           initial={{ height: 0, opacity: 0 }} 
                           animate={{ height: 'auto', opacity: 1 }} 
                           exit={{ height: 0, opacity: 0 }}
-                          className="flex items-center gap-3 px-2 overflow-hidden"
+                          className="flex items-center gap-2 px-1 overflow-hidden"
                         >
-                          <div className="flex-1 flex items-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-2 overflow-hidden shadow-inner">
-                            <input
-                              type="text"
-                              className="w-full bg-transparent border-none text-center font-black text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
-                              value={dayConfig.open}
-                              onChange={(e) => {
-                                const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, open: e.target.value } };
-                                setMerchantProfile({ ...merchantProfile, opening_hours: next });
-                              }}
-                            />
+                          <div className="flex-1 flex flex-col gap-1.5 group/time">
+                            <span className="text-[9px] font-black text-slate-400 uppercase ml-2 tracking-widest">Abertura</span>
+                            <div className="relative flex items-center bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 p-3 shadow-inner group-hover/time:border-primary/50 transition-all overflow-hidden">
+                              <span className="material-symbols-outlined text-slate-300 group-hover/time:text-primary transition-colors text-lg absolute left-3">schedule</span>
+                              <input
+                                type="time"
+                                className="w-full bg-transparent border-none text-center font-black text-slate-900 dark:text-white focus:ring-0 text-base cursor-pointer pl-6"
+                                value={dayConfig.open}
+                                onChange={(e) => {
+                                  const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, open: e.target.value } };
+                                  setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                                }}
+                              />
+                            </div>
                           </div>
-                          <span className="text-[10px] font-black text-slate-400 uppercase">at´e</span>
-                          <div className="flex-1 flex items-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-2 overflow-hidden shadow-inner">
-                            <input
-                              type="text"
-                              className="w-full bg-transparent border-none text-center font-black text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
-                              value={dayConfig.close}
-                              onChange={(e) => {
-                                const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, close: e.target.value } };
-                                setMerchantProfile({ ...merchantProfile, opening_hours: next });
-                              }}
-                            />
+
+                          <div className="size-10 flex items-center justify-center mt-6 text-slate-200 dark:text-slate-700">
+                             <span className="material-symbols-outlined text-xl animate-pulse">trending_flat</span>
                           </div>
+
+                          <div className="flex-1 flex flex-col gap-1.5 group/time">
+                            <span className="text-[9px] font-black text-slate-400 uppercase ml-2 tracking-widest">Fechamento</span>
+                            <div className="relative flex items-center bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 p-3 shadow-inner group-hover/time:border-primary/50 transition-all overflow-hidden">
+                              <span className="material-symbols-outlined text-slate-300 group-hover/time:text-primary transition-colors text-lg absolute left-3">bedtime</span>
+                              <input
+                                type="time"
+                                className="w-full bg-transparent border-none text-center font-black text-slate-900 dark:text-white focus:ring-0 text-base cursor-pointer pl-6"
+                                value={dayConfig.close}
+                                onChange={(e) => {
+                                  const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, close: e.target.value } };
+                                  setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                                }}
+                              />
+                            </div>
+                          </div>
+
                         </motion.div>
                       )}
                     </AnimatePresence>

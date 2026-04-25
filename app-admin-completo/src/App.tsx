@@ -221,7 +221,6 @@ function App() {
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
               {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
-              {activeTab === 'my_studio' && <MyStudioTab />}
               {activeTab === 'merchant_studio' && <MerchantStudio />}
               {activeTab === 'establishment_types' && <EstablishmentTypesTab />}
               {(activeTab === 'financial' && userRole === 'merchant') && <MyStudioTab />}
@@ -233,6 +232,9 @@ function App() {
               {activeTab === 'gamification' && <GamificationTab />}
             </motion.div>
           </AnimatePresence>
+
+          {/* Global Studios & Modals Provider */}
+          <MyStudioTab />
         </main>
       </div>
 
