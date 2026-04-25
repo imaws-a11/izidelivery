@@ -346,12 +346,21 @@ function App() {
         details: addr.details,
         city: addr.city,
         active: addr.is_active,
+        lat: addr.lat,
+        lng: addr.lng,
       }));
       setSavedAddresses(addresses);
-      // [Comentario Limpo pelo Sistema]
+      // Ativa o endereço salvo se houver um marcado como ativo
       const active = addresses.find(a => a.active);
       if (active) {
-        setUserLocation(prev => ({ ...prev, address: active.street }));
+        setUserLocation(prev => ({ 
+          ...prev, 
+          address: active.street,
+          lat: active.lat || prev.lat,
+          lng: active.lng || prev.lng,
+          loading: false,
+          isManual: true
+        }));
       }
     }
   };
@@ -800,17 +809,30 @@ function App() {
 
   const isLoaded = true; // Loaded via index.html
 
-  const updateLocation = (onSuccess?: (address: string, lat: number, lng: number) => void) => {
+  const updateLocation = (force = false, onSuccess?: (address: string, lat: number, lng: number) => void) => {
+    // Se o endereço foi definido manualmente e não for um "force", ignoramos a atualização automática
+    // Isso evita que o GPS do dispositivo sobrescreva um endereço salvo ou selecionado.
+    if (userLocation.isManual && !force) {
+      console.log("[GPS] Ignorando atualização automática pois o endereço é manual.");
+      return;
+    }
+
     setUserLocation((prev) => ({ ...prev, loading: true }));
 
     const processCoords = async (latitude: number, longitude: number, accuracy?: number) => {
       try {
         // 1. ATUALIZA MAPA E ESTADO IMEDIATAMENTE (Sem Lag)
-        setUserLocation(prev => ({ ...prev, lat: latitude, lng: longitude, accuracy }));
-        setTransitData(prev => ({
-          ...prev,
-          origin: { ...prev.origin, lat: latitude, lng: longitude }
-        }));
+        setUserLocation(prev => {
+          if (prev.isManual && !force) return prev;
+          return { ...prev, lat: latitude, lng: longitude, accuracy };
+        });
+        setTransitData(prev => {
+          if (userLocation.isManual && !force) return prev;
+          return {
+            ...prev,
+            origin: { ...prev.origin, lat: latitude, lng: longitude }
+          };
+        });
 
         let address = "";
 
@@ -855,7 +877,12 @@ function App() {
         if (!address) address = "Localização atual";
 
         // 3. ATUALIZA APENAS O ENDEREÇO QUANDO CHEGAR
-        setUserLocation(prev => ({ ...prev, address, loading: false }));
+        // Verificação dupla: se no meio do caminho o endereço virou manual (ex: carregou endereço salvo), abortamos.
+        setUserLocation(prev => {
+          if (prev.isManual && !force) return prev;
+          return { ...prev, address, loading: false };
+        });
+
         localStorage.setItem("lastKnownLocation", JSON.stringify({ address, loading: false, lat: latitude, lng: longitude, accuracy }));
         setTransitData((prev) => ({ 
           ...prev, 
@@ -3082,6 +3109,7 @@ const navigateSubView = (target: string) => {
     loading: boolean;
     lat?: number | null;
     lng?: number | null;
+    isManual?: boolean;
   }>(() => {
     return {
       address: "Buscando satélite...",
@@ -6853,12 +6881,12 @@ const navigateSubView = (target: string) => {
     const dashOffset = circumference - (progressPercent / 100) * circumference;
 
     const perks = [
-      { id: 'frete', icon: 'local_shipping', label: 'Frete Grátis', active: true },
-      { id: 'cashback', icon: 'monetization_on', label: 'Cashback 5%', active: true },
-      { id: 'priority', icon: 'support_agent', label: 'Priority', active: true },
-      { id: 'seguro', icon: 'shield', label: 'Seguro', active: userLevel >= 2 },
-      { id: 'surprise', icon: 'card_giftcard', label: 'Surprise', active: userLevel >= 3 },
-      { id: 'fastmatch', icon: 'bolt', label: 'Fast Match', active: userLevel >= 4 },
+      { id: 'frete', icon: 'local_shipping', label: 'Frete Grátis', active: isIziBlackMembership },
+      { id: 'cashback', icon: 'monetization_on', label: 'Cashback 5%', active: isIziBlackMembership },
+      { id: 'priority', icon: 'support_agent', label: 'Priority', active: isIziBlackMembership },
+      { id: 'seguro', icon: 'shield', label: 'Seguro', active: isIziBlackMembership && userLevel >= 2 },
+      { id: 'surprise', icon: 'card_giftcard', label: 'Surprise', active: isIziBlackMembership && userLevel >= 3 },
+      { id: 'fastmatch', icon: 'bolt', label: 'Fast Match', active: isIziBlackMembership && userLevel >= 4 },
     ];
 
     return (
@@ -7022,7 +7050,9 @@ const navigateSubView = (target: string) => {
                            </div>
                            <div className="text-right">
                               <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none">5% OFF</p>
-                              <p className="text-[8px] text-white/10 font-bold uppercase tracking-widest mt-1">Sempre ativo</p>
+                              <p className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${isIziBlackMembership ? 'text-yellow-400' : 'text-white/10'}`}>
+                                {isIziBlackMembership ? 'Sempre ativo' : 'Disponível no Izi Black'}
+                              </p>
                            </div>
                         </div>
                       </div>
@@ -7823,7 +7853,7 @@ const navigateSubView = (target: string) => {
                   <div className="flex justify-between items-center mb-4 ml-1">
                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Origem (Onde Coletar?)</p>
                      <button 
-                       onClick={() => updateLocation()}
+                       onClick={() => updateLocation(true)}
                        disabled={userLocation.loading}
                        className="flex items-center gap-1.5 text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-400/5 disabled:opacity-50"
                      >
@@ -8478,12 +8508,12 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "wallet" && (
                   <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} />
+                     <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 0.01} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 0.0} isIziBlack={isIziBlackMembership} />
                   </motion.div>
                 )}
                 {tab === "profile" && (
                   <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-black">
-                     <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} walletBalance={walletBalance} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
+                     <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -8516,6 +8546,7 @@ const navigateSubView = (target: string) => {
                       userLocation={userLocation} 
                       paymentMethod={paymentMethod} 
                       setPaymentMethod={(m: any) => setPaymentMethod(m)} 
+                      iziCoinRate={isIziBlackMembership ? (globalSettings?.izi_coin_rate || 1.0) : 0}
                       changeFor={changeFor} 
                       setChangeFor={setChangeFor} 
                       selectedCard={selectedCard} 
@@ -8668,6 +8699,11 @@ const navigateSubView = (target: string) => {
                 {subView === "explore_category" && (
                   <motion.div key="expcat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40">
                     {renderExploreCategory()}
+                  </motion.div>
+                )}
+                {subView === "notifications_center" && (
+                  <motion.div key="notifcenter" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderNotificationsCenter()}
                   </motion.div>
                 )}
                 {subView === "taxi_wizard" && (

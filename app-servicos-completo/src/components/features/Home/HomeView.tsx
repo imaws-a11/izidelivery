@@ -170,9 +170,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
   setTab,
   onReturnToPayment,
 }) => {
-  const [activeBannerIndex, setActiveBannerIndex] = React.useState(0);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<{ establishments: any[], products: any[] }>({ establishments: [], products: [] });
+   const [activeBannerIndex, setActiveBannerIndex] = React.useState(0);
+   const [isSearching, setIsSearching] = useState(false);
+   const [searchResults, setSearchResults] = useState<{ establishments: any[], products: any[] }>({ establishments: [], products: [] });
+
 
   // Busca Inteligente
   useEffect(() => {
@@ -231,15 +232,59 @@ export const HomeView: React.FC<HomeViewProps> = ({
     { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Food",             type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
     { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("explore_restaurants"); } },
     { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     action: null },
+    { icon: "inventory_2",    img: "/images/envios.png",   tagline: "ENTREGAS RÁPIDAS", highlight: "special", label: "Izi Envios",   type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
     { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  action: null },
     { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   action: null },
-    { icon: "inventory_2",    img: "/images/envios.png",   tagline: "ENTREGAS RÁPIDAS",  highlight: "none", label: "Izi Envios",   type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
     { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets" }); navigateSubView("explore_category"); } },
     { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gás e Água",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank" }); navigateSubView("explore_category"); } },
     { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining" }); navigateSubView("explore_category"); } },
     { icon: "bakery_dining",  img: "/images/padaria.png",  tagline: "PADARIA ARTESANAL",highlight: "gold", label: "Padaria",      type: "generic",    action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining" }); navigateSubView("explore_category"); } },
     { icon: "nutrition",      img: "/images/hortifruti.png",tagline:"FRESCOR HORTI",    highlight: "cyan", label: "Hortifruti",   type: "generic",    action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition" }); navigateSubView("explore_category"); } },
+    { icon: "cleaning_services", img: "/images/limpeza.png", tagline: "IZI CLEAN",       highlight: "none", label: "Limpeza",      type: "generic",    action: () => showToast("Serviço em breve!", "info") },
+    { icon: "electrical_services", img: "/images/eletrica.png", tagline: "REPAROS",      highlight: "none", label: "Elétrica",     type: "generic",    action: () => showToast("Serviço em breve!", "info") },
+    { icon: "plumbing",        img: "/images/hidraulica.png", tagline: "REPAROS",     highlight: "none", label: "Hidráulica",   type: "generic",    action: () => showToast("Serviço em breve!", "info") },
   ];
+
+
+
+  const renderServiceCard = (svc: any, i: number, isMenu: boolean = false) => (
+    <div
+      key={i}
+      onClick={() => {
+        if (svc.action) svc.action();
+        else handleServiceSelection(svc);
+        if (isMenu) setShowAllServices(false);
+      }}
+      className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[35px] overflow-hidden group transition-all duration-300
+        bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]
+        active:scale-95
+        ${svc.highlight === "special" ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-zinc-950" : ""}
+      `}
+    >
+      {svc.highlight === "special" && (
+        <div className="absolute inset-0 bg-yellow-400/10 animate-pulse pointer-events-none" />
+      )}
+      <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500
+        ${svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+          svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+          svc.highlight === "special" ? "bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" :
+          "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}
+      `}>
+         <span className={`material-symbols-outlined text-[26px] ${svc.highlight === "gold" || svc.highlight === "cyan" || svc.highlight === "special" ? "text-black font-black" : "text-white"}`} 
+               style={{ fontVariationSettings: "'FILL' 1" }}>
+           {svc.icon}
+         </span>
+      </div>
+
+      <h3 className={`font-black text-[9px] tracking-widest uppercase text-center w-full px-1 z-10
+        ${svc.highlight === "gold" || svc.highlight === "special" ? "text-yellow-400" : "text-zinc-500"}
+      `}>
+        {svc.label}
+      </h3>
+    </div>
+  );
+
+
 
   const handleServiceSelection = (cat: any) => {
     if (cat.action) return cat.action();
@@ -1016,130 +1061,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </section>
           )}
 
-          {/* GRADE DE SERVIÇOS EM CARROSSEL (4X2) */}
-          <div className="relative w-full overflow-hidden">
-            <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-0">
-              {/* PÁGINA 1: Principais (8 itens) */}
-              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-3 px-5 py-4">
-                {deliveryServices.slice(0, 8).map((svc, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.96 }}
-                    viewport={{ once: true }}
-                    transition={{ 
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 17,
-                      delay: i * 0.04 
-                    }}
-                    onClick={() => handleServiceSelection(svc)}
-                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[35px] overflow-hidden group transition-all duration-500
-                      bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]
-                      ${svc.highlight === "gold" ? "hover:bg-zinc-700/80 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(251,191,36,0.05),inset_6px_6px_12px_rgba(251,191,36,0.1),inset_-6px_-6px_12px_rgba(0,0,0,0.5)]" : "hover:bg-zinc-700/80"}
-                    `}
-                  >
-                    {/* Background Glow/Image */}
-                    <div className={`absolute inset-x-0 bottom-0 h-1/2 opacity-20 blur-2xl transition-all duration-700 group-hover:opacity-40
-                      ${svc.highlight === "gold" ? "bg-yellow-400" : svc.highlight === "cyan" ? "bg-cyan-400" : "bg-white/20"}
-                    `} />
-                    
-                    {svc.img && (
-                      <img 
-                        src={svc.img} 
-                        alt="bg" 
-                        className="absolute inset-0 size-full object-cover opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700" 
-                      />
-                    )}
-
-                    <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500
-                      ${svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
-                        svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
-                        "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}
-                    `}>
-                       <span 
-                        className={`material-symbols-outlined text-[26px] transition-transform duration-500 group-hover:scale-110
-                          ${svc.highlight === "gold" ? "text-black" : svc.highlight === "cyan" ? "text-black" : "text-white"}`} 
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                       >
-                         {svc.icon}
-                       </span>
-                    </div>
-
-                    <div className="text-center relative z-10 flex flex-col items-center px-1">
-                      <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none group-hover:text-yellow-400/90 transition-colors">
-                        {svc.label}
-                      </h3>
-                    </div>
-                  </motion.div>
-                ))}
+          {/* CARROSSEL DE SERVIÇOS EM GRID (DUAS LINHAS) */}
+          <div className="grid grid-rows-2 grid-flow-col gap-4 overflow-x-auto no-scrollbar pb-8 -mx-5 px-5" style={{ gridAutoColumns: '100px' }}>
+            {deliveryServices.map((svc, i) => (
+              <div key={i} className="w-full h-full">
+                {renderServiceCard(svc, i)}
               </div>
-
-              {/* PÁGINA 2: Especializados (Restante) */}
-              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-3 px-5 py-4">
-                {deliveryServices.slice(8).map((svc, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.96 }}
-                    transition={{ 
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 17,
-                      delay: i * 0.04 
-                    }}
-                    onClick={() => handleServiceSelection(svc)}
-                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[35px] overflow-hidden group transition-all duration-500
-                      bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]
-                      ${svc.highlight === "gold" ? "hover:bg-zinc-700/80 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(251,191,36,0.05),inset_6px_6px_12px_rgba(251,191,36,0.1),inset_-6px_-6px_12px_rgba(0,0,0,0.5)]" : "hover:bg-zinc-700/80"}
-                    `}
-                  >
-                    {/* Background Glow/Image */}
-                    <div className={`absolute inset-x-0 bottom-0 h-1/2 opacity-20 blur-2xl transition-all duration-700 group-hover:opacity-40
-                      ${svc.highlight === "gold" ? "bg-yellow-400" : svc.highlight === "cyan" ? "bg-cyan-400" : "bg-white/20"}
-                    `} />
-                    
-                    {svc.img && (
-                      <img 
-                        src={svc.img} 
-                        alt="bg" 
-                        className="absolute inset-0 size-full object-cover opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700" 
-                      />
-                    )}
-
-                    <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500
-                      ${svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
-                        svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
-                        "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}
-                    `}>
-                       <span 
-                        className={`material-symbols-outlined text-[26px] transition-transform duration-500 group-hover:scale-110
-                          ${svc.highlight === "gold" ? "text-black" : svc.highlight === "cyan" ? "text-black" : "text-white"}`} 
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                       >
-                         {svc.icon}
-                       </span>
-                    </div>
-
-                    <div className="text-center relative z-10 flex flex-col items-center px-1">
-                      <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none group-hover:text-yellow-400/90 transition-colors">
-                        {svc.label}
-                      </h3>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pagination Indicators (opcional) */}
-            <div className="flex justify-center gap-1.5 mt-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-100" />
-              <div className="w-1.5 h-1.5 rounded-full bg-zinc-700 opacity-50" />
-            </div>
+            ))}
           </div>
 
           {/* MOBILIDADE (CLAY DESIGN) */}

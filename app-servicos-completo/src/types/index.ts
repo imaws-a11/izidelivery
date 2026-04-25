@@ -6,6 +6,8 @@ export interface SavedAddress {
   details: string;
   city: string;
   active: boolean;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Order {
