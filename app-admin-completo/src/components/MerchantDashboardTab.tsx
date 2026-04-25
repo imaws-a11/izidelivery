@@ -18,18 +18,68 @@ export default function MerchantDashboardTab() {
   }, [fetchAllOrders]);
 
   // Filtrar ordens do lojista de forma robusta
-  const merchantOrders = allOrders.filter(o => o.merchant_id === merchantProfile?.id);
+  const merchantId = merchantProfile?.id || merchantProfile?.merchant_id;
+  const merchantOrders = allOrders.filter(o => String(o.merchant_id) === String(merchantId));
   const completedOrders = merchantOrders.filter(o => o.status === 'concluido' || o.status === 'delivered');
   
-  // Usar dados reais do contexto (mais performático e já filtrado)
-  const { totalRevenue, completedOrdersCount, avgTicket, dailyRevenue, topProducts } = dashboardData;
+  // Usar dados reais calculados localmente para garantir exatidão
+  const { totalRevenue, completedOrdersCount, avgTicket, dailyRevenue, topProducts } = React.useMemo(() => {
+    const totalRev = completedOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
+    const count = completedOrders.length;
+    const avg = count > 0 ? totalRev / count : 0;
+    
+    const today = new Date();
+    const dailyRev = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(today.getDate() - (6 - i));
+      const dateStr = d.toISOString().split('T')[0];
+      return completedOrders
+        .filter(o => o.created_at.startsWith(dateStr))
+        .reduce((sum, o) => sum + (o.total_price || 0), 0);
+    });
+
+    const productSales: Record<string, number> = {};
+    completedOrders.forEach(o => {
+      const items = (o as any).items || [];
+      items.forEach((it: any) => {
+        const name = it.name || it.product_name || 'Produto';
+        const qty = it.quantity || 1;
+        productSales[name] = (productSales[name] || 0) + qty;
+      });
+      if (items.length === 0) {
+        // Fallback for legacy text string items
+        const parts = (o.delivery_address || '').split('| ITENS:');
+        const rawItems = parts[1] ? parts[1].split(',').map((i: string) => i.trim()).filter(Boolean) : [];
+        rawItems.forEach((item: string) => {
+           const cleanName = item.replace(/\(R\$.*?\)/g, '').trim();
+           const match = cleanName.match(/^(\d+)x\s+(.*)/);
+           const name = match ? match[2] : cleanName;
+           const qty = match ? parseInt(match[1]) : 1;
+           productSales[name] = (productSales[name] || 0) + qty;
+        });
+      }
+    });
+
+    const topProds = Object.entries(productSales)
+      .map(([label, sales]) => ({ label, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+
+    return {
+      totalRevenue: totalRev,
+      completedOrdersCount: count,
+      avgTicket: avg,
+      dailyRevenue: dailyRev,
+      topProducts: topProds
+    };
+  }, [completedOrders]);
   
   // Metas e Projeções (Dinâmico baseado nas configurações)
   const [showGoalModal, setShowGoalModal] = React.useState(false);
   const [tempGoal, setTempGoal] = React.useState('');
   const { handleUpdateMerchantProfile, isSaving } = useAdmin();
 
-  const monthlyGoal = Number(merchantProfile?.monthly_goal || 0);
+  const monthlyGoal = Number(merchantProfile?.metadata?.monthly_goal || merchantProfile?.monthly_goal || 0);
   const progressPercent = monthlyGoal > 0 ? Math.min((totalRevenue / monthlyGoal) * 100, 100) : 0;
 
   const openGoalModal = () => {
@@ -41,7 +91,13 @@ export default function MerchantDashboardTab() {
     const val = parseFloat(tempGoal.replace(',', '.'));
     if (isNaN(val)) return;
     
-    await handleUpdateMerchantProfile({ monthly_goal: val });
+    // Salvar usando a coluna existente 'metadata' para garantir que não dê erro de schema
+    const updatedMetadata = {
+      ...(merchantProfile?.metadata || {}),
+      monthly_goal: val
+    };
+
+    await handleUpdateMerchantProfile({ metadata: updatedMetadata });
     setShowGoalModal(false);
   };
 

@@ -346,7 +346,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
         merchantId, 
         editingItemMerchantId: editingItem.merchant_id 
       });
-      toastError('Erro: Nenhum lojista identificado. NÃ£o Ã© possÃ­vel salvar o produto.');
+      toastError('Erro: Nenhum lojista identificado. Não é possível salvar o produto.');
       setIsSaving(false);
       return;
     }
@@ -909,7 +909,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">DescriÃ§Ã£o</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Descrição</label>
                     <textarea 
                       value={editingItem.description || ''}
                       onChange={e => setEditingItem({...editingItem, description: e.target.value})}
@@ -921,7 +921,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                   <div className="flex items-center gap-6 p-6 bg-white/5 rounded-[32px] border border-white/5 shadow-inner">
                     <div className="flex-1">
                       <p className="text-sm font-black">Item Ativo</p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Habilita no cardÃ¡pio pÃºblico</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Habilita no cardápio público</p>
                     </div>
                     <button
                       onClick={() => setEditingItem({...editingItem, is_available: !editingItem.is_available})}
@@ -934,7 +934,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
 
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">MÃ­dia do Produto</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Mídia do Produto</label>
                     <div className="aspect-square rounded-[48px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
                       {editingItem.image_url ? (
                         <>
@@ -962,7 +962,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                         }}
                       />
                     </div>
-                    <p className="text-[10px] text-center text-slate-500 mt-4 uppercase tracking-[0.2em]">Formatos aceitos: JPG, PNG Ã¢€¢ MÃ¡ximo 2MB</p>
+                    <p className="text-[10px] text-center text-slate-500 mt-4 uppercase tracking-[0.2em]">Formatos aceitos: JPG, PNG â€¢ Máximo 2MB</p>
                   </div>
                 </div>
               </motion.div>
@@ -981,7 +981,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                     </div>
                     <div>
                       <h4 className="font-black text-lg">Grupos de Adicionais</h4>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Crie variaÃ§Ãµes e complementos</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Crie variações e complementos</p>
                     </div>
                   </div>
                   <button 
@@ -1084,7 +1084,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                         <div key={gIdx} className="bg-slate-900/40 rounded-[48px] border border-white/5 overflow-hidden group/group-card">
                           <div className="bg-white/5 p-8 flex flex-wrap items-center gap-6 border-b border-white/5">
                             <div className="flex-1 min-w-[200px] space-y-2">
-                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-2">TÃ­tulo do Grupo</label>
+                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-2">Título do Grupo</label>
                               <input 
                                 type="text"
                                 value={group.name}
@@ -1123,7 +1123,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                 onClick={() => updateGroup(gIdx, 'is_required', !group.is_required)}
                                 className={`px-6 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all ${group.is_required ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/5 text-slate-500 border border-white/5'}`}
                               >
-                                ObrigatÃ³rio
+                                Obrigatório
                               </button>
                               
                               <button
@@ -1176,7 +1176,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                   </div>
                                   <div className="w-px h-8 bg-white/5"></div>
                                   <div className="w-24 space-y-1">
-                                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-3">PreÃ§o R$</label>
+                                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-3">Preço R$</label>
                                     <input 
                                       type="number" 
                                       step="0.01"
@@ -1229,7 +1229,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                     try {
                       setIsSaving(true);
                       await supabase.from('products_delivery').delete().eq('id', editingItem.id);
-                      toastSuccess('Produto excluÃ­do!');
+                      toastSuccess('Produto excluído!');
                       onSave();
                       onClose();
                     } catch (err: any) {
@@ -1254,7 +1254,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
             >
               {isSaving ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin">refresh</span> Salvando EstÃºdio
+                  <span className="material-symbols-outlined animate-spin">refresh</span> Salvando Estúdio
                 </>
               ) : (
                 <>
@@ -1291,8 +1291,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                     <h3 className="text-xl font-black">{categoryModal.title}</h3>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                       {categoryModal.mode === 'create' 
-                        ? (categoryModal.parentId ? 'Vincular Ã  categoria selecionada' : 'Nova categoria principal')
-                        : 'Atualize ou remova do cardÃ¡pio'
+                        ? (categoryModal.parentId ? 'Vincular à categoria selecionada' : 'Nova categoria principal')
+                        : 'Atualize ou remova do cardápio'
                       }
                     </p>
                   </div>

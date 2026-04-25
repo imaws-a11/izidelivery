@@ -8,11 +8,11 @@ interface AddressSearchInputProps {
   onSelect: (addr: { formatted_address: string; lat?: number; lng?: number }) => void;
   onClear?: () => void;
   className?: string;
-  /** LocalizaÃ§Ã£o do usuÃ¡rio para usar como referÃªncia de bias nas sugestÃµes */
+  /** Localização do usuário para usar como referência de bias nas sugestões */
   userCoords?: { lat: number; lng: number } | null;
-  /** Se true, o input estÃ¡ dentro de um modal/overlay com fundo escuro */
+  /** Se true, o input está dentro de um modal/overlay com fundo escuro */
   darkMode?: boolean;
-  /** Se true, desloca o botÃ£o de limpar para a esquerda para dar espaço a um botÃ£o externo */
+  /** Se true, desloca o botão de limpar para a esquerda para dar espaço a um botão externo */
   extraRightPadding?: boolean;
 }
 
@@ -101,7 +101,7 @@ export const AddressSearchInput = ({
   };
 
   /**
-   * Formata a distÃ¢ncia de forma amigÃ¡vel
+   * Formata a distância de forma amigável
    */
   const formatDistance = (meters: number) => {
     if (!meters) return null;
@@ -159,7 +159,7 @@ export const AddressSearchInput = ({
     setOpen(false);
     setSuggestions([]);
 
-    // Busca coordenadas do lugar para melhor precisÃ£o de rota
+    // Busca coordenadas do lugar para melhor precisão de rota
     let coords: { lat: number; lng: number } | null = null;
     if (prediction.place_id) {
       coords = await fetchPlaceDetails(prediction.place_id);
@@ -210,7 +210,7 @@ export const AddressSearchInput = ({
             <div style={{ padding: "12px 18px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{ width: "4px", height: "12px", background: "#ffd900", borderRadius: "10px" }} />
               <span style={{ fontSize: "9px", fontWeight: 900, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
-                {userCoords ? "ðŸ“ SugestÃµes por proximidade" : "ðŸ’¡ SugestÃµes de endereÃ§o"}
+                {userCoords ? "ðŸ“ Sugestões por proximidade" : "ðŸ’¡ Sugestões de endereço"}
               </span>
             </div>
 
