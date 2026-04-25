@@ -6,7 +6,6 @@ interface ProfileViewProps {
   userName: string | null;
   userLevel: number;
   userXP: number;
-  walletBalance?: number;
   logout: () => Promise<void>;
   setSubView?: (view: string) => void;
   isIziBlackMembership: boolean;
@@ -19,7 +18,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   userName,
   userLevel,
   userXP,
-  walletBalance = 0,
   logout,
   setSubView,
   isIziBlackMembership,
@@ -32,6 +30,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const handleLogout = async () => {
     await logout();
   };
+
+
 
   const menuItems = [
     {
@@ -93,13 +93,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span className="material-symbols-outlined font-black">arrow_back</span>
           </motion.button>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-none">
-              Elite <span className="text-yellow-400">Profile</span>
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
+              Perfil
             </h1>
-            <div className="flex items-center gap-2 mt-1.5">
-               <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
-               <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.4em]">Personal Space</p>
-            </div>
           </div>
         </div>
 
@@ -107,9 +103,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           whileHover={{ scale: 1.05, rotate: 5 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleLogout}
-          className="size-12 rounded-2xl bg-zinc-900/50 border border-red-500/20 flex items-center justify-center text-red-500 transition-all shadow-lg"
+          className="size-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center text-zinc-400 hover:text-red-400 transition-all shadow-[0_8px_32px_0_rgba(0,0,0,0.3),inset_1px_1px_2px_rgba(255,255,255,0.05)] active:scale-90 group"
         >
-          <span className="material-symbols-outlined font-black">power_settings_new</span>
+          <span className="material-symbols-outlined font-black group-hover:rotate-12 transition-transform">power_settings_new</span>
         </motion.button>
       </header>
 
@@ -151,10 +147,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </motion.div>
 
                 {/* Status Badge */}
-                <div className="absolute -bottom-2 translate-x-1/2 right-1/2 bg-black text-yellow-400 px-4 py-1.5 rounded-full border border-yellow-400/30 shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05)] flex items-center gap-1.5 min-w-[100px] justify-center">
-                   <span className="material-symbols-outlined text-[12px] fill-1">verified</span>
-                   <span className="text-[10px] font-black uppercase tracking-widest">Vip Elite</span>
-                </div>
+                {isIziBlackMembership && (
+                  <div className="absolute -bottom-2 translate-x-1/2 right-1/2 bg-black text-yellow-400 px-4 py-1.5 rounded-full border border-yellow-400/30 shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05)] flex items-center gap-1.5 min-w-[100px] justify-center">
+                    <span className="material-symbols-outlined text-[12px] fill-1">verified</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">Vip Elite</span>
+                  </div>
+                )}
               </div>
 
               {/* Identity Section */}
@@ -195,39 +193,46 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </motion.section>
 
-        {/* === STATS BENTO BOX (PREMIUM) === */}
-        <section className="grid grid-cols-2 gap-5">
-           <motion.div
-             whileHover={{ y: -5 }}
-             className="bg-zinc-900/40 p-6 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group"
+        {/* === QUICK ACTIONS (ONE-CLICK CARDS) === */}
+        <section className="grid grid-cols-3 gap-4">
+           <motion.button
+             whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
+             whileTap={{ scale: 0.95 }}
+             onClick={() => setSubView?.("delivery_code")}
+             className="flex flex-col items-center gap-3 bg-zinc-900/40 p-5 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
            >
-              <div className="absolute top-0 right-0 size-24 bg-emerald-400/5 blur-3xl -mr-12 -mt-12 group-hover:bg-emerald-400/10 transition-all" />
-              <div className="flex items-center gap-3 mb-4">
-                 <div className="size-10 rounded-xl bg-emerald-400/10 flex items-center justify-center text-emerald-400 border border-emerald-400/20">
-                    <span className="material-symbols-outlined text-xl font-black">payments</span>
-                 </div>
-                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Saldo Atual</span>
+              <div className="size-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center text-yellow-400 border border-yellow-400/20 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.1)]">
+                 <span className="material-symbols-outlined text-2xl font-black">qr_code_2</span>
               </div>
-              <h3 className="text-2xl font-black text-white tracking-tighter leading-none">R$ {walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</h3>
-           </motion.div>
+              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-tighter text-center leading-tight">Código de<br/>Entrega</span>
+              <div className="absolute top-0 right-0 size-16 bg-yellow-400/5 blur-2xl -mr-8 -mt-8 group-hover:bg-yellow-400/10 transition-all" />
+           </motion.button>
 
-           <motion.div
-             whileHover={{ y: -5 }}
-             onClick={() => setTab("wallet")}
-             className="bg-zinc-900/40 p-6 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group cursor-pointer"
+           <motion.button
+             whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
+             whileTap={{ scale: 0.95 }}
+             onClick={() => setSubView?.("support")}
+             className="flex flex-col items-center gap-3 bg-zinc-900/40 p-5 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
            >
-              <div className="absolute top-0 right-0 size-24 bg-blue-400/5 blur-3xl -mr-12 -mt-12 group-hover:bg-blue-400/10 transition-all" />
-              <div className="flex items-center gap-3 mb-4">
-                 <div className="size-10 rounded-xl bg-blue-400/10 flex items-center justify-center text-blue-400 border border-blue-400/20">
-                    <span className="material-symbols-outlined text-xl font-black">account_balance_wallet</span>
-                 </div>
-                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Izi Wallet</span>
+              <div className="size-12 rounded-2xl bg-blue-400/10 flex items-center justify-center text-blue-400 border border-blue-400/20 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.1)]">
+                 <span className="material-symbols-outlined text-2xl font-black">chat</span>
               </div>
-              <div className="flex items-center justify-between">
-                 <h3 className="text-lg font-black text-white tracking-tighter leading-none">Acessar</h3>
-                 <span className="material-symbols-outlined text-zinc-700 group-hover:text-blue-400 transition-colors">arrow_forward</span>
+              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Chat</span>
+              <div className="absolute top-0 right-0 size-16 bg-blue-400/5 blur-2xl -mr-8 -mt-8 group-hover:bg-blue-400/10 transition-all" />
+           </motion.button>
+
+           <motion.button
+             whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
+             whileTap={{ scale: 0.95 }}
+             onClick={() => setTab("home")}
+             className="flex flex-col items-center gap-3 bg-zinc-900/40 p-5 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
+           >
+              <div className="size-12 rounded-2xl bg-emerald-400/10 flex items-center justify-center text-emerald-400 border border-emerald-400/20 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.1)]">
+                 <span className="material-symbols-outlined text-2xl font-black">sell</span>
               </div>
-           </motion.div>
+              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-tighter text-center leading-tight">Meus<br/>Cupons</span>
+              <div className="absolute top-0 right-0 size-16 bg-emerald-400/5 blur-2xl -mr-8 -mt-8 group-hover:bg-emerald-400/10 transition-all" />
+           </motion.button>
         </section>
 
         {/* === MENU LIST LUXURY SELECTION === */}

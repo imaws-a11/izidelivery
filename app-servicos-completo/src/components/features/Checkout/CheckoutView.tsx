@@ -101,7 +101,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   
   const total = Math.max(0, subtotal + (Number(deliveryFee) || 0) + serviceFeeAmount - (Number(couponDiscount) || 0) - (Number(coinDiscount) || 0));
 
-  const cashbackRate = isIziBlack ? (iziBlackCashback * (iziBlackCashbackMultiplier || 1)) : (iziCoinRate || 1);
+  const cashbackRate = isIziBlack ? (iziBlackCashback * (iziBlackCashbackMultiplier || 1)) : iziCoinRate;
   const estimatedCashbackCoins = (total * (cashbackRate / 100));
 
   const paymentOptions = [

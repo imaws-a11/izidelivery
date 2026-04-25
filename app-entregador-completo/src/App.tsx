@@ -1055,6 +1055,8 @@ function App() {
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [showWithdrawHistory, setShowWithdrawHistory] = useState(false);
+    const [showWithdrawDetail, setShowWithdrawDetail] = useState(false);
+    const [selectedWithdraw, setSelectedWithdraw] = useState<any>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [confirmPaymentState, setConfirmPaymentState] = useState<{
         show: boolean,
@@ -4698,7 +4700,11 @@ function App() {
                 </header>
 
                 {/* Claymorphic Balance Card Premium */}
-                <div className="rounded-[45px] p-8 relative overflow-hidden group border-t-4 border-white/40" style={sClayYellow}>
+                <div 
+                    onClick={handleWithdrawRequest}
+                    className="rounded-[45px] p-8 relative overflow-hidden group border-t-4 border-white/40 cursor-pointer active:scale-[0.98] transition-all" 
+                    style={sClayYellow}
+                >
                     <div className="absolute -right-6 -top-6 opacity-20 rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                         <Icon name="account_balance_wallet" size={160} className="text-stone-900" />
                     </div>
@@ -4717,14 +4723,14 @@ function App() {
                             <div className="flex gap-2">
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={() => setShowWithdrawHistory(true)}
+                                    onClick={(e) => { e.stopPropagation(); setShowWithdrawHistory(true); }}
                                     className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
                                 >
                                     <Icon name="history" className="text-stone-950" size={20} />
                                 </motion.button>
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={() => setShowBankDetails(true)}
+                                    onClick={(e) => { e.stopPropagation(); setShowBankDetails(true); }}
                                     className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
                                 >
                                     <Icon name="account_balance" className="text-stone-950" size={20} />
@@ -4911,13 +4917,8 @@ function App() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
-                                onClick={() => {
-                                    if (tx.receipt_url) {
-                                        setSelectedReceiptUrl(tx.receipt_url);
-                                        setShowReceipt(true);
-                                    }
-                                }}
-                                className={`clay-card-dark rounded-[30px] p-6 border border-white/5 flex items-center gap-5 relative overflow-hidden transition-all ${tx.receipt_url ? 'active:scale-95 cursor-pointer hover:border-primary/30' : ''}`}
+                                onClick={() => { setSelectedWithdraw(tx); setShowWithdrawDetail(true); }}
+                                className="clay-card-dark rounded-[30px] p-6 border border-white/5 flex items-center gap-5 relative overflow-hidden transition-all active:scale-95 cursor-pointer hover:border-primary/30"
                             >
                                 <div className={`size-14 rounded-2xl flex items-center justify-center border shadow-lg ${
                                     tx.status === 'concluido' ? 'bg-emerald-500/10 border-emerald-500/20' : 
@@ -5011,6 +5012,149 @@ function App() {
             </div>
         </motion.div>
     );
+
+    const renderWithdrawDetailView = () => {
+        if (!selectedWithdraw) return null;
+        
+        const tx = selectedWithdraw;
+        const feePercent = Number(appSettings?.withdrawalfeepercent ?? 0);
+        const grossAmount = Number(tx.amount);
+        const feeAmount = grossAmount * (feePercent / 100);
+        const netAmount = grossAmount - feeAmount;
+
+        return (
+            <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col p-6 overflow-y-auto"
+            >
+                <header className="flex items-center justify-between mb-8">
+                    <button onClick={() => setShowWithdrawDetail(false)} className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
+                        <Icon name="arrow_back" className="text-white" />
+                    </button>
+                    <div className="text-center">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Detalhamento</p>
+                        <h2 className="text-xl font-black text-white italic">Fluxo de Saque</h2>
+                    </div>
+                    <div className="size-12" />
+                </header>
+
+                <div className="space-y-6">
+                    {/* Main Clay Card */}
+                    <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full -mr-16 -mt-16" />
+                        
+                        <div className="flex flex-col items-center text-center space-y-4 mb-8">
+                            <div className={`size-20 rounded-[30px] flex items-center justify-center border shadow-2xl ${
+                                tx.status === 'concluido' ? 'bg-emerald-500/10 border-emerald-500/20' : 
+                                tx.status === 'recusado' ? 'bg-rose-500/10 border-rose-500/20' :
+                                'bg-primary/10 border-primary/20'
+                            }`}>
+                                <Icon 
+                                    name={tx.status === 'concluido' ? 'verified' : tx.status === 'recusado' ? 'close' : 'sync'} 
+                                    size={36} 
+                                    className={tx.status === 'concluido' ? 'text-emerald-400' : tx.status === 'recusado' ? 'text-rose-400' : 'text-primary'} 
+                                />
+                            </div>
+                            <div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border ${
+                                    tx.status === 'concluido' ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 
+                                    tx.status === 'recusado' ? 'text-rose-400 bg-rose-400/10 border-rose-400/20' :
+                                    'text-primary bg-primary/10 border-primary/20'
+                                }`}>
+                                    {tx.status === 'concluido' ? 'Pago com Sucesso' : tx.status === 'recusado' ? 'Saque Recusado' : 'Aguardando Processamento'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 bg-black/20 rounded-[32px] p-6 border border-white/5 shadow-inner">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">ID Transação</span>
+                                <span className="text-[10px] font-mono text-white/60">#{tx.id.slice(0, 12).toUpperCase()}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Data e Hora</span>
+                                <span className="text-[10px] font-bold text-white/60 uppercase">
+                                    {new Date(tx.created_at).toLocaleDateString('pt-BR')} às {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Método</span>
+                                <span className="text-[10px] font-bold text-white/60 uppercase">PIX</span>
+                            </div>
+                            <div className="w-full h-[1px] bg-white/5" />
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Chave PIX Utilizada</span>
+                                <span className="text-xs font-black text-white italic truncate">{pixKey || 'Chave não registrada'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Breakdown Card */}
+                    <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 space-y-6">
+                        <h3 className="text-sm font-black text-white uppercase tracking-widest italic flex items-center gap-2">
+                            <Icon name="analytics" size={16} className="text-primary" />
+                            Valores e Taxas
+                        </h3>
+
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Valor Bruto</span>
+                                <span className="text-sm font-black text-white">R$ {grossAmount.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                            
+                            {feeAmount > 0 && (
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Taxa de Saque</span>
+                                        <span className="text-[8px] font-black text-rose-500/50 border border-rose-500/20 px-2 py-0.5 rounded-full">{feePercent}%</span>
+                                    </div>
+                                    <span className="text-sm font-black text-rose-500">- R$ {feeAmount.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            )}
+
+                            <div className="w-full h-[1px] bg-white/5" />
+
+                            <div className="flex justify-between items-end pt-2">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Valor Líquido</span>
+                                <span className="text-3xl font-black text-primary italic drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]">
+                                    R$ {netAmount.toFixed(2).replace('.', ',')}
+                                </span>
+                            </div>
+                        </div>
+
+                        {tx.status !== 'concluido' && (
+                            <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10">
+                                <p className="text-[9px] text-primary/70 leading-relaxed font-medium uppercase tracking-wider text-center">
+                                    Prazo de compensação: até {appSettings?.withdrawal_period_h ?? 24}h úteis
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Receipt Button */}
+                    {tx.receipt_url && (
+                        <motion.button 
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                                setSelectedReceiptUrl(tx.receipt_url);
+                                setShowReceipt(true);
+                            }}
+                            className="w-full py-6 rounded-[30px] bg-white text-black font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl active:bg-neutral-200 transition-colors"
+                        >
+                            <Icon name="description" size={20} />
+                            Ver Comprovante Oficial
+                        </motion.button>
+                    )}
+                </div>
+
+                <p className="mt-8 text-center text-[9px] font-bold text-white/20 uppercase tracking-widest italic">
+                    Izi Delivery Financial Security
+                </p>
+            </motion.div>
+        );
+    };
 
     const handleAvatarUpload = async (file: File) => {
         if (!driverId || !file) return;
@@ -7103,6 +7247,7 @@ function App() {
 
             <AnimatePresence>
                 {showWithdrawHistory && renderWithdrawHistoryView()}
+                {showWithdrawDetail && renderWithdrawDetailView()}
             </AnimatePresence>
 
             {/* In-App Broadcast Popups */}
@@ -7114,7 +7259,4 @@ function App() {
 }
 
 export default App;
-
-
-
 
