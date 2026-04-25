@@ -6552,7 +6552,7 @@ const navigateSubView = (target: string) => {
               transition={{ delay: 0.6 }}
               className="text-zinc-500 text-sm max-w-xs mx-auto leading-relaxed font-medium"
             >
-              Bem-vindo Ã  elite. Seus privilégios exclusivos já estão vinculados Ã  sua conta com sucesso.
+              Bem-vindo à elite. Seus privilégios exclusivos já estão vinculados à sua conta com sucesso.
             </motion.p>
           </div>
 
@@ -7066,7 +7066,7 @@ const navigateSubView = (target: string) => {
                            </div>
                            <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Izi Surprise</h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento Ã s suas notificações!</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento às suas notificações!</p>
                       </div>
                     )}
                   </div>

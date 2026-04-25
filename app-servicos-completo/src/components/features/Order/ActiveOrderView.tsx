@@ -252,7 +252,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                   >
                     <button
                       onClick={() => {
-                        console.log("[DEBUG] Clique no botÃ£o de cancelar. OrderID:", selectedItem?.id);
+                        console.log("[DEBUG] Clique no botão de cancelar. OrderID:", selectedItem?.id);
                         if(window.confirm("Deseja realmente cancelar este pedido?")) {
                           onCancelOrder(selectedItem?.id);
                         }
