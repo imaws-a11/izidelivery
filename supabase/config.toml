@@ -1,0 +1,11 @@
+project_id = "cmkylgblkiceiclbewxr"
+
+[api]
+port = 54321
+schemas = ["public", "auth", "storage"]
+
+[db]
+port = 54322
+
+[storage]
+enabled = true

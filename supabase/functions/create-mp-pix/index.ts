@@ -32,7 +32,7 @@ serve(async (req) => {
         },
       },
       date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      notification_url: 'https://mbqmyozgwpxwxrdwwkwn.supabase.co/functions/v1/mp-webhook',
+      notification_url: 'https://cmkylgblkiceiclbewxr.supabase.co/functions/v1/mp-webhook',
     }
     console.log(`[DEBUG] Enviando pedido para MP: OrderID=${orderId}, Amount=${amount}, NotifyURL=${payload.notification_url}`);
     const response = await fetch('https://api.mercadopago.com/v1/payments', {

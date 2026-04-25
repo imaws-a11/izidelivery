@@ -387,7 +387,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </button>
                 <button onClick={() => setSubView("notifications_center")} 
                   className="w-10 h-10 flex items-center justify-center rounded-[18px] bg-zinc-900 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05)]">
-                  <span className="material-symbols-outlined text-yellow-400 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>notifications</span>
+                  <span className="material-symbols-outlined text-zinc-100 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>notifications</span>
                 </button>
               </div>
             </div>

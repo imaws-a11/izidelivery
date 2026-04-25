@@ -30,8 +30,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
+    try {
+      await supabase.auth.signOut();
+      
+      // Limpeza agressiva do LocalStorage para chaves do Supabase
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      setSession(null);
+      // Forçar recarregamento para limpar estados em memória
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Mesmo com erro, tentamos limpar localmente
+      setSession(null);
+      window.location.href = '/';
+    }
   };
 
   return (
