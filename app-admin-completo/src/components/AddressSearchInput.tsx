@@ -14,6 +14,8 @@ interface AddressSearchInputProps {
   darkMode?: boolean;
   /** Se true, desloca o botão de limpar para a esquerda para dar espaço a um botão externo */
   extraRightPadding?: boolean;
+  /** Dispara a cada letra digitada, útil para capturar complementos manuais (Apto, Bloco) */
+  onChangeRaw?: (val: string) => void;
 }
 
 export const AddressSearchInput = ({
@@ -24,6 +26,7 @@ export const AddressSearchInput = ({
   className,
   userCoords,
   extraRightPadding,
+  onChangeRaw,
 }: AddressSearchInputProps) => {
   const { isLoaded } = useAdmin();
   const [query, setQuery] = useState(initialValue || "");
@@ -136,6 +139,7 @@ export const AddressSearchInput = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
+    if (onChangeRaw) onChangeRaw(val);
     clearTimeout(debounceRef.current);
     if (!val) {
       setSuggestions([]);

@@ -62,7 +62,7 @@ export default function MerchantsTab() {
         <div className="flex items-center gap-4">
           <button 
              onClick={() => {
-                setEditType('merchant');
+                setEditType('new_merchant');
                 setEditingItem({
                   store_name: '',
                   email: '',
@@ -73,7 +73,7 @@ export default function MerchantsTab() {
                   is_active: true,
                   role: 'merchant'
                 });
-                setActiveTab('my_studio');
+                setActiveTab('merchant_studio');
              }}
              className="h-16 px-10 bg-primary text-slate-900 rounded-[28px] shadow-2xl shadow-primary/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all group overflow-hidden relative"
           >
@@ -180,7 +180,10 @@ export default function MerchantsTab() {
                   >
                     <td className="px-10 py-7">
                       <div 
-                        onClick={() => { openMerchantPreview(m); setActiveTab('my_studio'); }}
+                        onClick={() => { 
+                          openMerchantPreview(m);
+                          setActiveTab('my_studio'); 
+                        }}
                         className="flex items-center gap-5 cursor-pointer group/item"
                       >
                         <div className="size-16 rounded-3xl bg-primary/20 dark:bg-primary/10 border border-primary/10 flex items-center justify-center overflow-hidden transition-transform group-hover/item:scale-105 shadow-sm">
@@ -230,7 +233,10 @@ export default function MerchantsTab() {
                     <td className="px-10 py-7 text-right">
                       <div className="flex items-center justify-end gap-3 opacity-40 group-hover/row:opacity-100 transition-opacity">
                          <button 
-                           onClick={() => { openMerchantPreview(m); setActiveTab('my_studio'); }}
+                           onClick={() => { 
+                             openMerchantPreview(m);
+                             setActiveTab('my_studio'); 
+                           }}
                            className="size-11 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm flex items-center justify-center border border-transparent hover:border-primary/20"
                            title="Acessar Estúdio"
                          >
@@ -244,10 +250,7 @@ export default function MerchantsTab() {
                            <span className="material-symbols-outlined text-xl">{(m.status === 'active' || m.is_active) ? 'do_not_disturb_on' : 'verified'}</span>
                          </button>
                          <button 
-                           onClick={async () => {
-                              const ok = await window.confirm('Tem certeza que deseja remover este parceiro permanentemente?');
-                              if (ok) handleDeleteMerchant(m.id);
-                           }}
+                           onClick={() => handleDeleteMerchant(m.id)}
                            className="size-11 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all shadow-sm flex items-center justify-center border border-rose-100 dark:border-rose-500/20"
                            title="Excluir Lojista"
                          >

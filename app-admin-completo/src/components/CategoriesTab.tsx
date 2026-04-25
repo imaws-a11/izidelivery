@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
+import { supabase } from '../lib/supabase';
+import { toastSuccess, toastError } from '../lib/useToast';
 
 export default function CategoriesTab() {
   const {
@@ -8,8 +10,6 @@ export default function CategoriesTab() {
     establishmentTypes,
     handleUpdateEstablishmentType,
     handleDeleteEstablishmentType,
-    handleUpdateMerchant,
-    setEditingItem,
     setSelectedMerchantPreview,
     setActivePreviewTab,
     isSaving,
@@ -20,6 +20,15 @@ export default function CategoriesTab() {
 
   const [filter, setFilter] = useState('');
   const [selectedMerchantId, setSelectedMerchantId] = useState<string | null>(null);
+
+  // Helper: detecta se o ícone é URL ou nome Material Symbol
+  const renderIcon = (icon: string, className = 'text-4xl') => {
+    if (!icon) return <span className={`material-symbols-outlined ${className}`}>category</span>;
+    if (icon.startsWith('http') || icon.startsWith('/')) {
+      return <img src={icon} alt="ícone" className="w-10 h-10 object-contain" />;
+    }
+    return <span className={`material-symbols-outlined ${className}`}>{icon}</span>;
+  };
   const [isEditingGlobal, setIsEditingGlobal] = useState(false);
   const [editingType, setEditingType] = useState<any>(null);
   
@@ -53,20 +62,24 @@ export default function CategoriesTab() {
     }
   }, [selectedMerchantId]);
 
+  const [isSavingAssignment, setIsSavingAssignment] = useState(false);
+
   const handleSaveAssignment = async () => {
     if (!selectedMerchant || !tempStoreType) return;
+    setIsSavingAssignment(true);
     try {
-      const updated = { 
-        ...selectedMerchant, 
-        store_type: tempStoreType, 
-        food_category: tempFoodCategories.length > 0 ? tempFoodCategories : ['all'] 
-      };
-      
-      setEditingItem(updated);
-      await handleUpdateMerchant({ preventDefault: () => {} } as React.FormEvent);
+      const foodCategory = tempFoodCategories.length > 0 ? tempFoodCategories : ['all'];
+      const { error } = await supabase
+        .from('admin_users')
+        .update({ store_type: tempStoreType, food_category: foodCategory })
+        .eq('id', selectedMerchant.id);
+      if (error) throw error;
+      toastSuccess('Taxonomia do lojista atualizada!');
       fetchMerchants();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toastError('Erro ao salvar: ' + err.message);
+    } finally {
+      setIsSavingAssignment(false);
     }
   };
 
@@ -234,7 +247,7 @@ export default function CategoriesTab() {
                                    {isSelected && (
                                       <motion.div layoutId={`main-cat-bg-${t.id}`} className="absolute inset-0 bg-primary pointer-events-none" />
                                    )}
-                                   <span className={`material-symbols-outlined text-4xl relative z-10 transition-transform group-hover:scale-110 ${isSelected ? 'text-slate-900' : 'text-slate-300 dark:text-slate-600'}`}>{t.icon}</span>
+                                   <span className={`relative z-10 transition-transform group-hover:scale-110 flex items-center justify-center ${isSelected ? 'text-slate-900' : 'text-slate-300 dark:text-slate-600'}`}>{renderIcon(t.icon, 'text-4xl')}</span>
                                    <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
                                    
                                    {isSelected && (
@@ -282,7 +295,7 @@ export default function CategoriesTab() {
                                           {isSubSelected && (
                                              <motion.div layoutId={`sub-cat-bg-${t.id}`} className="absolute inset-0 bg-emerald-500 pointer-events-none" />
                                           )}
-                                          <span className={`material-symbols-outlined text-4xl relative z-10 ${isSubSelected ? 'text-white' : 'text-slate-300 dark:text-slate-600'}`}>{t.icon}</span>
+                                          <span className={`relative z-10 flex items-center justify-center ${isSubSelected ? 'text-white' : 'text-slate-300 dark:text-slate-600'}`}>{renderIcon(t.icon, 'text-4xl')}</span>
                                           <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
                                           
                                           {isSubSelected && (
@@ -333,10 +346,11 @@ export default function CategoriesTab() {
                              </button>
                              <button 
                                onClick={handleSaveAssignment}
-                               disabled={isSaving || !tempStoreType}
-                               className="px-12 py-4 rounded-2xl bg-primary text-slate-900 font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.05] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                               disabled={isSavingAssignment || !tempStoreType}
+                               className="px-12 py-4 rounded-2xl bg-primary text-slate-900 font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.05] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale flex items-center gap-2"
                              >
-                                Confirmar Atualização
+                                {isSavingAssignment && <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>}
+                                {isSavingAssignment ? 'Salvando...' : 'Confirmar Atualização'}
                              </button>
                           </div>
                        </div>
@@ -406,7 +420,7 @@ export default function CategoriesTab() {
                           <div className="flex items-center justify-between">
                              <div className="flex items-center gap-4">
                                 <div className="size-14 rounded-3xl bg-white dark:bg-slate-700 flex items-center justify-center text-primary shadow-sm border border-slate-50 dark:border-slate-600">
-                                   <span className="material-symbols-outlined text-3xl">{main.icon}</span>
+                                   <span className="flex items-center justify-center">{renderIcon(main.icon, 'text-3xl')}</span>
                                 </div>
                                 <div>
                                    <span className="font-black text-[13px] uppercase tracking-tighter dark:text-white italic">{main.name}</span>

@@ -136,7 +136,9 @@ interface HomeViewProps {
   setExploreCategoryState: (state: any) => void;
   setRestaurantInitialCategory: (cat: string) => void;
   isIziBlackMembership: boolean;
+  isIziBlackMembership: boolean;
   setTab: (tab: "home" | "orders" | "wallet" | "profile") => void;
+  establishmentTypes: any[];
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -169,6 +171,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   isIziBlackMembership,
   setTab,
   onReturnToPayment,
+  establishmentTypes,
 }) => {
    const [activeBannerIndex, setActiveBannerIndex] = React.useState(0);
    const [isSearching, setIsSearching] = useState(false);
@@ -228,22 +231,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
   };
 
-  const deliveryServices = [
-    { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Food",             type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-    { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("explore_restaurants"); } },
-    { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     action: null },
-    { icon: "inventory_2",    img: "/images/envios.png",   tagline: "ENTREGAS RÁPIDAS", highlight: "special", label: "Izi Envios",   type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
-    { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  action: null },
-    { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   action: null },
-    { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets" }); navigateSubView("explore_category"); } },
-    { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gás e Água",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank" }); navigateSubView("explore_category"); } },
-    { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining" }); navigateSubView("explore_category"); } },
-    { icon: "bakery_dining",  img: "/images/padaria.png",  tagline: "PADARIA ARTESANAL",highlight: "gold", label: "Padaria",      type: "generic",    action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining" }); navigateSubView("explore_category"); } },
-    { icon: "nutrition",      img: "/images/hortifruti.png",tagline:"FRESCOR HORTI",    highlight: "cyan", label: "Hortifruti",   type: "generic",    action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition" }); navigateSubView("explore_category"); } },
-    { icon: "cleaning_services", img: "/images/limpeza.png", tagline: "IZI CLEAN",       highlight: "none", label: "Limpeza",      type: "generic",    action: () => showToast("Serviço em breve!", "info") },
-    { icon: "electrical_services", img: "/images/eletrica.png", tagline: "REPAROS",      highlight: "none", label: "Elétrica",     type: "generic",    action: () => showToast("Serviço em breve!", "info") },
-    { icon: "plumbing",        img: "/images/hidraulica.png", tagline: "REPAROS",     highlight: "none", label: "Hidráulica",   type: "generic",    action: () => showToast("Serviço em breve!", "info") },
+  const baseDeliveryServices = [
+    { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Food",             type: "restaurant", value: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
+    { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", value: "almoco", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("explore_restaurants"); } },
+    { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     value: "market", action: null },
+    { icon: "inventory_2",    img: "/images/envios.png",   tagline: "ENTREGAS RÁPIDAS", highlight: "special", label: "Izi Envios",   type: null,         value: "envios", action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
+    { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  value: "beverages", action: null },
+    { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   value: "pharmacy", action: null },
+    { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    value: "pets", action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets" }); navigateSubView("explore_category"); } },
+    { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gás e Água",   type: "generic",    value: "gas", action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank" }); navigateSubView("explore_category"); } },
+    { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    value: "açougue", action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining" }); navigateSubView("explore_category"); } },
+    { icon: "bakery_dining",  img: "/images/padaria.png",  tagline: "PADARIA ARTESANAL",highlight: "gold", label: "Padaria",      type: "generic",    value: "padaria", action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining" }); navigateSubView("explore_category"); } },
+    { icon: "nutrition",      img: "/images/hortifruti.png",tagline:"FRESCOR HORTI",    highlight: "cyan", label: "Hortifruti",   type: "generic",    value: "hortifruti", action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition" }); navigateSubView("explore_category"); } },
+    { icon: "cleaning_services", img: "/images/limpeza.png", tagline: "IZI CLEAN",       highlight: "none", label: "Limpeza",      type: "generic",    value: "limpeza", action: () => showToast("Serviço em breve!", "info") },
+    { icon: "electrical_services", img: "/images/eletrica.png", tagline: "REPAROS",      highlight: "none", label: "Elétrica",     type: "generic",    value: "eletrica", action: () => showToast("Serviço em breve!", "info") },
+    { icon: "plumbing",        img: "/images/hidraulica.png", tagline: "REPAROS",     highlight: "none", label: "Hidráulica",   type: "generic",    value: "hidraulica", action: () => showToast("Serviço em breve!", "info") },
   ];
+
+  // Sincroniza dinamicamente os ícones 3D vindos do banco de dados (establishmentTypes)
+  const deliveryServices = baseDeliveryServices.map(svc => {
+    const dbMatch = (establishmentTypes || []).find(db => db.value === svc.value || db.value === svc.type || db.value === svc.label.toLowerCase());
+    if (dbMatch && dbMatch.icon) {
+      return { ...svc, icon: dbMatch.icon, label: dbMatch.name || svc.label };
+    }
+    return svc;
+  });
 
 
 
@@ -264,16 +276,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {svc.highlight === "special" && (
         <div className="absolute inset-0 bg-yellow-400/10 animate-pulse pointer-events-none" />
       )}
-      <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500
+      <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500 overflow-hidden
         ${svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
           svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
           svc.highlight === "special" ? "bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" :
           "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}
       `}>
-         <span className={`material-symbols-outlined text-[26px] ${svc.highlight === "gold" || svc.highlight === "cyan" || svc.highlight === "special" ? "text-black font-black" : "text-white"}`} 
-               style={{ fontVariationSettings: "'FILL' 1" }}>
-           {svc.icon}
-         </span>
+         {svc.icon?.startsWith('http') ? (
+           <img src={svc.icon} alt={svc.label} className="w-full h-full object-contain p-1.5 drop-shadow-md" />
+         ) : (
+           <span className={`material-symbols-outlined text-[26px] ${svc.highlight === "gold" || svc.highlight === "cyan" || svc.highlight === "special" ? "text-black font-black" : "text-white"}`} 
+                 style={{ fontVariationSettings: "'FILL' 1" }}>
+             {svc.icon}
+           </span>
+         )}
       </div>
 
       <h3 className={`font-black text-[9px] tracking-widest uppercase text-center w-full px-1 z-10

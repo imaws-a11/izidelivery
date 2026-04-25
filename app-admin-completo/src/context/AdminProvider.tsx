@@ -223,26 +223,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const timer = setTimeout(async () => {
       try {
         const cleanSettings = {
-          ...appSettings,
-          id: appSettings.id || '00000000-0000-0000-0000-000000000000',
-          iziBlackFee: Number(appSettings.iziBlackFee ?? 0),
-          iziBlackCashback: Number(appSettings.iziBlackCashback ?? 0),
-          iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping ?? 0),
-          izi_black_cashback_multiplier: Number(appSettings.izi_black_cashback_multiplier ?? 2),
-          izi_black_xp_multiplier: Number(appSettings.izi_black_xp_multiplier ?? 2),
+          id: appSettings.id || 'c568f69e-1e96-48c3-8e7c-8e8e8e8e8e8e',
+          app_name: appSettings.appName,
+          support_email: appSettings.supportEmail,
+          opening_time: appSettings.openingTime,
+          closing_time: appSettings.closingTime,
           radius: Number(appSettings.radius ?? 0),
-          baseFee: Number(appSettings.baseFee ?? 0),
-          appCommission: Number(appSettings.appCommission ?? 0),
-          driverFreightCommission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-          privateDriverCommission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-          serviceFee: Number(appSettings.serviceFee ?? 0),
-          flashOfferDiscount: Number(appSettings.flashOfferDiscount ?? 0),
-          iziCoinRate: Number(appSettings.iziCoinRate ?? 0),
-          withdrawalfeepercent: Number(appSettings.withdrawalfeepercent ?? 0),
-          withdrawal_period_h: Number(appSettings.withdrawal_period_h ?? 12),
+          base_fee: Number(appSettings.baseFee ?? 0),
+          app_commission: Number(appSettings.appCommission ?? 0),
+          driver_freight_commission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+          private_driver_commission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+          service_fee: Number(appSettings.serviceFee ?? 0),
+          izi_black_fee: Number(appSettings.iziBlackFee ?? 0),
+          izi_black_cashback: Number(appSettings.iziBlackCashback ?? 0),
+          izi_black_min_order_free_shipping: Number(appSettings.iziBlackMinOrderFreeShipping ?? 0),
+          izi_coin_rate: Number(appSettings.iziCoinRate ?? 1.0),
+          min_withdrawal_amount: Number(appSettings.minwithdrawalamount ?? 0.0),
+          withdrawal_fee_percent: Number(appSettings.withdrawalfeepercent ?? 0),
+          withdrawal_period_h: Number(appSettings.withdrawal_period_h ?? 24),
           withdrawal_day: String(appSettings.withdrawal_day || 'Quarta-feira'),
-          minwithdrawalamount: Number(appSettings.minwithdrawalamount ?? 0.0),
-          loan_interest_rate: Number(appSettings.loan_interest_rate ?? 12.0),
           mercadopago_public_key: String(appSettings.mercadopago_public_key || ''),
           updated_at: new Date().toISOString()
         };
@@ -252,7 +251,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .upsert(cleanSettings);
         
         if (error) {
-          toastError('Erro ao salvar configurações automáticas: ' + error.message);
+          console.error('Save error:', error);
           throw error;
         }
         
@@ -539,10 +538,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (session?.user?.email) {
       setIsInitialLoading(true);
       fetchUserRole(session.user.email);
+      fetchEstablishmentTypes();
     } else {
       setIsInitialLoading(false);
     }
-  }, [session?.user?.email, fetchUserRole, isAuthLoading]);
+  }, [session?.user?.email, fetchUserRole, isAuthLoading, fetchEstablishmentTypes]);
 
   // Sincronização em tempo real "mão-dupla" absoluta (Auto-refresh de stats)
   useEffect(() => {
@@ -1417,15 +1417,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data } = await supabase.from('app_settings_delivery').select('*').single();
       if (data) {
-        const mergedSettings = {
+        const mergedSettings: AppSettings = {
           ...appSettings,
-          ...data,
-          minwithdrawalamount: data.minwithdrawalamount !== undefined ? Number(data.minwithdrawalamount) : appSettings.minwithdrawalamount,
-          withdrawalfeepercent: data.withdrawalfeepercent !== undefined ? Number(data.withdrawalfeepercent) : appSettings.withdrawalfeepercent,
+          id: data.id,
+          appName: data.app_name || appSettings.appName,
+          supportEmail: data.support_email || appSettings.supportEmail,
+          openingTime: data.opening_time || appSettings.openingTime,
+          closingTime: data.closing_time || appSettings.closingTime,
+          radius: data.radius !== undefined ? Number(data.radius) : appSettings.radius,
+          baseFee: data.base_fee !== undefined ? Number(data.base_fee) : appSettings.baseFee,
+          appCommission: data.app_commission !== undefined ? Number(data.app_commission) : appSettings.appCommission,
+          driverFreightCommission: data.driver_freight_commission !== undefined ? Number(data.driver_freight_commission) : appSettings.driverFreightCommission,
+          privateDriverCommission: data.private_driver_commission !== undefined ? Number(data.private_driver_commission) : appSettings.privateDriverCommission,
+          serviceFee: data.service_fee !== undefined ? Number(data.service_fee) : appSettings.serviceFee,
+          iziBlackFee: data.izi_black_fee !== undefined ? Number(data.izi_black_fee) : appSettings.iziBlackFee,
+          iziBlackCashback: data.izi_black_cashback !== undefined ? Number(data.izi_black_cashback) : appSettings.iziBlackCashback,
+          iziBlackMinOrderFreeShipping: data.izi_black_min_order_free_shipping !== undefined ? Number(data.izi_black_min_order_free_shipping) : appSettings.iziBlackMinOrderFreeShipping,
+          iziCoinRate: data.izi_coin_rate !== undefined ? Number(data.izi_coin_rate) : appSettings.iziCoinRate,
+          minwithdrawalamount: data.min_withdrawal_amount !== undefined ? Number(data.min_withdrawal_amount) : appSettings.minwithdrawalamount,
+          withdrawalfeepercent: data.withdrawal_fee_percent !== undefined ? Number(data.withdrawal_fee_percent) : appSettings.withdrawalfeepercent,
           withdrawal_period_h: data.withdrawal_period_h !== undefined ? Number(data.withdrawal_period_h) : appSettings.withdrawal_period_h,
-          driverFreightCommission: Number((data as any).driverFreightCommission ?? (data as any).appCommission ?? appSettings.driverFreightCommission),
-          privateDriverCommission: Number((data as any).privateDriverCommission ?? (data as any).driverFreightCommission ?? (data as any).appCommission ?? appSettings.privateDriverCommission),
-        } as AppSettings;
+          withdrawal_day: data.withdrawal_day || appSettings.withdrawal_day,
+          mercadopago_public_key: data.mercadopago_public_key || appSettings.mercadopago_public_key,
+        };
         setAppSettings(mergedSettings);
         setLastSavedHash(JSON.stringify(mergedSettings));
       }

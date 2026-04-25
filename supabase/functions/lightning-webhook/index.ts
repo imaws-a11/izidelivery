@@ -62,7 +62,7 @@ serve(async (req) => {
     // Tentativa 1: Localizar pelo payment_intent_id (ID da cobrança OpenNode)
     let query = db.from('orders_delivery').update({ 
       payment_status: 'paid', 
-      status: 'novo',
+      status: 'waiting_merchant',
       updated_at: new Date().toISOString()
     })
 
@@ -86,7 +86,7 @@ serve(async (req) => {
          .from('orders_delivery')
          .update({ 
            payment_status: 'paid', 
-           status: 'novo',
+           status: 'waiting_merchant',
            payment_intent_id: openNodeChargeId, // Força o vínculo se não estava vinculado
            updated_at: new Date().toISOString()
          })
