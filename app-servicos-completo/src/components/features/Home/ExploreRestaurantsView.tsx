@@ -94,42 +94,53 @@ export const ExploreRestaurantsView = ({
       // Filtragem por tipo e categoria
       const shopType = (shop.type || "").toLowerCase().trim();
       
-      // Base: Esta view é exclusiva para o ecossistema de Food (Restaurante, Doceria, Lanches)
-      const foodMasterTypes = ['restaurant', 'restaurante', 'candy', 'doceria', 'comida', 'lanches'];
-      const isFoodRelated = foodMasterTypes.includes(shopType);
+      // Base: Esta view é exclusiva para o ecossistema de Food
+      // Aceita variações do banco e do mapeamento local
+      const foodMasterTypes = ['restaurant', 'restaurante', 'candy', 'doceria', 'comida', 'lanches', 'food'];
+      const isFoodRelated = foodMasterTypes.includes(shopType) || shopType.includes('restaurante') || shopType.includes('food');
+      
       if (!isFoodRelated) return false;
 
+      // Se houver busca por texto, aplica primeiro
+      const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+
+      // Se a categoria for "Todos", não filtra por subcategoria
+      if (selectedCategory === "all" || selectedCategory === "Todos") {
+        return true;
+      }
+
+      // Filtragem por subcategoria (especialidade)
       const shopFoodCats = Array.isArray(shop.foodCategory) 
         ? shop.foodCategory.map(c => (c || "").toLowerCase())
         : [(shop.foodCategory || "").toLowerCase()];
       
-      const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const catId = selectedCategory.toLowerCase();
       
-      let matchesCategory = true;
-      if (selectedCategory !== "all" && selectedCategory !== "Todos") {
-        const catId = selectedCategory.toLowerCase();
-        
-        if (catId === "promocoes" || catId === "promoções") {
-          matchesCategory = shop.hasPromotions;
-        } else {
-          matchesCategory = shopFoodCats.includes(catId) || 
-                           shopType === catId ||
-                           shopFoodCats.some(c => normalize(c).includes(normalize(selectedCategory))) ||
-                           normalize(shop.name).includes(normalize(selectedCategory));
-        }
-                         
-        if (!matchesCategory) {
-          if (catId === 'burguer' || catId === 'burger' || catId === 'hamburguer') {
-            matchesCategory = shopFoodCats.some(c => c.includes('burg')) || shopType.includes('burg');
-          } else if (catId === 'pizza') {
-            matchesCategory = shopFoodCats.some(c => c.includes('pizz')) || shopType.includes('pizz');
-          } else if (catId === 'japonesa' || catId === 'japones') {
-            matchesCategory = shopFoodCats.some(c => c.includes('japon') || c.includes('sushi')) || shopType.includes('japon');
-          }
+      let matchesCategory = false;
+      
+      if (catId === "promocoes" || catId === "promoções") {
+        matchesCategory = shop.hasPromotions;
+      } else {
+        // Tenta match exato, por normalize ou se o tipo do shop é o próprio catId
+        matchesCategory = shopFoodCats.includes(catId) || 
+                         shopType === catId ||
+                         shopFoodCats.some(c => normalize(c).includes(normalize(selectedCategory))) ||
+                         normalize(shop.name).includes(normalize(selectedCategory));
+      }
+                       
+      // Fallbacks para termos comuns
+      if (!matchesCategory) {
+        if (catId === 'burguer' || catId === 'burger' || catId === 'hamburguer') {
+          matchesCategory = shopFoodCats.some(c => c.includes('burg')) || shopType.includes('burg');
+        } else if (catId === 'pizza') {
+          matchesCategory = shopFoodCats.some(c => c.includes('pizz')) || shopType.includes('pizz');
+        } else if (catId === 'japonesa' || catId === 'japones') {
+          matchesCategory = shopFoodCats.some(c => c.includes('japon') || c.includes('sushi')) || shopType.includes('japon');
         }
       }
 
-      return matchesSearch && matchesCategory;
+      return matchesCategory;
     });
   }, [establishments, searchQuery, selectedCategory]);
 

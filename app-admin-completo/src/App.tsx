@@ -21,6 +21,7 @@ import SettingsTab from './components/SettingsTab';
 import MyStoreTab from './components/MyStoreTab';
 import MyDriversTab from './components/MyDriversTab';
 import MyStudioTab from './components/MyStudioTab';
+import MerchantStudio from './components/MerchantStudio';
 
 import FinancialTab from './components/FinancialTab';
 import IziBlackTab from './components/IziBlackTab';
@@ -29,6 +30,7 @@ import MerchantDashboardTab from './components/MerchantDashboardTab';
 import CategoriesTab from './components/CategoriesTab';
 import NotificationsTab from './components/NotificationsTab';
 import GamificationTab from './components/GamificationTab';
+import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
 
 
@@ -164,6 +166,7 @@ function App() {
                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
                   <NavTab id="partners" icon="handshake" label="Parceiros Izi" />
                   <NavTab id="categories" icon="category" label="Taxonomia" />
+                   <NavTab id="establishment_types" icon="hub" label="Ecossistema" />
                   <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
                   <NavTab id="users" icon="group" label="Usuários" />
@@ -218,7 +221,10 @@ function App() {
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
               {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
-              {(activeTab === 'my_studio' || (activeTab === 'financial' && userRole === 'merchant')) && <MyStudioTab />}
+              {activeTab === 'my_studio' && <MyStudioTab />}
+              {activeTab === 'merchant_studio' && <MerchantStudio />}
+              {activeTab === 'establishment_types' && <EstablishmentTypesTab />}
+              {(activeTab === 'financial' && userRole === 'merchant') && <MyStudioTab />}
               {activeTab === 'categories' && userRole === 'admin' && <CategoriesTab />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}

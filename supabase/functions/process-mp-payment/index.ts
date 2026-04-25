@@ -85,7 +85,7 @@ serve(async (req) => {
       .from('orders_delivery')
       .update({ 
         payment_intent_id: String(data.id),
-        status: data.status === 'approved' ? 'novo' : 'pendente_pagamento'
+        status: data.status === 'approved' ? 'waiting_merchant' : 'pendente_pagamento'
       })
       .eq('id', orderId)
 

@@ -95,7 +95,7 @@ serve(async (req) => {
         await supabaseAdmin
           .from('orders_delivery')
           .update({ 
-            status: 'novo', 
+            status: 'waiting_merchant', 
             paid_at: new Date().toISOString(),
             payment_status: 'approved'
           })
