@@ -47,7 +47,7 @@ const CANCELLED_STATUSES = ["cancelado", "recusado"];
 
 const STATUS_ORDER_MAP: Record<string, number> = {
   novo: 0, searching_driver: 0, waiting_driver: 0, waiting_merchant: 0, pendente_pagamento: 0,
-  aceito: 1, confirmante: 1, atribuido: 1,
+  aceito: 1, confirmado: 1, confirmante: 1, atribuido: 1,
   a_caminho_coleta: 2, saiu_para_coleta: 2,
   chegou_coleta: 3, chegou: 3, no_local_coleta: 3,
   picked_up: 4, in_transit: 4, a_caminho: 4, em_rota: 4, saiu_para_entrega: 4, no_local: 4,
@@ -193,7 +193,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
           vehicleIcon={order?.service_type === "van" ? "airport_shuttle" : "local_shipping"}
           originLabel="COLETA"
           boxed={false}
-          searching={order?.status === 'waiting_driver'}
+          searching={order?.status === 'waiting_driver' || (!!order?.scheduled_at && order?.status === 'confirmado')}
           onMyLocationClick={onUpdateLocation}
         />
         <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
@@ -279,7 +279,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                 className="space-y-10"
               >
                 {/* CARD DO MOTORISTA */}
-                {order?.driver_name ? (
+                {order?.driver_id ? (
                   <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 flex items-center justify-between gap-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-[50px] rounded-full -mr-10 -mt-10 pointer-events-none" />
                     <div className="flex items-center gap-5">
@@ -290,7 +290,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                       </div>
                       <div>
                         <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Condutor Responsável</p>
-                        <h3 className="text-xl font-black text-white uppercase tracking-tighter leading-none">{order.driver_name}</h3>
+                        <h3 className="text-xl font-black text-white uppercase tracking-tighter leading-none">{order?.driver_name || "Motorista Parceiro"}</h3>
                         <div className="flex items-center gap-1.5 mt-2.5">
                           <Icon name="star" size={14} className="text-yellow-400" />
                           <span className="text-[11px] font-bold text-zinc-400">4.9 • {order?.driver_vehicle_plate || "PLACA CONFIRMADA"}</span>

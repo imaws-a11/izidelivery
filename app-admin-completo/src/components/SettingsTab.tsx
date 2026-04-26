@@ -290,25 +290,7 @@ export default function SettingsTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-6">
-          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Taxa Base de Entrega</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-black text-sm">R$</span>
-              <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-2xl text-emerald-600 focus:ring-2 focus:ring-emerald-300 shadow-inner"
-                type="number"
-                step="0.01"
-                value={appSettings.baseFee}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 0;
-                  setAppSettings({ ...appSettings, baseFee: val });
-                  handleUpdateGlobalFinance('base_fee', val);
-                }}
-              />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
           <div className="bg-primary/5 border border-primary/20 rounded-[28px] p-6 space-y-3">
             <label className="block text-[10px] font-black text-primary/80 uppercase tracking-widest mb-1">Comissão App (%)</label>
             <div className="relative">

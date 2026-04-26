@@ -733,7 +733,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               whileTap={{ scale: 0.98 }}
               onClick={() => { 
                 setSelectedItem(activeOrder); 
-                const isMobility = ['mototaxi', 'carro', 'van', 'utilitario', 'frete', 'logistica'].includes(activeOrder.service_type);
+                const isMobility = ['mototaxi', 'carro', 'van', 'utilitario', 'frete', 'logistica'].includes(activeOrder.service_type) || !!activeOrder.scheduled_at;
                 setSubView(isMobility ? "logistics_tracking" : "active_order");
               }}
               className="relative overflow-hidden bg-zinc-900 border border-yellow-400/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(255,215,9,0.15)] group cursor-pointer"
