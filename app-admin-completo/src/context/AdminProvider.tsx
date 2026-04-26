@@ -1479,8 +1479,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const fetchGlobalSettings = useCallback(async () => {
     try {
-      const { data } = await supabase.from('admin_settings_delivery').select('*').single();
-      if (data) setGlobalSettings(data);
+      // Tabela tem apenas key + value(jsonb) — os dados ficam em value
+      const { data } = await supabase
+        .from('admin_settings_delivery')
+        .select('value')
+        .eq('key', 'global')
+        .maybeSingle();
+      if (data?.value) setGlobalSettings(data.value);
     } catch (e) {
       console.error('Erro ao buscar global settings:', e);
     }
@@ -1488,11 +1493,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const saveGlobalSettings = useCallback(async (newSettings: any) => {
     try {
-      // Garantir que temos um ID para o upsert se necessário, mas geralmente é uma linha única
+      // Tabela: key(text) + value(jsonb) — nunca enviar campos flat como colunas
       const { error } = await supabase
         .from('admin_settings_delivery')
-        .upsert({ ...newSettings, updated_at: new Date().toISOString() });
-      
+        .upsert({ key: 'global', value: newSettings }, { onConflict: 'key' });
+
       if (error) throw error;
       setGlobalSettings(newSettings);
     } catch (err: any) {
