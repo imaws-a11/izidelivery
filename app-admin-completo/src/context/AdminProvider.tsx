@@ -211,7 +211,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (isFetchingSettings) return;
     
-    // Gera um hash simples do conteúdo para evitar salvar se nada mudou de fato (ex: após o fetch inicial)
     const currentHash = JSON.stringify(appSettings);
     if (lastSavedHash === currentHash) return;
     if (lastSavedHash === '') {
@@ -222,37 +221,51 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAutoSaveStatus('pending');
     const timer = setTimeout(async () => {
       try {
-        const cleanSettings = {
-          id: appSettings.id || 'c568f69e-1e96-48c3-8e7c-8e8e8e8e8e8e',
-          app_name: appSettings.appName,
-          support_email: appSettings.supportEmail,
-          opening_time: appSettings.openingTime,
-          closing_time: appSettings.closingTime,
-          radius: Number(appSettings.radius ?? 0),
-          base_fee: Number(appSettings.baseFee ?? 0),
-          app_commission: Number(appSettings.appCommission ?? 0),
-          driver_freight_commission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-          private_driver_commission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-          service_fee: Number(appSettings.serviceFee ?? 0),
-          izi_black_fee: Number(appSettings.iziBlackFee ?? 0),
-          izi_black_cashback: Number(appSettings.iziBlackCashback ?? 0),
+        const SETTINGS_ID = appSettings.id || 'c568f69e-1e96-48c3-8e7c-8e8e8e8e8e8e';
+        const payload = {
+          app_name:                          String(appSettings.appName || 'IZI Delivery'),
+          support_email:                     String(appSettings.supportEmail || ''),
+          opening_time:                      String(appSettings.openingTime || '08:00'),
+          closing_time:                      String(appSettings.closingTime || '23:00'),
+          radius:                            Number(appSettings.radius ?? 15),
+          base_fee:                          Number(appSettings.baseFee ?? 0),
+          app_commission:                    Number(appSettings.appCommission ?? 0),
+          driver_freight_commission:         Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+          private_driver_commission:         Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+          service_fee:                       Number(appSettings.serviceFee ?? 0),
+          izi_black_fee:                     Number(appSettings.iziBlackFee ?? 0),
+          izi_black_cashback:                Number(appSettings.iziBlackCashback ?? 0),
           izi_black_min_order_free_shipping: Number(appSettings.iziBlackMinOrderFreeShipping ?? 0),
-          izi_coin_rate: Number(appSettings.iziCoinRate ?? 1.0),
-          min_withdrawal_amount: Number(appSettings.minwithdrawalamount ?? 0.0),
-          withdrawal_fee_percent: Number(appSettings.withdrawalfeepercent ?? 0),
-          withdrawal_period_h: Number(appSettings.withdrawal_period_h ?? 24),
-          withdrawal_day: String(appSettings.withdrawal_day || 'Quarta-feira'),
-          mercadopago_public_key: String(appSettings.mercadopago_public_key || ''),
-          updated_at: new Date().toISOString()
+          izi_coin_rate:                     Number(appSettings.iziCoinRate ?? 1.0),
+          min_withdrawal_amount:             Number(appSettings.minwithdrawalamount ?? 50),
+          withdrawal_fee_percent:            Number(appSettings.withdrawalfeepercent ?? 0),
+          withdrawal_period_h:               Number(appSettings.withdrawal_period_h ?? 24),
+          withdrawal_day:                    String(appSettings.withdrawal_day || 'Quarta-feira'),
+          mercadopago_public_key:            String(appSettings.mercadopago_public_key || ''),
+          updated_at:                        new Date().toISOString()
         };
-        
-        const { error } = await supabase
+
+        // Tenta UPDATE primeiro (registro sempre deve existir)
+        const { error: updateErr, count } = await supabase
           .from('app_settings_delivery')
-          .upsert(cleanSettings);
-        
-        if (error) {
-          console.error('Save error:', error);
-          throw error;
+          .update(payload)
+          .eq('id', SETTINGS_ID)
+          .select('id', { count: 'exact', head: true });
+
+        if (updateErr) {
+          console.error('AutoSave UPDATE Error:', updateErr);
+          throw updateErr;
+        }
+
+        // Se nenhuma linha foi afetada, faz INSERT
+        if (count === 0) {
+          const { error: insertErr } = await supabase
+            .from('app_settings_delivery')
+            .insert({ id: SETTINGS_ID, ...payload });
+          if (insertErr) {
+            console.error('AutoSave INSERT Error:', insertErr);
+            throw insertErr;
+          }
         }
         
         setLastSavedHash(JSON.stringify(appSettings));
@@ -1607,7 +1620,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { error: updateErr } = await supabase.from('users_delivery').update({ izi_coins: newBalance }).eq('id', userId);
       if (updateErr) throw updateErr;
 
-      await supabase.from('wallet_transactions').insert({
+      await supabase.from('wallet_transactions_delivery').insert({
         user_id: userId,
         amount,
         type: 'credit',
@@ -2381,38 +2394,46 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleSaveAppSettings = useCallback(async () => {
     setIsSaving(true);
     try {
-      const cleanSettings = {
-         ...appSettings,
-         iziBlackFee: Number(appSettings.iziBlackFee ?? 0),
-         iziBlackCashback: Number(appSettings.iziBlackCashback ?? 0),
-         iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping ?? 0),
-         radius: Number(appSettings.radius ?? 0),
-         baseFee: Number(appSettings.baseFee ?? 0),
-         appCommission: Number(appSettings.appCommission ?? 0),
-         driverFreightCommission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-         privateDriverCommission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-         serviceFee: Number(appSettings.serviceFee ?? 0),
-         flashOfferDiscount: Number(appSettings.flashOfferDiscount ?? 0),
-         iziCoinRate: Number(appSettings.iziCoinRate ?? 0),
-         minwithdrawalamount: Number(appSettings.minwithdrawalamount ?? 0),
-         withdrawalfeepercent: Number(appSettings.withdrawalfeepercent ?? 0),
-         withdrawal_period_h: Number(appSettings.withdrawal_period_h ?? 24),
-         withdrawal_day: appSettings.withdrawal_day || 'Quarta-feira',
-         loan_interest_rate: Number(appSettings.loan_interest_rate ?? 12.0),
-         paymentmethodsactive: appSettings.paymentmethodsactive || { pix: true, card: true, lightning: false, wallet: true },
-         updated_at: new Date().toISOString()
+      const SETTINGS_ID = appSettings.id || 'c568f69e-1e96-48c3-8e7c-8e8e8e8e8e8e';
+      const payload = {
+        app_name:                          String(appSettings.appName || 'IZI Delivery'),
+        support_email:                     String(appSettings.supportEmail || ''),
+        opening_time:                      String(appSettings.openingTime || '08:00'),
+        closing_time:                      String(appSettings.closingTime || '23:00'),
+        radius:                            Number(appSettings.radius ?? 15),
+        base_fee:                          Number(appSettings.baseFee ?? 0),
+        app_commission:                    Number(appSettings.appCommission ?? 0),
+        driver_freight_commission:         Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+        private_driver_commission:         Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+        service_fee:                       Number(appSettings.serviceFee ?? 0),
+        izi_black_fee:                     Number(appSettings.iziBlackFee ?? 0),
+        izi_black_cashback:                Number(appSettings.iziBlackCashback ?? 0),
+        izi_black_min_order_free_shipping: Number(appSettings.iziBlackMinOrderFreeShipping ?? 0),
+        izi_black_cashback_multiplier:     Number(appSettings.izi_black_cashback_multiplier ?? 2),
+        izi_black_xp_multiplier:           Number(appSettings.izi_black_xp_multiplier ?? 2),
+        izi_coin_rate:                     Number(appSettings.iziCoinRate ?? 1.0),
+        min_withdrawal_amount:             Number(appSettings.minwithdrawalamount ?? 50),
+        withdrawal_fee_percent:            Number(appSettings.withdrawalfeepercent ?? 0),
+        withdrawal_period_h:               Number(appSettings.withdrawal_period_h ?? 24),
+        withdrawal_day:                    String(appSettings.withdrawal_day || 'Quarta-feira'),
+        loan_interest_rate:                Number(appSettings.loan_interest_rate ?? 12.0),
+        mercadopago_public_key:            String(appSettings.mercadopago_public_key || ''),
+        sms_notifications:                 Boolean(appSettings.smsNotifications ?? true),
+        email_notifications:               Boolean(appSettings.emailNotifications ?? true),
+        payment_methods_active:            appSettings.paymentmethodsactive || { pix: true, card: true, lightning: false, wallet: true },
+        updated_at:                        new Date().toISOString()
       };
 
       const { error } = await supabase
         .from('app_settings_delivery')
-        .upsert(cleanSettings);
-      
+        .update(payload)
+        .eq('id', SETTINGS_ID);
+
       if (error) throw error;
-      setAppSettings(cleanSettings as AppSettings);
-      setLastSavedHash(JSON.stringify(cleanSettings));
+      setLastSavedHash(JSON.stringify(appSettings));
       setAutoSaveStatus('saved');
       toastSuccess('Configurações salvas com sucesso!');
-      logAction('Update Settings', 'System', cleanSettings);
+      logAction('Update Settings', 'System', payload);
       setTimeout(() => setAutoSaveStatus('idle'), 2000);
     } catch (err: any) {
       setAutoSaveStatus('error');

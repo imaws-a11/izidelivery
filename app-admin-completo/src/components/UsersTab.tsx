@@ -47,11 +47,11 @@ export default function UsersTab() {
 
   const fetchUserExtraData = async (userId: string) => {
     // 1. Fetch Transactions
-    const { data: txs } = await supabase
-      .from('wallet_transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+    const { data: txs } = await supabase
+      .from('wallet_transactions_delivery')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
       .limit(5);
     if (txs) setUserTransactions(txs);
 
@@ -100,7 +100,7 @@ export default function UsersTab() {
       }
 
       // 2. Log Transaction for Audit
-      const { error: insertError } = await supabase.from('wallet_transactions').insert({
+      const { error: insertError } = await supabase.from('wallet_transactions_delivery').insert({
         user_id: selectedUser.id,
         amount: diff,
         type: diff >= 0 ? 'credit' : 'debit',

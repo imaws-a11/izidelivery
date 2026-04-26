@@ -703,13 +703,19 @@ function PreApprovedLimitsSection() {
   const [savingId, setSavingId] = React.useState<string | null>(null);
 
   const fetchGlobalLimit = async () => {
-    const { data } = await supabase.from('admin_settings_delivery').select('global_pre_approved_limit').single();
+    const { data } = await supabase
+      .from('app_settings_delivery')
+      .select('global_pre_approved_limit')
+      .single();
     if (data) setGlobalLimit(data.global_pre_approved_limit || 0);
   };
 
   const handleUpdateGlobal = async (val: number) => {
     setGlobalLimit(val);
-    const { error } = await supabase.from('admin_settings_delivery').update({ global_pre_approved_limit: val }).eq('id', '00000000-0000-0000-0000-000000000000');
+    const { error } = await supabase
+      .from('app_settings_delivery')
+      .update({ global_pre_approved_limit: val })
+      .eq('id', 'c568f69e-1e96-48c3-8e7c-8e8e8e8e8e8e');
     if (!error) toastSuccess('Limite global atualizado!');
   };
 
