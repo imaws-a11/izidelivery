@@ -515,18 +515,95 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              </div>
           </div>
 
-          <div className="bg-indigo-500/5 rounded-3xl p-6 border border-indigo-500/10">
-             <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Arquivos Digitais</p>
-             <div className="flex flex-wrap gap-4">
-                <button className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700 hover:border-indigo-500/30 transition-all">
-                  <span className="material-symbols-outlined text-indigo-500">picture_as_pdf</span>
-                  CNH_FRENTE.PDF
-                </button>
-                <button className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700 hover:border-indigo-500/30 transition-all">
-                  <span className="material-symbols-outlined text-indigo-500">picture_as_pdf</span>
-                  CNH_VERSO.PDF
-                </button>
-             </div>
+          {/* Upload de Documentos */}
+          <div className="space-y-4">
+            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Arquivos Digitais</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { key: 'doc_cnh_frente', label: 'CNH Frente', icon: 'badge' },
+                { key: 'doc_cnh_verso',  label: 'CNH Verso',  icon: 'badge' },
+                { key: 'doc_residencia', label: 'Comprovante de Residência', icon: 'home_work' },
+              ].map(({ key, label, icon }) => {
+                const url: string = selectedDriverStudio[key] || '';
+                const isPdf = url.toLowerCase().includes('.pdf');
+                const isUploading = selectedDriverStudio[`_uploading_${key}`];
+                return (
+                  <div key={key} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="h-28 bg-slate-50 dark:bg-slate-800 flex items-center justify-center relative">
+                      {url ? (
+                        isPdf ? (
+                          <a href={url} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-2 group">
+                            <span className="material-symbols-outlined text-4xl text-indigo-500 group-hover:scale-110 transition-transform">picture_as_pdf</span>
+                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Abrir PDF</span>
+                          </a>
+                        ) : (
+                          <a href={url} target="_blank" rel="noreferrer">
+                            <img src={url} alt={label} className="h-full max-h-28 object-contain rounded-xl hover:scale-105 transition-transform" />
+                          </a>
+                        )
+                      ) : (
+                        <span className="material-symbols-outlined text-4xl text-slate-300">{icon}</span>
+                      )}
+                      {isUploading && (
+                        <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex items-center justify-center">
+                          <div className="size-6 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-700 dark:text-white uppercase tracking-widest">{label}</p>
+                        {url ? (
+                          <p className="text-[9px] font-bold text-emerald-500 mt-0.5 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[10px]">check_circle</span> Arquivo enviado
+                          </p>
+                        ) : (
+                          <p className="text-[9px] font-bold text-slate-400 mt-0.5">Nenhum arquivo</p>
+                        )}
+                      </div>
+                      <label className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                        url
+                          ? 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 dark:border-slate-700'
+                          : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]'
+                      }`}>
+                        <span className="material-symbols-outlined text-sm">upload_file</span>
+                        {url ? 'Substituir' : 'Enviar Arquivo'}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/png,image/jpeg,image/jpg,application/pdf"
+                          disabled={isUploading}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const allowed = ['image/png','image/jpeg','image/jpg','application/pdf'];
+                            if (!allowed.includes(file.type)) { toastError('Formato inválido. Use PNG, JPEG ou PDF.'); return; }
+                            if (file.size > 10 * 1024 * 1024) { toastError('Arquivo muito grande. Máximo 10MB.'); return; }
+                            setSelectedDriverStudio((prev: any) => ({...prev, [`_uploading_${key}`]: true}));
+                            try {
+                              const ext = file.name.split('.').pop();
+                              const driverId = selectedDriverStudio.id || 'novo';
+                              const path = `drivers/${driverId}/${key}_${Date.now()}.${ext}`;
+                              const { error: upErr } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
+                              if (upErr) throw upErr;
+                              const { data: pub } = supabase.storage.from('documents').getPublicUrl(path);
+                              setSelectedDriverStudio((prev: any) => ({...prev, [key]: pub.publicUrl, [`_uploading_${key}`]: false}));
+                              toastSuccess(`${label} enviado com sucesso!`);
+                            } catch (err: any) {
+                              setSelectedDriverStudio((prev: any) => ({...prev, [`_uploading_${key}`]: false}));
+                              toastError('Erro no upload: ' + err.message);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 text-center">
+              Formatos aceitos: <span className="text-indigo-400 font-black">PNG, JPEG, PDF</span> · Tamanho máximo: <span className="text-indigo-400 font-black">10MB</span>
+            </p>
           </div>
         </div>
       </div>
@@ -592,21 +669,24 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              throw new Error('O e-mail é obrigatório para um novo entregador.');
            }
 
-           const driverData = {
-             id: finalId,
-             name: selectedDriverStudio.name,
-             email: selectedDriverStudio.email,
-             phone: selectedDriverStudio.phone,
-             vehicle_type: selectedDriverStudio.vehicle_type,
-             vehicle_model: selectedDriverStudio.vehicle_model,
-             vehicle_color: selectedDriverStudio.vehicle_color,
-             license_plate: selectedDriverStudio.license_plate,
-             document_number: selectedDriverStudio.document_number,
-             address: selectedDriverStudio.address,
-             bank_info: selectedDriverStudio.bank_info,
-             is_active: selectedDriverStudio.is_active,
-             status: selectedDriverStudio.status || 'active',
-             merchant_id: mId
+           const driverData = {
+             id: finalId,
+             name: selectedDriverStudio.name,
+             email: selectedDriverStudio.email,
+             phone: selectedDriverStudio.phone,
+             vehicle_type: selectedDriverStudio.vehicle_type,
+             vehicle_model: selectedDriverStudio.vehicle_model,
+             vehicle_color: selectedDriverStudio.vehicle_color,
+             license_plate: selectedDriverStudio.license_plate,
+             document_number: selectedDriverStudio.document_number,
+             address: selectedDriverStudio.address,
+             bank_info: selectedDriverStudio.bank_info,
+             is_active: selectedDriverStudio.is_active,
+             status: selectedDriverStudio.status || 'active',
+             merchant_id: mId,
+             doc_cnh_frente:  selectedDriverStudio.doc_cnh_frente  || null,
+             doc_cnh_verso:   selectedDriverStudio.doc_cnh_verso   || null,
+             doc_residencia:  selectedDriverStudio.doc_residencia  || null,
            };
 
          let error;
