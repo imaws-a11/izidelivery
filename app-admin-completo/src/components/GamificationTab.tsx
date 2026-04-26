@@ -7,23 +7,25 @@ interface Mission {
     id: string;
     title: string;
     description: string;
-    target_type: 'user' | 'driver';
-    action_type: string;
-    goal_value: number;
-    xp_reward: number;
-    coin_reward: number;
+    type: string;
+    target_action: string;
+    target_value: number;
+    reward_xp: number;
+    reward_coins: number;
     icon: string;
+    color: string;
     is_active: boolean;
 }
 
 interface Level {
     id: string;
-    target_type: 'user' | 'driver';
     level_number: number;
     xp_required: number;
+    name: string;
     title: string;
-    reward_multiplier: number;
-    perks: string[];
+    icon: string;
+    color: string;
+    is_active: boolean;
 }
 
 export default function GamificationTab() {
@@ -174,8 +176,8 @@ export default function GamificationTab() {
                             {missions.map((mission) => (
                                 <div key={mission.id} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group">
                                     <div className="flex justify-between items-start mb-6">
-                                        <div className={`size-12 rounded-xl flex items-center justify-center ${mission.target_type === 'user' ? 'bg-blue-500/10 text-blue-500' : 'bg-primary/10 text-primary'}`}>
-                                            <span className="material-symbols-outlined font-black">{mission.target_type === 'user' ? 'person' : 'delivery_dining'}</span>
+                                        <div className={`size-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary`}>
+                                            <span className="material-symbols-outlined font-black">{mission.icon || 'emoji_events'}</span>
                                         </div>
                                         <div className="flex gap-2">
                                             <button onClick={() => { setCurrentMission(mission); setShowMissionModal(true); }} className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-colors">
@@ -192,11 +194,11 @@ export default function GamificationTab() {
                                     <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-50 dark:border-slate-800">
                                         <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Recompensa</p>
-                                            <p className="text-sm font-black text-primary italic">+{mission.xp_reward} XP</p>
+                                            <p className="text-sm font-black text-primary italic">+{mission.reward_xp} XP</p>
                                         </div>
                                         <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Meta</p>
-                                            <p className="text-sm font-black text-slate-900 dark:text-white italic">{mission.goal_value}x {mission.action_type.split('_')[0]}</p>
+                                            <p className="text-sm font-black text-slate-900 dark:text-white italic">{mission.target_value}x {(mission.target_action || '').split('_')[0] || 'ação'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -219,7 +221,7 @@ export default function GamificationTab() {
                                 Progressão: Clientes
                             </h3>
                             <div className="space-y-4">
-                                {levels.filter(l => l.target_type === 'user').map((level) => (
+                                {levels.map((level) => (
                                     <div key={level.id} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 flex items-center gap-6 group hover:border-blue-500/30 transition-all">
                                         <div className="size-16 rounded-2xl bg-blue-500/10 flex flex-col items-center justify-center text-blue-500 border border-blue-500/20 group-hover:bg-blue-500 group-hover:text-white transition-all">
                                             <span className="text-[10px] font-black uppercase leading-none">LVL</span>
@@ -227,7 +229,7 @@ export default function GamificationTab() {
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex justify-between items-center mb-1">
-                                                <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight italic">{level.title}</h4>
+                                                <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight italic">{level.title || level.name}</h4>
                                                 <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{level.xp_required} XP</span>
                                             </div>
                                             <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -246,15 +248,15 @@ export default function GamificationTab() {
                                 Progressão: Entregadores
                             </h3>
                             <div className="space-y-4">
-                                {levels.filter(l => l.target_type === 'driver').map((level) => (
-                                    <div key={level.id} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 flex items-center gap-6 group hover:border-primary/30 transition-all">
+                                {levels.map((level) => (
+                                    <div key={`drv-${level.id}`} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 flex items-center gap-6 group hover:border-primary/30 transition-all">
                                         <div className="size-16 rounded-2xl bg-primary/10 flex flex-col items-center justify-center text-primary border border-primary/20 group-hover:bg-primary group-hover:text-slate-900 transition-all">
                                             <span className="text-[10px] font-black uppercase leading-none">LVL</span>
                                             <span className="text-2xl font-black italic">{level.level_number}</span>
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex justify-between items-center mb-1">
-                                                <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight italic">{level.title}</h4>
+                                                <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight italic">{level.title || level.name}</h4>
                                                 <span className="text-[10px] font-black text-primary uppercase tracking-widest">{level.xp_required} XP</span>
                                             </div>
                                             <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">

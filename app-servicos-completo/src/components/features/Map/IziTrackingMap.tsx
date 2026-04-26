@@ -17,6 +17,7 @@ interface IziTrackingMapProps {
   originLabel?: string;
   onMyLocationClick?: () => void;
   boxed?: boolean;
+  searching?: boolean;
 }
 
 export function IziTrackingMap({ 
@@ -28,7 +29,8 @@ export function IziTrackingMap({
   vehicleIcon = "directions_car", 
   originLabel = "COLETA", 
   onMyLocationClick,
-  boxed
+  boxed,
+  searching
 }: IziTrackingMapProps) {
   const { isLoaded } = useGoogleMapsLoader();
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -36,6 +38,20 @@ export function IziTrackingMap({
   const [isRelocating, setIsRelocating] = useState(false);
 
   const isValid = (c: any) => c && typeof c.lat === 'number' && c.lat !== 0;
+
+  // Radar effect component
+  const RadarOverlay = ({ pos }: { pos: { lat: number, lng: number } }) => (
+    <OverlayView position={pos} mapPaneName={OverlayView.FLOAT_PANE}>
+      <div className="relative -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+        <div className="absolute inset-0 size-64 -translate-x-1/2 -translate-y-1/2">
+           <div className="absolute inset-0 bg-yellow-400/20 rounded-full animate-[ping_3s_linear_infinite]" />
+           <div className="absolute inset-0 bg-yellow-400/10 rounded-full animate-[ping_3s_linear_infinite_1.5s] scale-75" />
+           <div className="absolute inset-0 border-2 border-yellow-400/30 rounded-full animate-[pulse_2s_ease-in-out_infinite]" />
+        </div>
+        <div className="size-4 bg-yellow-400 rounded-full border-2 border-white shadow-lg relative z-10" />
+      </div>
+    </OverlayView>
+  );
 
   // Centralização automática e manual
   const centerMap = useCallback((loc: { lat: number, lng: number }, zoom = 17) => {
@@ -83,6 +99,11 @@ export function IziTrackingMap({
           clickableIcons: false
         }}
       >
+        {/* RADAR DE BUSCA */}
+        {searching && isValid(originLoc || userLoc) && (
+          <RadarOverlay pos={(originLoc || userLoc)!} />
+        )}
+
         {/* ROTA TRAÇADA (PRE-PREENCHIDA OU COMPRADA) */}
         {routePolyline && (
           <Polyline

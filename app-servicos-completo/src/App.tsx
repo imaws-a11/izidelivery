@@ -157,6 +157,7 @@ function App() {
     | "payment_processing"
     | "payment_error"
     | "payment_success"
+    | "mobility_payment_success"
     | "cart"
     | "store_catalog"
     | "all_pharmacies"
@@ -2023,11 +2024,18 @@ function App() {
       "no_local",
     ].includes(status || "");
 
-  const getOrderAddress = (order: any) =>
-    String(order?.delivery_address || "Endereço não informado")
-      .split("| ITENS:")[0]
-      .split("| OBS:")[0]
-      .trim();
+  const getOrderAddress = (raw: any) => {
+    if (!raw) return "Endereço não informado";
+    if (typeof raw !== "string") return raw.formatted_address || raw.address || "Endereço";
+    
+    let clean = raw.split("| ITENS:")[0].split("| OBS:")[0].trim();
+    try {
+      const p = JSON.parse(clean);
+      return p.formatted_address || p.address || clean;
+    } catch {
+      return clean;
+    }
+  };
 
   const getOrderItems = (order: any) => {
     if (Array.isArray(order?.items) && order.items.length > 0) return order.items;
@@ -2354,7 +2362,7 @@ function App() {
         : (subtotal * appliedCoupon.discount_value) / 100
       : 0;
     
-    const coinValue = globalSettings?.izi_coin_value || 0.01;
+    const coinValue = globalSettings?.izi_coin_value || 1.0;
     const coinDiscount = useCoins ? (iziCoins || 0) * coinValue : 0;
     const deliveryFee = currentDeliveryFee;
     const serviceFeePercent = globalSettings?.service_fee_percent || 0;
@@ -2419,7 +2427,7 @@ function App() {
 
           // Dedução de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
-            const coinValue = globalSettings?.izi_coin_value || 0.01;
+            const coinValue = globalSettings?.izi_coin_value || 1.0;
             const discountApplied = (iziCoins * coinValue);
             const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
             const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
@@ -2481,7 +2489,7 @@ function App() {
 
           // Dedução de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
-            const coinValue = globalSettings?.izi_coin_value || 0.01;
+            const coinValue = globalSettings?.izi_coin_value || 1.0;
             const discountApplied = (iziCoins * coinValue);
             const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
             const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
@@ -2511,7 +2519,7 @@ function App() {
       }
 
       if (paymentMethod === "saldo") {
-        const coinValue = globalSettings?.izi_coin_value || 0.01;
+        const coinValue = globalSettings?.izi_coin_value || 1.0;
         const totalBrlAvailable = walletBalance + (iziCoins * coinValue);
 
         if (totalBrlAvailable < total) {
@@ -2607,7 +2615,7 @@ function App() {
 
            // Dedução de Izi Coins se houver desconto aplicado
            if (useCoins && iziCoins > 0) {
-             const coinValue = globalSettings?.izi_coin_value || 0.01;
+             const coinValue = globalSettings?.izi_coin_value || 1.0;
              const discountApplied = (iziCoins * coinValue);
              const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
              const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
@@ -3273,7 +3281,7 @@ const navigateSubView = (target: string) => {
         weather: ratesData?.find(r => r.type === 'weather_rules')?.metadata || marketConditions.settings.weather,
         baseValues: ratesData?.find(r => r.type === 'base_values')?.metadata || marketConditions.settings.baseValues,
         flowControl: ratesData?.find(r => r.type === 'flow_control')?.metadata || marketConditions.settings.flowControl,
-        shippingPriorities: ratesData?.find(r => r.type === 'shipping_priorities')?.metadata || {},
+        shippingPriorities: ratesData?.find(r => r.type === 'shipping_priorities')?.metadata || marketConditions.settings.shippingPriorities,
         peakHours: (ratesData?.find(r => r.type === 'peak_hour')?.metadata as any)?.rules || []
       };
 
@@ -3358,8 +3366,17 @@ const navigateSubView = (target: string) => {
   };
 
       // [Comentario Limpo pelo Sistema]
-  const calculateDistancePrices = (origin: string, destination: string) => {
-    if (!origin || !destination || !window.google?.maps) return;
+  const calculateDistancePrices = (origin: any, destination: any) => {
+    const extractStr = (val: any) => {
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object' && val !== null) return val.address || val.formatted_address || val.display_name || "";
+      return "";
+    };
+
+    const originStr = extractStr(origin);
+    const destStr = extractStr(destination);
+
+    if (!originStr || !destStr || !window.google?.maps) return;
     setIsCalculatingPrice(true);
     setDistancePrices({});
 
@@ -3374,8 +3391,8 @@ const navigateSubView = (target: string) => {
               'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs'
             },
             body: JSON.stringify({
-              origin: { address: origin },
-              destination: { address: destination },
+              origin: { address: originStr },
+              destination: { address: destStr },
               travelMode: 'DRIVE',
               routingPreference: 'TRAFFIC_AWARE',
               computeAlternativeRoutes: false,
@@ -3385,6 +3402,13 @@ const navigateSubView = (target: string) => {
           });
 
           const data = await res.json();
+          if (!res.ok) {
+            console.error("Routes API Error Payload:", { origin, destination });
+            console.error("Routes API Error Response:", data);
+            setIsCalculatingPrice(false);
+            return;
+          }
+
           setIsCalculatingPrice(false);
 
           if (data.routes && data.routes.length > 0) {
@@ -3433,11 +3457,16 @@ const navigateSubView = (target: string) => {
         const van_km         = parseFloat(String(bv.van_km))         || 8.0;
         const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
             
-            const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
-            const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
-            const utilitario_int = Math.max(0.1, parseFloat(String(bv.utilitario_km_interval)) || 1.0);
+        // Preços base para Utilitário (Izi Envios) vindos da seção Shipping Priorities
+        const priorities = marketConditions.settings?.shippingPriorities || {};
+        const scheduledCfg = priorities.scheduled || { min_fee: 15, km_fee: 1 };
+        const normalCfg    = priorities.normal    || { min_fee: 10, km_fee: 1 };
+        
+        const utilitario_min = parseFloat(String(scheduledCfg.min_fee)) || 15.0;
+        const utilitario_km  = parseFloat(String((scheduledCfg as any).km_fee))  || 1.0;
+        const utilitario_int = 1.0;
             
-            const logistica_min  = parseFloat(String(bv.logistica_min))  || 45.0;
+        const logistica_min  = parseFloat(String(bv.logistica_min))  || 45.0;
             const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
             const logistica_int  = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
 
@@ -3462,7 +3491,7 @@ const navigateSubView = (target: string) => {
               mototaxi:   parseFloat(((mototaxi_min   + (mototaxi_km   * (distKm / mototaxi_int)))   * surge).toFixed(2)),
               carro:      parseFloat(((carro_min      + (carro_km      * (distKm / carro_int)))      * surge).toFixed(2)),
               van:        parseFloat(((van_min        + (van_km        * (distKm / van_int)))        * surge).toFixed(2)),
-              utilitario: parseFloat(((utilitario_min + (utilitario_km * (distKm / utilitario_int))) * surge).toFixed(2)),
+              utilitario: parseFloat(((utilitario_min + (utilitario_km * distKm)) * surge).toFixed(2)),
               logistica:  parseFloat(((logistica_min  + (logistica_km  * (distKm / logistica_int)))  * surge).toFixed(2)),
               // Preços específicos de logística - Agora puramente Lineares (KM * Distância)
               fiorino:    parseFloat(((fiorino_min + (fiorino_km * distKm)) * surge).toFixed(2)),
@@ -3474,11 +3503,24 @@ const navigateSubView = (target: string) => {
             };
             setDistancePrices(newPrices);
             setTransitData(prev => {
-              // Se já houver um valor orçado no wizard de logística, não sobrescreve com o genérico
+              // 1. Wizard de Logística/Frete
               if ((prev.type === 'logistica' || prev.type === 'frete') && prev.vehicleCategory) {
                 return prev;
               }
-              return { ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi };
+              
+              // 2. Regra Izi Envios (Prioridades)
+              if (prev.type === 'utilitario') {
+                 const pKey = prev.priority || 'normal';
+                 const config = priorities[pKey as keyof typeof priorities];
+                 if (config) {
+                    const price = (Number(config.min_fee) + (Number((config as any).km_fee) * distKm)) * (Number(config.multiplier) || 1);
+                    return { ...prev, estPrice: parseFloat(price.toFixed(2)) };
+                 }
+              }
+
+              // 3. Demais Categorias
+              const finalBasePrice = newPrices[prev.type as keyof typeof newPrices] || newPrices.mototaxi;
+              return { ...prev, estPrice: finalBasePrice };
             });
 
             supabase
@@ -3518,6 +3560,10 @@ const navigateSubView = (target: string) => {
     }
     if (!transitData.receiverPhone) {
       toastError("Informe o telefone de contato");
+      return;
+    }
+    if (transitData.scheduled && (!transitData.scheduledDate || !transitData.scheduledTime)) {
+      toastError("Selecione data e hora para o agendamento");
       return;
     }
     setSubView("mobility_payment");
@@ -3662,23 +3708,49 @@ const navigateSubView = (target: string) => {
     try {
       // 1. Validar saldo se for saldo
       if (paymentMethod === "saldo") {
-        if (walletBalance < finalPrice) {
-          toastError("Saldo insuficiente na carteira");
+        const coinValue = globalSettings?.izi_coin_value || 1.0;
+        const totalBrlAvailable = walletBalance + (iziCoins * coinValue);
+
+        if (totalBrlAvailable < finalPrice) {
+          toastError("Saldo insuficiente na carteira IZI Pay.");
           setIsLoading(false);
           return;
         }
+
+        let remainingToPay = finalPrice;
+        let newIziCoins = iziCoins;
+        let newWalletBalance = walletBalance;
+
+        // Tenta debitar do Saldo de Coins primeiro
+        const coinsAvailableValue = newIziCoins * coinValue;
+        if (coinsAvailableValue >= remainingToPay) {
+          newIziCoins -= (remainingToPay / coinValue);
+          remainingToPay = 0;
+        } else {
+          remainingToPay -= coinsAvailableValue;
+          newIziCoins = 0;
+        }
+
+        // Se ainda sobrar, debita do wallet_balance (BRL)
+        if (remainingToPay > 0) {
+          newWalletBalance -= remainingToPay;
+          remainingToPay = 0;
+        }
+
         await supabase.from("wallet_transactions_delivery").insert({
           user_id: userId,
           type: "pagamento",
           amount: finalPrice,
-          description: `Viagem: ${transitData.origin.split(',')[0]} para ${transitData.destination.split(',')[0]}`
+          description: `Viagem: ${(typeof transitData.origin === 'string' ? transitData.origin : transitData.origin?.address || 'Origem').split(',')[0]} para ${(typeof transitData.destination === 'string' ? transitData.destination : transitData.destination?.address || 'Destino').split(',')[0]}`
         });
         
         await supabase.from("users_delivery").update({ 
-          wallet_balance: walletBalance - finalPrice 
+          wallet_balance: Number(newWalletBalance.toFixed(2)),
+          izi_coins: Number(newIziCoins.toFixed(8))
         }).eq("id", userId);
         
-        setWalletBalance(prev => prev - finalPrice);
+        setWalletBalance(newWalletBalance);
+        setIziCoins(newIziCoins);
       }
 
       const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
@@ -3732,13 +3804,9 @@ const navigateSubView = (target: string) => {
         const isLogisticsService = ['frete', 'logistica', 'van'].includes(transitData.type);
         if (transitData.scheduled) {
           toastSuccess("Agendamento confirmado com sucesso!");
-          setSubView("payment_success");
-        } else if (isLogisticsService) {
-          toastSuccess("Solicitação Izi Express enviada! Buscando motorista...");
-          setSubView("logistics_tracking");
+          setSubView("mobility_payment_success");
         } else {
-          toastSuccess("Procurando motorista...");
-          setSubView("active_order");
+          setSubView("mobility_payment_success");
         }
       }
     } catch (err: any) {
@@ -4548,7 +4616,7 @@ const navigateSubView = (target: string) => {
 
           // Dedução de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
-            const coinValue = globalSettings?.izi_coin_value || 0.01;
+            const coinValue = globalSettings?.izi_coin_value || 1.0;
             const discountApplied = (iziCoins * coinValue);
             // No PixPayment, recalculamos o teto do desconto
             const subtotalForCoins = subtotal + (selectedItem?.delivery_fee || 0) + (isIziBlackMembership ? 0 : (subtotal * (globalSettings?.service_fee_percent || 0) / 100)) - discount;
@@ -5133,7 +5201,10 @@ const navigateSubView = (target: string) => {
           <section className="grid grid-cols-1 gap-3">
             {isTrackable && (
               <button
-                onClick={() => setSubView("active_order")}
+                onClick={() => {
+                  const isMobility = ['mototaxi', 'carro', 'van', 'utilitario', 'frete', 'logistica'].includes(selectedItem.service_type);
+                  setSubView(isMobility ? "logistics_tracking" : "active_order");
+                }}
                 className="w-full py-4 rounded-2xl bg-yellow-400 text-black font-black text-[11px] uppercase tracking-widest shadow-[0_0_24px_rgba(255,215,9,0.2)] active:scale-95 transition-all"
               >
                 Acompanhar Pedido
@@ -5196,6 +5267,38 @@ const navigateSubView = (target: string) => {
         </p>
         <button onClick={() => { setTab("orders"); setSubView("none"); }} className="w-full py-5 bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-[0_15px_30px_rgba(16,185,129,0.2)]">
           Acompanhar Pedido
+        </button>
+      </motion.div>
+    </div>
+  );
+
+  const renderMobilityPaymentSuccess = () => (
+    <div className="fixed inset-0 z-[250] bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-6 overflow-hidden">
+      <div className="absolute inset-0 bg-yellow-400/5 blur-[120px] rounded-full animate-pulse" />
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="w-full max-w-sm clay-card-dark rounded-[50px] p-10 text-center relative border border-white/10 shadow-2xl overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-full h-1 bg-yellow-400" />
+        <div className="size-20 rounded-full bg-yellow-400/10 flex items-center justify-center mx-auto mb-6 border border-yellow-400/20 shadow-[0_0_30px_rgba(250,204,21,0.1)]">
+          <span className="material-symbols-outlined text-4xl text-yellow-400 fill-1">verified</span>
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pagamento Aprovado!</h2>
+        <p className="text-zinc-400 mt-2 mb-8 font-bold text-xs uppercase tracking-widest leading-relaxed">
+          Sucesso! Sua solicitação de {transitData.scheduled ? 'agendamento' : 'serviço'} foi confirmada. Estamos localizando o melhor parceiro para você. ✨
+        </p>
+        <button 
+          onClick={() => { 
+            if (transitData.scheduled) {
+              setTab("orders");
+              setSubView("none");
+            } else {
+              setSubView("waiting_driver");
+            }
+          }} 
+          className="w-full py-5 bg-yellow-400 text-black font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-[0_20px_40px_rgba(250,204,21,0.2)] hover:scale-[1.02]"
+        >
+          Acompanhar Solicitação
         </button>
       </motion.div>
     </div>
@@ -5455,12 +5558,23 @@ const navigateSubView = (target: string) => {
           savedCards={savedCards}
           onBack={handleBack}
           onAddCard={() => setIsAddingCard(true)}
-          onSetDefault={handleSetPrimaryCard}
+          onSetDefault={(id) => {
+            handleSetPrimaryCard(id);
+            setPaymentMethod("cartao");
+          }}
           onDelete={handleDeleteCard}
           isLoading={isLoadingCards}
           onDepositPix={() => {
             setDepositPaymentMethod("pix");
             setShowDepositModal(true);
+          }}
+          walletBalance={walletBalance}
+          paymentMethod={paymentMethod}
+          onSelectMethod={(method) => {
+            setPaymentMethod(method);
+            if (paymentsOrigin === "checkout") {
+              setSubView("checkout");
+            }
           }}
         />
 
@@ -7484,6 +7598,92 @@ const navigateSubView = (target: string) => {
       </div>
     );
   };
+  
+  const renderDatePicker = () => {
+    const days = [];
+    const now = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(now.getDate() + i);
+      days.push(d);
+    }
+
+    return (
+      <motion.div key="date-picker-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md flex items-end justify-center p-4">
+        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="w-full max-w-[500px] bg-zinc-900 rounded-[40px] border border-white/10 p-8 shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black text-white">Escolha a Data</h3>
+            <button onClick={() => setShowDatePicker(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-4 gap-3 max-h-[300px] overflow-y-auto no-scrollbar p-2">
+            {days.map((date, i) => {
+              const dateStr = date.toISOString().split('T')[0];
+              const isSelected = transitData.scheduledDate === dateStr;
+              return (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setTransitData({ ...transitData, scheduledDate: dateStr });
+                    setShowDatePicker(false);
+                  }}
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${
+                    isSelected ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-zinc-800 border-white/5 text-zinc-400'
+                  }`}
+                >
+                  <span className="text-[10px] font-black uppercase opacity-60 mb-1">{date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
+                  <span className="text-lg font-black">{date.getDate()}</span>
+                  <span className="text-[10px] font-black uppercase opacity-60">{date.toLocaleDateString('pt-BR', { month: 'short' })}</span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  const renderTimePicker = () => {
+    const times = [];
+    for (let h = 8; h <= 20; h++) {
+      times.push(`${h.toString().padStart(2, '0')}:00`);
+      times.push(`${h.toString().padStart(2, '0')}:30`);
+    }
+
+    return (
+      <motion.div key="time-picker-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md flex items-end justify-center p-4">
+        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="w-full max-w-[500px] bg-zinc-900 rounded-[40px] border border-white/10 p-8 shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black text-white">Escolha o Horário</h3>
+            <button onClick={() => setShowTimePicker(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-3 max-h-[300px] overflow-y-auto no-scrollbar p-2">
+            {times.map((time, i) => {
+              const isSelected = transitData.scheduledTime === time;
+              return (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setTransitData({ ...transitData, scheduledTime: time });
+                    setShowTimePicker(false);
+                  }}
+                  className={`py-4 rounded-2xl border font-black transition-all ${
+                    isSelected ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-zinc-800 border-white/5 text-zinc-400'
+                  }`}
+                >
+                  {time}
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
 
   const renderFreightWizard = () => {
     return (
@@ -7596,6 +7796,8 @@ const navigateSubView = (target: string) => {
         transitData={transitData}
         isIziBlackMembership={isIziBlackMembership}
         walletBalance={walletBalance}
+        iziCoins={iziCoins}
+        iziCoinValue={globalSettings?.izi_coin_value || 1.0}
         selectedCard={selectedCard}
         handleConfirmMobility={handleConfirmMobility}
         navigateSubView={navigateSubView}
@@ -7608,26 +7810,21 @@ const navigateSubView = (target: string) => {
 
   const renderExploreEnvios = () => {
     const getPriorityPrice = (priorityId: string) => {
-      const basePrice = distancePrices[transitData.type as keyof typeof distancePrices] || distancePrices.mototaxi || 0;
       const settings = marketConditions.settings;
-      if (!settings || !settings.shippingPriorities) return basePrice;
+      const config = settings?.shippingPriorities?.[priorityId as keyof typeof settings.shippingPriorities];
       
-      const config = settings.shippingPriorities[priorityId as keyof typeof settings.shippingPriorities];
-      if (!config) return basePrice;
-
-      // Se não temos km, tentamos mostrar a taxa mínima ou o próprio baseprice
-      if (distanceValueKm === 0 && config.min_fee) {
-        return config.min_fee;
+      if (!config) {
+        // Fallback para valores hardcoded caso o banco falhe
+        const fallbacks: any = { turbo: 15, light: 12, normal: 8, scheduled: 15 };
+        return fallbacks[priorityId] || 10;
       }
 
-      if ((config as any).km_fee > 0) {
-        const p = (config.min_fee || 0) + ((config as any).km_fee * distanceValueKm);
-        return parseFloat(p.toFixed(2));
-      }
+      const minFee = Number(config.min_fee) || 0;
+      const kmFee = Number((config as any).km_fee) || 0;
+      const multiplier = Number(config.multiplier) || 1.0;
       
-      let price = basePrice * (config.multiplier || 1.0);
-      if (price < (config.min_fee || 0)) price = config.min_fee;
-      return price;
+      const price = (minFee + (kmFee * distanceValueKm)) * multiplier;
+      return parseFloat(price.toFixed(2)) || minFee;
     };
 
     const services = [
@@ -7724,22 +7921,20 @@ const navigateSubView = (target: string) => {
     ];
 
     const getPriorityPrice = (priorityId: string) => {
-      const basePrice = distancePrices[transitData.type as keyof typeof distancePrices] || distancePrices.mototaxi || 0;
       const settings = marketConditions.settings;
-      if (!settings || !settings.shippingPriorities) return basePrice;
+      const config = settings?.shippingPriorities?.[priorityId as keyof typeof settings.shippingPriorities];
       
-      const config = settings.shippingPriorities[priorityId as keyof typeof settings.shippingPriorities];
-      if (!config) return basePrice;
-
-      // Prioridade com preço independente?
-      if ((config as any).km_fee > 0) {
-        const p = (config.min_fee || 0) + ((config as any).km_fee * distanceValueKm);
-        return parseFloat(p.toFixed(2));
+      if (!config) {
+        const fallbacks: any = { turbo: 15, light: 12, normal: 8, scheduled: 15 };
+        return fallbacks[priorityId] || 10;
       }
+
+      const minFee = Number(config.min_fee) || 0;
+      const kmFee = Number((config as any).km_fee) || 0;
+      const multiplier = Number(config.multiplier) || 1.0;
       
-      let price = basePrice * (config.multiplier || 1.0);
-      if (price < (config.min_fee || 0)) price = config.min_fee;
-      return price;
+      const price = (minFee + (kmFee * distanceValueKm)) * multiplier;
+      return parseFloat(price.toFixed(2)) || minFee;
     };
 
     return (
@@ -7914,6 +8109,53 @@ const navigateSubView = (target: string) => {
                 </div>
               </div>
             </section>
+          )}
+
+          {transitData.origin && transitData.destination && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-yellow-400 border border-yellow-400 p-8 rounded-[45px] shadow-[8px_8px_20px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 size-32 bg-white/20 blur-[50px] -mr-16 -mt-16 pointer-events-none" />
+              <div className="flex items-center justify-between gap-4 relative z-10">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-black text-sm">distance</span>
+                    <p className="text-[10px] font-black text-black/70 uppercase tracking-widest">{routeDistance || 'Calculando rota...'}</p>
+                  </div>
+                  <div className="flex flex-col mb-1">
+                    <p className="text-[9px] font-black text-black/60 uppercase tracking-[0.2em]">
+                      {transitData.type === 'utilitario' ? (
+                        transitData.priority === 'turbo' ? 'Izi Turbo Flash' :
+                        transitData.priority === 'light' ? 'Izi Light Flash' :
+                        transitData.priority === 'normal' ? 'Izi Express' :
+                        transitData.priority === 'scheduled' ? 'Izi Agendado' : 'Izi Express'
+                      ) : (
+                        transitData.type === 'mototaxi' ? 'Moto Táxi' :
+                        transitData.type === 'carro' ? 'Particular' :
+                        transitData.type === 'van' ? 'Transporte de Carga' : 'Serviço de Entrega'
+                      )}
+                    </p>
+                    <h4 className="text-3xl font-black text-black tracking-tighter italic">
+                      {isCalculatingPrice ? (
+                        <span className="animate-pulse opacity-50 text-xl uppercase">Calculando...</span>
+                      ) : (
+                        <>R$ {(transitData.estPrice || 0).toFixed(2).replace(".", ",")}</>
+                      )}
+                    </h4>
+                  </div>
+                </div>
+                <div className="size-14 rounded-2xl bg-black/5 flex items-center justify-center border border-black/10">
+                  <span className="material-symbols-outlined text-black text-2xl">receipt_long</span>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-6 border-t border-black/10 flex items-center gap-3 relative z-10">
+                 <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                 <p className="text-[8px] font-black text-black/70 uppercase tracking-[0.2em] italic">Preço Izi Garantido • Inclui Taxas</p>
+              </div>
+            </motion.div>
           )}
 
           <section className="space-y-6">
@@ -8140,38 +8382,7 @@ const navigateSubView = (target: string) => {
              </p>
           </div>
 
-          {transitData.origin && transitData.destination && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-zinc-800 border border-white/10 p-8 rounded-[45px] shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[50px] -mr-16 -mt-16 pointer-events-none" />
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-yellow-400 text-sm">distance</span>
-                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{routeDistance || 'Calculando rota...'}</p>
-                  </div>
-                  <h4 className="text-3xl font-black text-white tracking-tighter italic">
-                    {isCalculatingPrice ? (
-                      <span className="animate-pulse opacity-50">Calculando...</span>
-                    ) : (
-                      <>R$ {(distancePrices[transitData.type] || 0).toFixed(2).replace(".", ",")}</>
-                    )}
-                  </h4>
-                </div>
-                <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                  <span className="material-symbols-outlined text-yellow-400 text-2xl">receipt_long</span>
-                </div>
-              </div>
-              
-              <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-3">
-                 <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                 <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] italic">Preço Izi Garantido • Inclui Taxas</p>
-              </div>
-            </motion.div>
-          )}
+
         </main>
 
         <div className="fixed bottom-0 left-0 right-0 p-8 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent z-50">
@@ -8204,56 +8415,67 @@ const navigateSubView = (target: string) => {
       utilitario: { label: "Izi Express", icon: "bolt", color: "text-purple-500" },
     };
     const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-yellow-400" };
+    const pickupLoc = typeof selectedItem.pickup_address === 'object' 
+      ? { lat: Number(selectedItem.pickup_address.lat), lng: Number(selectedItem.pickup_address.lng) }
+      : (userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null);
 
     return (
-      <div className="fixed inset-0 z-[250] bg-black/98 flex items-center justify-center p-6 overflow-hidden">
-        <div className="absolute inset-0 bg-yellow-400/5 blur-[120px] rounded-full animate-pulse" />
-        
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-          className="w-full max-w-sm clay-card-dark rounded-[50px] p-10 text-center relative border border-white/5"
-        >
-          {/* Radar */}
-          <div className="relative size-24 mx-auto mb-10">
-            <motion.div animate={{ scale: [1, 2.5], opacity: [0.4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
-            <motion.div animate={{ scale: [1, 2], opacity: [0.3, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.6 }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
-            <div className="relative size-full bg-yellow-400/10 border border-yellow-400/30 rounded-full flex items-center justify-center shadow-[inset_0_4px_10px_rgba(255,255,255,0.1)]">
-              <span className={`material-symbols-outlined text-4xl ${service.color} fill-1`}>{service.icon}</span>
-            </div>
-          </div>
+      <div className="fixed inset-0 z-[250] bg-zinc-950 flex flex-col overflow-hidden">
+        {/* Mapa no Fundo */}
+        <div className="absolute inset-0 z-0 opacity-60">
+           <IziTrackingMap 
+             originLoc={pickupLoc}
+             userLoc={userLocation as any}
+             searching={true}
+             boxed={false}
+           />
+           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+        </div>
 
-          <div className="space-y-4">
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
-              Buscando <br/>
-              <span className="text-yellow-400">{service.label}</span>
-            </h2>
-            <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest leading-relaxed">
-              Estamos enviando seu convite para os melhores parceiros da região.
-            </p>
-          </div>
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center">
+           {/* Radar flutuante central (visual complementar) */}
+           <div className="relative size-32 mb-10">
+              <motion.div animate={{ scale: [1, 2.5], opacity: [0.5, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
+              <div className="relative size-full bg-yellow-400/10 border border-yellow-400/30 rounded-full flex items-center justify-center shadow-2xl backdrop-blur-xl">
+                <span className={`material-symbols-outlined text-5xl ${service.color} fill-1`}>{service.icon}</span>
+              </div>
+           </div>
 
-          <div className="mt-12 space-y-6">
-            <div className="flex items-center justify-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0s' }} />
-              <span className="size-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
-              <span className="size-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0.4s' }} />
-            </div>
+           <div className="space-y-4 max-w-xs">
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none drop-shadow-2xl">
+                Buscando <br/>
+                <span className="text-yellow-400">{service.label}</span>
+              </h2>
+              <p className="text-zinc-300 font-bold text-[10px] uppercase tracking-[0.2em] leading-relaxed drop-shadow-lg">
+                Estamos enviando seu convite para os melhores parceiros na região. ✨
+              </p>
+           </div>
+           
+           {/* Loader dots */}
+           <div className="mt-8 flex items-center justify-center gap-2">
+              <span className="size-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0s' }} />
+              <span className="size-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
+              <span className="size-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0.4s' }} />
+           </div>
+        </div>
 
-            <button
-              onClick={async () => {
-                if (!selectedItem?.id || !userId) return;
-                if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
-                await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
-                setSubView("none");
-                fetchMyOrders(userId);
-                toastSuccess("Solicitação cancelada.");
-              }}
-              className="w-full py-5 bg-zinc-900/50 border border-white/5 rounded-[24px] text-red-500/70 font-black text-[10px] uppercase tracking-[0.2em] active:scale-95 transition-all"
-            >
-              Cancelar Solicitação
-            </button>
-          </div>
-        </motion.div>
+        {/* Footer info/cancel */}
+        <div className="relative z-10 p-8 pb-12 w-full max-w-md mx-auto">
+           <button 
+             onClick={async () => {
+               if (!selectedItem?.id || !userId) { setSubView("none"); return; }
+               if (window.confirm("Deseja interromper a busca e cancelar o serviço?")) {
+                  await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
+                  setSubView("none");
+                  fetchMyOrders(userId);
+                  toastSuccess("Busca interrompida.");
+               }
+             }}
+             className="w-full py-5 rounded-[30px] border border-white/5 bg-black/40 backdrop-blur-2xl text-zinc-400 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-2xl"
+           >
+             Interromper Busca
+           </button>
+        </div>
       </div>
     );
   };
@@ -8501,7 +8723,7 @@ const navigateSubView = (target: string) => {
 
           {view === "login" && (
             <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-              <LoginView loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginPassword={loginPassword} setLoginPassword={setLoginPassword} authMode={authMode} setAuthMode={setAuthMode} handleLogin={handleLogin} handleSignUp={handleSignUp} isLoading={isLoading} loginError={loginError} phone={phone} setPhone={setPhone} userName={userName} setUserName={setUserName} />
+              <LoginView loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginPassword={loginPassword} setLoginPassword={setLoginPassword} authMode={authMode} setAuthMode={setAuthMode} handleLogin={handleLogin} handleSignUp={handleSignUp} isLoading={isLoading} loginError={loginError} setLoginError={setLoginError} phone={phone} setPhone={setPhone} userName={userName} setUserName={setUserName} rememberMe={rememberMe} setRememberMe={setRememberMe} />
             </motion.div>
           )}
 
@@ -8520,7 +8742,7 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "wallet" && (
                   <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 0.01} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 0.0} isIziBlack={isIziBlackMembership} />
+                     <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 0.0} isIziBlack={isIziBlackMembership} />
                   </motion.div>
                 )}
                 {tab === "profile" && (
@@ -8571,9 +8793,12 @@ const navigateSubView = (target: string) => {
                       setPaymentsOrigin={setPaymentsOrigin} 
                       setSubView={(v: any) => setSubView(v)} 
                       iziCoins={iziCoins} 
-                      iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 0.01} 
+                      iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 1.0} 
                       deliveryFee={calculateDeliveryFee()} 
                       isIziBlack={isIziBlackMembership}
+                      walletBalance={walletBalance}
+                      isShopOpen={selectedShop ? isShopCurrentlyOpen(selectedShop) : true}
+                      shopName={selectedShop?.name || "Izi Delivery"}
                     />
                   </motion.div>
                 )}
@@ -8738,6 +8963,17 @@ const navigateSubView = (target: string) => {
                     {renderMobilityPayment()}
                   </motion.div>
                 )}
+                {subView === "logistics_tracking" && (
+                  <motion.div key="ltrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                    <LogisticsTrackingView 
+                       order={selectedItem}
+                       userLocation={userLocation as any}
+                       driverLocation={driverLocation}
+                       onBack={() => setSubView("none")}
+                       onUpdateLocation={updateLocation}
+                    />
+                  </motion.div>
+                )}
                 {subView === "active_order" && (
                   <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
                     <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} onCancelOrder={handleCancelOrder} />
@@ -8756,6 +8992,11 @@ const navigateSubView = (target: string) => {
                 {subView === "payment_success" && (
                   <motion.div key="psuccess" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
                     {renderPaymentSuccess()}
+                  </motion.div>
+                )}
+                {subView === "mobility_payment_success" && (
+                  <motion.div key="mpsuccess" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                    {renderMobilityPaymentSuccess()}
                   </motion.div>
                 )}
                 {subView === "waiting_merchant" && (
@@ -8876,9 +9117,14 @@ const navigateSubView = (target: string) => {
           )}
         </AnimatePresence>
 
+        <AnimatePresence mode="wait">
+          {showDatePicker && renderDatePicker()}
+          {showTimePicker && renderTimePicker()}
+        </AnimatePresence>
+
         <AnimatePresence>
           {showSplash && (
-            <SplashScreenComponent finishLoading={() => setShowSplash(false)} />
+            <SplashScreenComponent key="splash-screen" finishLoading={() => setShowSplash(false)} />
           )}
         </AnimatePresence>
       </div>
