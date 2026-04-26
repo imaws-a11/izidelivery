@@ -298,26 +298,20 @@ export const WalletView: React.FC<WalletViewProps> = ({
     if (!userId) return;
     const fetchLimit = async () => {
       try {
-        // 1. Busca limite individual
+        // 1. Busca limite individual + is_izi_black do usuário
         const { data: userData } = await supabase
           .from("users_delivery")
-          .select("pre_approved_limit")
+          .select("pre_approved_limit, is_izi_black")
           .eq("id", userId)
           .single();
-        
-        // 2. Busca configurações globais (limite base e juros)
+
+        // 2. Busca configurações globais (limite base, juros e black cashback)
         const { data: globalRaw } = await supabase
           .from("admin_settings_delivery")
           .select("value")
           .eq("key", "global")
           .maybeSingle();
         const globalData = globalRaw?.value || null;
-
-        const { data: userDataExtended } = await supabase
-          .from("users_delivery")
-          .select("is_izi_black")
-          .eq("id", userId)
-          .single();
 
         const userLimit = Number(userData?.pre_approved_limit || 0);
         const globalLimit = Number(globalData?.global_pre_approved_limit || 0);
@@ -328,7 +322,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
         setPreApprovedLimit(userLimit > 0 ? userLimit : globalLimit);
         setLoanInterestRate(globalInterest);
         setBlackCashbackRate(globalBlackCashback);
-        if (userDataExtended) setIsIziBlack(userDataExtended.is_izi_black);
+        if (userData) setIsIziBlack(userData.is_izi_black);
       } catch (err) {
         console.error("Erro ao carregar configurações econômicas:", err);
       }

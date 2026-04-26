@@ -12,7 +12,8 @@ export default function OrdersAdminTab() {
     fetchAllOrders,
     isLoadingList,
     appSettings,
-    merchantsList
+    merchantsList,
+    dynamicRatesState
   } = useAdmin();
 
   React.useEffect(() => {
@@ -174,7 +175,7 @@ export default function OrdersAdminTab() {
     const isMobilityOrFreight = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'logistica', 'van', 'utilitario'].includes(type);
     
     // Novas taxas do dynamicRatesState.baseValues (usado no AdminContext)
-    const baseValues = (useAdmin() as any).dynamicRatesState?.baseValues || {};
+    const baseValues = (dynamicRatesState as any)?.baseValues || {};
 
     let minGuaranteed = 0;
     if (type === 'restaurant') {

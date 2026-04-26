@@ -810,18 +810,22 @@ function App() {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token || supabaseKey;
+            const authHeaders = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
+            
             // Busca configurações gerais
             const res = await fetch(`${supabaseUrl}/rest/v1/app_settings_delivery?select=*`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                headers: authHeaders
             });
             if (res.ok) {
                 const data = await res.json();
                 if (data && data[0]) setAppSettings(data[0]);
             }
 
-            // Busca taxas dinÂ¢micas (especialmente os valores base como food_min)
+            // Busca taxas dinâmicas
             const resRates = await fetch(`${supabaseUrl}/rest/v1/dynamic_rates_delivery?type=eq.base_values&select=*`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                headers: authHeaders
             });
             if (resRates.ok) {
                 const dataRates = await resRates.json();
@@ -2953,22 +2957,19 @@ function App() {
                 setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
 
                 txs.forEach((t: any) => {
+                    // 'pagamento' é débito de cliente — nunca deve afetar saldo do entregador
+                    if (t.type === 'pagamento') return;
+
                     const amount = Number(t.amount);
                     const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback'].includes(t.type);
                     balance = isCredit ? balance + amount : balance - amount;
 
-                    // Apenas ganhos reais entram nos totais de ganhos (sum)
-                    // Cashback e Reembolso afetam o saldo (balance), mas não são considerados faturamento de trabalho
+                    // Apenas ganhos reais de trabalho entram nos totais
                     const isEarning = ['venda', 'vaga_dedicada', 'bonus', 'deposito'].includes(t.type);
                     if (isEarning) {
                         const tDate = new Date(t.created_at);
                         totalGanhos += amount;
-                        
-                        // Ajuste de fuso: garantindo que tDate está sendo comparado no dia local
-                        const tDay = new Date(tDate);
-                        tDay.setHours(0,0,0,0);
-                        
-                        // Comparação robusta: se a data da transação for igual ou posterior ao início do dia atual
+
                         if (tDate >= startOfDay) todaySum += amount;
                         if (tDate >= startOfWeek) weeklySum += amount;
                     }
