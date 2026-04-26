@@ -112,6 +112,9 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   onDelete,
   isLoading,
   onDepositPix,
+  walletBalance = 0,
+  paymentMethod,
+  onSelectMethod,
 }) => {
   return (
     <div className="fixed inset-0 z-[140] bg-black text-zinc-100 flex flex-col pt-safe overflow-hidden">
@@ -136,6 +139,37 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
           </div>
         ) : (
           <div className="space-y-12">
+            {/* Wallet Balance Section */}
+            <section className="space-y-6">
+              <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em] ml-2">Saldo Disponível</p>
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onSelectMethod?.("saldo")}
+                className={`w-full p-8 rounded-[40px] border-2 transition-all flex items-center justify-between group shadow-2xl relative overflow-hidden
+                  ${paymentMethod === "saldo" 
+                    ? "bg-yellow-400 border-yellow-400 text-black" 
+                    : "bg-[#0c0c0c] border-white/5 text-white"
+                  }`}
+              >
+                <div className="flex items-center gap-6 relative z-10">
+                  <div className={`size-16 rounded-[22px] flex items-center justify-center shadow-inner border ${paymentMethod === "saldo" ? "bg-black/10 border-black/10" : "bg-zinc-900 border-white/5"}`}>
+                    <span className={`material-symbols-outlined text-3xl font-black ${paymentMethod === "saldo" ? "text-black" : "text-yellow-400"}`}>account_balance_wallet</span>
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${paymentMethod === "saldo" ? "text-black/60" : "text-zinc-500"}`}>IZI PAY BALANCE</p>
+                    <p className="text-3xl font-black tracking-tighter">R$ {walletBalance.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                </div>
+                {paymentMethod === "saldo" && (
+                  <div className="size-10 rounded-full bg-black flex items-center justify-center shadow-lg relative z-10">
+                    <span className="material-symbols-outlined text-yellow-400 font-black">check</span>
+                  </div>
+                )}
+                {/* Decorative Glow */}
+                <div className={`absolute -right-20 -top-20 size-40 rounded-full blur-[60px] pointer-events-none ${paymentMethod === "saldo" ? "bg-white/40" : "bg-yellow-400/5"}`} />
+              </motion.button>
+            </section>
+
             {/* Quick Actions / Pix */}
             <section className="space-y-6">
               <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em] ml-2">Fluxo de Caixa</p>

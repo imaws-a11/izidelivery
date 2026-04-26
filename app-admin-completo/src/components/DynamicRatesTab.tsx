@@ -256,7 +256,6 @@ export default function DynamicRatesTab() {
               { title: 'Bebidas / Conveniência', minKey: 'beverages_min', kmKey: 'beverages_km' },
               { title: 'MotoTáxi', minKey: 'mototaxi_min', kmKey: 'mototaxi_km' },
               { title: 'Carro Executivo', minKey: 'carro_min', kmKey: 'carro_km' },
-              { title: 'Izi Express', minKey: 'utilitario_min', kmKey: 'utilitario_km' },
               { title: 'Van de Transporte', minKey: 'van_min', kmKey: 'van_km' },
               { 
                 title: 'Logística / Frete', 

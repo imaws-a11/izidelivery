@@ -1579,43 +1579,68 @@ function App() {
         };
 
         let watchId: string | undefined;
+        let webWatchId: number | undefined;
 
         const startNativeTracking = async () => {
-            try {
-                // 1. Requerendo permissões nativas para mobile
-                const permissions = await Geolocation.checkPermissions();
-                if (permissions.location !== 'granted') {
-                    await Geolocation.requestPermissions();
-                }
-
-                // 2. Obter posição IMEDIATA para agilizar a primeira abertura do mapa
-                const pos = await Geolocation.getCurrentPosition({ 
-                    enableHighAccuracy: true,
-                    timeout: 20000,
-                    maximumAge: 10000
-                }).catch(() => Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 }));
-                
-                if (pos) await updateLocation(pos.coords.latitude, pos.coords.longitude);
-
-                // 3. Assistindo ativamente as coordenadas enviando para o Supabase
-                watchId = await Geolocation.watchPosition(
-                    { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
-                    (position, err) => {
-                        if (position) {
-                            updateLocation(position.coords.latitude, position.coords.longitude);
-                        }
+            // ── AMBIENTE NATIVO (APK Android/iOS) ──
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    const permissions = await Geolocation.checkPermissions();
+                    if (permissions.location !== 'granted') {
+                        await Geolocation.requestPermissions();
                     }
-                );
-            } catch (err) {
-                console.error("GPS Tracking Error (Native):", err);
+
+                    // Posição imediata para agilizar a primeira abertura do mapa
+                    const pos = await Geolocation.getCurrentPosition({ 
+                        enableHighAccuracy: true,
+                        timeout: 20000,
+                        maximumAge: 10000
+                    }).catch(() => Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 }));
+                    
+                    if (pos) await updateLocation(pos.coords.latitude, pos.coords.longitude);
+
+                    // Watch contínuo
+                    watchId = await Geolocation.watchPosition(
+                        { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
+                        (position) => {
+                            if (position) {
+                                updateLocation(position.coords.latitude, position.coords.longitude);
+                            }
+                        }
+                    );
+                } catch (err) {
+                    console.error("GPS Tracking Error (Native):", err);
+                }
+                return;
             }
+
+            // ── AMBIENTE WEB (browser) ─ usa API nativa do browser ──
+            if (!navigator.geolocation) {
+                console.warn('[GPS] navigator.geolocation não disponível neste browser.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
+                (err) => console.warn('[GPS-WEB] Erro ao obter posição inicial:', err.message),
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            );
+
+            webWatchId = navigator.geolocation.watchPosition(
+                (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
+                (err) => console.warn('[GPS-WEB] Erro no watchPosition:', err.message),
+                { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 }
+            );
         };
 
         startNativeTracking();
         
         return () => {
-             if (watchId) {
+             if (watchId && Capacitor.isNativePlatform()) {
                  Geolocation.clearWatch({ id: watchId });
+             }
+             if (webWatchId !== undefined) {
+                 navigator.geolocation.clearWatch(webWatchId);
              }
         };
     }, [isAuthenticated, driverId, isOnline, activeMission]);
@@ -2401,7 +2426,7 @@ function App() {
         setIsSyncing(true);
         try {
             const [data] = await Promise.all([
-                fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20'),
+                fetchFromDB('orders_delivery', 'select=*&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20'),
                 new Promise(resolve => setTimeout(resolve, 600)) // Atraso artificial mínimo para feedback visual fluido (Girar o ícone)
             ]);
             
@@ -2415,23 +2440,22 @@ function App() {
             );
 
             if (myAssignment && (!currentMission || currentMission.realId !== myAssignment.id)) {
-                const merchant = myAssignment.admin_users;
                 const mission = { 
                     ...myAssignment, 
                     realId: myAssignment.id, 
                     type: myAssignment.service_type, 
                     customer: myAssignment.user_name || 'Cliente Izi',
-                    store_name: merchant?.store_name || myAssignment.store_name || 'Loja Parceira',
-                    pickup_address: merchant?.store_address || myAssignment.pickup_address,
-                    pickup_lat: merchant?.latitude || myAssignment.pickup_lat,
-                    pickup_lng: merchant?.longitude || myAssignment.pickup_lng
+                    store_name: myAssignment.merchant_name || myAssignment.store_name || 'Loja Parceira',
+                    pickup_address: myAssignment.pickup_address,
+                    pickup_lat: myAssignment.pickup_lat,
+                    pickup_lng: myAssignment.pickup_lng
                 };
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             }
 
             const available = data.filter((o: any) => {
-                const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
+                const isMerchantOrder = !!o.merchant_id;
                 // Atualizado para incluir novo e pendente, conforme regra do painel lojista solicitada
                 const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
@@ -2448,14 +2472,14 @@ function App() {
                 id: o.id.slice(0, 8).toUpperCase(), 
                 realId: o.id, 
                 type: o.service_type, 
-                origin: o.admin_users?.store_address || o.pickup_address, 
+                origin: o.pickup_address, 
                 destination: o.delivery_address, 
                 price: o.total_price,
-                pickup_lat: o.admin_users?.latitude || o.pickup_lat,
-                pickup_lng: o.admin_users?.longitude || o.pickup_lng,
+                pickup_lat: o.pickup_lat,
+                pickup_lng: o.pickup_lng,
                 delivery_lat: o.delivery_lat,
                 delivery_lng: o.delivery_lng,
-                store_name: o.admin_users?.store_name || o.store_name || 'Loja Parceira',
+                store_name: o.merchant_name || o.store_name || 'Loja Parceira',
                 customer: 'Cliente Izi'
             }));
 
@@ -2822,7 +2846,7 @@ function App() {
             // 1. Coleta de dados em paralelo para maior performance
             const [txsRes, drvRes, ordsRes, setsRes] = await Promise.all([
                 apiRequest(`wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`),
-                apiRequest(`drivers_delivery?id=eq.${driverId}&select=bank_info,name,avatar_url`),
+                apiRequest(`drivers_delivery?id=eq.${driverId}&select=bank_info,name`),
                 apiRequest(`orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado,delivered)&order=updated_at.desc`),
                 apiRequest(`admin_settings_delivery?limit=1`)
             ]).catch(() => [null, null, null, null]);
@@ -2837,7 +2861,6 @@ function App() {
             if (drvData?.[0]) {
                 const d = drvData[0];
                 if (d.bank_info?.pix_key) { setPixKey(d.bank_info.pix_key); localStorage.setItem('izi_driver_pix', d.bank_info.pix_key); }
-                if (d.avatar_url) { setDriverAvatar(d.avatar_url); localStorage.setItem('izi_driver_avatar', d.avatar_url); }
                 setDriverName(d.name || 'Entregador');
             }
             if (sets?.[0]) setAppSettings(sets[0]);

@@ -11,6 +11,8 @@ interface MobilityPaymentViewProps {
   navigateSubView: (view: any) => void;
   marketConditions: any;
   calculateDynamicPrice: (base: number) => number;
+  iziCoins?: number;
+  iziCoinValue?: number;
   serviceFee?: number;
 }
 
@@ -26,6 +28,8 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
   marketConditions,
   calculateDynamicPrice,
   serviceFee = 0,
+  iziCoins = 0,
+  iziCoinValue = 1.0,
 }) => {
   const bv = marketConditions?.settings?.baseValues || {};
   const basePrices: Record<string, number> = { 
@@ -47,11 +51,12 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
     return calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min || 0) || 0;
   };
 
-  const rawBase = getPrecisePrice();
-  const serviceFeeAmount = (rawBase * serviceFee) / 100;
+  const rawBase = Number(getPrecisePrice() || 0);
+  const serviceFeeAmount = (rawBase * Number(serviceFee || 0)) / 100;
   const rawPriceWithFee = rawBase + serviceFeeAmount;
   
-  const price = rawPriceWithFee;
+  const price = Number(rawPriceWithFee || 0);
+  const totalBalance = Number(walletBalance || 0) + (Number(iziCoins || 0) * Number(iziCoinValue || 1.0));
 
   const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
     const isSelected = paymentMethod === id;
@@ -126,7 +131,15 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
                 </div>
                 <div className="flex-1">
                   <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none mb-2">
-                    {transitData.type === 'mototaxi' ? 'MotoTáxi IZI' : (transitData.type === 'carro' ? 'Particular' : (transitData.type === 'van' ? 'Van IZI Express' : (transitData.type === 'utilitario' ? 'Izi Express' : 'Logística / Frete')))}
+                    {transitData.priority === 'turbo' ? 'Izi Turbo Flash' : 
+                     transitData.priority === 'light' ? 'Izi Light Flash' :
+                     transitData.priority === 'normal' ? 'Izi Express' :
+                     transitData.priority === 'scheduled' ? 'Izi Agendado' :
+                     transitData.subService === 'coleta' ? 'Click e Retire Izi' :
+                     transitData.type === 'mototaxi' ? 'MotoTáxi IZI' : 
+                     transitData.type === 'carro' ? 'Particular' : 
+                     transitData.type === 'van' ? 'Van IZI Express' : 
+                     transitData.type === 'utilitario' ? 'Izi Express' : 'Logística / Frete'}
                   </h4>
                   <div className="flex items-center gap-2">
                      <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black text-zinc-500 uppercase tracking-widest border border-white/5">
@@ -205,10 +218,10 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
             <PaymentMethodButton 
               id="saldo" 
               icon="account_balance_wallet" 
-              label="Saldo IZI Wallet" 
-              sub={`R$ ${walletBalance.toFixed(2).replace(".", ",")} disponível`}
+              label="Saldo Izi Pay" 
+              sub={`R$ ${walletBalance.toFixed(2).replace(".", ",")} + ${iziCoins} coins`}
               colorClass="text-cyan-400"
-              disabled={walletBalance < price}
+              disabled={totalBalance < price}
             />
 
             <PaymentMethodButton 

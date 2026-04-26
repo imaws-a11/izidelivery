@@ -4,6 +4,26 @@ import { Icon } from "../../common/Icon";
 import { IziTrackingMap } from "../Map/IziTrackingMap";
 import { IziBottomSheet } from "../../common/IziBottomSheet";
 
+/** Extrai apenas o endereço legível de strings JSON ou formatadas do DB */
+const parseAddressText = (rawStr: any): string => {
+  if (!rawStr) return "Endereço não disponível";
+  if (typeof rawStr !== "string") {
+    return rawStr.formatted_address || rawStr.address || "Localidade";
+  }
+  
+  // Tenta limpar sufixos comuns do app
+  let cleanStr = rawStr.split(" | OBS:")[0].split(" | FRETE:")[0].split(" | ENVIO:")[0].split(" | EXCURSÃO:")[0].split(" | VIAGEM:")[0].trim();
+  
+  if (cleanStr.includes("[object Object]")) return "Endereço em processamento...";
+
+  try {
+    const parsed = JSON.parse(cleanStr);
+    return parsed.formatted_address || parsed.address || cleanStr;
+  } catch {
+    return cleanStr;
+  }
+};
+
 interface LogisticsTrackingViewProps {
   order: any;
   driverLocation: { lat: number; lng: number } | null;
@@ -160,7 +180,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
     COLOR_MAP[color]?.[type] ?? "";
 
   return (
-    <div className="absolute inset-0 z-[150] bg-zinc-950 text-white flex flex-col overflow-hidden italic"
+    <div className="absolute inset-0 z-[150] bg-zinc-950 text-white flex flex-col overflow-hidden"
          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
       {/* ── MAPA EM TELA CHEIA ── */}
@@ -173,6 +193,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
           vehicleIcon={order?.service_type === "van" ? "airport_shuttle" : "local_shipping"}
           originLabel="COLETA"
           boxed={false}
+          searching={order?.status === 'waiting_driver'}
           onMyLocationClick={onUpdateLocation}
         />
         <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
@@ -268,8 +289,8 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                           : <Icon name="person" size={32} className="text-zinc-500" />}
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 italic">Condutor Responsável</p>
-                        <h3 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">{order.driver_name}</h3>
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Condutor Responsável</p>
+                        <h3 className="text-xl font-black text-white uppercase tracking-tighter leading-none">{order.driver_name}</h3>
                         <div className="flex items-center gap-1.5 mt-2.5">
                           <Icon name="star" size={14} className="text-yellow-400" />
                           <span className="text-[11px] font-bold text-zinc-400">4.9 • {order?.driver_vehicle_plate || "PLACA CONFIRMADA"}</span>
@@ -289,7 +310,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                       <div className="size-8 rounded-full border-2 border-blue-400/30 border-t-blue-400 animate-spin" />
                     </div>
                     <div>
-                      <p className="text-lg font-black text-white uppercase tracking-tighter mb-1 italic">Conectando ao Motorista</p>
+                      <p className="text-lg font-black text-white uppercase tracking-tighter mb-1">Conectando ao Motorista</p>
                       <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">
                         Seu pedido está no topo da fila — acompanhe o status em tempo real
                       </p>
@@ -299,7 +320,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
 
                 {/* TIMELINE */}
                 <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 space-y-2">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-8 px-2 italic">Progresso da Missão</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-8 px-2">Progresso da Missão</h4>
                   {STATUS_TIMELINE.map((step, idx) => {
                     const done   = idx < currentStepIndex;
                     const active = idx === currentStepIndex;
@@ -327,7 +348,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                           )}
                         </div>
                         <div className={`pb-6 flex-1 flex flex-col justify-center ${isLast ? "pb-0" : ""}`}>
-                          <span className={`text-[13px] font-black uppercase tracking-tight transition-colors duration-500 italic
+                          <span className={`text-[13px] font-black uppercase tracking-tight transition-colors duration-500
                             ${done ? "text-emerald-500" : active ? "text-white" : "text-zinc-700"}`}>
                             {step.label}
                           </span>
@@ -356,11 +377,9 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                         <Icon name="package_2" size={18} className="text-white" />
                       </div>
                       <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1 italic">Ponto de Coleta</p>
-                        <p className="text-xs font-black text-white uppercase truncate italic">
-                          {typeof order?.pickup_address === "string"
-                            ? order.pickup_address
-                            : order?.pickup_address?.address || "Endereço em processamento..."}
+                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Ponto de Coleta</p>
+                        <p className="text-xs font-black text-white uppercase truncate">
+                          {parseAddressText(order?.pickup_address)}
                         </p>
                       </div>
                     </div>
@@ -370,11 +389,9 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                         <Icon name="flag" size={18} className="text-yellow-400" />
                       </div>
                       <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1 italic">Destino Final</p>
-                        <p className="text-xs font-black text-white uppercase truncate italic">
-                          {typeof order?.delivery_address === "string"
-                            ? order.delivery_address
-                            : order?.delivery_address?.address || "Calculando melhor rota..."}
+                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Destino Final</p>
+                        <p className="text-xs font-black text-white uppercase truncate">
+                          {parseAddressText(order?.delivery_address)}
                         </p>
                       </div>
                     </div>
@@ -384,14 +401,14 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mb-1 italic">Serviço Especializado</p>
-                      <p className="text-sm font-black text-white uppercase italic">
+                      <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mb-1">Serviço Especializado</p>
+                      <p className="text-sm font-black text-white uppercase">
                         {order?.service_type === "van" ? "Logística Van" : isFreight ? "Frete Express IZI" : "Mobilidade Urbana"}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mb-1 italic">Custo Total</p>
-                      <p className="text-2xl font-black text-yellow-400 italic tracking-tighter">
+                      <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mb-1">Custo Total</p>
+                      <p className="text-2xl font-black text-yellow-400 tracking-tighter">
                         R$ {Number(order?.total_price || 0).toFixed(2).replace(".", ",")}
                       </p>
                     </div>
@@ -403,7 +420,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={onCancel}
-                    className="w-full py-6 rounded-[35px] border border-rose-500/20 text-rose-400 font-black text-[12px] uppercase tracking-[0.3em] hover:bg-rose-500/5 active:scale-95 transition-all italic"
+                    className="w-full py-6 rounded-[35px] border border-rose-500/20 text-rose-400 font-black text-[12px] uppercase tracking-[0.3em] hover:bg-rose-500/5 active:scale-95 transition-all"
                   >
                     Interromper Solicitação
                   </motion.button>
@@ -415,7 +432,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={onBack}
-                    className="w-full py-6 rounded-[35px] bg-emerald-500 text-black font-black text-sm uppercase tracking-widest shadow-[0_20px_50px_rgba(34,197,94,0.3)] active:scale-95 transition-all italic mb-6"
+                    className="w-full py-6 rounded-[35px] bg-emerald-500 text-black font-black text-sm uppercase tracking-widest shadow-[0_20px_50px_rgba(34,197,94,0.3)] active:scale-95 transition-all mb-6"
                   >
                     Mudar para Nova Missão ✓
                   </motion.button>

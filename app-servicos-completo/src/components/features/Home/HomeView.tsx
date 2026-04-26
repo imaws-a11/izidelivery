@@ -523,7 +523,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                               <img src={shop.img} className="size-full object-cover" alt={shop.name} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h5 className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors uppercase italic">{shop.name}</h5>
+                              <h5 className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors uppercase">{shop.name}</h5>
                               <div className="flex items-center gap-2 mt-0.5">
                                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">{shop.tag || "Restaurante"}</p>
                                  <span className="size-1 rounded-full bg-zinc-800" />
@@ -608,7 +608,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                             <div className="flex-1 min-w-0 flex flex-col justify-center">
                               <h5 className="text-xs font-black text-white group-hover:text-yellow-400 transition-colors uppercase leading-tight line-clamp-2">{product.name}</h5>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-sm font-black text-white italic">R$ {Number(product.price).toFixed(2).replace('.', ',')}</span>
+                                <span className="text-sm font-black text-white">R$ {Number(product.price).toFixed(2).replace('.', ',')}</span>
                                 <span className="text-[8px] font-black text-zinc-500 uppercase tracking-tighter truncate">em {product.merchant_name}</span>
                               </div>
                             </div>
@@ -628,7 +628,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
                       </div>
                       <div>
-                        <p className="text-white font-black text-sm uppercase italic">Nenhum resultado para "{searchQuery}"</p>
+                        <p className="text-white font-black text-sm uppercase">Nenhum resultado para "{searchQuery}"</p>
                         <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">Tente buscar por outro termo ou categoria</p>
                       </div>
                     </div>
@@ -662,7 +662,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <img src={iziCoinImg} className="w-9 h-9 object-contain animate-pulse" alt="Izi Coin" />
                   </div>
                   <div>
-                    <h4 className="text-white font-black text-sm uppercase tracking-tight italic">Recarga de IZI Coins</h4>
+                    <h4 className="text-white font-black text-sm uppercase tracking-tight">Recarga de IZI Coins</h4>
                     <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">{coinOrder.status === 'pendente_pagamento' ? 'Aguardando Pagamento' : 'Processamento Instantâneo'}</p>
                   </div>
                 </div>
@@ -679,7 +679,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                  <div className="flex flex-col gap-2" onClick={() => { setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}>
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400 cursor-pointer">
                       <span>Valor: R$ {Number(coinOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                      <span className="text-white italic">Confirmando Transação...</span>
+                      <span className="text-white">Confirmando Transação...</span>
                     </div>
                     {/* Progress Bar Dinâmica */}
                     <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
@@ -731,7 +731,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => { setSelectedItem(activeOrder); setSubView("active_order"); }}
+              onClick={() => { 
+                setSelectedItem(activeOrder); 
+                const isMobility = ['mototaxi', 'carro', 'van', 'utilitario', 'frete', 'logistica'].includes(activeOrder.service_type);
+                setSubView(isMobility ? "logistics_tracking" : "active_order");
+              }}
               className="relative overflow-hidden bg-zinc-900 border border-yellow-400/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(255,215,9,0.15)] group cursor-pointer"
             >
               {/* Background Glow */}
@@ -745,7 +749,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </span>
                   </div>
                   <div>
-                    <h4 className="text-white font-black text-sm uppercase tracking-tight italic">Acompanhe seu pedido</h4>
+                    <h4 className="text-white font-black text-sm uppercase tracking-tight">Acompanhe seu pedido</h4>
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
@@ -773,7 +777,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                  <div className="flex flex-col gap-2">
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400">
                       <span className="truncate max-w-[150px]">{activeOrder.merchant_name || "Seu pedido"}</span>
-                      <span className="text-white italic">
+                      <span className="text-white">
                         {["saiu_para_entrega", "em_rota", "a_caminho", "picked_up"].includes(activeOrder.status) ? "Em Trânsito" : "Processando"}
                       </span>
                     </div>
@@ -789,7 +793,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                  
                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
                     <p className="text-zinc-500 text-[9px] font-medium max-w-[200px] truncate">
-                      Destino: {activeOrder.delivery_address || "Seu endereço"}
+                      Destino: {parseAddressText(activeOrder.delivery_address) || "Seu endereço"}
                     </p>
                     <div className="text-white text-[10px] font-black flex items-center gap-1 group-hover:gap-2 transition-all">
                        VER MAPA <span className="material-symbols-outlined text-sm text-yellow-400">arrow_forward</span>
@@ -837,7 +841,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-1">Serviço Ativo</p>
-                    <h4 className="text-base font-black text-white uppercase tracking-tight italic leading-tight">
+                    <h4 className="text-base font-black text-white uppercase tracking-tight leading-tight">
                       {logisticsOrder.service_type === "van" ? "Van de Carga" : "Izi Logistics"}
                     </h4>
                     <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">
@@ -885,7 +889,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
                 <div className="text-right shrink-0 flex flex-col justify-center">
                   <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Total</p>
-                  <p className="text-lg font-black text-white italic">R$ {Number(logisticsOrder.total_price || 0).toFixed(2).replace(".",",")}</p>
+                  <p className="text-lg font-black text-white">R$ {Number(logisticsOrder.total_price || 0).toFixed(2).replace(".",",")}</p>
                 </div>
               </div>
 
@@ -931,7 +935,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-yellow-400 text-2xl fill-1 animate-pulse">bolt</span>
-                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">Izi Flash</h3>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Izi Flash</h3>
                   </div>
                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-2 pl-8">Ofertas que desaparecem</p>
                 </div>
@@ -1010,15 +1014,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         />
                         {story.merchant}
                       </span>
-                      <h5 className="text-white text-xl font-black uppercase italic tracking-tighter leading-none group-hover:text-yellow-400 transition-colors drop-shadow-2xl line-clamp-1 mt-1">
+                      <h5 className="text-white text-xl font-black uppercase tracking-tighter leading-none group-hover:text-yellow-400 transition-colors drop-shadow-2xl line-clamp-1 mt-1">
                         {story.name}
                       </h5>
                       <div className="flex items-baseline gap-2 mt-1.5">
-                        <span className="text-2xl font-black text-white italic tracking-tighter drop-shadow-lg">
+                        <span className="text-2xl font-black text-white tracking-tighter drop-shadow-lg">
                           R$ {story.finalPrice}
                         </span>
                         {story.originalPrice && (
-                          <span className="text-[10px] text-white/30 line-through font-bold italic">
+                          <span className="text-[10px] text-white/30 line-through font-bold">
                             R$ {story.originalPrice}
                           </span>
                         )}
@@ -1047,7 +1051,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <section className="space-y-5">
               <div className="flex items-end justify-between px-2">
                 <div className="space-y-1">
-                  <h3 className="text-2xl font-black tracking-tighter text-white italic uppercase leading-none">Cupons</h3>
+                  <h3 className="text-2xl font-black tracking-tighter text-white uppercase leading-none">Cupons</h3>
                   <div className="flex items-center gap-2">
                     <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
                     <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">{availableCoupons.length} Cupons Ativos</p>
@@ -1101,7 +1105,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="absolute top-0 right-0 size-80 bg-yellow-400 opacity-[0.03] blur-[120px] rounded-full -mr-32 -mt-32 pointer-events-none group-hover:opacity-[0.06] transition-opacity duration-1000" />
             <div className="flex flex-col items-center mb-8 text-center relative z-10">
               <span className="bg-zinc-900/50 text-white/30 text-[7px] font-black px-5 py-2 rounded-full tracking-[0.4em] uppercase mb-4 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]">Izi Connect</span>
-              <h2 className="text-4xl font-black tracking-tighter text-white italic uppercase leading-none drop-shadow-2xl">Vá de Izi.</h2>
+              <h2 className="text-4xl font-black tracking-tighter text-white uppercase leading-none drop-shadow-2xl">Vá de Izi.</h2>
             </div>
             <div className="grid grid-cols-4 gap-4 relative z-10 px-1">
               {[
@@ -1142,7 +1146,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
                   <div className="absolute bottom-5 left-5 right-5">
                     <span className="bg-yellow-400 text-zinc-950 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 inline-block">Destaque</span>
-                    <h3 className="text-white text-2xl font-black uppercase italic tracking-tighter leading-none">Rio de Janeiro</h3>
+                    <h3 className="text-white text-2xl font-black uppercase tracking-tighter leading-none">Rio de Janeiro</h3>
                     <p className="text-zinc-300 text-[10px] mt-1.5 font-medium leading-tight">A Cidade Maravilhosa te espera com vistas de tirar o fôlego.</p>
                   </div>
                 </div>
@@ -1151,7 +1155,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 brightness-[0.85]" alt="Lençois" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9pJtQUFvwTMhb5kOHNQVWVa4scypdDjMI-fzC6Yb5AxrJ9ngRDwIBShljsWaxqjyZwzS5r2TmovVp8S3ZjcsfxhXh53ExX1PKLBVC_BAD4PfuaeIZQhlQ3-qeVWGS2gqHSyQrVfX-2d6SSwy9MogLoHWtAXwu_qcOqjmsJ1RPsEBkQItbwCrNJpST3gTzADr509nhW9iuFTZEo3hH-uU5RvXFiLC9rBO9t6IkRzRn7DfwOxLSlh6sbpA8bTCJyOZUoCI8OKp_u4I"/>
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
                   <div className="absolute bottom-5 left-5 right-5">
-                    <h3 className="text-white text-2xl font-black uppercase italic tracking-tighter leading-none">Lençóis</h3>
+                    <h3 className="text-white text-2xl font-black uppercase tracking-tighter leading-none">Lençóis</h3>
                     <p className="text-zinc-300 text-[10px] mt-1.5 font-medium leading-tight">Dunas intermináveis e lagoas cristalinas.</p>
                   </div>
                 </div>
@@ -1160,7 +1164,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 brightness-[0.85]" alt="Amazônia" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBtt5NYpAq16N5wdors_x3KLtpbg1NdGI4t3QSRDAqOLDNqwoKIYBZBlhojbqT2XIWkg55xUeTWMc-06JQM_0k3r9fOxsYKEUoMVrSh3UR0OCBIjW0l7jp7C_li1o54J-aqQ4UuoDoYwypn9sRV4ohcSxEk076knbWw_az9ggN7nVuyKs3fH8SDi1w8qn68-YAUAXPKRsUKoA7kymmS1BrBp0q7SlVXqK4_5M5DEcv06aCfrGWTI5Kb7aWK0W8H6W_xhtjvyFrQko"/>
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
                   <div className="absolute bottom-5 left-5 right-5">
-                    <h3 className="text-white text-2xl font-black uppercase italic tracking-tighter leading-none">Amazônia</h3>
+                    <h3 className="text-white text-2xl font-black uppercase tracking-tighter leading-none">Amazônia</h3>
                     <p className="text-zinc-300 text-[10px] mt-1.5 font-medium leading-tight">A maior biodiversidade do planeta à sua volta.</p>
                   </div>
                 </div>
@@ -1172,7 +1176,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div className="flex justify-between items-end mb-6 px-4">
                 <div>
                   <p className="text-yellow-400 font-black text-[10px] tracking-[0.2em] uppercase">Categorias</p>
-                  <h2 className="text-zinc-100 font-bold text-2xl italic tracking-tighter leading-none">O que você busca?</h2>
+                  <h2 className="text-zinc-100 font-bold text-2xl tracking-tighter leading-none">O que você busca?</h2>
                 </div>
                 <div></div>
               </div>
@@ -1234,7 +1238,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <section className="space-y-6">
             <div className="flex justify-between items-end px-1">
               <div className="space-y-1">
-                <h3 className="text-2xl font-black tracking-tighter text-white italic uppercase leading-none">Favoritos da região</h3>
+                <h3 className="text-2xl font-black tracking-tighter text-white uppercase leading-none">Favoritos da região</h3>
                 <div className="flex items-center gap-2">
                   <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">Os melhores perto de você</p>
@@ -1264,7 +1268,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                          </div>
                       </div>
                       <div className="space-y-0.5">
-                        <h4 className="text-base font-black text-white leading-tight tracking-tight uppercase italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{shop.name}</h4>
+                        <h4 className="text-base font-black text-white leading-tight tracking-tight uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{shop.name}</h4>
                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest drop-shadow-md">{shop.tag}</p>
                       </div>
                     </div>

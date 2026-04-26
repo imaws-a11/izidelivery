@@ -34,6 +34,7 @@ interface CheckoutViewProps {
   paymentMethodsActive?: { pix?: boolean; card?: boolean; lightning?: boolean; wallet?: boolean };
   walletBalance?: number;
   isShopOpen?: boolean;
+  shopName?: string;
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
@@ -57,7 +58,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   handlePlaceOrder,
   setSubView,
   iziCoins = 0,
-  iziCoinValue = 0.01,
+  iziCoinValue = 1.0,
   iziCoinRate = 1,
   deliveryFee = 0,
   serviceFee = 0,
@@ -66,7 +67,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   iziBlackCashbackMultiplier = 1,
   paymentMethodsActive = { pix: true, card: true, lightning: true, wallet: true },
   walletBalance = 0,
-  isShopOpen = true
+  isShopOpen = true,
+  shopName = "Estabelecimento"
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((sum, item) => {
@@ -94,7 +96,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       : (subtotal * appliedCoupon.discount_value) / 100
     : 0;
   
-  const coinDiscount = useCoins ? (iziCoins || 0) * (iziCoinValue || 0.01) : 0;
+  const coinDiscount = useCoins ? (iziCoins || 0) * (iziCoinValue || 1.0) : 0;
   
   const rawServiceFee = (subtotal * (Number(serviceFee) || 0)) / 100;
   const serviceFeeAmount = isIziBlack ? 0 : rawServiceFee;
@@ -117,9 +119,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     {
       id: "saldo",
       icon: "account_balance_wallet",
-      label: "Saldo Izi",
-      sub: `${iziCoins.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 8 })} coins (R$ ${(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")})`,
-      disabled: (iziCoins * iziCoinValue) < total,
+      label: "Saldo Izi Pay",
+      sub: `R$ ${Number(walletBalance || 0).toFixed(2).replace(".", ",")} + ${Number(iziCoins || 0)} coins`,
+      disabled: (Number(walletBalance || 0) + (Number(iziCoins || 0) * Number(iziCoinValue || 1.0))) < total,
       color: "text-emerald-400",
       active: paymentMethodsActive.wallet !== false
     },
@@ -288,7 +290,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
         <section className="space-y-8">
            <div className="flex items-center justify-between border-b border-white/5 pb-6">
-             <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Seu Pedido</h2>
+             <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Pedido em {shopName}</h2>
              <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/10 shadow-lg shadow-yellow-400/5">
                 {cart.length} ITENS
              </span>
