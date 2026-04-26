@@ -306,10 +306,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
           .single();
         
         // 2. Busca configurações globais (limite base e juros)
-        const { data: globalData } = await supabase
+        const { data: globalRaw } = await supabase
           .from("admin_settings_delivery")
-          .select("global_pre_approved_limit, loan_interest_rate, izi_black_cashback")
-          .single();
+          .select("value")
+          .eq("key", "global")
+          .maybeSingle();
+        const globalData = globalRaw?.value || null;
 
         const { data: userDataExtended } = await supabase
           .from("users_delivery")
