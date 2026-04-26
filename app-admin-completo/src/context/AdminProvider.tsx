@@ -2026,14 +2026,35 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!editingItem) return;
     setIsSaving(true);
     try {
-      const { id, created_at, ...cleanItem } = editingItem;
+      const { id } = editingItem;
+
+      // Mapeamento explícito: apenas colunas que existem em partner_stores_delivery
+      const partnerPayload: any = {
+        name:               editingItem.name               || '',
+        description:        editingItem.description        || null,
+        address:            editingItem.address            || null,
+        phone:              editingItem.phone              || null,
+        is_active:          editingItem.is_active          ?? true,
+        is_deleted:         editingItem.is_deleted         ?? false,
+        store_address:      editingItem.store_address      || editingItem.address || null,
+        address_number:     editingItem.address_number     || null,
+        address_complement: editingItem.address_complement || null,
+        neighborhood:       editingItem.neighborhood       || null,
+        city:               editingItem.city               || null,
+        state:              editingItem.state              || null,
+        latitude:           editingItem.latitude  != null ? Number(editingItem.latitude)  : null,
+        longitude:          editingItem.longitude != null ? Number(editingItem.longitude) : null,
+        google_place_id:    editingItem.google_place_id   || null,
+      };
+
+      // Inclui id apenas se for edição de registro existente
+      if (id && !String(id).startsWith('new-')) {
+        partnerPayload.id = id;
+      }
+
       const { error } = await supabase
         .from('partner_stores_delivery')
-        .upsert({
-          ...(id ? { id } : {}),
-          ...cleanItem,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(partnerPayload);
 
       if (error) throw error;
       toastSuccess(id ? 'Parceiro atualizado!' : 'Novo parceiro adicionado!');

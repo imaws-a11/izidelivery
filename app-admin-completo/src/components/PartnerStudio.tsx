@@ -280,43 +280,177 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-8"
                 >
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 mb-2">
-                      <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                        <span className="material-symbols-outlined">location_on</span>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">Bússola de Entrega</h3>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Defina o endereço exato para cálculos de distância.</p>
-                      </div>
+                  {/* Header */}
+                  <div className="flex items-center gap-4">
+                    <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined text-2xl">location_on</span>
                     </div>
-                    
-                    <AddressSearchInput
-                      value={editingItem.address || ''}
-                      onChange={(data) => {
-                        setEditingItem({
-                          ...editingItem,
-                          address: data.address,
-                          city: data.city || editingItem.city,
-                          latitude: data.latitude,
-                          longitude: data.longitude,
-                          google_place_id: data.placeId
-                        });
-                      }}
-                      placeholder="Pesquise o endereço (Rua, Número, Bairro, Cidade)..."
-                    />
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">Endereço do Parceiro</h3>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Use o campo de busca ou preencha manualmente os campos abaixo.</p>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Latitude</span>
-                      <p className="font-mono text-xs dark:text-white">{editingItem.latitude || '---'}</p>
+                  {/* Autocomplete principal */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Buscar Endereço</label>
+                    <AddressSearchInput
+                      placeholder="Ex: Rua das Flores, 123, Centro, Aracaju..."
+                      initialValue={editingItem.address || ''}
+                      onSelect={(data) => {
+                        const addr = data.formatted_address || '';
+                        // Extrai cidade da última parte do endereço formatado
+                        const parts = addr.split(',');
+                        const cityPart = parts.length >= 2 ? parts[parts.length - 2]?.trim() : '';
+                        setEditingItem({
+                          ...editingItem,
+                          address:      addr,
+                          store_address: addr,
+                          city:         cityPart || editingItem.city,
+                          latitude:     data.lat  ?? editingItem.latitude,
+                          longitude:    data.lng  ?? editingItem.longitude,
+                        });
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+                    />
+                    <p className="text-[10px] font-bold text-slate-400 ml-4">
+                      Ao selecionar um endereço, os campos abaixo serão preenchidos automaticamente.
+                    </p>
+                  </div>
+
+                  {/* Campos de endereço estruturado */}
+                  <div className="bg-slate-50 dark:bg-slate-800/30 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 space-y-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="material-symbols-outlined text-slate-400">edit_location_alt</span>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dados do Endereço</p>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Longitude</span>
-                      <p className="font-mono text-xs dark:text-white">{editingItem.longitude || '---'}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Rua / Logradouro */}
+                      <div className="md:col-span-2 space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Rua / Logradouro</label>
+                        <input
+                          type="text"
+                          value={editingItem.store_address || editingItem.address || ''}
+                          onChange={e => setEditingItem({ ...editingItem, store_address: e.target.value, address: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+                          placeholder="Ex: Rua das Flores"
+                        />
+                      </div>
+                      {/* Número */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Número</label>
+                        <input
+                          type="text"
+                          value={editingItem.address_number || ''}
+                          onChange={e => setEditingItem({ ...editingItem, address_number: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+                          placeholder="Ex: 123"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Complemento */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Complemento</label>
+                        <input
+                          type="text"
+                          value={editingItem.address_complement || ''}
+                          onChange={e => setEditingItem({ ...editingItem, address_complement: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+                          placeholder="Ex: Sala 2, Loja A, Galpão 3..."
+                        />
+                      </div>
+                      {/* Bairro */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Bairro</label>
+                        <input
+                          type="text"
+                          value={editingItem.neighborhood || ''}
+                          onChange={e => setEditingItem({ ...editingItem, neighborhood: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+                          placeholder="Ex: Centro"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Cidade */}
+                      <div className="md:col-span-2 space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Cidade</label>
+                        <input
+                          type="text"
+                          value={editingItem.city || ''}
+                          onChange={e => setEditingItem({ ...editingItem, city: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+                          placeholder="Ex: Aracaju"
+                        />
+                      </div>
+                      {/* Estado */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Estado (UF)</label>
+                        <input
+                          type="text"
+                          maxLength={2}
+                          value={editingItem.state || ''}
+                          onChange={e => setEditingItem({ ...editingItem, state: e.target.value.toUpperCase() })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white uppercase"
+                          placeholder="SE"
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Coordenadas GPS */}
+                  <div className="flex items-center gap-4">
+                    <div className="grid grid-cols-2 gap-4 flex-1">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Latitude</span>
+                        <p className="font-mono text-xs dark:text-white">{editingItem.latitude ? Number(editingItem.latitude).toFixed(6) : '—'}</p>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Longitude</span>
+                        <p className="font-mono text-xs dark:text-white">{editingItem.longitude ? Number(editingItem.longitude).toFixed(6) : '—'}</p>
+                      </div>
+                    </div>
+                    {/* Botão GPS */}
+                    <button
+                      type="button"
+                      title="Capturar minha localização atual via GPS"
+                      onClick={() => {
+                        if (!navigator.geolocation) return toastError('Geolocalização não suportada.');
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setEditingItem({
+                              ...editingItem,
+                              latitude: pos.coords.latitude,
+                              longitude: pos.coords.longitude
+                            });
+                            toastSuccess('Coordenadas GPS capturadas!');
+                          },
+                          () => toastError('Não foi possível obter a localização.')
+                        );
+                      }}
+                      className="size-16 rounded-2xl bg-primary/10 text-primary hover:bg-primary hover:text-slate-950 flex flex-col items-center justify-center gap-1 transition-all active:scale-90 shrink-0"
+                    >
+                      <span className="material-symbols-outlined text-xl">my_location</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest">GPS</span>
+                    </button>
+                  </div>
+
+                  {/* Indicador visual se o endereço está completo */}
+                  {(editingItem.latitude && editingItem.longitude) && (
+                    <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/20 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
+                      <span className="material-symbols-outlined text-emerald-500" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                      <div>
+                        <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Localização GPS confirmada</p>
+                        <p className="text-[9px] font-bold text-emerald-600/70 dark:text-emerald-500/60">
+                          {editingItem.city ? `${editingItem.city}${editingItem.state ? ` - ${editingItem.state}` : ''}` : 'Coordenadas registradas com sucesso.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 

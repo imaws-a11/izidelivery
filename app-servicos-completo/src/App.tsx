@@ -251,9 +251,9 @@ function App() {
       const { data } = await supabase
         .from('admin_settings_delivery')
         .select('*')
-        .eq('id', '00000000-0000-0000-0000-000000000000')
+        .eq('key', 'global')
         .maybeSingle();
-      if (data) setGlobalSettings(data);
+      if (data) setGlobalSettings(data.value || data);
 
       const { data: appData } = await supabase
         .from('app_settings_delivery')
