@@ -46,8 +46,10 @@ function App() {
     setShowActiveOrdersModal
   } = useAdmin();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('izi_admin_remember_email') || '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('izi_admin_remember_email'));
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -56,6 +58,12 @@ function App() {
     setAuthLoading(true);
     setAuthError(null);
     try {
+      if (rememberMe) {
+        localStorage.setItem('izi_admin_remember_email', email);
+      } else {
+        localStorage.removeItem('izi_admin_remember_email');
+      }
+
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } catch (err: any) {
@@ -104,14 +112,42 @@ function App() {
                 className="w-full bg-white/5 border border-white/5 rounded-full px-8 py-5 text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-inner"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 relative">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Senha"
-                className="w-full bg-white/5 border border-white/5 rounded-full px-8 py-5 text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-inner"
+                className="w-full bg-white/5 border border-white/5 rounded-full px-8 py-5 text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-inner pr-16"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-xl">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-2">
+              <button
+                type="button"
+                onClick={() => setRememberMe(!rememberMe)}
+                className="flex items-center gap-3 group transition-all"
+              >
+                <div className={`size-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                  rememberMe ? 'bg-primary border-primary shadow-lg shadow-primary/20' : 'border-white/10 bg-white/5 group-hover:border-white/20'
+                }`}>
+                  {rememberMe && <span className="material-symbols-outlined text-sm text-slate-900 font-black">check</span>}
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${
+                  rememberMe ? 'text-primary' : 'text-slate-500 group-hover:text-slate-400'
+                }`}>
+                  Salvar dados para mais tarde
+                </span>
+              </button>
             </div>
             {authError && <p className="text-red-400 text-xs font-bold text-center mt-2">{authError}</p>}
             <button
