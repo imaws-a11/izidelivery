@@ -1973,17 +1973,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchMerchants]);
 
   const handleUpdateDriverStatus = useCallback(async (id: string, newStatus: any) => {
+    console.log('--- ADMIN PROVIDER: handleUpdateDriverStatus ---', { id, newStatus });
     try {
       const { error } = await supabase.from('drivers_delivery').update({ 
         is_active: newStatus === 'active',
         status: newStatus 
       }).eq('id', id);
+      
       if (error) throw error;
+      
+      toastSuccess('Status do entregador atualizado com sucesso!');
       fetchDrivers();
+      
+      if (selectedDriverStudio?.id === id) {
+        setSelectedDriverStudio(prev => prev ? ({ ...prev, status: newStatus, is_active: newStatus === 'active' }) : null);
+      }
     } catch (err: any) {
       console.error(err);
+      toastError('Erro ao atualizar status: ' + err.message);
     }
-  }, [fetchDrivers]);
+  }, [fetchDrivers, selectedDriverStudio]);
 
   const handleDeleteDriver = useCallback(async (id: string) => {
     if (!await showConfirm({ message: 'Excluir este entregador?' })) return;

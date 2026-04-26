@@ -157,7 +157,7 @@ export default function OrdersAdminTab() {
     const gross = Number(order.total_price || 0);
     const commissionAmount = gross * (rate / 100);
     return {
-      label: 'Taxa Plataforma Loja',
+      label: 'Comissão App (Loja)',
       rate,
       gross,
       commissionAmount,
@@ -210,7 +210,7 @@ export default function OrdersAdminTab() {
     );
 
     return {
-      label: isPrivateDriver ? 'Comissão Motorista Particular' : 'Comissão Entregador',
+      label: isPrivateDriver ? 'Comissão App (Motorista)' : 'Comissão App (Entregador)',
       baseLabel: isPrivateDriver ? 'Base Corrida' : 'Base Frete',
       netLabel: isPrivateDriver ? 'Líquido Motorista' : 'Líquido Entregador',
       rate,
@@ -507,7 +507,7 @@ export default function OrdersAdminTab() {
                                                        <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
                                                    </div>
                                                )}
-                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                                                <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-3">
                                                    {selectedMerchantFinancial && (
                                                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
                                                          <span>{selectedMerchantFinancial.label} ({selectedMerchantFinancial.rate}%)</span>

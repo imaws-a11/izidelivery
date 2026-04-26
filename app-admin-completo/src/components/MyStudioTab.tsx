@@ -19,7 +19,7 @@ import { GMAPS_KEY } from '../config';
 
 export default function MyStudioTab() {
   const {
-    activeTab, setActiveTab, userRole, merchantProfile, setMerchantProfile,
+    activeTab, setActiveTab, userRole, merchantProfile, setMerchantProfile, session,
     selectedMerchantPreview, setSelectedMerchantPreview,
     productsList, previewProducts, setPreviewProducts,
     menuCategoriesList, previewCategories, setPreviewCategories,
@@ -2938,14 +2938,28 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                />
              </div>
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Status de Verificação</label>
-               <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl px-6 py-5 border border-slate-100 dark:border-slate-800 shadow-sm">
-                  <span className={`size-3 rounded-full ${selectedDriverStudio.status === 'active' ? 'bg-green-500' : 'bg-amber-500'}`}></span>
-                  <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                    {selectedDriverStudio.status === 'active' ? 'Verificado' : 'Pendente / Em Análise'}
-                  </span>
-               </div>
-             </div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Status de Verificação</label>
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="flex-1 flex items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl px-6 py-5 border border-slate-100 dark:border-slate-800 shadow-sm">
+                     <span className={`size-3 rounded-full ${selectedDriverStudio.status === 'active' ? 'bg-green-500' : 'bg-amber-500'}`}></span>
+                     <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                       {selectedDriverStudio.status === 'active' ? 'Verificado' : 'Pendente / Em Análise'}
+                     </span>
+                  </div>
+                  {selectedDriverStudio.status !== 'active' && (
+                    <button
+                      onClick={() => {
+                        console.log('--- BUTTON CLICK: Aprovar Documentos (MyStudioTab) ---', selectedDriverStudio.id);
+                        handleUpdateDriverStatus(selectedDriverStudio.id, 'active');
+                      }}
+                      className="px-6 py-5 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">verified</span>
+                      Aprovar Documentos
+                    </button>
+                  )}
+                </div>
+              </div>
           </div>
 
           {/* Upload de Documentos */}

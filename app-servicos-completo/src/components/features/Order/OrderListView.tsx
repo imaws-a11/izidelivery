@@ -119,17 +119,17 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
           setSelectedItem(order);
           const isHistory = ["concluido", "cancelado"].includes(order.status);
           
-          if (isCoin) {
-            setSubView("izi_coin_tracking");
-          } else if (isHistory) {
-            setSubView("order_detail");
-          } else if (isMobilityOrder) {
-            setSubView(["frete", "logistica", "van", "mototaxi", "carro"].includes(order.service_type) ? "logistics_tracking" : "active_order");
-          } else {
-            setSubView("active_order");
-          }
-        }}
-        className={`relative overflow-hidden rounded-[40px] cursor-pointer group ${isHistory ? 'mb-4 scale-95 origin-left opacity-90' : 'mb-8'}`}
+            if (isCoin) {
+              setSubView("izi_coin_tracking");
+            } else if (isHistory) {
+              setSubView("order_detail");
+            } else if (isMobilityOrder || !!order.scheduled_at) {
+              setSubView("logistics_tracking");
+            } else {
+              setSubView("active_order");
+            }
+          }}
+          className={`relative overflow-hidden rounded-[40px] cursor-pointer group ${isHistory ? 'mb-4 scale-95 origin-left opacity-90' : 'mb-8'}`}
         style={{
           background: "linear-gradient(135deg, rgba(28,28,31,0.9) 0%, rgba(20,20,22,0.95) 100%)",
           backdropFilter: "blur(20px)",

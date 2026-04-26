@@ -1205,12 +1205,20 @@ function App() {
     if (!uid) return;
     const { data } = await supabase
       .from("orders_delivery")
-      .select("*")
+      .select("*, drivers_delivery!driver_id(name, vehicle_plate, avatar_url, phone, rating)")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
     
     if (data) {
-      setMyOrders(data);
+      const mappedOrders = data.map((o: any) => ({
+        ...o,
+        driver_name: o.drivers_delivery?.name || o.driver_name,
+        driver_vehicle_plate: o.drivers_delivery?.vehicle_plate || o.driver_vehicle_plate,
+        driver_avatar: o.drivers_delivery?.avatar_url || o.driver_avatar,
+        driver_phone: o.drivers_delivery?.phone || o.driver_phone,
+        driver_rating: o.drivers_delivery?.rating || o.driver_rating
+      }));
+      setMyOrders(mappedOrders);
     }
   };
 
@@ -2711,9 +2719,33 @@ const navigateSubView = (target: string) => {
         schema: 'public', 
         table: 'orders_delivery',
         filter: `id=eq.${selectedItem.id}` 
-      }, (payload) => {
+      }, async (payload) => {
         console.log("[REALTIME] Status do pedido atualizado:", payload.new.status);
-        setSelectedItem(payload.new);
+        
+        if (payload.new.driver_id) {
+           const { data: driverInfo } = await supabase
+             .from("drivers_delivery")
+             .select("name, vehicle_plate, avatar_url, phone, rating")
+             .eq("id", payload.new.driver_id)
+             .single();
+             
+           if (driverInfo) {
+             const updatedItem = {
+               ...payload.new,
+               driver_name: driverInfo.name,
+               driver_vehicle_plate: driverInfo.vehicle_plate,
+               driver_avatar: driverInfo.avatar_url,
+               driver_phone: driverInfo.phone,
+               driver_rating: driverInfo.rating
+             };
+             setSelectedItem(updatedItem);
+           } else {
+             setSelectedItem(payload.new);
+           }
+        } else {
+           setSelectedItem(payload.new);
+        }
+
         // Atualizar lista de pedidos também se o usuário estiver logado
         if (userId) fetchMyOrders(userId);
       })
@@ -3041,6 +3073,16 @@ const navigateSubView = (target: string) => {
   }, [userId]);
   
   const [myOrders, setMyOrders] = useState<any[]>([]);
+
+  // Sincroniza o selectedItem com as atualizações em tempo real
+  useEffect(() => {
+    if (selectedItem?.id) {
+      const updated = myOrders.find(o => o.id === selectedItem.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedItem)) {
+        setSelectedItem(updated);
+      }
+    }
+  }, [myOrders]);
 
   // Atualiza automaticamente as telas PIX/Lightning se o pagamento for confirmado em tempo real
   // Usa selectedItem.id (não o objeto inteiro) como dependência para evitar loops de re-render

@@ -732,7 +732,7 @@ function App() {
     const [showSplash, setShowSplash] = useState(true);
 
     const ensureDriverRecord = useCallback(async (userId: string, email: string, name: string) => {
-        const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online, vehicle_type').eq('id', userId).maybeSingle();
+        const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online, vehicle_type, preferences, avatar_url').eq('id', userId).maybeSingle();
         if (!data) {
             await supabase.from('drivers_delivery').upsert({
                 id: userId, 
@@ -751,6 +751,19 @@ function App() {
                     localStorage.setItem('izi_driver_vehicle', data.vehicle_type);
                 }
                 localStorage.setItem('izi_driver_name', data.name);
+            }
+            if (data.avatar_url) {
+                setDriverAvatar(data.avatar_url);
+                localStorage.setItem('izi_driver_avatar', data.avatar_url);
+            }
+            if (data.preferences) {
+                const p = data.preferences as any;
+                if (p.pref_sound !== undefined) setPrefSoundEnabled(p.pref_sound);
+                if (p.pref_vibration !== undefined) setPrefVibrationEnabled(p.pref_vibration);
+                if (p.pref_nav_app !== undefined) setPrefNavApp(p.pref_nav_app);
+                if (p.pref_max_radius !== undefined) setPrefMaxRadius(p.pref_max_radius);
+                if (p.pref_vehicle) setPrefVehicleTypes(p.pref_vehicle);
+                if (p.pref_services) setPrefServiceTypes(p.pref_services);
             }
             const lat = Number(data.lat);
             const lng = Number(data.lng);
@@ -877,13 +890,7 @@ function App() {
         try {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            let token = supabaseKey;
-
-            // Recuperação segura do token JWT para respeitar políticas RLS
-            try {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch(e) { /* Fallback para anon key */ }
+            let token = await getSecureToken();
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -1164,16 +1171,20 @@ function App() {
     const [prefVehicleTypes, setPrefVehicleTypes] = useState<string[]>(() => {
         try { return JSON.parse(localStorage.getItem('pref_vehicle') || '["moto"]'); } catch { return ['moto']; }
     });
+    const prefVehicleTypesRef = useRef(prefVehicleTypes);
+    useEffect(() => { prefVehicleTypesRef.current = prefVehicleTypes; }, [prefVehicleTypes]);
+
     const [prefServiceTypes, setPrefServiceTypes] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem('pref_services');
             if (saved) return JSON.parse(saved);
-            // Padrão: entregas ativas, mobilidade opcional
             const def = ['all_services'];
             localStorage.setItem('pref_services', JSON.stringify(def));
             return def;
         } catch { return ['all_services']; }
     });
+    const prefServiceTypesRef = useRef(prefServiceTypes);
+    useEffect(() => { prefServiceTypesRef.current = prefServiceTypes; }, [prefServiceTypes]);
     const [prefMaxRadius, setPrefMaxRadius] = useState<number>(() => Number(localStorage.getItem('pref_max_radius') || 10));
 
     
@@ -1402,19 +1413,19 @@ function App() {
         
         let minGuaranteed = 0;
         if (type === 'restaurant') {
-            minGuaranteed = Number(dynamicRates?.food_min || appSettings?.baseFee || 7);
+            minGuaranteed = Number(dynamicRates?.food_min || appSettings?.base_fee || 7);
         } else if (type === 'market') {
-            minGuaranteed = Number(dynamicRates?.market_min || dynamicRates?.food_min || appSettings?.baseFee || 7);
+            minGuaranteed = Number(dynamicRates?.market_min || dynamicRates?.food_min || appSettings?.base_fee || 7);
         } else if (type === 'pharmacy') {
-            minGuaranteed = Number(dynamicRates?.pharmacy_min || dynamicRates?.food_min || appSettings?.baseFee || 7);
+            minGuaranteed = Number(dynamicRates?.pharmacy_min || dynamicRates?.food_min || appSettings?.base_fee || 7);
         } else if (type === 'beverages') {
-            minGuaranteed = Number(dynamicRates?.beverages_min || dynamicRates?.food_min || appSettings?.baseFee || 7);
+            minGuaranteed = Number(dynamicRates?.beverages_min || dynamicRates?.food_min || appSettings?.base_fee || 7);
         } else if (type === 'mototaxi') {
             minGuaranteed = Number(dynamicRates?.mototaxi_min || 6);
         } else if (['car_ride', 'motorista_particular'].includes(type)) {
             minGuaranteed = Number(dynamicRates?.carro_min || 14);
         } else {
-            minGuaranteed = Number(appSettings?.baseFee || 7);
+            minGuaranteed = Number(appSettings?.base_fee || 7);
         }
 
         const isMobility = ['mototaxi', 'car_ride', 'frete', 'logistica', 'motorista_particular', 'van', 'utilitario', 'motoboy'].includes(type);
@@ -1427,7 +1438,7 @@ function App() {
             base = Math.max(deliveryFee, minGuaranteed);
         }
 
-        if (base <= 0) base = Number(appSettings?.baseFee || 7);
+        if (base <= 0) base = Number(appSettings?.base_fee || 7);
         return Number(base.toFixed(2));
     }, [appSettings, dynamicRates]);
 
@@ -1438,17 +1449,9 @@ function App() {
         const type = normalizeServiceType(rawType);
         
         // Verificação de pagamento em dinheiro
-        const isCash = order.payment_method === 'dinheiro' || order.payment_method === 'cash';
         const driverBaseAmount = getGrossEarnings(order);
-
-        // REGRA SOLICITADA: Só desconta comissão se for pagamento em DINHEIRO
-        // Pois em pagamentos digitais o dinheiro não fica com o entregador e ele recebe o frete cheio
-        if (!isCash) {
-            return Number(driverBaseAmount.toFixed(2));
-        }
-
-        const deliveryCommission = Number(appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
-        const privateDriverCommission = Number(appSettings?.privateDriverCommission ?? appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
+        const deliveryCommission = Number(appSettings?.driver_freight_commission ?? appSettings?.app_commission ?? 7);
+        const privateDriverCommission = Number(appSettings?.private_driver_commission ?? appSettings?.driver_freight_commission ?? appSettings?.app_commission ?? 7);
         const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
         
         const commission = isPrivateDriver ? privateDriverCommission : deliveryCommission;
@@ -1743,10 +1746,10 @@ function App() {
                     hasBootedRef.current = true;
                     console.log('[AUTH] Primeiro boot detectado. Carregando perfil...');
 
-                    // Buscar perfil apenas para nome e chave pix (NÃƒO tocar no is_online aqui)
+                    // Buscar perfil apenas para nome e chave pix (NÃO tocar no is_online aqui)
                     const { data: profile } = await supabase
                         .from('drivers_delivery')
-                        .select('name, bank_info, avatar_url, license_plate')
+                        .select('name, bank_info, avatar_url, license_plate, preferences')
                         .eq('id', user.id)
                         .single();
 
@@ -1758,6 +1761,34 @@ function App() {
                         setDriverAvatar(profile.avatar_url || null);
                         if (profile.avatar_url) localStorage.setItem('izi_driver_avatar', profile.avatar_url);
                         else localStorage.removeItem('izi_driver_avatar');
+
+                        if (profile.preferences) {
+                            const p = profile.preferences as any;
+                            if (p.pref_sound !== undefined) {
+                                setPrefSoundEnabled(p.pref_sound);
+                                localStorage.setItem('pref_sound', String(p.pref_sound));
+                            }
+                            if (p.pref_vibration !== undefined) {
+                                setPrefVibrationEnabled(p.pref_vibration);
+                                localStorage.setItem('pref_vibration', String(p.pref_vibration));
+                            }
+                            if (p.pref_nav_app !== undefined) {
+                                setPrefNavApp(p.pref_nav_app);
+                                localStorage.setItem('pref_nav_app', p.pref_nav_app);
+                            }
+                            if (p.pref_max_radius !== undefined) {
+                                setPrefMaxRadius(p.pref_max_radius);
+                                localStorage.setItem('pref_max_radius', String(p.pref_max_radius));
+                            }
+                            if (p.pref_vehicle) {
+                                setPrefVehicleTypes(p.pref_vehicle);
+                                localStorage.setItem('pref_vehicle', JSON.stringify(p.pref_vehicle));
+                            }
+                            if (p.pref_services) {
+                                setPrefServiceTypes(p.pref_services);
+                                localStorage.setItem('pref_services', JSON.stringify(p.pref_services));
+                            }
+                        }
                     } else {
                         const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                         setDriverName(name);
@@ -2193,31 +2224,44 @@ function App() {
 
         return () => { supabase.removeChannel(slotsChannel); };
     }, [isAuthenticated, driverId]);
-    // Buscar candidaturas
+    
+    // Auxiliar centralizado para obter token de auth seguro (com refresh se necessÃ¡rio)
+    const getSecureToken = useCallback(async () => {
+        const sUrl = import.meta.env.VITE_SUPABASE_URL;
+        const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        try {
+            const sessionPromise = supabase.auth.getSession();
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+            const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+            if (session?.access_token) {
+                // Se expira em menos de 1 minuto, forcar refresh
+                const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+                if (expiresAt > 0 && expiresAt < Date.now() + 60000) {
+                    const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+                    if (refreshed?.access_token) return refreshed.access_token;
+                }
+                return session.access_token;
+            }
+        } catch(e) {}
+        
+        try {
+            const project = (sUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
+            const ls = localStorage.getItem(`sb-${project}-auth-token`);
+            if (ls) {
+                const parsed = JSON.parse(ls);
+                const expiresAt = parsed?.expires_at ? parsed.expires_at * 1000 : 0;
+                // Só usa o localstorage token se ele for válido
+                if (parsed?.access_token && (expiresAt === 0 || expiresAt > Date.now() + 60000)) {
+                    return parsed.access_token;
+                }
+            }
+        } catch(e) {}
+        return sKey;
+    }, []);
     const fetchFromDB = useCallback(async (table: string, queryParams: string = '') => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        
-        let token = supabaseKey;
-        try {
-            // Promise.race para evitar deadlock no getSession do Capacitor
-            const sessionPromise = supabase.auth.getSession();
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000));
-            
-            const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-            if (session?.access_token) {
-                token = session.access_token;
-            } else {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            }
-        } catch(e) {
-            console.warn('[FETCH] getSession demorou muito, usando localStorage fallback:', e);
-            try {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch (err) {}
-        }
+        const token = await getSecureToken();
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 12000); // Aumentado para 12s
@@ -2584,6 +2628,45 @@ function App() {
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                 if (financialTypes.includes(o.service_type)) return;
 
+                // 2.1 FILTRAGEM POR PREFERÃŠNCIAS E VEÃCULOS
+                const isCompatible = () => {
+                    const type = normalizeServiceType(o.service_type);
+                    const pServices = prefServiceTypesRef.current;
+                    const pVehicles = prefVehicleTypesRef.current;
+                    
+                    if (pVehicles.length === 0) return false;
+
+                    const allServicesEnabled = pServices.includes('all_services');
+                    const isDelivery = ['restaurant', 'market', 'pharmacy', 'beverages', 'package', 'motoboy'].includes(type);
+                    const isMobility = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'van', 'utilitario'].includes(type);
+
+                    // Filtro de ServiÃ§os
+                    if (isDelivery && !allServicesEnabled) return false;
+                    if (isMobility) {
+                        const mapping: Record<string, string> = {
+                            'mototaxi': 'mototaxi', 'car_ride': 'motorista', 'motorista_particular': 'motorista',
+                            'frete': 'frete', 'van': 'frete', 'utilitario': 'frete'
+                        };
+                        const prefKey = mapping[type];
+                        if (prefKey && !pServices.includes(prefKey)) return false;
+                    }
+
+                    // Filtro de VeÃ­culos
+                    const canDoMoto = pVehicles.includes('moto');
+                    const canDoBike = pVehicles.includes('bike');
+                    const canDoCar = pVehicles.includes('carro');
+                    const canDoLarge = pVehicles.some(v => ['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g'].includes(v));
+
+                    if (isDelivery) return canDoMoto || canDoBike || canDoCar;
+                    if (type === 'mototaxi') return canDoMoto;
+                    if (type === 'car_ride' || type === 'motorista_particular') return canDoCar;
+                    if (type === 'frete' || type === 'van' || type === 'utilitario') return canDoLarge || canDoCar;
+
+                    return true;
+                };
+
+                if (!isCompatible()) return;
+
                 const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                 const pStatus = String(o.payment_status || '').toLowerCase();
                 const pMethod = String(o.payment_method || '').toLowerCase();
@@ -2731,11 +2814,7 @@ function App() {
             
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            let token = supabaseKey;
-            try {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch(e) {}
+            let token = await getSecureToken();
 
             const authHeaders = { 
                 'apikey': supabaseKey, 
@@ -2827,12 +2906,7 @@ function App() {
             const sUrl = import.meta.env.VITE_SUPABASE_URL;
             const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             
-            let token = sKey;
-            try {
-                const project = (sUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
-                const ls = localStorage.getItem(`sb-${project}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || sKey;
-            } catch(e) {}
+            const token = await getSecureToken();
 
             const headers = { 'apikey': sKey, 'Authorization': `Bearer ${token}` };
             const apiRequest = (path: string, method = 'GET', body?: any) => 
@@ -2848,7 +2922,7 @@ function App() {
                 apiRequest(`wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`),
                 apiRequest(`drivers_delivery?id=eq.${driverId}&select=bank_info,name`),
                 apiRequest(`orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado,delivered)&order=updated_at.desc`),
-                apiRequest(`admin_settings_delivery?limit=1`)
+                apiRequest(`app_settings_delivery?limit=1`)
             ]).catch(() => [null, null, null, null]);
 
             const [txs, drvData, orders, sets] = await Promise.all([
@@ -2969,12 +3043,7 @@ function App() {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             
-            let token = supabaseKey;
-            try {
-                const lsKey = `sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`;
-                const ls = localStorage.getItem(lsKey);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch(e) {}
+            const token = await getSecureToken();
 
             const payload: any = {
                 status: newStatus.toLowerCase(),
@@ -3039,9 +3108,8 @@ function App() {
                         user_id: driverId,
                         amount: netEarned,
                         type: 'deposito',
-                        status: 'concluido',
-                        description: `Ganhos: Missão #${ordShortId} (Líquido)`,
-                        order_id: missionId
+                        status: 'completed',
+                        description: `Ganhos: Missão #${ordShortId} (Líquido)`
                     }),
                     signal: AbortSignal.timeout(10000)
                 }).catch(err => console.error('[WALLET] Erro ao registrar ganho:', err));
@@ -3063,9 +3131,8 @@ function App() {
                                 user_id: driverId,
                                 amount: totalOrderPrice,
                                 type: 'debit',
-                                status: 'concluido',
-                                description: `Desconto de pagamento em Dinheiro. (Pedido ${ordShortId})`,
-                                order_id: missionId
+                                status: 'completed',
+                                description: `Desconto de pagamento em Dinheiro. (Pedido ${ordShortId})`
                             }),
                             signal: AbortSignal.timeout(10000)
                         }).catch(err => console.error('[CASH] Erro ao debitar pagamento:', err));
@@ -3101,7 +3168,7 @@ function App() {
     const handleWithdrawRequest = () => {
         if (!pixKey || pixKey.trim().length < 3) { toastError('Cadastre uma chave PIX válida.'); setIsEditingPix(true); return; }
         if (stats.balance <= 0) { toastError('Sem saldo disponível.'); return; }
-        const minAmount = Number(appSettings?.minwithdrawalamount ?? 0);
+        const minAmount = Number(appSettings?.min_withdrawal_amount ?? 0);
         if (stats.balance < minAmount) { toastError(`Saque mínimo: R$ ${minAmount.toFixed(2)}`); return; }
         setShowWithdrawModal(true);
     };
@@ -3117,7 +3184,7 @@ function App() {
 
         setIsWithdrawLoading(true);
 
-        const feeAmount = stats.balance * (Number(appSettings?.withdrawalfeepercent ?? 0) / 100);
+        const feeAmount = stats.balance * (Number(appSettings?.withdrawal_fee_percent ?? 0) / 100);
         try {
             const uid = driverId || localStorage.getItem('izi_driver_uid');
             if (!uid) throw new Error("Sessão inválida. Faça login novamente.");
@@ -3125,13 +3192,7 @@ function App() {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             
-            // Reconstrução do token para autenticação REST (mesmo padrão do handleSavePix)
-            let token = supabaseKey;
-            try {
-                const project = (supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
-                const raw = localStorage.getItem(`sb-${project}-auth-token`);
-                if (raw) token = JSON.parse(raw)?.access_token || supabaseKey;
-            } catch(e) {}
+            let token = await getSecureToken();
 
             console.log('[WITHDRAW] Solicitando saque via REST...', { uid, amount: stats.balance });
 
@@ -3183,12 +3244,7 @@ function App() {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             
-            let token = supabaseKey;
-            try {
-                const project = (supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
-                const raw = localStorage.getItem(`sb-${project}-auth-token`);
-                if (raw) token = JSON.parse(raw)?.access_token || supabaseKey;
-            } catch(e) {}
+            let token = await getSecureToken();
 
             console.log('[PIX] Salvando dados via REST...', { driverId, keyToSave });
 
@@ -5221,7 +5277,7 @@ function App() {
         if (!selectedWithdraw) return null;
         
         const tx = selectedWithdraw;
-        const feePercent = Number(appSettings?.withdrawalfeepercent ?? 0);
+        const feePercent = Number(appSettings?.withdrawal_fee_percent ?? 0);
         const grossAmount = Number(tx.amount);
         const feeAmount = grossAmount * (feePercent / 100);
         const netAmount = grossAmount - feeAmount;
@@ -5774,8 +5830,31 @@ function App() {
             </button>
         );
 
+        const syncPreferencesToDB = async (updatedPrefs?: any) => {
+            if (!driverId) return;
+            const currentPrefs = {
+                pref_sound: prefSoundEnabled,
+                pref_vibration: prefVibrationEnabled,
+                pref_nav_app: prefNavApp,
+                pref_vehicle: prefVehicleTypes,
+                pref_services: prefServiceTypes,
+                pref_max_radius: prefMaxRadius,
+                ...updatedPrefs
+            };
+            try {
+                await supabase.from('drivers_delivery').update({ preferences: currentPrefs }).eq('id', driverId);
+            } catch (e) {
+                console.error('[PREFS] Erro ao sincronizar com DB:', e);
+            }
+        };
+
         const savePreference = (key: string, value: string) => {
             localStorage.setItem(key, value);
+            // Sincroniza campos simples
+            if (key === 'pref_sound') syncPreferencesToDB({ pref_sound: value === 'true' });
+            if (key === 'pref_vibration') syncPreferencesToDB({ pref_vibration: value === 'true' });
+            if (key === 'pref_nav_app') syncPreferencesToDB({ pref_nav_app: value });
+            if (key === 'pref_max_radius') syncPreferencesToDB({ pref_max_radius: Number(value) });
         };
 
         const mobilityOptions = [
@@ -5792,6 +5871,7 @@ function App() {
                 : [...prefServiceTypes.filter(s => s !== 'all_services'), 'all_services'];
             setPrefServiceTypes(updated);
             localStorage.setItem('pref_services', JSON.stringify(updated));
+            syncPreferencesToDB({ pref_services: updated });
         };
 
         const toggleMobility = (key: string) => {
@@ -5809,6 +5889,7 @@ function App() {
                 : [...prefServiceTypes, key];
             setPrefServiceTypes(updated);
             localStorage.setItem('pref_services', JSON.stringify(updated));
+            syncPreferencesToDB({ pref_services: updated });
         };
 
         return (
@@ -6010,6 +6091,7 @@ function App() {
                                                 : [...prefVehicleTypes, v.key];
                                             setPrefVehicleTypes(updated);
                                             localStorage.setItem('pref_vehicle', JSON.stringify(updated));
+                                            syncPreferencesToDB({ pref_vehicle: updated });
                                         }} />
                                     </div>
                                 );
@@ -7114,13 +7196,13 @@ function App() {
                                 </div>
 
                                 <div className="space-y-4 px-2">
-                                    {Number(appSettings?.withdrawalfeepercent ?? 0) > 0 && (
+                                    {Number(appSettings?.withdrawal_fee_percent ?? 0) > 0 && (
                                         <div className="flex justify-between items-center">
                                             <span className="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2">
                                                 Taxa Admin
-                                                <span className="px-2 py-0.5 rounded-full bg-white/5 text-[8px] text-white/30 capitalize">{appSettings?.withdrawalfeepercent}%</span>
+                                                <span className="px-2 py-0.5 rounded-full bg-white/5 text-[8px] text-white/30 capitalize">{appSettings?.withdrawal_fee_percent}%</span>
                                             </span>
-                                            <span className="text-xs font-black text-rose-500">- R$ {(stats.balance * (Number(appSettings?.withdrawalfeepercent) / 100)).toFixed(2).replace('.', ',')}</span>
+                                            <span className="text-xs font-black text-rose-500">- R$ {(stats.balance * (Number(appSettings?.withdrawal_fee_percent) / 100)).toFixed(2).replace('.', ',')}</span>
                                         </div>
                                     )}
                                     
@@ -7132,7 +7214,7 @@ function App() {
                                             <span className="text-[8px] font-medium text-white/20 uppercase tracking-wider">Depósito imediato via PIX</span>
                                         </div>
                                         <span className="text-3xl font-black text-primary drop-shadow-[0_0_20px_rgba(255,217,0,0.4)]">
-                                            R$ {(stats.balance * (1 - (Number(appSettings?.withdrawalfeepercent ?? 0) / 100))).toFixed(2).replace('.', ',')}
+                                            R$ {(stats.balance * (1 - (Number(appSettings?.withdrawal_fee_percent ?? 0) / 100))).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
                                 </div>
