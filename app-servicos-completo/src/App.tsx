@@ -544,8 +544,12 @@ function App() {
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'wallet_transactions_delivery', filter: `user_id=eq.${userId}` },
           (payload) => {
-            console.log("[REALTIME] Nova transação detectada:", payload.new);
-            setWalletTransactions(prev => [payload.new, ...prev].slice(0, 50));
+            const tx = payload.new as any;
+            // Ignorar transações exclusivas do entregador
+            if (tx.type === 'vaga_dedicada') return;
+            if (tx.description && tx.description.startsWith('Ganhos: Missão')) return;
+            console.log("[REALTIME] Nova transação detectada:", tx);
+            setWalletTransactions(prev => [tx, ...prev].slice(0, 50));
           }
         )
         .subscribe();
@@ -787,13 +791,15 @@ function App() {
         });
       }
 
-      // Buscar transacoes reais
+      // Buscar transacoes reais — excluindo tipos exclusivos do entregador
       const { data: txData } = await supabase
         .from("wallet_transactions_delivery")
         .select("*")
         .eq("user_id", uid)
+        .not("type", "eq", "vaga_dedicada")
+        .not("description", "ilike", "Ganhos: Missão%")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
       if (txData) setWalletTransactions(txData);
     } catch (err) {
       console.error("Erro ao buscar carteira:", err);
@@ -1205,7 +1211,7 @@ function App() {
     if (!uid) return;
     const { data } = await supabase
       .from("orders_delivery")
-      .select("*, drivers_delivery!driver_id(name, vehicle_plate, avatar_url, phone, rating)")
+      .select("*, drivers_delivery!driver_id(name, license_plate, avatar_url, phone, rating)")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
     
@@ -1213,7 +1219,7 @@ function App() {
       const mappedOrders = data.map((o: any) => ({
         ...o,
         driver_name: o.drivers_delivery?.name || o.driver_name,
-        driver_vehicle_plate: o.drivers_delivery?.vehicle_plate || o.driver_vehicle_plate,
+        driver_vehicle_plate: o.drivers_delivery?.license_plate || o.driver_vehicle_plate,
         driver_avatar: o.drivers_delivery?.avatar_url || o.driver_avatar,
         driver_phone: o.drivers_delivery?.phone || o.driver_phone,
         driver_rating: o.drivers_delivery?.rating || o.driver_rating
@@ -2597,7 +2603,6 @@ function App() {
             type: "pagamento",
             amount: total,
             description: `Pedido #${order.id.slice(0, 6).toUpperCase()} em ${shopName}`,
-            order_id: order.id,
             balance_after: newWalletBalance,
           });
 
@@ -2725,7 +2730,7 @@ const navigateSubView = (target: string) => {
         if (payload.new.driver_id) {
            const { data: driverInfo } = await supabase
              .from("drivers_delivery")
-             .select("name, vehicle_plate, avatar_url, phone, rating")
+             .select("name, license_plate, avatar_url, phone, rating")
              .eq("id", payload.new.driver_id)
              .single();
              
@@ -2733,7 +2738,7 @@ const navigateSubView = (target: string) => {
              const updatedItem = {
                ...payload.new,
                driver_name: driverInfo.name,
-               driver_vehicle_plate: driverInfo.vehicle_plate,
+               driver_vehicle_plate: driverInfo.license_plate,
                driver_avatar: driverInfo.avatar_url,
                driver_phone: driverInfo.phone,
                driver_rating: driverInfo.rating
