@@ -235,7 +235,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Food",             type: "restaurant", value: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
     { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", value: "almoco", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("explore_restaurants"); } },
     { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     value: "market", action: null },
-    { icon: "inventory_2",    img: "/images/envios.png",   tagline: "ENTREGAS RÁPIDAS", highlight: "special", label: "Izi Envios",   type: null,         value: "envios", action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
+    { icon: "inventory_2",    img: "/images/envios.png",   tagline: "ENTREGAS RÁPIDAS", highlight: "full_yellow", label: "Izi Envios",   type: null,         value: "envios", action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
     { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  value: "beverages", action: null },
     { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   value: "pharmacy", action: null },
     { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    value: "pets", action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets" }); navigateSubView("explore_category"); } },
@@ -267,8 +267,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
         else handleServiceSelection(svc);
         if (isMenu) setShowAllServices(false);
       }}
-      className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[35px] overflow-hidden group transition-all duration-300
-        bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]
+      className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[35px] group transition-all duration-300
+        ${svc.icon?.startsWith('http') 
+          ? "bg-transparent overflow-visible" 
+          : "overflow-hidden " + (svc.highlight === "full_yellow" ? "bg-yellow-400 shadow-[10px_10px_20px_rgba(0,0,0,0.4)] border border-yellow-300" : "bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]")
+        }
         active:scale-95
         ${svc.highlight === "special" ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-zinc-950" : ""}
       `}
@@ -276,24 +279,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {svc.highlight === "special" && (
         <div className="absolute inset-0 bg-yellow-400/10 animate-pulse pointer-events-none" />
       )}
-      <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500 overflow-hidden
-        ${svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
-          svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
-          svc.highlight === "special" ? "bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" :
-          "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}
+      <div className={`relative z-10 flex items-center justify-center mb-1 transition-all duration-500
+        ${svc.icon?.startsWith('http') 
+          ? "w-16 h-16 bg-transparent overflow-visible" 
+          : "w-12 h-12 rounded-[18px] overflow-hidden " + (
+              svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+              svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+              svc.highlight === "special" ? "bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" :
+              svc.highlight === "full_yellow" ? "bg-black shadow-[4px_4px_8px_rgba(0,0,0,0.3)]" :
+              "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"
+          )}
       `}>
          {svc.icon?.startsWith('http') ? (
-           <img src={svc.icon} alt={svc.label} className="w-full h-full object-contain p-1.5 drop-shadow-md" />
+           <img src={svc.icon} alt={svc.label} className="w-full h-full object-contain scale-[1.3] drop-shadow-2xl" />
          ) : (
-           <span className={`material-symbols-outlined text-[26px] ${svc.highlight === "gold" || svc.highlight === "cyan" || svc.highlight === "special" ? "text-black font-black" : "text-white"}`} 
+           <span className={`material-symbols-outlined text-[26px] ${svc.highlight === "gold" || svc.highlight === "cyan" || svc.highlight === "special" ? "text-black font-black" : svc.highlight === "full_yellow" ? "text-yellow-400 font-black" : "text-white"}`} 
                  style={{ fontVariationSettings: "'FILL' 1" }}>
              {svc.icon}
            </span>
          )}
       </div>
 
-      <h3 className={`font-black text-[9px] tracking-widest uppercase text-center w-full px-1 z-10
-        ${svc.highlight === "gold" || svc.highlight === "special" ? "text-yellow-400" : "text-zinc-500"}
+      <h3 className={`font-black text-[9px] tracking-widest uppercase text-center w-full px-1 z-10 mt-1
+        ${svc.icon?.startsWith('http') 
+          ? "text-zinc-300 drop-shadow-md" 
+          : svc.highlight === "gold" || svc.highlight === "special" ? "text-yellow-400" : svc.highlight === "full_yellow" ? "text-black" : "text-zinc-500"}
       `}>
         {svc.label}
       </h3>

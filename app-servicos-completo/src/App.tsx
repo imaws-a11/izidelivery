@@ -541,7 +541,7 @@ function App() {
         .channel(`wallet_tx_sync_${userId}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` },
+          { event: 'INSERT', schema: 'public', table: 'wallet_transactions_delivery', filter: `user_id=eq.${userId}` },
           (payload) => {
             console.log("[REALTIME] Nova transação detectada:", payload.new);
             setWalletTransactions(prev => [payload.new, ...prev].slice(0, 50));
@@ -788,7 +788,7 @@ function App() {
 
       // Buscar transacoes reais
       const { data: txData } = await supabase
-        .from("wallet_transactions")
+        .from("wallet_transactions_delivery")
         .select("*")
         .eq("user_id", uid)
         .order("created_at", { ascending: false })
@@ -2575,7 +2575,7 @@ function App() {
 
         // 4. Registrar no histórico
         const { error: walletErr } = await supabase
-          .from("wallet_transactions")
+          .from("wallet_transactions_delivery")
           .insert({
             user_id: userId,
             type: "pagamento",
@@ -3667,7 +3667,7 @@ const navigateSubView = (target: string) => {
           setIsLoading(false);
           return;
         }
-        await supabase.from("wallet_transactions").insert({
+        await supabase.from("wallet_transactions_delivery").insert({
           user_id: userId,
           type: "pagamento",
           amount: finalPrice,
@@ -6496,7 +6496,7 @@ const navigateSubView = (target: string) => {
         } else if (paymentMethod === "saldo") {
           // Deduz do saldo
           const { error: walletErr } = await supabase
-            .from("wallet_transactions")
+            .from("wallet_transactions_delivery")
             .insert({
               user_id: userId,
               amount: total,

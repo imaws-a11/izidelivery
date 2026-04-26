@@ -22,7 +22,7 @@ export const MerchantCard = ({ shop, onClick, index }: MerchantCardProps) => {
       {/* Image Container */}
       <div className="relative size-24 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white/5">
         <img 
-          src={shop.store_logo || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop"} 
+          src={shop.img || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop"} 
           alt={shop.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
