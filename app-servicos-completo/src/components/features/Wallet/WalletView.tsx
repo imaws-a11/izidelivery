@@ -458,7 +458,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
       if (updUserErr) throw updUserErr;
 
       // 3. Registrar Transação
-      await supabase.from("wallet_transactions").insert({
+      await supabase.from("wallet_transactions_delivery").insert({
         user_id: userId,
         amount: loan.total_payable,
         type: "pagamento", // Debito
@@ -631,7 +631,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
       }
 
       // 2. Registro da transação remetente
-      await supabase.from("wallet_transactions").insert({
+      await supabase.from("wallet_transactions_delivery").insert({
         user_id: userId,
         amount: val,
         type: "transferencia",
@@ -662,7 +662,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
         if (errDest) throw errDest;
 
         // Registro da transação para o destinatário usuário
-        await supabase.from("wallet_transactions").insert({
+        await supabase.from("wallet_transactions_delivery").insert({
           user_id: recipient.id,
           amount: val,
           type: "deposito",
