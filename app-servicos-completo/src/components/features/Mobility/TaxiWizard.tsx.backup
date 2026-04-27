@@ -48,8 +48,10 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
 }) => {
 
   const totalValue = React.useMemo(() => {
-    return distancePrices[transitData.type] || 0;
-  }, [distancePrices, transitData.type]);
+    const base = distancePrices[transitData.type] || 0;
+    const distanceMultiplier = parseFloat(routeDistance) || 0;
+    return base + (distanceMultiplier * 3.5);
+  }, [distancePrices, transitData.type, routeDistance]);
 
   React.useEffect(() => {
     updateLocation();
