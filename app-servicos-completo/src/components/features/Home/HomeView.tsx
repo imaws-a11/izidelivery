@@ -391,7 +391,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 )}
               </button>
 
-              <div className="flex-1 flex flex-col items-center cursor-pointer group px-2" onClick={() => setSubView("addresses")}>
+              <div className="flex-1 flex flex-col items-center cursor-pointer group px-2" onClick={() => navigateSubView("addresses")}>
                 <p className="text-zinc-500 text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-1">Entregas em</p>
                 <div className="flex items-center gap-1 max-w-[180px]">
                   <span className="text-white font-black text-[11px] tracking-tight truncate leading-none">
@@ -411,7 +411,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </span>
                   )}
                 </button>
-                <button onClick={() => setSubView("notifications_center")} 
+                <button onClick={() => navigateSubView("notifications_center")} 
                   className="w-10 h-10 flex items-center justify-center rounded-[18px] bg-zinc-900 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05)]">
                   <span className="material-symbols-outlined text-zinc-100 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>notifications</span>
                 </button>
@@ -590,7 +590,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                       merchant_id: product.merchant_id,
                                       merchant_name: product.merchant_name
                                     });
-                                    setSubView("product_detail");
+                                    navigateSubView("product_detail");
                                   }, 300);
                                 } else {
                                   showToast("Loja não disponível no momento", "error");
@@ -657,7 +657,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {/* Background Glow */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 blur-[60px] -mr-16 -mt-16 group-hover:bg-blue-400/20 transition-all duration-700" />
               
-              <div className="flex items-center justify-between" onClick={() => { setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}>
+              <div className="flex items-center justify-between" onClick={() => { setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }}>
                 <div className="flex items-center gap-3 cursor-pointer">
                   <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden">
                     <img src={iziCoinImg} className="w-9 h-9 object-contain animate-pulse" alt="Izi Coin" />
@@ -677,7 +677,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
 
               <div className="space-y-4">
-                 <div className="flex flex-col gap-2" onClick={() => { setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}>
+                 <div className="flex flex-col gap-2" onClick={() => { setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }}>
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400 cursor-pointer">
                       <span>Valor: R$ {Number(coinOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
                       <span className="text-white">Confirmando Transação...</span>
@@ -716,7 +716,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                        </p>
                     )}
                     <button 
-                       onClick={(e) => { e.stopPropagation(); setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}
+                       onClick={(e) => { e.stopPropagation(); setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }}
                        className="text-white text-[10px] font-black flex items-center justify-end gap-1 hover:gap-2 transition-all p-2"
                     >
                        VER DETALHES <span className="material-symbols-outlined text-sm text-blue-400">arrow_forward</span>
@@ -735,7 +735,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               onClick={() => { 
                 setSelectedItem(activeOrder); 
                 const isMobility = ['mototaxi', 'carro', 'van', 'utilitario', 'frete', 'logistica'].includes(activeOrder.service_type) || !!activeOrder.scheduled_at;
-                setSubView(isMobility ? "logistics_tracking" : "active_order");
+                navigateSubView(isMobility ? "logistics_tracking" : "active_order");
               }}
               className="relative overflow-hidden bg-zinc-900 border border-yellow-400/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(255,215,9,0.15)] group cursor-pointer"
             >
@@ -810,7 +810,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => { setSelectedItem(logisticsOrder); setSubView("logistics_tracking"); }}
+              onClick={() => { setSelectedItem(logisticsOrder); navigateSubView("logistics_tracking"); }}
               className="relative overflow-hidden rounded-[36px] cursor-pointer group"
               style={{
                 background: "linear-gradient(145deg, #1c1c1f, #141416)",

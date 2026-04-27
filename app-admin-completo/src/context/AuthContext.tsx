@@ -16,13 +16,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setIsLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('[AUTH] Erro ao recuperar sessão:', error.message);
+          if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
+             console.warn("[AUTH] Refresh token inválido detectado. Limpando...");
+             logout();
+             return;
+          }
+        }
+        setSession(currentSession);
+      } catch (err) {
+        console.error('[AUTH] Erro fatal na inicialização:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log("[AUTH] Evento Admin:", event);
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !newSession)) {
+        setSession(null);
+      } else {
+        setSession(newSession);
+      }
       setIsLoading(false);
     });
 

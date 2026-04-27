@@ -1663,7 +1663,15 @@ function App() {
         // Check initial Supabase session
         const checkSession = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) {
+                    console.error('[AUTH] Erro ao verificar sessão inicial:', error.message);
+                    if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
+                        console.warn("[AUTH] Refresh token inválido detectado no boot. Limpando...");
+                        clearDriverSessionState();
+                        return;
+                    }
+                }
                 const user = session?.user;
                 if (user) {
                     setDriverId(user.id);
@@ -1677,8 +1685,11 @@ function App() {
                     setDriverId(null);
                     setIsAuthenticated(false);
                 }
-            } catch (e) {
+            } catch (e: any) {
                 console.error('[AUTH] Erro ao verificar sessão inicial:', e);
+                if (e.message?.includes("Refresh Token Not Found")) {
+                    clearDriverSessionState();
+                }
             } finally {
                 setAuthInitLoading(false);
             }
@@ -1741,7 +1752,16 @@ function App() {
         // Timeout de segurança: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
         const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("[AUTH] Evento Entregador:", event);
+            
+            if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+                setIsAuthenticated(false);
+                setDriverId(null);
+                setAuthInitLoading(false);
+                return;
+            }
+
             const user = session?.user;
             if (user) {
                 setDriverId(user.id);
@@ -2238,13 +2258,32 @@ function App() {
         try {
             const sessionPromise = supabase.auth.getSession();
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
-            const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+            const { data: { session }, error: sessionErr } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+            
+            if (sessionErr) {
+                console.error('[AUTH] Erro ao obter sessão em getSecureToken:', sessionErr.message);
+                if (sessionErr.message.includes("Refresh Token Not Found") || sessionErr.message.includes("invalid_refresh_token")) {
+                    console.warn("[AUTH] Token inválido detectado em getSecureToken.");
+                    // Não forçamos logout aqui para não sermos disruptivos em chamadas de background, 
+                    // mas retornamos a anon key como fallback.
+                    return sKey;
+                }
+            }
+
             if (session?.access_token) {
                 // Se expira em menos de 1 minuto, forcar refresh
                 const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
                 if (expiresAt > 0 && expiresAt < Date.now() + 60000) {
-                    const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-                    if (refreshed?.access_token) return refreshed.access_token;
+                    try {
+                        const { data: { session: refreshed }, error: refreshErr } = await supabase.auth.refreshSession();
+                        if (refreshErr) {
+                            console.error('[AUTH] Erro ao renovar sessão:', refreshErr.message);
+                            return session.access_token; // Retorna o atual mesmo quase expirado se o refresh falhar
+                        }
+                        if (refreshed?.access_token) return refreshed.access_token;
+                    } catch (e) {
+                        return session.access_token;
+                    }
                 }
                 return session.access_token;
             }
@@ -3303,24 +3342,18 @@ function App() {
         }
     };
 
-    const handleLogout = useCallback(async () => {
-        try {
-            console.log('[AUTH] Iniciando processo de logout...');
-            isLoggingOutRef.current = true;
-            // 1. Deslogar do Supabase primeiro (limpa cookies/sessão no servidor)
-            await supabase.auth.signOut();
-            
-            // 2. Limpar o estado local e LocalStorage (limpa dados de UI)
-            clearDriverSessionState();
-            
-            // 3. Forçar recarregamento para limpar estados residuais de memória
-            window.location.href = '/';
-        } catch (error) {
-            console.error('[AUTH] Erro durante o logout:', error);
-            // Mesmo com erro no signOut, tentamos limpar localmente
-            clearDriverSessionState();
-            window.location.href = '/';
-        }
+    const handleLogout = useCallback(() => {
+        console.log('[AUTH] Iniciando processo de logout...');
+        isLoggingOutRef.current = true;
+        
+        // 1. Deslogar do Supabase em background (sem travar a interface)
+        supabase.auth.signOut().catch(err => console.warn('[AUTH] Erro no signOut remoto:', err));
+        
+        // 2. Limpar o estado local e LocalStorage (limpa dados de UI imediatamente)
+        clearDriverSessionState();
+        
+        // 3. Forçar recarregamento para limpar estados residuais de memória
+        window.location.href = '/';
     }, [clearDriverSessionState]);
 
     const renderHeader = () => (
@@ -3345,12 +3378,32 @@ function App() {
         }
         // ---------------------------------------------------
 
+        console.log("Iniciando candidatura para o slot:", slot.id, "Motorista:", driverId);
         setApplyingSlotId(slot.id);
         
         try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            console.log("Enviando para o Supabase (bypass cliente)...");
             
+            // Tentativa de obter o token diretamente para evitar travamento do getSession()
+            const projectRef = import.meta.env.VITE_SUPABASE_URL?.match(/\/\/(.*?)\./)?.[1];
+            const sessionKey = `sb-${projectRef}-auth-token`;
+            let token = import.meta.env.VITE_SUPABASE_ANON_KEY; // Fallback
+            
+            try {
+                const storedSession = localStorage.getItem(sessionKey);
+                if (storedSession) {
+                    const parsed = JSON.parse(storedSession);
+                    if (parsed && parsed.access_token) {
+                        token = parsed.access_token;
+                    }
+                }
+            } catch (e) {
+                console.warn("Aviso: não foi possível ler o token do localStorage.");
+            }
+
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
             const payload = {
                 slot_id: slot.id,
                 driver_id: driverId,
@@ -3358,27 +3411,47 @@ function App() {
                 merchant_id: slot.merchant_id
             };
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+
             const response = await fetch(`${supabaseUrl}/rest/v1/slot_applications`, {
                 method: 'POST',
                 headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
+                    'apikey': anonKey,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation'
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error("Supabase API Error:", errorData);
-                throw new Error(errorData.message || 'Erro ao enviar candidatura');
+                let errorDetails = '';
+                try {
+                    const errorJson = await response.json();
+                    errorDetails = JSON.stringify(errorJson);
+                } catch(e) {
+                    errorDetails = await response.text();
+                }
+                console.error("Erro Supabase detalhado:", errorDetails);
+                
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('Sessão expirada. Por favor, deslogue e logue novamente.');
+                }
+                if (response.status === 409 || errorDetails.includes('duplicate key')) {
+                    throw new Error('Você já se candidatou a esta vaga.');
+                }
+                throw new Error(`Erro na API (${response.status})`);
             }
 
-            console.log("Candidatura enviada via REST!");
+            const responseData = await response.json();
+            console.log("Candidatura enviada com sucesso!", responseData);
             setShowSlotAppliedSuccess(true);
             
-            // --- ATUALIZAÃ‡ÃƒO OTIMISTA E INSTANTÃ‚NEA ---
+            // --- ATUALIZAÇÃO OTIMISTA ---
             const newApp = {
                 slot_id: slot.id,
                 driver_id: driverId,
@@ -3386,17 +3459,18 @@ function App() {
                 created_at: new Date().toISOString()
             };
             
-            const updatedApps = [...myApplications, newApp];
+            const currentApps = Array.isArray(myApplications) ? myApplications : [];
+            const updatedApps = [...currentApps, newApp];
             setMyApplications(updatedApps);
             localStorage.setItem(`izi_apps_${driverId}`, JSON.stringify(updatedApps));
 
-            // Atualiza do banco em background para garantir sincronia de campos extras
             refreshMyApplications();
             
         } catch (err: any) {
-            console.error('Erro detalhado:', err);
-            toastError('Falha ao registrar candidatura. ' + (err.message || ''));
+            console.error('Erro ao processar candidatura:', err);
+            toastError(err.message || 'Falha ao registrar candidatura');
         } finally {
+            console.log("Limpando estado de carregamento.");
             setApplyingSlotId(null);
         }
     };
@@ -4872,7 +4946,14 @@ function App() {
                         }
 
                         return (
-                        <div key={order.id} className="clay-card-dark rounded-[32px] p-6 space-y-5 relative overflow-hidden group">
+                        <div 
+                            key={order.id} 
+                            onClick={() => {
+                                setSelectedOrder(order);
+                                setShowOrderModal(true);
+                            }}
+                            className="clay-card-dark rounded-[32px] p-6 space-y-5 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+                        >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full transition-opacity group-hover:bg-primary/20" />
                             
                             <div className="flex items-center justify-between relative z-10">
@@ -6904,21 +6985,23 @@ function App() {
                 </main>
 
                 {/* Bottom Fixed Action Button Container */}
-                <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50">
-                    <button 
-                        onClick={() => {
-                            setShowOrderModal(false);
-                            handleAccept(selectedOrder);
-                        }}
-                        disabled={isAccepting}
-                        className={`w-full bg-yellow-400 ${clayYellow} py-6 rounded-full flex items-center justify-center gap-3 active:scale-[0.97] transition-transform shadow-[0_10px_40px_rgba(250,204,21,0.25)] disabled:opacity-50`}
-                    >
-                        <span className="text-black font-black text-lg tracking-tighter uppercase">
-                            {isAccepting ? 'Confirmando...' : 'Ir Para a Coleta'}
-                        </span>
-                        <Icon name="arrow_forward" className="text-black font-bold" />
-                    </button>
-                </div>
+                {activeTab !== 'history' && !['entregue', 'completed', 'finalizado', 'concluido', 'concluído', 'delivered', 'cancelado', 'cancelled'].includes(selectedOrder.status?.toLowerCase()) && (
+                    <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50">
+                        <button 
+                            onClick={() => {
+                                setShowOrderModal(false);
+                                handleAccept(selectedOrder);
+                            }}
+                            disabled={isAccepting}
+                            className={`w-full bg-yellow-400 ${clayYellow} py-6 rounded-full flex items-center justify-center gap-3 active:scale-[0.97] transition-transform shadow-[0_10px_40px_rgba(250,204,21,0.25)] disabled:opacity-50`}
+                        >
+                            <span className="text-black font-black text-lg tracking-tighter uppercase">
+                                {isAccepting ? 'Confirmando...' : 'Ir Para a Coleta'}
+                            </span>
+                            <Icon name="arrow_forward" className="text-black font-bold" />
+                        </button>
+                    </div>
+                )}
             </motion.div>
         );
     };

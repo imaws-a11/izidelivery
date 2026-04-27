@@ -1082,13 +1082,16 @@ function WithdrawalRequestsSection() {
         const uids = [...new Set(txs.map((t: any) => t.user_id).filter(Boolean))];
         const { data: drivers } = await supabase
           .from('drivers_delivery')
-          .select('id, name, phone, pix_key')
+          .select('id, name, phone, bank_info')
           .in('id', uids);
 
-        const mapped = txs.map((t: any) => ({
-          ...t,
-          user: drivers?.find((d: any) => d.id === t.user_id) || null,
-        }));
+        const mapped = txs.map((t: any) => {
+          const driver = drivers?.find((d: any) => d.id === t.user_id);
+          return {
+            ...t,
+            user: driver ? { ...driver, pix_key: driver.bank_info?.pix_key } : null,
+          };
+        });
         setRequests(mapped);
       } else {
         setRequests([]);
