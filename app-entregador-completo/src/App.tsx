@@ -3499,7 +3499,7 @@ function App() {
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
                                     { id: 'active_mission', label: 'Missão', icon: 'route' },
                                     { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
-                                    { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active).length },
+                                    { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active && !myApplications.some(app => String(app.slot_id) === String(s.id))).length },
                                     { id: 'earnings', label: 'Izi Pay', icon: 'payments' },
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'profile', label: 'Perfil', icon: 'person' }
@@ -3985,6 +3985,13 @@ function App() {
                                 const hasApplied = !!application;
                                 const isAccepted = application?.status === 'accepted';
                                 const maxDeliveries = (slot.metadata?.base_deliveries || slot.max_deliveries || 0);
+                                
+                                // Oculta o card do dashboard 1 hora após o lojista aceitar o entregador
+                                if (isAccepted && application?.updated_at) {
+                                    const acceptedAt = new Date(application.updated_at).getTime();
+                                    const oneHourMs = 60 * 60 * 1000;
+                                    if (Date.now() - acceptedAt > oneHourMs) return null;
+                                }
                                 
                                 return (
                                     <motion.button 
@@ -6780,56 +6787,6 @@ function App() {
                         </div>
                     </section>
 
-                    {/* Route Details - Map Section */}
-                    <section className="relative rounded-xl overflow-hidden h-56 bg-neutral-900 shadow-2xl border border-neutral-800/50">
-                        {isLoaded ? (
-                            <GoogleMap
-                                mapContainerStyle={{ width: '100%', height: '100%' }}
-                                center={driverCoords || { lat: -23.55052, lng: -46.633308 }}
-                                zoom={15}
-                                options={mapOptions}
-                            >
-                                {modalRoutePolyline && (
-                                    <>
-                                        <Polyline
-                                            path={window.google.maps.geometry.encoding.decodePath(modalRoutePolyline)}
-                                            options={{
-                                                strokeColor: '#FACD05',
-                                                strokeWeight: 6,
-                                                strokeOpacity: 0.9,
-                                            }}
-                                        />
-                                        {modalRouteInfo?.start && (
-                                            <OverlayView position={modalRouteInfo.start} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                                                <div className="size-3 rounded-full bg-yellow-400 border-2 border-black shadow-lg" />
-                                            </OverlayView>
-                                        )}
-                                        {modalRouteInfo?.end && (
-                                            <OverlayView position={modalRouteInfo.end} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                                                <div className="size-3 rounded-full bg-white border-2 border-black shadow-lg" />
-                                            </OverlayView>
-                                        )}
-                                    </>
-                                )}
-                            </GoogleMap>
-                        ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 gap-3">
-                                <div className="size-8 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
-                                <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Carregando Mapa...</span>
-                            </div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-neutral-950/80 to-transparent pointer-events-none"></div>
-                        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                            <div className="bg-neutral-900/90 backdrop-blur-xl p-3 rounded-xl border border-white/5 shadow-2xl max-w-[65%]">
-                                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-1">Destino Atual</p>
-                                <p className="text-white font-bold text-xs line-clamp-1">{presentation.destinationText}</p>
-                            </div>
-                            <div className={`bg-yellow-400 ${clayYellow} text-black px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 shadow-[0_10px_30px_rgba(250,204,21,0.3)]`}>
-                                <Icon name="navigation" className="text-lg" />
-                                <span className="uppercase tracking-tight">{displayDistance}</span>
-                            </div>
-                        </div>
-                    </section>
 
                     {/* Itens do Pedido */}
                     <section className="space-y-3">
@@ -6947,6 +6904,69 @@ function App() {
                                     </p>
                                 </div>
                             )}
+
+                            {/* ── Breakdown financeiro: Desconto da plataforma ── */}
+                            {(() => {
+                                const isCash = ['cash', 'dinheiro', 'money'].includes(
+                                    (selectedOrder.payment_method || '').toLowerCase()
+                                );
+                                const discount = grossEarnings - netEarnings;
+                                const hasDiscount = discount > 0.01;
+                                if (!isCash && !hasDiscount) return null;
+                                return (
+                                    <div className="space-y-2">
+                                        <div className="bg-black/40 rounded-xl p-4 space-y-2 border border-white/5">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-neutral-500 mb-3">Breakdown Financeiro</p>
+                                            <div className="flex justify-between text-[11px] font-bold text-neutral-400">
+                                                <span>💵 Valor recebido do cliente</span>
+                                                <span className="text-neutral-200">R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                            {hasDiscount && (
+                                                <div className="flex justify-between text-[11px] font-bold text-red-400">
+                                                    <span>🏪 Taxa da plataforma</span>
+                                                    <span>- R$ {discount.toFixed(2).replace('.', ',')}</span>
+                                                </div>
+                                            )}
+                                            <div className="h-px bg-white/5 w-full my-1" />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[11px] font-black text-white uppercase tracking-tight">💰 Seu lucro líquido</span>
+                                                <span className="text-emerald-400 font-black text-base">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Aviso de débito no saldo — só quando dinheiro + desconto */}
+                                        {isCash && hasDiscount && (
+                                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+                                                <p className="text-amber-400 text-[9px] font-black uppercase tracking-[0.3em]">
+                                                    💳 Impacto no seu Saldo Izi
+                                                </p>
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between text-[11px] font-bold">
+                                                        <span className="text-neutral-400">Recebido em dinheiro</span>
+                                                        <span className="text-white">+ R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-[11px] font-bold">
+                                                        <span className="text-neutral-400">Lucro líquido da missão</span>
+                                                        <span className="text-emerald-400">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                    <div className="h-px bg-amber-500/20 w-full" />
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-amber-400 text-[11px] font-black uppercase tracking-tight">Saldo desta missão</span>
+                                                        <span className="text-red-400 font-black text-base">
+                                                            R$ {(netEarnings - grossEarnings).toFixed(2).replace('.', ',')}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-neutral-400 text-[10px] leading-relaxed border-t border-amber-500/20 pt-2">
+                                                    O valor de{' '}
+                                                    <span className="text-amber-400 font-black">R$ {discount.toFixed(2).replace('.', ',')}</span>
+                                                    {' '}foi debitado automaticamente do seu saldo Izi.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </section>
 
