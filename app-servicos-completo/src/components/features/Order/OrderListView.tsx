@@ -111,7 +111,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
 
     return (
       <motion.div
-        key={order.id}
+        key={order.id || Math.random().toString(36).substr(2, 9)}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         whileTap={{ scale: 0.98 }}

@@ -201,9 +201,9 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
               
               <div className="grid grid-cols-1 gap-8">
                 <AnimatePresence>
-                  {savedCards.map((card) => (
+                  {savedCards.map((card, i) => (
                     <PaymentCard 
-                      key={card.id}
+                      key={card.id || i}
                       id={card.id}
                       brand={card.brand}
                       last4={card.last4}

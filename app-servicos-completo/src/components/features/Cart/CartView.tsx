@@ -199,7 +199,7 @@ export const CartView: React.FC<CartViewProps> = ({
              <div className="flex gap-6 overflow-x-auto no-scrollbar -mx-6 px-6 pb-6">
                 {suggestedMerchantProducts.map((product: any) => (
                   <motion.div 
-                    key={product.id} 
+                    key={product.id || `prod-${i}`} 
                     whileTap={{ scale: 0.96 }}
                     onClick={() => handleAddToCart(product)}
                     className="flex-shrink-0 w-48 bg-zinc-900/60 rounded-[40px] p-4 flex flex-col gap-4 group transition-all cursor-pointer clay-card border border-white/5"

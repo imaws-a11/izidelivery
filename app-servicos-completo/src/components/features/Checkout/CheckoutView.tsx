@@ -199,9 +199,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         <section className="space-y-6">
           <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Como deseja pagar?</h2>
           <div className="grid grid-cols-2 gap-4">
-            {paymentOptions.map((m) => (
+            {paymentOptions.map((m, i) => (
               <button
-                key={m.id}
+                key={m.id || "pm-" + i}
                 onClick={() => {
                    if (!m.disabled) {
                       setPaymentMethod(m.id);
@@ -243,6 +243,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           <AnimatePresence>
             {paymentMethod === "dinheiro" && (
               <motion.div
+                key="dinheiro-form"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -267,10 +268,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             )}
             
             {paymentMethod === "cartao" && savedCards.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                {savedCards.map((card: any) => (
+              <motion.div key="cartao-form" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                {savedCards.map((card: any, i: number) => (
                   <button
-                    key={card.id}
+                    key={card.id || "card-" + i}
                     onClick={() => setSelectedCard(card)}
                     className={`w-full h-16 rounded-2xl flex items-center justify-between px-6 transition-all border ${selectedCard?.id === card.id ? "bg-yellow-400 border-yellow-400 text-black" : "bg-zinc-900/40 border-white/5 text-white"}`}
                   >
@@ -315,8 +316,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     <p className="text-white font-black text-sm truncate uppercase italic tracking-tight">{item.name}</p>
                     {getAddonDetails(item).length > 0 ? (
                       <div className="mt-1.5 space-y-1">
-                        {getAddonDetails(item).map((addon: any) => (
-                          <p key={`${item.cartId || item.id}-${addon.group_id}-${addon.id}`} className="text-zinc-600 text-[9px] font-bold tracking-widest leading-relaxed">
+                        {getAddonDetails(item).map((addon: any, idx: number) => (
+                          <p key={`${item.cartId || item.id}-${addon.group_id}-${addon.id}-${idx}`} className="text-zinc-600 text-[9px] font-bold tracking-widest leading-relaxed">
                             {addon.group_name}: {addon.name} x{addon.quantity} - R$ {Number(addon.total_price || 0).toFixed(2).replace(".", ",")}
                           </p>
                         ))}

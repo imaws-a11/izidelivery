@@ -345,11 +345,11 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                 <div className="space-y-4">
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] px-2 italic">Tipo de Veículo</p>
                   <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
-                    {vehicleTypes.map((v) => {
+                    {vehicleTypes.map((v, i) => {
                       const selected = freightData.vehicleType === v.name;
                       return (
                         <motion.button
-                          key={v.id}
+                          key={v.id || i}
                           whileTap={{ scale: 0.93 }}
                           animate={{ scale: selected ? 1.06 : 1 }}
                           onClick={() => {

@@ -751,7 +751,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
         <AnimatePresence mode="wait">
           {!recipient ? (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
+            <motion.div key="search-recipient" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Destinatário</label>
                 <div className="flex gap-2">
@@ -774,7 +774,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
               </div>
             </motion.div>
           ) : (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-10">
+            <motion.div key="send-amount" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-10">
               <div className="flex items-center gap-4 bg-zinc-900/40 p-5 rounded-3xl border border-white/5">
                 <div className="size-14 rounded-full bg-yellow-400 flex items-center justify-center font-black text-black text-xl shadow-lg">
                   {recipient.name[0]}
@@ -949,9 +949,9 @@ export const WalletView: React.FC<WalletViewProps> = ({
                 <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Nenhum empréstimo ativo</p>
               </div>
             ) : (
-              loans.map((loan) => (
+              loans.map((loan, idx) => (
                 <motion.div 
-                  key={loan.id} 
+                  key={loan.id || `loan-${idx}`} 
                   whileTap={{ scale: 0.98 }}
                   onClick={() => { setSelectedLoan(loan); setShowLoanDetails(true); setSelectedInstallments([]); }}
                   className="bg-yellow-400 p-6 rounded-[32px] border-2 border-yellow-300 flex flex-col gap-4 cursor-pointer shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7)] active:scale-95 transition-all"
@@ -991,7 +991,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
         <AnimatePresence>
           {showLoanDetails && selectedLoan && (
-            <div className="fixed inset-0 z-[1100] flex items-end justify-center">
+            <div key="loan-details-modal" className="fixed inset-0 z-[1100] flex items-end justify-center">
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -1215,9 +1215,9 @@ export const WalletView: React.FC<WalletViewProps> = ({
                     >
                       <p className="text-[10px] font-bold text-zinc-500 uppercase">Escolha um cartão salvo</p>
                       <div className="space-y-3">
-                        {savedCards.length > 0 ? savedCards.slice(0, 1).map((card: any) => (
+                        {savedCards.length > 0 ? savedCards.slice(0, 1).map((card: any, idx: number) => (
                           <button 
-                            key={card.id}
+                            key={card.id || `card-${idx}`}
                             onClick={() => setSelectedMethod('card')}
                             className={`w-full p-5 rounded-3xl border flex items-center justify-between transition-all ${
                               selectedMethod === 'card' ? 'bg-blue-500/20 border-blue-500' : 'bg-white/5 border-white/5'
@@ -1564,7 +1564,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
       {/* ANIMAÇÃO PREMIUM DE MOEDAS VOANDO */}
       <AnimatePresence>
         {showAnimation && (
-          <div className="fixed inset-0 z-[1000] pointer-events-none flex items-center justify-center overflow-hidden">
+          <div key="coin-animation" className="fixed inset-0 z-[1000] pointer-events-none flex items-center justify-center overflow-hidden">
              <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
@@ -1631,7 +1631,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
       {/* MODAL DE DETALHES DA TRANSAÇÃO - DESIGN CLAYMORPHIC PREMIUM */}
       <AnimatePresence>
         {selectedTransaction && (
-          <div className="fixed inset-0 z-[2000] flex items-end justify-center p-4">
+          <div key="transaction-modal" className="fixed inset-0 z-[2000] flex items-end justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

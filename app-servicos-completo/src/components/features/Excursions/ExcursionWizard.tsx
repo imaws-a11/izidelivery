@@ -167,7 +167,7 @@ export const ExcursionWizard: React.FC<ExcursionWizardProps> = ({
       <main className="px-6 space-y-10 relative z-10">
         {filteredExcursions.map((ex, idx) => (
           <motion.article 
-            key={ex.id}
+            key={ex.id || idx}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}

@@ -2542,75 +2542,72 @@ function App() {
           return;
         }
 
-        // 2. Criar o pedido com status pago
+        // 1. Calcular Novos Saldos PRIMEIRO
+        let remainingToPay = total;
+        let tempNewIziCoins = iziCoins;
+        let tempNewWalletBalance = walletBalance;
+
+        if (useCoins && iziCoins > 0) {
+           const discountApplied = (iziCoins * coinValue);
+           const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
+           const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
+           const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
+           tempNewIziCoins -= coinsToDeduct;
+        }
+
+        if (remainingToPay > 0) {
+           const coinsAvailableValue = tempNewIziCoins * coinValue;
+           if (coinsAvailableValue >= remainingToPay) {
+              tempNewIziCoins -= (remainingToPay / coinValue);
+              remainingToPay = 0;
+           } else {
+              remainingToPay -= coinsAvailableValue;
+              tempNewIziCoins = 0;
+           }
+           if (remainingToPay > 0) {
+              tempNewWalletBalance -= remainingToPay;
+              remainingToPay = 0;
+           }
+        }
+
+        // 2. Debitar no Banco de Dados PRIMEIRO (Garantia de Cobrança)
+        const { error: updateErr } = await supabase.from("users_delivery").update({ 
+          wallet_balance: Number(tempNewWalletBalance.toFixed(2)),
+          izi_coins: Number(tempNewIziCoins.toFixed(8))
+        }).eq("id", userId);
+
+        if (updateErr) {
+          console.error("Erro crítico ao debitar saldo:", updateErr);
+          throw new Error("Não foi possível processar o débito na sua carteira. Tente novamente.");
+        }
+
+        // 3. Criar o pedido com status pago
         const { data: order, error: orderErr } = await supabase
           .from("orders_delivery")
           .insert({ ...orderBase, status: "waiting_merchant", payment_status: "paid" })
           .select()
           .single();
 
-        if (orderErr) throw orderErr;
-
-        // 3. Lógica de Débito (Priorizando Coins se Saldo Izi for usado, ou apenas debitando o que foi usado como desconto)
-        let remainingToPay = total;
-        let newIziCoins = iziCoins;
-        let newWalletBalance = walletBalance;
-
-        // Se o usuário usou o toggle "Usar Coins", o 'total' já veio reduzido.
-        // Mas precisamos deduzir os coins que geraram esse desconto!
-        if (useCoins && iziCoins > 0) {
-           const discountApplied = (iziCoins * coinValue);
-           const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
-           const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
-           const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
-           newIziCoins -= coinsToDeduct;
+        if (orderErr || !order) {
+           // ESTORNO SE FALHAR A CRIAÇÃO DO PEDIDO
+           await supabase.from("users_delivery").update({ 
+             wallet_balance: walletBalance,
+             izi_coins: iziCoins
+           }).eq("id", userId);
+           throw orderErr || new Error("Erro ao criar pedido. Seu saldo foi estornado.");
         }
 
-        // Se o método de pagamento for Saldo, debitamos o 'total' (restante) do saldo/coins
-        if (remainingToPay > 0) {
-           // Tenta debitar do Saldo de Coins primeiro (comum no Izi)
-           const coinsAvailableValue = newIziCoins * coinValue;
-           if (coinsAvailableValue >= remainingToPay) {
-              newIziCoins -= (remainingToPay / coinValue);
-              remainingToPay = 0;
-           } else {
-              remainingToPay -= coinsAvailableValue;
-              newIziCoins = 0;
-           }
+        // 4. Registrar no histórico e atualizar estado local
+        await supabase.from("wallet_transactions_delivery").insert({
+          user_id: userId,
+          type: "pagamento",
+          amount: total,
+          description: `Pedido #${order.id.slice(0, 6).toUpperCase()} em ${shopName}`,
+          balance_after: tempNewWalletBalance,
+        });
 
-           // Se ainda sobrar, debita do wallet_balance (BRL)
-           if (remainingToPay > 0) {
-              newWalletBalance -= remainingToPay;
-              remainingToPay = 0;
-           }
-        }
-
-        const { error: updateErr } = await supabase
-          .from("users_delivery")
-          .update({ 
-            wallet_balance: Number(newWalletBalance.toFixed(2)),
-            izi_coins: Number(newIziCoins.toFixed(8))
-          })
-          .eq("id", userId);
-
-        if (updateErr) throw updateErr;
-
-        // 4. Registrar no histórico
-        const { error: walletErr } = await supabase
-          .from("wallet_transactions_delivery")
-          .insert({
-            user_id: userId,
-            type: "pagamento",
-            amount: total,
-            description: `Pedido #${order.id.slice(0, 6).toUpperCase()} em ${shopName}`,
-            balance_after: newWalletBalance,
-          });
-
-        if (walletErr) throw walletErr;
-
-        // 5. Atualizar estado local e navegar
-        setWalletBalance(newWalletBalance);
-        setIziCoins(newIziCoins);
+        setWalletBalance(tempNewWalletBalance);
+        setIziCoins(tempNewIziCoins);
         setSelectedItem(order);
         if (cart.length > 0) await clearCart(order.id);
         navigateSubView("waiting_merchant");
@@ -3728,36 +3725,44 @@ const navigateSubView = (target: string) => {
 
     setIsLoading(true);
 
-    const orderBase: any = {
-      user_id: userId,
-      merchant_id: null,
-      status: "waiting_driver",
-      total_price: finalPrice,
-      service_type: transitData.type,
-      pickup_address: transitData.origin,
-      delivery_address: `${typeof transitData.destination === 'object' ? (transitData.destination.formatted_address || transitData.destination.address || JSON.stringify(transitData.destination)) : transitData.destination} | OBS: ${
-        transitData.type === 'van'
-          ? `EXCURSÃO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}. ${transitData.excursionData.notes || ''}`
-          : (transitData.type === 'logistica' || transitData.type === 'frete')
-            ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes. ${
-                (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'Necessário subir ESCADAS.' : 'Sem escadas.'
-              }`
-            : isShipping
-              ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-              : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`
-      }`,
-      payment_method: paymentMethod,
-      payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
-      scheduled_at: (transitData.scheduled || transitData.type === 'van') ? (transitData.type === 'van' ? transitData.excursionData.departureDate : `${transitData.scheduledDate}T${transitData.scheduledTime}:00`) : null,
-      route_polyline: routePolyline
-    };
 
     try {
-      // 1. Validar saldo se for saldo
+      // 1. Criar o pedido (inicialmente pendente se for cartao, ou pago se for saldo/dinheiro)
+      const initialPaymentStatus = (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid';
+      const initialOrderStatus = (paymentMethod === 'cartao') ? 'pendente_pagamento' : 'waiting_driver';
+
+      const orderBase: any = {
+        user_id: userId,
+        merchant_id: null,
+        status: initialOrderStatus,
+        total_price: finalPrice,
+        service_type: transitData.type,
+        pickup_address: typeof transitData.origin === 'object' ? (transitData.origin.address || transitData.origin.formatted_address) : transitData.origin,
+        delivery_address: `${typeof transitData.destination === 'object' ? (transitData.destination.formatted_address || transitData.destination.address || JSON.stringify(transitData.destination)) : transitData.destination} | OBS: ${
+          transitData.type === 'van'
+            ? `EXCURSÃO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}. ${transitData.excursionData.notes || ''}`
+            : (transitData.type === 'logistica' || transitData.type === 'frete')
+              ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes. ${
+                  (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'Necessário subir ESCADAS.' : 'Sem escadas.'
+                }`
+              : isShipping
+                ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
+                : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`
+        }`,
+        payment_method: paymentMethod,
+        payment_status: initialPaymentStatus,
+        scheduled_at: (transitData.scheduled || transitData.type === 'van') ? (transitData.type === 'van' ? transitData.excursionData.departureDate : `${transitData.scheduledDate}T${transitData.scheduledTime}:00`) : null,
+        route_polyline: routePolyline
+      };
+
+      // Lógica de Débito de Saldo (Ocorrerá ANTES da criação do pedido para garantir atomicidade)
+      let finalNewIziCoins = iziCoins;
+      let finalNewWalletBalance = walletBalance;
+
       if (paymentMethod === "saldo") {
         const coinValue = globalSettings?.izi_coin_value || 1.0;
         const totalBrlAvailable = walletBalance + (iziCoins * coinValue);
-
+        
         if (totalBrlAvailable < finalPrice) {
           toastError("Saldo insuficiente na carteira IZI Pay.");
           setIsLoading(false);
@@ -3765,43 +3770,66 @@ const navigateSubView = (target: string) => {
         }
 
         let remainingToPay = finalPrice;
-        let newIziCoins = iziCoins;
-        let newWalletBalance = walletBalance;
+        let tempNewIziCoins = iziCoins;
+        let tempNewWalletBalance = walletBalance;
 
-        // Tenta debitar do Saldo de Coins primeiro
-        const coinsAvailableValue = newIziCoins * coinValue;
+        const coinsAvailableValue = tempNewIziCoins * coinValue;
         if (coinsAvailableValue >= remainingToPay) {
-          newIziCoins -= (remainingToPay / coinValue);
+          tempNewIziCoins -= (remainingToPay / coinValue);
           remainingToPay = 0;
         } else {
           remainingToPay -= coinsAvailableValue;
-          newIziCoins = 0;
+          tempNewIziCoins = 0;
         }
 
-        // Se ainda sobrar, debita do wallet_balance (BRL)
         if (remainingToPay > 0) {
-          newWalletBalance -= remainingToPay;
+          tempNewWalletBalance -= remainingToPay;
           remainingToPay = 0;
         }
+
+        // Executar o débito no banco ANTES de criar o pedido
+        const { error: updateErr } = await supabase.from("users_delivery").update({ 
+          wallet_balance: Number(tempNewWalletBalance.toFixed(2)),
+          izi_coins: Number(tempNewIziCoins.toFixed(8))
+        }).eq("id", userId);
+
+        if (updateErr) {
+          console.error("Erro crítico ao debitar saldo:", updateErr);
+          throw new Error("Não foi possível processar o débito na sua carteira. Tente novamente.");
+        }
+
+        finalNewIziCoins = tempNewIziCoins;
+        finalNewWalletBalance = tempNewWalletBalance;
+      }
+
+      // 1. Criar o pedido
+      const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+      
+      if (insertError || !order) {
+        // SE FALHOU AO CRIAR O PEDIDO, PRECISAMOS ESTORNAR O SALDO SE FOI DEBITADO!
+        if (paymentMethod === "saldo") {
+           await supabase.from("users_delivery").update({ 
+             wallet_balance: walletBalance,
+             izi_coins: iziCoins
+           }).eq("id", userId);
+        }
+        throw insertError || new Error("Falha ao criar registro do pedido");
+      }
+
+      // 2. Lógica de Pós-Débito (Registrar transação e atualizar estado local)
+      if (paymentMethod === "saldo") {
+        setWalletBalance(finalNewWalletBalance);
+        setIziCoins(finalNewIziCoins);
 
         await supabase.from("wallet_transactions_delivery").insert({
           user_id: userId,
           type: "pagamento",
           amount: finalPrice,
-          description: `Viagem: ${(typeof transitData.origin === 'string' ? transitData.origin : transitData.origin?.address || 'Origem').split(',')[0]} para ${(typeof transitData.destination === 'string' ? transitData.destination : transitData.destination?.address || 'Destino').split(',')[0]}`
+          description: `Serviço #${order.id.slice(0, 6).toUpperCase()}: ${transitData.type}`,
+          balance_after: finalNewWalletBalance
         });
-        
-        await supabase.from("users_delivery").update({ 
-          wallet_balance: Number(newWalletBalance.toFixed(2)),
-          izi_coins: Number(newIziCoins.toFixed(8))
-        }).eq("id", userId);
-        
-        setWalletBalance(newWalletBalance);
-        setIziCoins(newIziCoins);
       }
 
-      const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
-      if (insertError) throw insertError;
 
       if (transitData.type === 'van') {
         await supabase.from("excursions_delivery").insert({
@@ -3816,6 +3844,8 @@ const navigateSubView = (target: string) => {
          setPixConfirmed(false); setPixCpf("");
          setSelectedItem({ ...order, total_price: finalPrice });
          setSubView('pix_payment');
+         setIsLoading(false);
+         return;
       } else if (paymentMethod === 'bitcoin_lightning') {
           try {
             const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
@@ -3840,7 +3870,17 @@ const navigateSubView = (target: string) => {
                return;
             }
           } catch(e) { console.error("LN Error:", e); }
+      } else if (paymentMethod === 'cartao') {
+          if (selectedCard) {
+            handleConfirmSavedCardShortcut(order.id, finalPrice, "mobility");
+            return;
+          }
+          setSelectedItem(order);
+          setSubView("card_payment");
+          setIsLoading(false);
+          return;
       }
+
 
       const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
       setTransitHistory(newHistory);
@@ -4032,7 +4072,7 @@ const navigateSubView = (target: string) => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
-                  key={p.id}
+                  key={p.id || i}
                   onClick={() => { handleAddToCart(p); }}
                   className="bg-zinc-900 rounded-2xl p-3 shadow-lg border border-zinc-800 active:scale-95 transition-all overflow-hidden relative group"
                 >
@@ -4159,7 +4199,7 @@ const navigateSubView = (target: string) => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1, duration: 0.6 }}
-              key={deal.id}
+              key={deal.id || i}
               onClick={() => { 
                 setSelectedItem(deal);
                 setSubView("product_detail"); 
@@ -4380,7 +4420,7 @@ const navigateSubView = (target: string) => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
-                  key={item.id}
+                  key={item.id || `deal-${i}`}
                   className="bg-zinc-900/40 border border-white/5 rounded-[45px] p-5 flex items-center gap-6 group hover:bg-zinc-900/60 transition-all cursor-pointer relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -5628,7 +5668,7 @@ const navigateSubView = (target: string) => {
         {/* MODAL: ADD CARD */}
         <AnimatePresence>
           {isAddingCard && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div key="add-card-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-end justify-center p-4">
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                 className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl">
@@ -5687,7 +5727,7 @@ const navigateSubView = (target: string) => {
   const renderMyQRModal = () => (
     <AnimatePresence>
       {isShowingMyQR && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        <motion.div key="my-qr-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-6">
           <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
             className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[45px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
@@ -5728,7 +5768,7 @@ const navigateSubView = (target: string) => {
   const renderTransferModal = () => (
     <AnimatePresence>
       {transferTarget && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        <motion.div key="transfer-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
           <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
             className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[50px] p-8 text-center space-y-8 relative">
@@ -6011,7 +6051,7 @@ const navigateSubView = (target: string) => {
           <div className="flex flex-col">
             {topics.map((topic, index) => (
               <motion.button
-                key={topic.label}
+                key={topic.label || index}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.04 }}
@@ -6137,7 +6177,7 @@ const navigateSubView = (target: string) => {
             <div className="grid grid-cols-1 gap-5">
               {quests.map((q, i) => (
                 <motion.div 
-                  key={q.id} 
+                  key={q.id || `quest-${i}`} 
                   initial={{ opacity: 0, x: -20 }} 
                   animate={{ opacity: 1, x: 0 }} 
                   transition={{ delay: i * 0.1 }}
@@ -6177,7 +6217,7 @@ const navigateSubView = (target: string) => {
             <div className="bg-zinc-900/30 rounded-[45px] border border-white/5 p-4 shadow-inner space-y-2">
                {ranking.map((row, i) => (
                  <motion.div 
-                   key={row.name}
+                   key={row.name || i}
                    initial={{ opacity: 0, y: 10 }}
                    animate={{ opacity: 1, y: 0 }}
                    transition={{ delay: 0.5 + (i * 0.1) }}
@@ -6239,7 +6279,7 @@ const navigateSubView = (target: string) => {
         <main className="px-6 py-10 space-y-6">
           {notifications.map((n, i) => (
             <motion.div 
-              key={n.id}
+              key={n.id || `notif-${i}`}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
@@ -6329,6 +6369,7 @@ const navigateSubView = (target: string) => {
     <AnimatePresence>
       {activeBroadcast && (
         <motion.div 
+          key="broadcast-popup"
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
           exit={{ opacity: 0 }} 
@@ -6400,12 +6441,14 @@ const navigateSubView = (target: string) => {
       <AnimatePresence>
         {showDepositModal && (
           <motion.div 
+            key="deposit-modal-bg"
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }} 
             className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 italic"
           >
             <motion.div 
+              key="deposit-modal-content"
               initial={{ scale: 0.9, opacity: 0, y: 30 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
               exit={{ scale: 0.9, opacity: 0, y: 30 }} 
@@ -6516,9 +6559,9 @@ const navigateSubView = (target: string) => {
                         { id: 'cartao', icon: 'credit_card', label: 'Cartão', color: 'text-blue-400' },
                         { id: 'pix', icon: 'pix', label: 'Pix', color: 'text-emerald-400' },
                         { id: 'lightning', icon: 'bolt', label: 'Bitcoin Lightning', color: 'text-orange-400' }
-                      ].map((method) => (
+                      ].map((method, i) => (
                        <button
-                         key={method.id}
+                         key={method.id || `method-${i}`}
                          onClick={() => setDepositPaymentMethod(method.id)}
                          className={`p-6 rounded-[35px] border-2 transition-all flex flex-col items-center justify-center gap-3 group italic relative active:scale-95
                            ${depositPaymentMethod === method.id 
@@ -6778,8 +6821,8 @@ const navigateSubView = (target: string) => {
             <div className="space-y-4">
               <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Pagamento</p>
               <div className="flex flex-col">
-                {subOptions.map((m) => (
-                  <button key={m.id} 
+                {subOptions.map((m, i) => (
+                  <button key={m.id || `sub-${i}`} 
                     onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
                     disabled={m.disabled}
                     className={`w-full flex items-center gap-4 py-6 transition-all border-b border-zinc-900 last:border-0 ${m.disabled ? "opacity-30 cursor-not-allowed" : "active:opacity-75"}`}>
@@ -6881,7 +6924,7 @@ const navigateSubView = (target: string) => {
             <div className="grid grid-cols-2 gap-4">
               {perks.map((perk, idx) => (
                 <motion.div 
-                  key={perk.id}
+                  key={perk.id || `perk-${idx}`}
                   initial={{ opacity: 0, x: idx % 2 === 0 ? -10 : 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * idx }}
@@ -7534,16 +7577,16 @@ const navigateSubView = (target: string) => {
             </section>
 
             <div className="space-y-8">
-              {productAddonGroups.map((group) => (
-                <section key={group.id} className="space-y-4">
+              {productAddonGroups.map((group, gIdx) => (
+                <section key={group.id || `group-${gIdx}`} className="space-y-4">
                   <h3 className="text-lg font-black text-white tracking-tight">{group.name}</h3>
                   <div className="space-y-3">
-                    {group.items.map((item) => {
+                    {group.items.map((item, iIdx) => {
                       const qty = getOptionQuantity(group.id, item.id);
                       const isSelected = qty > 0;
                       return (
                         <motion.div 
-                          key={item.id} 
+                          key={item.id || `addon-${iIdx}`} 
                           whileTap={{ scale: 0.98 }}
                           onClick={() => qty === 0 && updateOptionQuantity(group, item, 1)}
                           className={"p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer relative overflow-hidden " + 
@@ -7903,7 +7946,7 @@ const navigateSubView = (target: string) => {
         <main className="px-6 pt-10 flex flex-col gap-6 relative z-10">
           {services.map((svc, i) => (
             <motion.div 
-              key={svc.id} 
+              key={svc.id || `svc-${i}`} 
               initial={{ opacity: 0, scale: 0.9 }} 
               animate={{ opacity: 1, scale: 1 }} 
               transition={{ delay: i * 0.1 }}
@@ -8015,7 +8058,7 @@ const navigateSubView = (target: string) => {
               const isSelected = transitData.priority === p.id;
               return (
                 <motion.div
-                  key={p.id}
+                  key={p.id || `priority-${i}`}
                   initial={{ opacity: 0, x: -30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1, type: "spring", damping: 20 }}
@@ -8653,8 +8696,8 @@ const navigateSubView = (target: string) => {
                   {hasDriver ? 'Inicie a conversa com seu motorista' : 'Disponível após confirmação do motorista'}
                 </p>
               )}
-              {schedMessagesState.map((msg: any) => (
-                <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {schedMessagesState.map((msg: any, i: number) => (
+                <div key={msg.id || `msg-${i}`} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] px-4 py-2.5 rounded-[18px] ${msg.from === 'user' ? 'bg-blue-500 text-white rounded-tr-[6px]' : 'bg-zinc-800 text-white rounded-tl-[6px]'}`}>
                     <p className="text-sm font-medium">{msg.text}</p>
                   </div>
@@ -8695,12 +8738,12 @@ const navigateSubView = (target: string) => {
           height: "105px",
         }}
       >
-        {navItems.map((item) => {
+        {navItems.map((item, i) => {
           const isActive = item.isCart ? subView === 'cart' : (tab === item.id && subView === 'none');
 
           return (
             <button
-              key={item.id}
+              key={item.id || `nav-${i}`}
               onClick={() => {
                 if (item.isCart) {
                   navigateSubView("cart");
@@ -9118,9 +9161,9 @@ const navigateSubView = (target: string) => {
 
         {/* Floating Cart Animations */}
         <AnimatePresence>
-          {cartAnimations.map(anim => (
+          {cartAnimations.map((anim, i) => (
             <motion.img
-              key={anim.id}
+              key={anim.id || `anim-${i}`}
               src={anim.img || ""}
               initial={{ x: anim.x - 30, y: anim.y - 30, scale: 0.8, opacity: 1 }}
               animate={{ 
@@ -9147,6 +9190,7 @@ const navigateSubView = (target: string) => {
         <AnimatePresence>
           {toast && (
             <motion.div
+              key="toast-notification"
               initial={{ y: -100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -100, opacity: 0 }}
