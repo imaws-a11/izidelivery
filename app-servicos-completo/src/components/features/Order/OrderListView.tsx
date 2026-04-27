@@ -23,6 +23,7 @@ interface OrderListViewProps {
   myOrders: any[];
   setSelectedItem: (item: any) => void;
   setSubView: (view: string) => void;
+  navigateSubView: (view: string) => void;
   userId: string | null;
   fetchMyOrders: (uid: string) => void;
 }
@@ -31,6 +32,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
   myOrders,
   setSelectedItem,
   setSubView,
+  navigateSubView,
   userId,
   fetchMyOrders,
 }) => {
@@ -120,13 +122,13 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
           const isHistory = ["concluido", "cancelado"].includes(order.status);
           
             if (isCoin) {
-              setSubView("izi_coin_tracking");
+              navigateSubView("izi_coin_tracking");
             } else if (isHistory) {
-              setSubView("order_detail");
+              navigateSubView("order_detail");
             } else if (isMobilityOrder || !!order.scheduled_at) {
-              setSubView("logistics_tracking");
+              navigateSubView("logistics_tracking");
             } else {
-              setSubView("active_order");
+              navigateSubView("active_order");
             }
           }}
           className={`relative overflow-hidden rounded-[40px] cursor-pointer group ${isHistory ? 'mb-4 scale-95 origin-left opacity-90' : 'mb-8'}`}

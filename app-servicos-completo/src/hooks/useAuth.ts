@@ -42,6 +42,10 @@ export const useAuth = () => {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Erro ao recuperar sessão inicial (auth):", error.message);
+          if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
+            console.warn("[AUTH] Refresh token inválido detectado no início. Limpando sessão...");
+            logout();
+          }
         }
         const u = session?.user || null;
         setUser(u);
@@ -50,8 +54,11 @@ export const useAuth = () => {
           setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
           checkRoles(u.id);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Exceção fatal no getSession:", err);
+        if (err.message?.includes("Refresh Token Not Found")) {
+          logout();
+        }
       } finally {
         setAuthInitLoading(false);
         clearTimeout(authTimeout);
@@ -60,15 +67,23 @@ export const useAuth = () => {
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user || null;
-      setUser(u);
-      setUserId(u ? u.id : null);
-      if (u) {
-        setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
-        checkRoles(u.id);
-      } else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[AUTH] Evento detectado:", event);
+      
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+        setUser(null);
+        setUserId(null);
         setIsUserAdmin(false);
+      } else {
+        const u = session?.user || null;
+        setUser(u);
+        setUserId(u ? u.id : null);
+        if (u) {
+          setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
+          checkRoles(u.id);
+        } else {
+          setIsUserAdmin(false);
+        }
       }
       setAuthInitLoading(false);
     });

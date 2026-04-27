@@ -116,7 +116,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
       {/* Botão flutuante voltar (sempre visível no topo) */}
       <div className="absolute top-8 left-6 z-50">
         <button
-          onClick={() => setSubView("none")}
+          onClick={() => window.history.back()}
           className="size-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl shadow-black/50"
         >
           <Icon name="arrow_back" />

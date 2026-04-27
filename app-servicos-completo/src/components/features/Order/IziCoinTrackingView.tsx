@@ -10,6 +10,7 @@ interface IziCoinTrackingViewProps {
   onGoToWallet: () => void;
   onSupport: () => void;
   onReturnToPayment: () => void;
+  onCancel?: (orderId: string) => void;
 }
 
 export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
@@ -18,6 +19,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
   onGoToWallet,
   onSupport,
   onReturnToPayment,
+  onCancel,
 }) => {
   const [status, setStatus] = useState(order?.status || "pendente_pagamento");
 
@@ -143,12 +145,21 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
         {/* Footer Actions */}
         <div className="w-full space-y-3">
           {!isConfirmed && (
-            <button
-               onClick={onReturnToPayment}
-               className="w-full py-4 rounded-[28px] bg-zinc-800 text-yellow-400 font-black text-xs uppercase tracking-widest border border-yellow-400/20 active:scale-95 transition-all shadow-lg"
-            >
-              Voltar ao Pagamento
-            </button>
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                 onClick={onReturnToPayment}
+                 className="w-full py-4 rounded-[28px] bg-zinc-800 text-yellow-400 font-black text-xs uppercase tracking-widest border border-yellow-400/20 active:scale-95 transition-all shadow-lg"
+              >
+                Voltar ao Pagamento
+              </button>
+              
+              <button
+                 onClick={() => onCancel?.(order?.id)}
+                 className="w-full py-4 rounded-[28px] bg-red-500/10 text-red-500 font-black text-xs uppercase tracking-widest border border-red-500/20 active:scale-95 transition-all"
+              >
+                Cancelar Recarga
+              </button>
+            </div>
           )}
 
           <button

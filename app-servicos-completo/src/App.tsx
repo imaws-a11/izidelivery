@@ -1265,6 +1265,41 @@ function App() {
     }
   };
 
+  const handleCancelCoinOrder = async (orderId: string) => {
+    if (!orderId) {
+      toastError("ID da recarga não encontrado.");
+      return;
+    }
+
+    const confirm = window.confirm("Deseja realmente cancelar esta recarga?");
+    if (!confirm) return;
+
+    try {
+      const { data: orderData } = await supabase.from("orders_delivery").select("status").eq("id", orderId).single();
+      
+      let error = null;
+      if (orderData && orderData.status === "pendente_pagamento") {
+         const { error: delError } = await supabase.from("orders_delivery").delete().eq("id", orderId);
+         error = delError;
+      } else {
+         const { error: updError } = await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", orderId);
+         error = updError;
+      }
+
+      if (error) throw error;
+
+      toastSuccess("Recarga cancelada com sucesso!");
+      
+      if (userId) fetchMyOrders(userId);
+      setSelectedItem(null);
+      setSubView("none");
+      setTab("home");
+    } catch (err: any) {
+      console.error("Erro ao cancelar recarga:", err);
+      toastError("Erro ao cancelar recarga. Tente novamente.");
+    }
+  };
+
   const fetchCoupons = async () => {
     console.log("[DEBUG] Fetching coupons/banners...");
     const { data } = await supabase
@@ -4547,7 +4582,8 @@ const navigateSubView = (target: string) => {
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-lg flex items-center gap-4 px-5 py-6 border-b border-white/5">
           <button 
             onClick={() => {
-              if (selectedItem?.service_type === 'coin_purchase') {
+              if (selectedItem?.service_type === 'coin_purchase' || paymentsOrigin === "profile") {
+                setTab("home");
                 setSubView("none");
               } else {
                 setSubView("checkout");
@@ -4839,7 +4875,16 @@ const navigateSubView = (target: string) => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); setPixCpf(""); }}
+          <button onClick={() => { 
+              if (selectedItem?.service_type === 'coin_purchase' || paymentsOrigin === "profile") {
+                setTab("home");
+                setSubView("none");
+              } else {
+                setSubView("checkout"); 
+              }
+              setPixConfirmed(false); 
+              setPixCpf(""); 
+            }}
             className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
@@ -5070,10 +5115,17 @@ const navigateSubView = (target: string) => {
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900 text-white">
           <button onClick={() => {
               if (selectedItem?.service_type === 'coin_purchase') {
-                setShowDepositModal(true);
+                // Reabre o modal de deposito apenas se nao vier do acompanhamento
+                if (previousSubViewRef.current !== "izi_coin_tracking") {
+                  setShowDepositModal(true);
+                }
+                setTab("home");
                 setSubView("none");
               } else if (paymentsOrigin === "izi_black") {
                 setSubView("izi_black_purchase");
+              } else if (paymentsOrigin === "profile") {
+                setTab("home");
+                setSubView("none");
               } else {
                 setSubView("checkout");
               }
@@ -5174,7 +5226,7 @@ const navigateSubView = (target: string) => {
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-2xl border-b border-zinc-900 px-5 py-4 flex items-center gap-4">
           <button
-            onClick={() => setSubView("none")}
+            onClick={() => window.history.back()}
             className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
           >
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
@@ -8600,7 +8652,7 @@ const navigateSubView = (target: string) => {
     return (
       <div className="absolute inset-0 z-[120] bg-black flex flex-col overflow-hidden">
         <header className="px-6 py-5 bg-zinc-900 border-b border-zinc-800 flex items-center gap-4 shrink-0">
-          <button onClick={() => { setSubView('none'); setFilterTab('agendados' as any); }} className="size-11 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center active:scale-90 transition-all">
+          <button onClick={() => { window.history.back(); setTimeout(() => setFilterTab('agendados' as any), 100); }} className="size-11 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center active:scale-90 transition-all">
             <Icon name="arrow_back" />
           </button>
           <div className="flex-1">
@@ -9059,8 +9111,24 @@ const navigateSubView = (target: string) => {
                        order={selectedItem}
                        userLocation={userLocation as any}
                        driverLocation={driverLocation}
-                       onBack={() => setSubView("none")}
+                       onBack={() => window.history.back()}
                        onUpdateLocation={updateLocation}
+                    />
+                  </motion.div>
+                )}
+                {subView === "izi_coin_tracking" && (
+                  <motion.div key="izitrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                    <IziCoinTrackingView 
+                       order={selectedItem}
+                       onClose={() => window.history.back()}
+                       onGoToWallet={() => {
+                          setTab("wallet");
+                          setSubView("none");
+                          window.history.replaceState({ view: "app", tab: "wallet", subView: "none" }, "");
+                       }}
+                       onSupport={() => setSubView("order_support")}
+                       onReturnToPayment={() => window.history.back()}
+                       onCancel={handleCancelCoinOrder}
                     />
                   </motion.div>
                 )}

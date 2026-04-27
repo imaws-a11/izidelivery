@@ -4,7 +4,7 @@ import { toastError } from '../lib/useToast';
 import { BespokeIcons } from '../lib/BespokeIcons';
 
 declare const MercadoPago: any;
-const mpPublicKey = import.meta.env.VITE_MP_PUBLIC_KEY as string || "APP_USR-7bc418a1-54bc-4e61-8f55-7ca54394019a";
+const mpPublicKey = import.meta.env.VITE_MP_PUBLIC_KEY as string || "";
 
 interface MercadoPagoCardFormProps {
   onConfirm: (token: string, issuer: string, installments: number, brand: string, last4: string) => void;
@@ -87,7 +87,15 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
         return;
       }
 
-      const mp = new MercadoPago(finalPublicKey);
+      let mp;
+      try {
+        mp = new MercadoPago(finalPublicKey);
+      } catch (mpInitErr) {
+        console.error("Erro ao inicializar SDK Mercado Pago:", mpInitErr);
+        toastError("Erro ao inicializar Mercado Pago. Verifique se a Chave Pública é válida.");
+        setLoading(false);
+        return;
+      }
       if (formData.cardNumber.replace(/\s/g, '').length < 15) {
         toastError("Número do cartão incompleto.");
         setLoading(false);
@@ -123,10 +131,12 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
     } catch (err: any) {
       console.error("MP Token Error Full Object:", err);
       
-      const errorMessage = typeof err === 'string' ? err : (err?.message || "");
+      const errorMessage = typeof err === 'string' ? err : (err?.message || err?.toString() || "");
       
-      if (errorMessage.includes("SSL certificate is required") || errorMessage.includes("secure connection")) {
-        toastError("Erro de Segurança: O Mercado Pago exige HTTPS (SSL) para processar cartões de produção. Para testes locais, use uma Chave de Testes (Sandbox) ou use um túnel HTTPS (ngrok).");
+      if (errorMessage.toLowerCase().includes("ssl") || 
+          errorMessage.toLowerCase().includes("secure connection") || 
+          errorMessage.toLowerCase().includes("not using a secure connection")) {
+        toastError("Erro de Segurança: Para usar chaves de produção (APP_USR-) o site PRECISA de HTTPS. Em localhost, use uma chave de testes (TEST-).");
       } else {
         const cause = err?.cause?.[0]?.description || errorMessage || "Erro desconhecido";
         toastError(`Falha na validação: ${cause}`);
@@ -138,6 +148,12 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
 
   return (
     <div className="w-full flex flex-col gap-6">
+      {!(publicKey || mpPublicKey) && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs text-center leading-relaxed">
+          <strong>Atenção:</strong> O meio de pagamento (Cartão) não está configurado corretamente. 
+          A Chave Pública do Mercado Pago está ausente.
+        </div>
+      )}
       {/* Animated Credit Card UI */}
       <motion.div 
         className="w-full relative h-[200px] rounded-2xl overflow-hidden shadow-2xl p-6 flex flex-col justify-between"
