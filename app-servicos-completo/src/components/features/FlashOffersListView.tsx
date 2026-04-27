@@ -72,7 +72,7 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                key={story.id}
+                key={story.id || i}
                 onClick={() => {
                   if (!story.isOpen) showToast(`Esta loja (${story.merchant}) está fechada no momento. 🕒`, "error");
                   else if (story.isRedeemed) showToast("Você já aproveitou esta oferta!", "info");

@@ -5140,6 +5140,7 @@ function App() {
 
     const renderWithdrawHistoryView = () => (
         <motion.div 
+            key="withdraw-history-modal"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -5227,6 +5228,7 @@ function App() {
                 <AnimatePresence>
                     {showReceipt && (
                         <motion.div 
+                            key="receipt-modal"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -5285,6 +5287,7 @@ function App() {
 
         return (
             <motion.div 
+                key="withdraw-detail-modal"
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }}
@@ -5604,6 +5607,7 @@ function App() {
     const renderPlateEditView = () => {
         return (
             <motion.div
+                key="plate-edit-modal"
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 50, scale: 0.95 }}
@@ -5695,6 +5699,7 @@ function App() {
     const renderBankDetailsView = () => {
         return (
             <motion.div
+                key="bank-details-modal"
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 50, scale: 0.95 }}
@@ -5895,6 +5900,7 @@ function App() {
 
         return (
             <motion.div
+                key="preferences-modal"
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 50, scale: 0.95 }}
@@ -6152,7 +6158,7 @@ function App() {
     const renderActiveMissionView = () => { // UPDATED
         if (!activeMission) {
             return (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
+                <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
                     <div className="size-28 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center mb-8 shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02)]">
                         <Icon name="route" size={48} className="text-white/20" />
                     </div>
@@ -6269,6 +6275,7 @@ function App() {
 
         return (
             <motion.div 
+                key="active-mission-populated"
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 className="fixed inset-0 z-[100] bg-[#0c0f10] flex flex-col overflow-hidden text-[#f5f6f7] font-['Plus_Jakarta_Sans']"
@@ -6559,7 +6566,7 @@ function App() {
     };
 
     const renderSOS = () => (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-8 text-center">
+        <motion.div key="sos-modal" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-8 text-center">
             <div className="size-28 clay-fab-sos rounded-full flex items-center justify-center mb-8 animate-pulse"><Icon name="emergency_share" className="text-6xl text-red-400" /></div>
             <h1 className="text-4xl font-black text-white uppercase tracking-tight mb-3">SOS Ativado</h1>
             <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
@@ -6641,6 +6648,7 @@ function App() {
 
         return (
             <motion.div 
+                key="order-details-modal"
                 initial={{ opacity: 0, y: 100 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: 100 }}
@@ -6916,6 +6924,7 @@ function App() {
         if (!activeBroadcast) return null;
         return (
           <motion.div 
+            key="broadcast-popup"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

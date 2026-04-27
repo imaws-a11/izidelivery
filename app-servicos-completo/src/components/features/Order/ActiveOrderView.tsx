@@ -173,7 +173,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 const isCurrent = i === currentIdx;
                 return (
                   <div
-                    key={s.id}
+                    key={s.id || i}
                     className={`flex items-start gap-6 relative z-10 transition-all duration-500 ${isActive ? "opacity-100" : "opacity-30"}`}
                   >
                     <div

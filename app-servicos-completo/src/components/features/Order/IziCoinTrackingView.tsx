@@ -105,7 +105,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
         {/* Timeline */}
         <div className="w-full space-y-6 px-4">
           {steps.map((step, idx) => (
-            <div key={step.id} className="flex items-center gap-6 relative group">
+            <div key={step.id || idx} className="flex items-center gap-6 relative group">
               {idx < steps.length - 1 && (
                 <div className={`absolute left-6 top-10 w-0.5 h-6 transition-colors duration-500 ${idx < currentIdx ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]" : "bg-zinc-800"}`} />
               )}

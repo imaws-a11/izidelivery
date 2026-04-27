@@ -218,7 +218,7 @@ export const ExploreRestaurantsView = ({
                 
                 return (
                   <motion.button
-                    key={cat.id || i}
+                    key={cat.id || `cat-${i}`}
                     onClick={() => setSelectedCategory(cat.id)}
                     whileTap={{ scale: 0.92 }}
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -257,7 +257,7 @@ export const ExploreRestaurantsView = ({
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
               {availableCoupons.filter(cpn => cpn.is_vip).map((cpn, i) => (
                 <motion.div 
-                  key={cpn.id || i} 
+                  key={cpn.id || `cpn-${i}`} 
                   initial={{ opacity: 0, scale: 0.9 }} 
                   animate={{ opacity: 1, scale: 1 }} 
                   transition={{ delay: i * 0.1 }}
@@ -322,7 +322,7 @@ export const ExploreRestaurantsView = ({
                 {filteredRestaurants.length > 0 ? (
                   filteredRestaurants.map((shop, i) => (
                     <motion.div
-                      key={shop.id || i}
+                      key={shop.id || `shop-${i}`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
@@ -336,7 +336,7 @@ export const ExploreRestaurantsView = ({
                     </motion.div>
                   ))
                 ) : (
-                  <div className="py-20 flex flex-col items-center justify-center gap-6 opacity-30">
+                  <div key="empty-state" className="py-20 flex flex-col items-center justify-center gap-6 opacity-30">
                      <div className="size-20 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center">
                         <span className="material-symbols-outlined text-4xl">search_off</span>
                      </div>

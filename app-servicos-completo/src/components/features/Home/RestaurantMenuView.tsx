@@ -119,9 +119,9 @@ export const RestaurantMenuView = ({
       {/* CATEGORY TABS */}
       <nav className="sticky top-0 z-40 mt-8 px-5 py-3 bg-black/90 backdrop-blur-xl border-b border-zinc-900">
         <div className="flex gap-3 overflow-x-auto no-scrollbar">
-          {allCategoryNames.map((cat) => (
+          {allCategoryNames.map((cat, i) => (
             <button
-              key={cat}
+              key={cat || `cat-${i}`}
               onClick={() => setActiveCategory(cat)}
               className={`px-5 py-2.5 rounded-full font-black text-[11px] uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${
                 activeCategory === cat
@@ -137,15 +137,15 @@ export const RestaurantMenuView = ({
 
       {/* MENU */}
       <main className="px-5 pt-8 space-y-12">
-        {displayCategories.map((category: any) => (
-          <section key={category.name}>
+        {displayCategories.map((category: any, idx: number) => (
+          <section key={category.id || category.name || `section-${idx}`}>
             <h2 className="font-black text-lg uppercase tracking-widest text-zinc-500 mb-8 border-l-4 border-yellow-400 pl-4">
               {category.name}
             </h2>
             <div className="grid grid-cols-2 gap-4">
               {(category.items || []).map((item: any, idx: number) => (
                 <motion.div
-                  key={item.id}
+                  key={item.id || idx}
                   initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}

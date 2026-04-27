@@ -136,7 +136,6 @@ interface HomeViewProps {
   setExploreCategoryState: (state: any) => void;
   setRestaurantInitialCategory: (cat: string) => void;
   isIziBlackMembership: boolean;
-  isIziBlackMembership: boolean;
   setTab: (tab: "home" | "orders" | "wallet" | "profile") => void;
   establishmentTypes: any[];
 }
@@ -371,6 +370,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <AnimatePresence>
         {subView === "none" && (
           <motion.header 
+            key="home-header"
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
@@ -428,7 +428,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full" id="home-banner-carousel">
               {banners.map((banner: any, i: number) => (
                 <div
-                  key={banner.id || i}
+                  key={banner.id || `banner-${i}`}
                   className="snap-center shrink-0 w-full h-full relative cursor-pointer"
                   onClick={() => handleBannerClickAction(banner)}
                 >
@@ -497,6 +497,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <AnimatePresence>
             {searchQuery.length >= 1 && (
               <motion.div
+                key="search-results-dropdown"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
@@ -508,9 +509,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <section>
                       <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 px-2">Lojas</h4>
                       <div className="space-y-2">
-                        {searchResults.establishments.map((shop) => (
+                        {searchResults.establishments.map((shop, i) => (
                           <motion.div
-                            key={shop.id}
+                            key={shop.id || `shop-${i}`}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => {
                               const shopData = ESTABLISHMENTS.find(e => e.id === shop.id) || shop;
@@ -544,9 +545,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <section>
                       <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 px-2">Produtos</h4>
                       <div className="grid grid-cols-1 gap-3">
-                        {searchResults.products.map((product) => (
+                        {searchResults.products.map((product, i) => (
                           <motion.div
-                            key={product.id}
+                            key={product.id || `prod-${i}`}
                             whileTap={{ scale: 0.98 }}
                             onClick={async () => {
                               try {
@@ -953,9 +954,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
               
               <div className="flex gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-6 -mx-5 px-5">
-                {activeStories.map(story => (
+                {activeStories.map((story, index) => (
                   <motion.div 
-                    key={story.id} 
+                    key={story.id || `story-${index}`} 
                     whileTap={{ scale: 0.96 }}
                     onClick={() => {
                       if (story.isRedeemed) showToast("Você já aproveitou esta oferta!", "info");
