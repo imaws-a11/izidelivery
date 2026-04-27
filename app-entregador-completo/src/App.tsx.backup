@@ -870,7 +870,7 @@ function App() {
         try {
             const { data, error } = await supabase
                 .from('slot_applications')
-                .select('*, dedicated_slots_delivery(*, admin_users(store_name, store_logo, store_address, store_phone))')
+                .select('*, slot:dedicated_slots_delivery(*, admin_users(store_name, store_logo, store_address, store_phone))')
                 .eq('driver_id', driverId);
             
             if (!error && data) {
