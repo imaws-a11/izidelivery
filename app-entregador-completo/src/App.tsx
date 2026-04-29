@@ -901,7 +901,8 @@ function App() {
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             // Busca principal de vagas ativas
-            const response = await fetch(`${supabaseUrl}/rest/v1/dedicated_slots_delivery?select=*&is_active=eq.true&order=created_at.desc`, {
+            const today = new Date().toLocaleDateString('en-CA');
+            const response = await fetch(`${supabaseUrl}/rest/v1/dedicated_slots_delivery?select=*&is_active=eq.true&or=(slot_date.is.null,slot_date.gte.${today})&order=created_at.desc`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 signal: controller.signal
             });
@@ -966,7 +967,7 @@ function App() {
         if (orders.length === 0) {
             if (isFirstLoad.current) {
                 isFirstLoad.current = false;
-                console.log('[SOM-WATCHER] Vigilante pronto. Lista inicial vazia.');
+
             }
             return;
         }
@@ -2071,7 +2072,7 @@ function App() {
         if (!driverId || !isAuthenticated) return;
         setIsSyncingMission(true);
         setIsSyncing(true); // Ativa o spinner global de sincronização
-        toast('Sincronizando dados com o servidor...', 'info');
+
         try {
             // 0. Recarregar Pedidos Disponíveis e Dados Financeiros
             await Promise.all([
@@ -2079,7 +2080,7 @@ function App() {
                 refreshFinanceData()
             ]);
 
-            console.log('[SYNC] Sincronizando missão ativa do banco...');
+
             const dId = String(driverId).trim();
             const orders = await fetchFromDB('orders_delivery', `driver_id=eq.${dId}&order=created_at.desc&limit=10`);
 
@@ -2126,7 +2127,7 @@ function App() {
                         if (!officialPickupLat || Math.abs(Number(officialPickupLat)) < 0.1) {
                             const nameLower = (activeOrder.merchant_name || activeOrder.pickup_address || "").toLowerCase();
                             if (nameLower.includes('paladar')) {
-                                console.log('[SYNC] Aplicando hard-fallback para Paladar Brumadinho');
+
                                 officialPickupLat = -20.1435361;
                                 officialPickupLng = -44.2169737;
                                 officialPickupAddress = "R. Henri Karam, 640 - Presidente Barroca, Brumadinho - MG";
@@ -2352,7 +2353,7 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
-        console.log('[REALTIME] Iniciando canal de escuta autoritativo para candidaturas...');
+
         
         const channel = supabase
             .channel(`all_applications_sync`)
@@ -2400,7 +2401,7 @@ function App() {
             });
 
         return () => {
-            console.log('[REALTIME] Encerrando canal de candidaturas.');
+
             supabase.removeChannel(channel);
         };
     }, [isAuthenticated, driverId, fetchFromDB, dedicatedSlots, refreshMyApplications]);
@@ -3136,50 +3137,60 @@ function App() {
                 const netEarned = getNetEarnings(missionForCalc);
                 const ordShortId = missionId.slice(0,8).toUpperCase();
 
-                console.log(`[WALLET] Finalizando missão ${ordShortId}. Ganho líquido: R$ ${netEarned}`);
+                // Processamento financeiro em paralelo para não travar a UI
+                const financialTasks = [];
 
-                // Inserir transação financeira via fetch manual para garantir sucesso no mobile
-                await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        user_id: driverId,
-                        amount: netEarned,
-                        type: 'deposito',
-                        status: 'completed',
-                        description: `Ganhos: Missão #${ordShortId} (Líquido)`
-                    }),
-                    signal: AbortSignal.timeout(10000)
-                }).catch(err => console.error('[WALLET] Erro ao registrar ganho:', err));
+                // 1. Registrar ganho do motorista
+                financialTasks.push(
+                    fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            user_id: driverId,
+                            amount: netEarned,
+                            type: 'deposito',
+                            status: 'completed',
+                            description: `Ganhos: Missão #${ordShortId} (Líquido)`
+                        }),
+                        signal: AbortSignal.timeout(10000)
+                    }).catch(err => console.error('[WALLET] Erro ao registrar ganho:', err))
+                );
 
-                // 2. INSERIR DÃ‰BITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o dinheiro do cliente)
+                // 2. INSERIR DÃ‰BITO SE FOI PAGO EM DINHEIRO
                 let cashDiscountAmount = 0;
                 if (paymentConfirmedMode === 'dinheiro') {
                     const totalOrderPrice = Number(activeMission.total_price || activeMission.price || 0);
                     if (totalOrderPrice > 0) {
                         cashDiscountAmount = totalOrderPrice;
-                        await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
-                            method: 'POST',
-                            headers: {
-                                'apikey': supabaseKey,
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                user_id: driverId,
-                                amount: totalOrderPrice,
-                                type: 'debit',
-                                status: 'completed',
-                                description: `Desconto de pagamento em Dinheiro. (Pedido ${ordShortId})`
-                            }),
-                            signal: AbortSignal.timeout(10000)
-                        }).catch(err => console.error('[CASH] Erro ao debitar pagamento:', err));
+                        financialTasks.push(
+                            fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                                method: 'POST',
+                                headers: {
+                                    'apikey': supabaseKey,
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    user_id: driverId,
+                                    amount: totalOrderPrice,
+                                    type: 'debit',
+                                    status: 'completed',
+                                    description: `Desconto de pagamento em Dinheiro. (Pedido ${ordShortId})`
+                                }),
+                                signal: AbortSignal.timeout(10000)
+                            }).catch(err => console.error('[CASH] Erro ao debitar pagamento:', err))
+                        );
                     }
                 }
+
+                // Disparamos as tarefas financeiras mas não aguardamos todas para fechar a UI
+                Promise.all(financialTasks).finally(() => {
+                    refreshFinanceData();
+                });
 
                 setFinishedMissionData({
                     show: true,
@@ -3195,7 +3206,6 @@ function App() {
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
-                setTimeout(() => refreshFinanceData(), 2000); // 2s para garantir propagação no DB
             } else {
                 setTimeout(() => syncMissionWithDB(), 2000);
             }
@@ -3236,7 +3246,7 @@ function App() {
             
             let token = await getSecureToken();
 
-            console.log('[WITHDRAW] Solicitando saque via REST...', { uid, amount: stats.balance });
+
 
             const res = await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
                 method: 'POST',
@@ -3256,7 +3266,7 @@ function App() {
 
             if (!res.ok) throw new Error(`Falha no servidor: ${res.status}`);
 
-            console.log('[WITHDRAW] Sucesso!');
+
 
             setShowWithdrawModal(false); 
             setShowSuccessOverlay(true);
@@ -3288,7 +3298,7 @@ function App() {
             
             let token = await getSecureToken();
 
-            console.log('[PIX] Salvando dados via REST...', { driverId, keyToSave });
+
 
             const res = await fetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
                 method: 'PATCH',
@@ -3343,7 +3353,7 @@ function App() {
     };
 
     const handleLogout = useCallback(() => {
-        console.log('[AUTH] Iniciando processo de logout...');
+
         isLoggingOutRef.current = true;
         
         // 1. Deslogar do Supabase em background (sem travar a interface)
@@ -3378,11 +3388,11 @@ function App() {
         }
         // ---------------------------------------------------
 
-        console.log("Iniciando candidatura para o slot:", slot.id, "Motorista:", driverId);
+
         setApplyingSlotId(slot.id);
         
         try {
-            console.log("Enviando para o Supabase (bypass cliente)...");
+
             
             // Tentativa de obter o token diretamente para evitar travamento do getSession()
             const projectRef = import.meta.env.VITE_SUPABASE_URL?.match(/\/\/(.*?)\./)?.[1];
@@ -3448,7 +3458,7 @@ function App() {
             }
 
             const responseData = await response.json();
-            console.log("Candidatura enviada com sucesso!", responseData);
+
             setShowSlotAppliedSuccess(true);
             
             // --- ATUALIZAÇÃO OTIMISTA ---
@@ -3470,7 +3480,7 @@ function App() {
             console.error('Erro ao processar candidatura:', err);
             toastError(err.message || 'Falha ao registrar candidatura');
         } finally {
-            console.log("Limpando estado de carregamento.");
+
             setApplyingSlotId(null);
         }
     };
@@ -3688,100 +3698,80 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
-                 {/* ─── HEADER CARD — NOVO DESIGN ─── */}
-                <header className="clay-profile-card rounded-[2.5rem] overflow-hidden relative p-6 flex flex-col gap-4 shadow-[20px_20px_40px_rgba(0,0,0,0.4),inset_4px_4px_12px_rgba(255,255,255,0.4),inset_-4px_-4px_12px_rgba(0,0,0,0.1)]">
-                    {/* Glow decorativo */}
-                    <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/30 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-stone-950/15 rounded-full blur-2xl pointer-events-none" />
+                    <header className="bg-yellow-400 rounded-[3rem] overflow-hidden relative p-10 flex flex-col items-center text-center gap-8 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+                    {/* Elementos Decorativos de Fundo */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/40 rounded-full blur-[100px] pointer-events-none" />
+                    <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-black/10 rounded-full blur-[80px] pointer-events-none" />
 
-                    {/* ── Linha Superior: Perfil e Ganhos Semanais ── */}
-                    <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 shrink-0 rounded-2xl border-[3px] border-white/80 overflow-hidden shadow-lg clay-profile-inner bg-stone-100">
-                                {driverAvatar ? (
-                                    <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <Icon name="person" size={32} className="text-stone-950/20" />
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-black text-stone-950 tracking-tighter leading-none uppercase italic">
-                                    {driverName.split(' ')[0] || 'Piloto'}
-                                </h1>
-                                <div className="mt-1 flex items-center gap-1.5 bg-stone-950/10 px-2 py-0.5 rounded-lg border border-black/5">
-                                    <Icon name="military_tech" size={10} className="text-stone-950" />
-                                    <span className="text-stone-950 text-[9px] font-black uppercase tracking-widest">
-                                        Nível {stats.level}
-                                    </span>
+                    {/* Perfil Centralizado */}
+                    <div className="relative z-10 flex flex-col items-center gap-4">
+                        <div className="w-24 h-24 rounded-[32px] border-4 border-white overflow-hidden shadow-2xl bg-stone-100 rotate-3 hover:rotate-0 transition-transform duration-500">
+                            {driverAvatar ? (
+                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <Icon name="person" size={48} className="text-black" />
                                 </div>
-                            </div>
+                            )}
                         </div>
-
-                        <div className="flex flex-col items-end">
-                            <p className="text-[8px] font-black uppercase text-stone-950/40 tracking-[0.3em]">Esta Semana</p>
-                            <div className="flex items-baseline leading-none">
-                                <span className="text-xs font-black text-stone-950/40 mr-0.5">R$</span>
-                                <span className="text-3xl font-black text-stone-950 tracking-tighter italic">
-                                    {stats.weekly.toFixed(0)}
+                        <div className="space-y-2">
+                            <h1 className="text-3xl font-black text-black tracking-tight leading-none uppercase">
+                                {driverName || 'Piloto Izi'}
+                            </h1>
+                            <div className="flex items-center justify-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-black/5 backdrop-blur-md">
+                                <Icon name="military_tech" size={14} className="text-black" />
+                                <span className="text-black text-[10px] font-black uppercase tracking-[0.2em]">
+                                    Nível {stats.level} • VIP
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* ── Bloco Central: Ganhos de Hoje (Mais Compacto e Impactante) ── */}
-                    <div className="bg-stone-950/5 rounded-3xl p-5 border border-black/5 relative z-10">
-                        <div className="flex justify-between items-center mb-2">
-                             <p className="text-[10px] font-black uppercase text-stone-950/50 tracking-[0.4em]">Ganhos de Hoje</p>
-                             <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                        </div>
-                        <div className="flex items-start leading-none">
-                            <span className="text-3xl font-black text-stone-950/20 mt-2 mr-1 italic">R$</span>
-                            <span className="text-[5.5rem] font-black text-stone-950 tracking-tighter leading-none" style={{ textShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
-                                {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
-                            </span>
-                            <div className="flex flex-col mt-auto mb-3 ml-1">
-                                <span className="text-3xl font-black text-stone-950/30 leading-none">,{stats.today.toFixed(2).split('.')[1]}</span>
+                    {/* Ganhos de Hoje Centralizados e Gigantes */}
+                    <div className="relative z-10 w-full">
+                        <p className="text-[10px] font-black uppercase text-black tracking-[0.4em] mb-2">Ganhos de Hoje</p>
+                        <div className="flex flex-col items-center">
+                            <div className="flex items-start justify-center leading-none">
+                                <span className="text-4xl font-black text-black mt-4 mr-1">R$</span>
+                                <span className="text-[7rem] font-black text-black tracking-tighter leading-none">
+                                    {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
+                                </span>
+                                <span className="text-4xl font-black text-black mt-4 ml-1">,{stats.today.toFixed(2).split('.')[1]}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* ── Barra XP Neon Solta (Sem fundo de card, apenas a barra) ── */}
-                    <div className="px-1 relative z-10">
-                        <div className="flex justify-between items-end mb-2">
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black text-stone-950 leading-none">{stats.xp}</span>
-                                <span className="text-[10px] font-black text-stone-950/40 uppercase tracking-widest">XP Total</span>
+                    {/* Resumo Semanal e Barra de Progresso */}
+                    <div className="relative z-10 w-full space-y-6">
+                        <div className="flex justify-around items-center py-4 bg-black/5 rounded-[2rem] border border-black/5">
+                            <div className="text-center">
+                                <p className="text-[8px] font-black uppercase text-black tracking-widest mb-1">Esta Semana</p>
+                                <p className="text-xl font-black text-black">R$ {stats.weekly.toFixed(0)}</p>
                             </div>
-                            <p className="text-[9px] font-black text-stone-950/40 uppercase tracking-widest italic">Próximo Nível: {stats.level + 1}</p>
+                            <div className="w-px h-8 bg-black/10" />
+                            <div className="text-center">
+                                <p className="text-[8px] font-black uppercase text-black tracking-widest mb-1">Entregas</p>
+                                <p className="text-xl font-black text-black">{stats.deliveries || 0}</p>
+                            </div>
                         </div>
-                        
-                        <div className="relative h-2 w-full bg-stone-950/10 rounded-full overflow-visible">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${Math.min((stats.xp % 100), 98)}%` }}
-                                transition={{ duration: 1.5, ease: "circOut" }}
-                                className="h-full rounded-full relative bg-stone-950"
-                                style={{
-                                    boxShadow: '0 0 15px 2px rgba(0,0,0,0.3), 0 0 5px rgba(255,255,255,0.2)'
-                                }}
-                            >
-                                {/* Brilho Neon na ponta */}
-                                <div 
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 size-4 rounded-full bg-yellow-400"
-                                    style={{ 
-                                        boxShadow: '0 0 15px 5px rgba(250,204,21,0.8), 0 0 30px 10px rgba(250,204,21,0.4)' 
-                                    }}
+
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-end px-2">
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-black text-black leading-none">{stats.xp}</span>
+                                    <span className="text-[10px] font-black text-black uppercase tracking-widest">XP</span>
+                                </div>
+                                <p className="text-[9px] font-black text-black uppercase tracking-widest">Meta Nível {stats.level + 1}</p>
+                            </div>
+                            
+                            <div className="relative h-3 w-full bg-black/10 rounded-full overflow-hidden p-0.5 border border-black/5">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min((stats.xp % 100), 98)}%` }}
+                                    transition={{ duration: 1.5, ease: "circOut" }}
+                                    className="h-full rounded-full bg-black"
                                 />
-                                {/* Rastro de luz */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-white/20 rounded-full" />
-                            </motion.div>
-                        </div>
-                        
-                        <div className="flex justify-between mt-2">
-                            <span className="text-[8px] font-black text-stone-950/30 uppercase tracking-[0.2em]">Evolução</span>
-                            <span className="text-[8px] font-black text-stone-950/30 uppercase tracking-[0.2em]">{100 - (stats.xp % 100)} XP faltantes</span>
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -3986,25 +3976,40 @@ function App() {
                                 const isAccepted = application?.status === 'accepted';
                                 const maxDeliveries = (slot.metadata?.base_deliveries || slot.max_deliveries || 0);
                                 
-                                // Oculta o card do dashboard 1 hora após o lojista aceitar o entregador
+                                // Oculta o card se não for pertinente a hoje
+                                const todayStr = new Date().toLocaleDateString('en-CA');
+                                const currentDayEng = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+                                
+                                if (slot.slot_date) {
+                                    // Vaga com data fixa: só mostra no dia
+                                    if (slot.slot_date !== todayStr) return null;
+                                } else if (slot.day_of_week && slot.day_of_week !== 'Daily') {
+                                    // Vaga recorrente: só mostra se hoje for um dos dias selecionados
+                                    const days = slot.day_of_week.split(',');
+                                    if (!days.includes(currentDayEng)) return null;
+                                }
+
+                                // Se a vaga foi aceita, controla a visibilidade (regra de 1h para recorrentes sem data)
                                 if (isAccepted && application?.updated_at) {
-                                    const acceptedAt = new Date(application.updated_at).getTime();
-                                    const oneHourMs = 60 * 60 * 1000;
-                                    if (Date.now() - acceptedAt > oneHourMs) return null;
+                                    if (!slot.slot_date) {
+                                        const acceptedAt = new Date(application.updated_at).getTime();
+                                        const oneHourMs = 60 * 60 * 1000;
+                                        if (Date.now() - acceptedAt > oneHourMs) return null;
+                                    }
                                 }
                                 
                                 return (
                                     <motion.button 
                                         key={slot.id}
                                         onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                        className={`relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)] ${isAccepted ? 'border-2 border-emerald-500/40' : 'border border-white/5'}`}
+                                        className={`relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-2xl ${isAccepted ? 'border-2 border-emerald-500/40' : 'border border-white/5'}`}
                                         style={{
                                             background: isAccepted 
                                                 ? "linear-gradient(145deg, #062016, #0a0a0c)" 
                                                 : "linear-gradient(145deg, #1a1a1d, #121214)",
                                         }}
                                     >
-                                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-all duration-1000 ${isAccepted ? 'bg-emerald-500/10' : 'bg-yellow-400/5'}`} />
+
 
                                         <div className="relative z-10 flex items-start justify-between">
                                             <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
@@ -4032,10 +4037,23 @@ function App() {
                                                         <Icon name="location_on" className="text-zinc-600" size={10} />
                                                         <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
                                                     </div>
+                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 mt-1">
+                                                        <Icon name="event" size={10} />
+                                                        <span>
+                                                            {slot.slot_date 
+                                                                ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+                                                                : (slot.day_of_week === 'Daily' ? 'Diário' : (
+                                                                    slot.day_of_week?.split(',').map((d: string) => ({
+                                                                        'Monday': 'Seg', 'Tuesday': 'Ter', 'Wednesday': 'Qua', 
+                                                                        'Thursday': 'Qui', 'Friday': 'Sex', 'Saturday': 'Sáb', 'Sunday': 'Dom'
+                                                                    }[d] || d)).join(', ') || 'Recorrente'
+                                                                ))}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
-                                            <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-inner">
+                                            <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5">
                                                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
                                                 <div className="flex flex-col items-end">
                                                     <p className={`text-2xl font-black leading-none ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
@@ -4102,15 +4120,13 @@ function App() {
                                         <motion.button 
                                             key={order.id}
                                             onClick={() => { setSelectedScheduledOrder(order); setActiveTab('scheduled'); }}
-                                            className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)]"
+                                            className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-2xl"
                                             style={{
                                                 background: "linear-gradient(145deg, #1a1a1d, #121214)",
                                                 border: "1px solid rgba(250,204,21,0.12)"
                                             }}
                                         >
-                                            {/* PREMIUM EFFECTS */}
-                                            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
-                                            <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-500/5 rounded-full blur-[60px] pointer-events-none" />
+
                                             
                                             <div className="relative z-10 flex items-start justify-between">
                                                 <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
@@ -4301,15 +4317,15 @@ function App() {
                             <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Regras do Agendamento</h4>
                         </div>
                         <ul className="space-y-4">
-                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
+                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
                                 <span className="text-yellow-400 font-black">â€¢</span> 
                                 Comparecer ao local com 15 min de antecedência.
                             </li>
-                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
+                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
                                 <span className="text-yellow-400 font-black">â€¢</span> 
                                 Estar com bateria do celular acima de 80%.
                             </li>
-                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
+                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
                                 <span className="text-yellow-400 font-black">â€¢</span> 
                                 Traje profissional e baú limpo.
                             </li>
@@ -4608,9 +4624,14 @@ function App() {
                         <div className="space-y-4">
                             {[...dedicatedSlots]
                                 .filter(s => {
-                                    // Regra de ouro: Vaga confirmada (por mim ou por qualquer um via is_active) SAI DA TELA
+                                    // Oculta se a data já passou
+                                    const todayStr = new Date().toLocaleDateString('en-CA');
+                                    if (s.slot_date && s.slot_date < todayStr) return false;
+
+                                    // Regra de ouro: Vaga confirmada (por mim) SAI DA TELA de disponíveis
                                     const myApp = myApplications.find(app => String(app.slot_id) === String(s.id));
                                     if (myApp?.status === 'accepted') return false;
+                                    
                                     return s.is_active;
                                 })
                                 .sort((a, b) => {
@@ -4633,60 +4654,66 @@ function App() {
                                         onClick={() => setSelectedSlot(s)}
                                         className={`w-full transition-all p-8 flex items-center gap-6 group text-left relative overflow-hidden active:scale-[0.98] ${
                                             isAccepted 
-                                            ? 'clay-card-dark border-2 border-emerald-500/30' 
-                                            : 'clay-card-exclusive border border-white/5'
+                                            ? 'clay-card-dark border-2 border-emerald-500' 
+                                            : 'bg-zinc-900 border border-white/10 rounded-[32px]'
                                         }`}
                                     >
-                                        {/* Efeito de brilho para vagas aprovadas */}
+                                        {/* Efeito sutil para vagas aprovadas */}
                                         {isAccepted && (
-                                            <div className="absolute inset-0 bg-emerald-500/[0.03] pointer-events-none" />
+                                            <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />
                                         )}
 
-                                        <div className="size-16 rounded-[24px] bg-white/[0.03] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
+                                        <div className="size-16 rounded-[24px] bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
                                             {s.admin_users?.store_logo
                                                 ? <img src={s.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                                 : <div className="bg-primary/10 size-full flex items-center justify-center"><Icon name="stars" size={28} className="text-primary" /></div>}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className={`size-1.5 rounded-full ${isAccepted ? 'bg-emerald-400' : 'bg-primary animate-pulse'} shadow-[0_0_8px_${isAccepted ? '#10b881' : '#ffd900'}]`}></span>
-                                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] truncate">
+                                                <span className={`size-1.5 rounded-full ${isAccepted ? 'bg-emerald-400' : 'bg-primary'}`}></span>
+                                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] truncate">
                                                     {s.admin_users?.store_name || 'Parceiro Exclusivo'}
                                                 </p>
                                             </div>
-                                            <p className={`text-lg font-black tracking-tight leading-tight group-hover:text-primary transition-colors ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{s.title}</p>
+                                            <p className={`text-xl font-black tracking-tight leading-tight group-hover:text-primary transition-colors ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{s.title}</p>
                                             <div className="flex items-center gap-3 mt-3">
-                                                <div className="flex items-center gap-1.5 bg-white/[0.05] px-3 py-1 rounded-full border border-white/5">
-                                                    <Icon name="schedule" size={12} className="text-primary/60" />
-                                                    <p className="text-[9px] text-white/50 font-black uppercase tracking-wider">{s.working_hours || 'A combinar'}</p>
+                                                <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                                                    <Icon name="schedule" size={12} className="text-primary" />
+                                                    <p className="text-[9px] text-white/70 font-black uppercase tracking-wider">{s.working_hours || 'A combinar'}</p>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 bg-white/[0.05] px-3 py-1 rounded-full border border-white/5">
-                                                    <Icon name="local_shipping" size={12} className="text-primary/60" />
-                                                    <p className="text-[9px] text-white/50 font-black uppercase tracking-wider">Dedicado</p>
+                                                <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                                                    <Icon name="event" size={12} className="text-primary" />
+                                                    <p className="text-[9px] text-white/70 font-black uppercase tracking-wider">
+                                                        {s.slot_date 
+                                                            ? new Date(s.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                                                            : (s.day_of_week === 'Daily' ? 'Diário' : (
+                                                                s.day_of_week?.split(',').map((d: string) => ({
+                                                                    'Monday': 'Seg', 'Tuesday': 'Ter', 'Wednesday': 'Qua', 
+                                                                    'Thursday': 'Qui', 'Friday': 'Sex', 'Saturday': 'Sáb', 'Sunday': 'Dom'
+                                                                }[d] || d)).join(',') || 'Recorrente'
+                                                            ))}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                            <div className={`${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-primary/10 border-primary/20'} border px-4 py-2 rounded-2xl shadow-xl transition-all`}>
+                                            <div className={`${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-primary/10 border-primary/20'} border px-4 py-2 rounded-2xl transition-all`}>
                                                 <p className={`text-xl font-black leading-none ${isAccepted ? 'text-emerald-400' : 'text-primary'}`}>R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
                                                 <p className={`text-[7px] font-black uppercase tracking-tighter text-center ${isAccepted ? 'text-emerald-400/60' : 'text-primary/60'}`}>p/ dia</p>
                                             </div>
                                             {hasApplied && (
                                                 <div className="flex flex-col items-end gap-1.5 mt-2 transition-all">
-                                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isAccepted ? 'bg-emerald-500 text-black shadow-[0_5px_15px_rgba(16,185,129,0.3)]' : 'bg-white/10 text-white/40 border border-white/5 shadow-inner'}`}>
+                                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isAccepted ? 'bg-emerald-500 text-black shadow-lg' : 'bg-white/10 text-white/60 border border-white/10'}`}>
                                                         {isAccepted ? (
                                                             <><Icon name="verified" size={10} /> Vaga Confirmada</>
                                                         ) : (
                                                             'Em Análise'
                                                         )}
-                                                        {application?.status === 'pending' && <div className="size-1 bg-yellow-400 rounded-full animate-ping" />}
+                                                        {application?.status === 'pending' && <div className="size-1 bg-yellow-400 rounded-full animate-pulse" />}
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* Background glow effect */}
-                                        <div className={`absolute -right-10 -bottom-10 size-40 blur-[80px] rounded-full transition-all duration-700 ${isAccepted ? 'bg-emerald-500/10' : 'bg-primary/5 group-hover:bg-primary/10'}`}></div>
                                     </motion.button>
                                 );
                             })}
@@ -4706,11 +4733,12 @@ function App() {
         const sClayDark: React.CSSProperties = {
             background: '#121212',
             borderRadius: '2.5rem',
-            boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
         };
         const sClayIcon: React.CSSProperties = {
             background: '#1A1A1A',
-            boxShadow: '4px 4px 8px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.05), inset -2px -2px 4px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255,255,255,0.05)',
         };
 
         return (
@@ -4775,9 +4803,20 @@ function App() {
                                 <span className="text-3xl font-black opacity-40">R$</span>
                                 <span className="text-8xl font-black tracking-tighter leading-none drop-shadow-sm">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
                             </div>
-                            <div className="mt-8 flex items-center gap-3 bg-white/20 w-fit px-6 py-3 rounded-full border border-white/20 backdrop-blur-md shadow-inner">
+                            <div className="mt-8 flex items-center gap-3 bg-white/20 w-fit px-6 py-3 rounded-full border border-white/20 backdrop-blur-md">
                                 <Icon name="schedule" size={16} className="text-zinc-900" />
-                                <p className="text-[11px] font-black uppercase tracking-widest">{slot.working_hours}</p>
+                                <p className="text-[11px] font-black uppercase tracking-widest">
+                                    {slot.slot_date 
+                                        ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
+                                        : (slot.day_of_week === 'Daily' ? 'Todos os dias' : (
+                                            slot.day_of_week?.split(',').map((d: string) => ({
+                                                'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 
+                                                'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
+                                            }[d] || d)).join(', ') || 'Recorrente'
+                                        ))}
+                                    {' • '}
+                                    {slot.working_hours}
+                                </p>
                             </div>
                         </div>
                         <Icon name="payments" size={160} className="absolute -right-8 -bottom-8 opacity-10 rotate-12" />
@@ -6315,7 +6354,7 @@ function App() {
 
         const getMainBtnData = () => {
             const s = (activeMission.status || '').toLowerCase().trim();
-            console.log('[DEBUG] Mission Status:', s);
+
 
             // CASO TERMINAL: Se a missão já acabou mas ainda está na tela, o botão serve para fechar.
             if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s)) {
