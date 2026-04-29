@@ -92,6 +92,14 @@ function Icon({ name, className = "", size = 20 }: any) {
     'storefront': BespokeIcons.Bag,
     'my_location': BespokeIcons.Pin,
     'directions': BespokeIcons.Map,
+    'photo_camera': BespokeIcons.Camera,
+    'account_balance': BespokeIcons.Bank,
+    'layers': BespokeIcons.Layers,
+    'admin_panel_settings': BespokeIcons.Shield,
+    'package': BespokeIcons.Bag,
+    'description': BespokeIcons.FileText,
+    'call': BespokeIcons.Phone,
+    'history_toggle_off': BespokeIcons.History,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
@@ -992,7 +1000,7 @@ function App() {
                 
                 if (window.Notification && Notification.permission === 'granted') {
                     new Notification('ðŸš€ Nova Missão Izi!', {
-                        body: `R$ ${newOrders[0].price?.toFixed(2) || '0,00'} â€¢ ${newOrders[0].origin || 'Entrega nova'}`,
+                        body: `R$ ${newOrders[0].price?.toFixed(2) || '0,00'} • ${newOrders[0].origin || 'Entrega nova'}`,
                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'
                     });
                 }
@@ -2705,7 +2713,7 @@ function App() {
                         playIziSound('driver');
                         if (Notification.permission === 'granted') {
                             new Notification('ðŸš€ Nova Missão Izi!', { 
-                                body: `${servicePreview.headline} â€¢ ${servicePreview.pickupText || o.pickup_address}`, 
+                                body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
                                 icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                             });
                         }
@@ -3656,14 +3664,22 @@ function App() {
 
                     {/* Perfil Centralizado */}
                     <div className="relative z-10 flex flex-col items-center gap-4">
-                        <div className="w-24 h-24 rounded-[32px] border-4 border-white overflow-hidden shadow-2xl bg-stone-100 rotate-3 hover:rotate-0 transition-transform duration-500">
+                        <div 
+                            onClick={() => setActiveTab('profile')}
+                            className="w-24 h-24 rounded-[32px] border-4 border-white overflow-hidden shadow-2xl bg-stone-100 rotate-3 hover:rotate-0 transition-transform duration-500 cursor-pointer relative group"
+                        >
                             {driverAvatar ? (
-                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
                                     <Icon name="person" size={48} className="text-black" />
                                 </div>
                             )}
+                            
+                            {/* Pequeno badge indicativo */}
+                            <div className="absolute bottom-1 right-1 size-6 rounded-full bg-black flex items-center justify-center border-2 border-white shadow-lg">
+                                <Icon name="photo_camera" size={10} className="text-white" />
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <h1 className="text-3xl font-black text-black tracking-tight leading-none uppercase">
@@ -4269,19 +4285,19 @@ function App() {
                         </div>
                         <ul className="space-y-4">
                             <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">â€¢</span> 
+                                <span className="text-yellow-400 font-black">•</span> 
                                 Comparecer ao local com 15 min de antecedência.
                             </li>
                             <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">â€¢</span> 
+                                <span className="text-yellow-400 font-black">•</span> 
                                 Estar com bateria do celular acima de 80%.
                             </li>
                             <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">â€¢</span> 
+                                <span className="text-yellow-400 font-black">•</span> 
                                 Traje profissional e baú limpo.
                             </li>
                             <li className="flex gap-4 text-xs text-yellow-400/70 font-black items-start leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">â€¢</span> 
+                                <span className="text-yellow-400 font-black">•</span> 
                                 O início da missão só é liberado no horário exato.
                             </li>
                         </ul>
@@ -4346,7 +4362,7 @@ function App() {
                                         className="w-full h-20 bg-zinc-900 text-white rounded-[28px] font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/10"
                                     >
                                         <Icon name="check_circle" className="text-emerald-400" />
-                                        Missão Concluída â€¢ Fechar
+                                        Missão Concluída • Fechar
                                     </button>
                                 );
                             }
@@ -4980,7 +4996,7 @@ function App() {
                                     <div className="flex items-center gap-3 pt-3 mt-3 border-t border-white/5">
                                         <Icon name="event" size={14} className="text-white/20" />
                                         <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-                                            {new Date(completedAt).toLocaleDateString('pt-BR')} <span className="mx-1 opacity-40">â€¢</span> {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(completedAt).toLocaleDateString('pt-BR')} <span className="mx-1 opacity-40">•</span> {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
                                 </div>
@@ -5475,14 +5491,6 @@ function App() {
                                 </span>
                             </div>
                         </div>
-
-                        {tx.status !== 'concluido' && (
-                            <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10">
-                                <p className="text-[9px] text-primary/70 leading-relaxed font-medium uppercase tracking-wider text-center">
-                                    Prazo de compensação: até {appSettings?.withdrawal_period_h ?? 24}h úteis
-                                </p>
-                            </div>
-                        )}
                     </div>
 
                     {/* Receipt Button */}
@@ -5508,32 +5516,122 @@ function App() {
         );
     };
 
-    const handleAvatarUpload = async (file: File) => {
-        if (!driverId || !file) return;
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const driverId = localStorage.getItem('izi_driver_uid');
+        if (!driverId) {
+            console.error('[AVATAR] DriverId não encontrado');
+            toastError('Erro de autenticação. Tente deslogar e logar novamente.');
+            return;
+        }
+
+        // Limite de 5MB
+        if (file.size > 5 * 1024 * 1024) {
+            toastError('A imagem deve ter no máximo 5MB.');
+            return;
+        }
+
         setIsUploadingAvatar(true);
+        console.log('[AVATAR] Preparando upload...', { name: file.name, size: file.size, type: file.type });
+
         try {
+            // Conversão de arquivo para ArrayBuffer/Blob
+            let arrayBuffer: ArrayBuffer;
+            if (typeof file.arrayBuffer === 'function') {
+                try {
+                    arrayBuffer = await file.arrayBuffer();
+                } catch (e) {
+                    arrayBuffer = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result as ArrayBuffer);
+                        reader.onerror = reject;
+                        reader.readAsArrayBuffer(file);
+                    });
+                }
+            } else {
+                arrayBuffer = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as ArrayBuffer);
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            const blob = new Blob([arrayBuffer], { type: file.type });
             const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-            const path = `drivers/${driverId}/avatar.${ext}`;
+            const fileName = `${Date.now()}-avatar.${ext}`;
+            const path = `drivers/${driverId}/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(path, file, { upsert: true, contentType: file.type });
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            // Recuperar JWT para autenticação manual via fetch
+            let authToken = supabaseKey;
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.includes('auth-token')) {
+                        const d = JSON.parse(localStorage.getItem(k) || '{}');
+                        if (d.access_token) authToken = d.access_token;
+                    }
+                }
+            } catch (e) {}
 
-            if (uploadError) throw uploadError;
+            const uploadUrl = `${supabaseUrl}/storage/v1/object/avatars/${path}`;
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout no upload (30s)')), 30000)
+            );
 
+            // 1. Upload do Arquivo
+            const res = await Promise.race([
+                fetch(uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': file.type,
+                        'x-upsert': 'true'
+                    },
+                    body: blob
+                }),
+                timeoutPromise
+            ]) as Response;
+            
+            if (!res.ok) {
+                const errorJson = await res.json().catch(() => ({ message: 'Erro no servidor de storage' }));
+                throw new Error(errorJson.message || 'Falha no upload do arquivo');
+            }
+            
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
-            const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`; // cache-bust
+            const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`; 
 
-            // Salvar no banco e no estado local
-            await supabase.from('drivers_delivery').update({ avatar_url: publicUrl }).eq('id', driverId);
+            // 2. Atualização do Perfil no Banco
+            const dbUrl = `${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`;
+            const dbRes = await fetch(dbUrl, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ avatar_url: publicUrl })
+            });
+
+            if (!dbRes.ok) throw new Error('Falha ao atualizar perfil no banco de dados');
+
+            // 3. Atualização do Estado Local
             setDriverAvatar(publicUrl);
             localStorage.setItem('izi_driver_avatar', publicUrl);
             toastSuccess('Foto de perfil atualizada!');
         } catch (err: any) {
             console.error('[AVATAR] Erro:', err);
-            toastError('Erro ao enviar foto. Tente novamente.');
+            toastError(`Erro ao enviar foto: ${err.message || 'Tente novamente.'}`);
         } finally {
             setIsUploadingAvatar(false);
+            if (event.target) event.target.value = '';
         }
     };
 
@@ -5543,6 +5641,7 @@ function App() {
                 {/* Avatar clicável com upload */}
                 <label
                     htmlFor="avatar-upload"
+                    onClick={() => console.log('[AVATAR] Label clicado')}
                     className="size-28 rounded-[40px] flex items-center justify-center mb-6 relative group cursor-pointer select-none"
                     style={{ background: '#1A1A1A', boxShadow: '12px 12px 24px rgba(0,0,0,0.5), -8px -8px 16px rgba(255,255,255,0.02)' }}
                 >
@@ -5565,26 +5664,30 @@ function App() {
                         )}
                     </div>
 
-                    {/* Badge de câmera */}
-                    <div className="absolute -bottom-1 -right-1 size-9 rounded-full bg-primary border-4 border-[#0a0a0a] flex items-center justify-center shadow-lg">
-                        <Icon name="photo_camera" size={14} className="text-slate-900" />
+                    {/* Badge de câmera Claymorphic */}
+                    <div 
+                        className="absolute -bottom-1 -right-1 size-10 rounded-full bg-primary flex items-center justify-center shadow-[inset_3px_3px_6px_rgba(255,255,255,0.7),inset_-3px_-3px_6px_rgba(0,0,0,0.2),0_10px_20px_rgba(0,0,0,0.4)] border-4 border-[#0a0a0a]"
+                    >
+                        <Icon name="photo_camera" size={16} className="text-slate-950" />
                     </div>
-
-                    <input
-                        id="avatar-upload"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleAvatarUpload(f);
-                            e.target.value = ''; // reset
-                        }}
-                    />
                 </label>
+
+                <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                        console.log('[AVATAR] Input onChange disparado');
+                        const f = e.target.files?.[0];
+                        if (f) {
+                            handleAvatarUpload(e);
+                        }
+                    }}
+                />
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
                 <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi â€¢ Nível {stats.level}</span>
+                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi • Nível {stats.level}</span>
                 </div>
                 
                 <div className="flex items-center gap-4 mt-8">
@@ -6317,7 +6420,7 @@ function App() {
             // CASO TERMINAL: Se a missão já acabou mas ainda está na tela, o botão serve para fechar.
             if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s)) {
                 return { 
-                    label: 'Concluído â€¢ Fechar', 
+                    label: 'Concluído • Fechar', 
                     action: () => {
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
@@ -6529,7 +6632,7 @@ function App() {
 
                         {/* Izi Pay Premium Section */}
                         <section className="space-y-4 pb-4">
-                             <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay â€¢ Rendimento</h2>
+                             <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
                              <div className="bg-zinc-900 border border-white/5 p-6 rounded-3xl relative overflow-hidden">
                                  
                                  <div className="flex justify-between items-center relative z-10">
@@ -6712,7 +6815,7 @@ function App() {
                         <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
                     </div>
                 </div>
-                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 â€¢ Conexão Segura</p>
+                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
             </motion.div>
         );
     };
@@ -6856,28 +6959,6 @@ function App() {
                         
                         <div className={`bg-neutral-900 ${clayCardDark} rounded-[32px] p-6 border border-white/5 space-y-6 shadow-2xl relative overflow-hidden`}>
                             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full" />
-                            
-                            {/* Breakdown Financeiro */}
-                            <div className="space-y-3 relative z-10">
-                                <div className="flex justify-between items-center text-[11px] font-bold">
-                                    <span className="text-neutral-500 uppercase tracking-widest">Total do Pedido</span>
-                                    <span className="text-white font-black">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                                </div>
-                                
-                                <div className="flex justify-between items-center text-[11px] font-bold">
-                                    <span className="text-emerald-400/80 uppercase tracking-widest">Lucro Entregador (+)</span>
-                                    <span className="text-emerald-400 font-black">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
-                                </div>
-                                
-                                {(selectedOrder.payment_method === 'dinheiro' || selectedOrder.payment_method === 'cash') && (
-                                    <div className="flex justify-between items-center text-[11px] font-bold">
-                                        <span className="text-rose-400/80 uppercase tracking-widest">Recebido em Mãos (-)</span>
-                                        <span className="text-rose-400 font-black">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="h-px bg-white/5 w-full relative z-10" />
                             
                             {/* Saldo da Missão Principal */}
                             <div className="flex justify-between items-center relative z-10 bg-black/20 p-4 rounded-2xl border border-white/5">
