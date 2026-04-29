@@ -70,6 +70,10 @@ export const VanWizard: React.FC<VanWizardProps> = ({
           originLoc={(transitData.origin?.lat && transitData.origin?.lng)
             ? { lat: Number(transitData.origin.lat), lng: Number(transitData.origin.lng) }
             : null}
+          destLoc={(transitData.destination?.lat && transitData.destination?.lng)
+            ? { lat: Number(transitData.destination.lat), lng: Number(transitData.destination.lng) }
+            : null}
+          originLabel="MEU ENDEREÇO"
           onMyLocationClick={updateLocation} 
           boxed={false}
           vehicleIcon="shuttle_taxi"
@@ -77,22 +81,6 @@ export const VanWizard: React.FC<VanWizardProps> = ({
         <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
       </div>
       
-      {/* ── BOTÃO DE LOCALIZAÇÃO (Dark Clay) ── */}
-      <div className="fixed right-6 bottom-96 z-[160] pointer-events-none">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => updateLocation()}
-          className="size-14 rounded-2xl flex items-center justify-center pointer-events-auto active:scale-95 transition-all text-blue-400"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <span className="material-symbols-rounded text-2xl font-black">my_location</span>
-        </motion.button>
-      </div>
 
       {/* ── HEADER FLUTUANTE (Dark Clay) ── */}
       <header className="fixed top-12 left-0 right-0 z-[150] flex items-center justify-between px-6 pointer-events-none">
@@ -122,7 +110,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
             border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
-          <h2 className="text-xl font-black text-white tracking-tighter leading-none uppercase italic">
+          <h2 className="text-xl font-black text-white tracking-tighter leading-none uppercase">
             Van Logística
           </h2>
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-400 mt-1">
@@ -137,7 +125,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="px-6 py-4 rounded-[28px] flex items-center gap-4 font-black text-xs text-white italic pointer-events-auto"
+          className="px-6 py-4 rounded-[28px] flex items-center gap-4 font-black text-xs text-white pointer-events-auto"
           style={{
             background: "rgba(9, 9, 11, 0.85)",
             backdropFilter: "blur(24px)",
@@ -160,7 +148,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="px-6 py-4 rounded-[32px] flex items-center gap-5 font-black text-xs text-white italic pointer-events-auto"
+          className="px-6 py-4 rounded-[32px] flex items-center gap-5 font-black text-xs text-white pointer-events-auto"
           style={{
             background: "rgba(9, 9, 11, 0.85)",
             backdropFilter: "blur(24px)",
@@ -194,7 +182,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                 className="space-y-10"
               >
                 <div className="space-y-6">
-                  <h3 className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.3em] px-2 italic text-shadow-sm">Trajeto da Van</h3>
+                  <h3 className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.3em] px-2 text-shadow-sm">Trajeto da Van</h3>
                   <div className="space-y-5 relative">
                     <div className="absolute left-9 top-1/2 -translate-y-1/2 w-[1px] h-12 bg-zinc-800" />
                     
@@ -208,7 +196,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                             placeholder="Endereço de Coleta"
                             onSelect={(addr) => setTransitData((p: any) => ({...p, origin: addr}))}
                             initialValue={transitData.origin?.address}
-                            className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 italic tracking-tight"
+                            className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
                           />
                         </div>
                         <motion.button
@@ -240,7 +228,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                           placeholder="Endereço de Entrega"
                           onSelect={(addr) => setTransitData((p: any) => ({...p, destination: addr}))}
                           initialValue={transitData.destination?.address}
-                          className="bg-transparent text-white font-black text-xs w-full outline-none placeholder:text-zinc-700 italic"
+                          className="bg-transparent text-white font-black text-xs w-full outline-none placeholder:text-zinc-700"
                         />
                       </div>
                     </div>
@@ -249,17 +237,17 @@ export const VanWizard: React.FC<VanWizardProps> = ({
 
                 <div className="clay-card-dark rounded-[35px] p-7 border border-white/5 flex flex-col gap-6">
                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest italic leading-none">Tipo de Serviço</p>
-                      <span className="bg-blue-500/10 text-blue-400 text-[10px] font-black px-3 py-1 rounded-full border border-blue-500/20 uppercase italic">Profissional</span>
+                      <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest leading-none">Tipo de Serviço</p>
+                      <span className="bg-blue-500/10 text-blue-400 text-[10px] font-black px-3 py-1 rounded-full border border-blue-500/20 uppercase">Profissional</span>
                    </div>
                    <div className="grid grid-cols-2 gap-4">
                       <div className="bg-black/20 p-4 rounded-3xl border border-white/5 flex flex-col gap-2 shadow-inner">
                          <Icon name="local_shipping" size={20} className="text-blue-400" />
-                         <span className="text-white font-black text-xs italic uppercase">Mudança</span>
+                         <span className="text-white font-black text-xs uppercase">Mudança</span>
                       </div>
                       <div className="bg-black/20 p-4 rounded-3xl border border-white/5 flex flex-col gap-2 shadow-inner opacity-40">
                          <Icon name="package_2" size={20} className="text-zinc-500" />
-                         <span className="text-zinc-500 font-black text-xs italic uppercase">Carga Lotação</span>
+                         <span className="text-zinc-500 font-black text-xs uppercase">Carga Lotação</span>
                       </div>
                    </div>
                 </div>
@@ -278,12 +266,12 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                           <Icon name="payments" size={24} className="text-blue-400" />
                         </div>
                         <div>
-                          <span className="text-white font-black text-[13px] uppercase italic block leading-none mb-1">Custo da Logística</span>
-                          <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest italic">Baseado na distância</span>
+                          <span className="text-white font-black text-[13px] uppercase block leading-none mb-1">Custo da Logística</span>
+                          <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">Baseado na distância</span>
                         </div>
                       </div>
                       <div className="text-right">
-                         <span className="text-blue-400 text-3xl font-black italic tracking-tighter block">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
+                         <span className="text-blue-400 text-3xl font-black tracking-tighter block">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
                       </div>
                     </div>
 
@@ -291,19 +279,19 @@ export const VanWizard: React.FC<VanWizardProps> = ({
 
                     <div className="space-y-5">
                       <div className="flex justify-between items-center px-2">
-                         <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic tracking-tight">Pagamento</span>
+                         <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest tracking-tight">Pagamento</span>
                          <button 
                           onClick={() => navigateSubView("mobility_payment")}
                           className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5 hover:bg-white/10 transition-all active:scale-95 shadow-md"
                          >
                            <Icon name={paymentMethod === 'online' ? 'credit_card' : 'payments'} size={14} className="text-blue-400" />
-                           <span className="text-white font-black text-[10px] uppercase italic">
+                           <span className="text-white font-black text-[10px] uppercase">
                               {paymentMethod === 'online' ? 'Cartão Online' : 'Pagar na Coleta'}
                            </span>
                          </button>
                       </div>
 
-                      <p className="text-blue-400/60 text-[10px] font-bold uppercase tracking-tight text-center italic bg-blue-500/5 p-4 rounded-3xl border border-blue-500/10">
+                      <p className="text-blue-400/60 text-[10px] font-bold uppercase tracking-tight text-center bg-blue-500/5 p-4 rounded-3xl border border-blue-500/10">
                         O motorista aguardará no local por até 15 minutos gratuitamente para carregamento.
                       </p>
                     </div>
@@ -335,7 +323,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
             className="w-full h-20 bg-blue-500 clay-card-dark py-6 rounded-full flex items-center justify-center gap-4 shadow-[0_20px_60px_rgba(59,130,246,0.3)] active:grayscale transition-all relative overflow-hidden group"
           >
             <div className="absolute inset-0 bg-blue-500 opacity-90" />
-            <span className="relative z-10 text-white font-black text-xl tracking-tighter uppercase italic">
+            <span className="relative z-10 text-white font-black text-xl tracking-tighter uppercase">
               {mobilityStep === 1 ? "Prosseguir" : "Contratar Van"}
             </span>
             <Icon name={mobilityStep === 1 ? "arrow_forward" : "local_shipping"} className="relative z-10 text-white font-black group-hover:translate-x-2 transition-transform" size={28} />

@@ -838,22 +838,29 @@ function App() {
   const updateLocation = (force = false, onSuccess?: (address: string, lat: number, lng: number) => void) => {
     // Se o endereço foi definido manualmente e não for um "force", ignoramos a atualização automática
     // Isso evita que o GPS do dispositivo sobrescreva um endereço salvo ou selecionado.
-    if (userLocation.isManual && !force) {
-      console.log("[GPS] Ignorando atualização automática pois o endereço é manual.");
-      return;
-    }
-
-    setUserLocation((prev) => ({ ...prev, loading: true }));
-
     const processCoords = async (latitude: number, longitude: number, accuracy?: number) => {
+      // Se for forçado ou estivermos em tela de mobilidade, removemos o bloqueio manual
+      const mobilityViews = ["taxi_wizard", "freight_wizard", "logistics_tracking", "excursion_wizard", "van_wizard"];
+      const isMobility = mobilityViews.includes(subView);
+      
+      if (force || isMobility) {
+        setUserLocation(prev => ({ ...prev, isManual: false }));
+      } else if (userLocation.isManual && !force) {
+        console.log("[GPS] Ignorando atualização automática pois o endereço é manual.");
+        return;
+      }
+
       try {
         // 1. ATUALIZA MAPA E ESTADO IMEDIATAMENTE (Sem Lag)
         setUserLocation(prev => {
-          if (prev.isManual && !force) return prev;
-          return { ...prev, lat: latitude, lng: longitude, accuracy };
+          return { ...prev, lat: latitude, lng: longitude, accuracy, loading: false };
         });
+        
         setTransitData(prev => {
-          if (userLocation.isManual && !force) return prev;
+          // Se for mobilidade e ainda não tiver origem, ou se for forçado, atualiza a origem
+          const shouldUpdateOrigin = isMobility || force || !prev.origin?.lat;
+          if (!shouldUpdateOrigin) return prev;
+          
           return {
             ...prev,
             origin: { ...prev.origin, lat: latitude, lng: longitude }
@@ -861,6 +868,8 @@ function App() {
         });
 
         let address = "";
+        let snappedLat = latitude;
+        let snappedLng = longitude;
 
         // 2. BUSCA ENDEREÇO EM SEGUNDO PLANO
         // Tenta reverse geocode via Google Maps Geocoder (browser)
@@ -872,6 +881,10 @@ function App() {
             });
             if (response.results[0]) {
               address = response.results[0].formatted_address;
+              if (response.results[0].geometry?.location) {
+                snappedLat = response.results[0].geometry.location.lat();
+                snappedLng = response.results[0].geometry.location.lng();
+              }
             }
           } catch { /* silent */ }
         }
@@ -885,6 +898,10 @@ function App() {
             const data = await res.json();
             if (data.results?.[0]) {
               address = data.results[0].formatted_address;
+              if (data.results[0].geometry?.location) {
+                snappedLat = data.results[0].geometry.location.lat;
+                snappedLng = data.results[0].geometry.location.lng;
+              }
             }
           } catch { /* silent */ }
         }
@@ -897,6 +914,10 @@ function App() {
             );
             const nomData = await nomRes.json();
             address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+            if (nomData.lat && nomData.lon) {
+              snappedLat = parseFloat(nomData.lat);
+              snappedLng = parseFloat(nomData.lon);
+            }
           } catch { /* silent */ }
         }
 
@@ -909,16 +930,16 @@ function App() {
           return { ...prev, address, loading: false };
         });
 
-        localStorage.setItem("lastKnownLocation", JSON.stringify({ address, loading: false, lat: latitude, lng: longitude, accuracy }));
+        localStorage.setItem("lastKnownLocation", JSON.stringify({ address, loading: false, lat: snappedLat, lng: snappedLng, accuracy }));
         setTransitData((prev) => ({ 
           ...prev, 
           origin: { 
             address: address, 
-            lat: latitude, 
-            lng: longitude 
+            lat: snappedLat, 
+            lng: snappedLng 
           } 
         }));
-        if (onSuccess) onSuccess(address, latitude, longitude);
+        if (onSuccess) onSuccess(address, snappedLat, snappedLng);
       } catch (error) {
         console.error("[GPS] Erro ao processar coordenadas:", error);
         setUserLocation((prev) => ({ ...prev, loading: false }));
@@ -980,25 +1001,35 @@ function App() {
           maximumAge: 0
         }, (pos) => {
           if (pos?.coords) {
-            setUserLocation(prev => ({ 
-              ...prev, 
-              lat: pos.coords.latitude, 
-              lng: pos.coords.longitude, 
-              loading: false,
-              accuracy: pos.coords.accuracy 
-            }));
+            setUserLocation(prev => { 
+              if (!prev.isManual) {
+                setTransitData(tPrev => ({ ...tPrev, origin: { ...tPrev.origin, lat: pos.coords.latitude, lng: pos.coords.longitude } }));
+              }
+              return { 
+                ...prev, 
+                lat: pos.coords.latitude, 
+                lng: pos.coords.longitude, 
+                loading: false,
+                accuracy: pos.coords.accuracy 
+              };
+            });
           }
         }).then(id => { watchId = id; });
       } else {
         watchId = navigator.geolocation.watchPosition(
           (pos) => {
-            setUserLocation(prev => ({ 
-              ...prev, 
-              lat: pos.coords.latitude, 
-              lng: pos.coords.longitude, 
-              loading: false,
-              accuracy: pos.coords.accuracy 
-            }));
+            setUserLocation(prev => { 
+              if (!prev.isManual) {
+                setTransitData(tPrev => ({ ...tPrev, origin: { ...tPrev.origin, lat: pos.coords.latitude, lng: pos.coords.longitude } }));
+              }
+              return { 
+                ...prev, 
+                lat: pos.coords.latitude, 
+                lng: pos.coords.longitude, 
+                loading: false,
+                accuracy: pos.coords.accuracy 
+              };
+            });
           },
           () => {},
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -8920,9 +8951,11 @@ const navigateSubView = (target: string) => {
     );
   };
 
+  const isMobilityActive = ["taxi_wizard", "freight_wizard", "van_wizard", "logistics_tracking", "active_order"].includes(subView);
+  
   return (
     <>
-      <div className="min-h-screen bg-black selection:bg-yellow-400/30">
+      <div className={`${isMobilityActive ? "h-screen overflow-hidden" : "min-h-screen"} bg-black selection:bg-yellow-400/30`}>
         <AnimatePresence mode="wait">
           {view === "loading" && (
             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[1000] bg-black flex flex-col items-center justify-center">

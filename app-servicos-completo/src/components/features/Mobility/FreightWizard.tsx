@@ -11,7 +11,7 @@ interface FreightWizardProps {
   mobilityStep: number;
   setMobilityStep: (step: number) => void;
   userLocation: any;
-  updateLocation: (onSuccess?: (address: string) => void) => void;
+  updateLocation: (force?: boolean, onSuccess?: (address: string, lat: number, lng: number) => void) => void;
   routePolyline: string;
   driverLocation: any;
   distancePrices: Record<string, number>;
@@ -60,7 +60,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   };
 
   React.useEffect(() => {
-    updateLocation();
+    updateLocation(true);
   }, []);
 
   const vehicleTypes = [
@@ -110,6 +110,10 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
           originLoc={(transitData.origin?.lat && transitData.origin?.lng)
             ? { lat: Number(transitData.origin.lat), lng: Number(transitData.origin.lng) }
             : null}
+          destLoc={(transitData.destination?.lat && transitData.destination?.lng)
+            ? { lat: Number(transitData.destination.lat), lng: Number(transitData.destination.lng) }
+            : null}
+          originLabel="MEU ENDEREÇO"
           onMyLocationClick={updateLocation}
           boxed={false}
         />
@@ -117,22 +121,6 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
         <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
       </div>
 
-      {/* ── BOTÃO DE LOCALIZAÇÃO (Dark Clay) ── */}
-      <div className="fixed right-6 bottom-96 z-[160] pointer-events-none">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => updateLocation()}
-          className="size-14 rounded-2xl flex items-center justify-center pointer-events-auto active:scale-95 transition-all text-yellow-500"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <span className="material-symbols-rounded text-2xl font-black">my_location</span>
-        </motion.button>
-      </div>
 
       {/* ── HEADER FLUTUANTE (Dark Clay) ── */}
       <header className="fixed top-12 left-0 right-0 z-[150] flex items-center justify-between px-6 pointer-events-none">
@@ -162,7 +150,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
             border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
-          <h2 className="text-xl font-black text-white tracking-tighter leading-none uppercase italic">
+          <h2 className="text-xl font-black text-white tracking-tighter leading-none uppercase">
             Izi Logistics
           </h2>
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-yellow-500 mt-1">
@@ -170,79 +158,6 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
           </p>
         </div>
       </header>
-
-      {/* ── CHIPS FLUTUANTES (Dark Clay Design) ── */}
-      <div className="fixed top-40 right-6 z-[140] flex flex-col gap-4 items-end pointer-events-none">
-        {/* Card de distância */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="px-6 py-4 rounded-[28px] flex items-center gap-4 font-black text-xs text-white italic pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            filter: routeDistance ? "none" : "grayscale(0.5)",
-          }}
-        >
-          <div className="size-9 rounded-2xl bg-zinc-800/80 flex items-center justify-center border border-white/5 shadow-inner">
-            <Icon name="route" size={20} className="text-yellow-500" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[8px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Distância</span>
-            <span className="text-sm tracking-tight text-white">{distancePart ?? "-- km"}</span>
-          </div>
-        </motion.div>
-
-        {/* Card de tempo do trajeto */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="px-6 py-4 rounded-[28px] flex items-center gap-4 font-black text-xs text-white italic pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            filter: timePart ? "none" : "grayscale(0.5)",
-          }}
-        >
-          <div className="size-9 rounded-2xl bg-zinc-800/80 flex items-center justify-center border border-white/5 shadow-inner">
-            <Icon name="schedule" size={20} className="text-yellow-500" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[8px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Tempo</span>
-            <span className="text-sm tracking-tight text-white">{timePart ?? "-- min"}</span>
-          </div>
-        </motion.div>
-
-        {/* Card de valor da corrida em tempo real */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="px-6 py-4 rounded-[32px] flex items-center gap-5 font-black text-xs text-white italic pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 20px 45px rgba(0,0,0,0.6), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
-            border: "1.5px solid rgba(251,191,36,0.2)",
-            filter: totalValue > 0 ? "none" : "grayscale(0.5)",
-          }}
-        >
-          <div className="size-11 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30 shadow-inner">
-            <Icon name="payments" size={24} className="text-yellow-500" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[9px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Valor Estimado</span>
-            <span className="text-2xl tracking-tighter text-yellow-500">
-               {totalValue > 0 ? `R$ ${totalValue.toFixed(2).replace(".", ",")}` : "R$ --,--"}
-            </span>
-          </div>
-        </motion.div>
-      </div>
 
       {/* ── BOTTOM SHEET (mesmo estilo do TaxiWizard) ── */}
       <IziBottomSheet snapPoints={["35vh", "60vh", "90vh"]} initialSnap={0}>
@@ -258,10 +173,63 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-8"
               >
+                {/* Cards de Info (Estilo TaxiWizard Premium) */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      className="p-4 rounded-[24px] flex flex-col gap-1 font-black relative overflow-hidden"
+                      style={{
+                        background: "linear-gradient(145deg, #facc15, #eab308)",
+                        boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
+                        filter: routeDistance ? "none" : "grayscale(0.5) opacity(0.7)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                         <Icon name="route" size={14} className="text-black/70" />
+                         <span className="text-[8px] text-black/70 uppercase not-italic tracking-widest leading-none">Distância</span>
+                      </div>
+                      <span className="text-sm tracking-tight text-black drop-shadow-sm">{distancePart ?? "-- km"}</span>
+                    </div>
+
+                    <div
+                      className="p-4 rounded-[24px] flex flex-col gap-1 font-black relative overflow-hidden"
+                      style={{
+                        background: "linear-gradient(145deg, #facc15, #eab308)",
+                        boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
+                        filter: timePart ? "none" : "grayscale(0.5) opacity(0.7)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                         <Icon name="schedule" size={14} className="text-black/70" />
+                         <span className="text-[8px] text-black/70 uppercase not-italic tracking-widest leading-none">Tempo</span>
+                      </div>
+                      <span className="text-sm tracking-tight text-black drop-shadow-sm">{timePart ?? "-- min"}</span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="p-5 rounded-[28px] flex items-center justify-between font-black relative overflow-hidden"
+                    style={{
+                      background: "linear-gradient(145deg, #1c1c1e, #121214)",
+                      boxShadow: "10px 10px 20px rgba(0,0,0,0.4), inset 2px 2px 5px rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                       <div className="size-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
+                          <Icon name="payments" size={20} className="text-yellow-500" />
+                       </div>
+                       <span className="text-[10px] text-zinc-500 uppercase not-italic tracking-widest leading-none">Valor Estimado</span>
+                    </div>
+                    <span className="text-2xl tracking-tighter text-yellow-500 drop-shadow-lg">
+                       {totalValue > 0 ? `R$ ${totalValue.toFixed(2).replace('.', ',')}` : "R$ --"}
+                    </span>
+                  </div>
+                </div>
+
                 {/* Cabeçalho da seção */}
                 <div className="flex flex-col gap-1 px-2">
-                  <p className="text-yellow-500 font-black text-[10px] uppercase tracking-[0.4em] italic">Izi Logistics</p>
-                  <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Configurar Frete</h3>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Para onde vamos?</h3>
                 </div>
 
                 {/* Endereços */}
@@ -283,17 +251,17 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                     </div>
                     <div className="flex-1 min-w-0 flex items-center gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1 italic">Coleta</p>
+                        <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1">Meu endereço</p>
                         <AddressSearchInput
                           placeholder="Local de coleta..."
                           onSelect={(addr) => setTransitData((p: any) => ({ ...p, origin: addr }))}
                           initialValue={transitData.origin?.address}
-                          className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 italic tracking-tight"
+                          className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
                         />
                       </div>
                       <motion.button
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => updateLocation((addr, lat, lng) => {
+                        onClick={() => updateLocation(true, (addr, lat, lng) => {
                           setTransitData((p: any) => ({
                             ...p,
                             origin: {
@@ -330,12 +298,12 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                       <Icon name="flag" size={24} className="text-yellow-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1 italic">Entrega</p>
+                      <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1">Entrega</p>
                       <AddressSearchInput
                         placeholder="Local de entrega..."
                         onSelect={(addr) => setTransitData((p: any) => ({ ...p, destination: addr }))}
                         initialValue={transitData.destination?.address}
-                        className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 italic tracking-tight"
+                        className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
                       />
                     </div>
                   </div>
@@ -343,7 +311,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
 
                 {/* Tipo de Veículo */}
                 <div className="space-y-4">
-                  <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] px-2 italic">Tipo de Veículo</p>
+                  <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] px-2">Tipo de Veículo</p>
                   <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
                     {vehicleTypes.map((v, i) => {
                       const selected = freightData.vehicleType === v.name;
@@ -406,7 +374,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                     border: "1px solid rgba(255,255,255,0.05)",
                   }}
                 >
-                  <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] italic relative z-10">Extras</p>
+                  <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] relative z-10">Extras</p>
 
                   {/* Toggle Escada */}
                   <div className="flex items-center justify-between relative z-10">
@@ -421,8 +389,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                         <Icon name="stairs" size={20} className={freightData.hasStairs ? "text-yellow-400" : "text-zinc-600"} />
                       </div>
                       <div>
-                        <span className="text-white font-black text-sm uppercase italic">Escada</span>
-                        <p className="text-zinc-600 text-[9px] font-black uppercase tracking-wider italic mt-0.5">
+                        <span className="text-white font-black text-sm uppercase">Escada</span>
+                        <p className="text-zinc-600 text-[9px] font-black uppercase tracking-wider mt-0.5">
                           + R$ {(parseFloat(marketConditions?.settings?.baseValues?.logistica_stairs) || 30).toFixed(0)}
                         </p>
                       </div>
@@ -463,8 +431,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                         <Icon name="group" size={20} className={freightData.helpers > 0 ? "text-yellow-400" : "text-zinc-600"} />
                       </div>
                       <div>
-                        <span className="text-white font-black text-sm uppercase italic">Ajudantes</span>
-                        <p className="text-zinc-600 text-[9px] font-black uppercase tracking-wider italic mt-0.5">
+                        <span className="text-white font-black text-sm uppercase">Ajudantes</span>
+                        <p className="text-zinc-600 text-[9px] font-black uppercase tracking-wider mt-0.5">
                           + R$ {(parseFloat(marketConditions?.settings?.baseValues?.logistica_helper) || 35).toFixed(0)} / cada
                         </p>
                       </div>
@@ -504,11 +472,63 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                 key="step2"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="space-y-6"
+                className="space-y-8"
               >
+                {/* Grid de Info no Topo do Step 2 (Igual ao Step 1) */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      className="p-4 rounded-[24px] flex flex-col gap-1 font-black relative overflow-hidden"
+                      style={{
+                        background: "linear-gradient(145deg, #facc15, #eab308)",
+                        boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                         <Icon name="route" size={14} className="text-black/70" />
+                         <span className="text-[8px] text-black/70 uppercase not-italic tracking-widest leading-none">Distância</span>
+                      </div>
+                      <span className="text-sm tracking-tight text-black drop-shadow-sm">{distancePart || "-- km"}</span>
+                    </div>
+
+                    <div
+                      className="p-4 rounded-[24px] flex flex-col gap-1 font-black relative overflow-hidden"
+                      style={{
+                        background: "linear-gradient(145deg, #facc15, #eab308)",
+                        boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                         <Icon name="schedule" size={14} className="text-black/70" />
+                         <span className="text-[8px] text-black/70 uppercase not-italic tracking-widest leading-none">Tempo</span>
+                      </div>
+                      <span className="text-sm tracking-tight text-black drop-shadow-sm">{timePart || "Rápido ⚡"}</span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="p-5 rounded-[28px] flex items-center justify-between font-black relative overflow-hidden"
+                    style={{
+                      background: "linear-gradient(145deg, #1c1c1e, #121214)",
+                      boxShadow: "10px 10px 20px rgba(0,0,0,0.4), inset 2px 2px 5px rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                       <div className="size-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
+                          <Icon name="payments" size={20} className="text-yellow-500" />
+                       </div>
+                       <span className="text-[10px] text-zinc-500 uppercase not-italic tracking-widest leading-none">Valor Total</span>
+                    </div>
+                    <span className="text-2xl tracking-tighter text-yellow-500 drop-shadow-lg">
+                       R$ {totalValue.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-1 px-2">
-                  <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.4em] italic">Confirmação</p>
-                  <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Resumo do Frete</h3>
+                  <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.4em]">Confirmação</p>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Resumo do Frete</h3>
                 </div>
 
                 <div
@@ -531,16 +551,16 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                         <Icon name="local_shipping" size={28} className="text-yellow-400" />
                       </div>
                       <div>
-                        <span className="text-white font-black text-sm uppercase italic block leading-none mb-1.5 tracking-tighter">
+                        <span className="text-white font-black text-sm uppercase block leading-none mb-1.5 tracking-tighter">
                           {freightData.vehicleType || "Veículo"}
                         </span>
-                        <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">
+                        <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
                           Orçamento Izi
                         </span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-yellow-500 text-4xl font-black italic tracking-tighter drop-shadow-[0_4px_10px_rgba(251,191,36,0.3)]">
+                      <span className="text-yellow-500 text-4xl font-black tracking-tighter drop-shadow-[0_4px_10px_rgba(251,191,36,0.3)]">
                         R$ {totalValue.toFixed(2).replace(".", ",")}
                       </span>
                     </div>
@@ -551,7 +571,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                   {/* Detalhes */}
                   <div className="space-y-5 relative z-10">
                     <div className="flex justify-between items-center px-2">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Forma de Pagamento</span>
+                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Forma de Pagamento</span>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigateSubView("mobility_payment")}
@@ -566,47 +586,13 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                           size={16}
                           className="text-yellow-400"
                         />
-                        <span className="text-white font-black text-[11px] uppercase italic tracking-tighter">
+                        <span className="text-white font-black text-[11px] uppercase tracking-tighter">
                           {paymentMethod === "online" ? "Cartão Online" : "Pagar na Coleta"}
                         </span>
                       </motion.button>
                     </div>
 
-                    <div
-                      className="p-6 rounded-[32px] space-y-4"
-                      style={{
-                        background: "rgba(0,0,0,0.3)",
-                        boxShadow: "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 5px rgba(255,255,255,0.02)",
-                        border: "1px solid rgba(255,255,255,0.05)",
-                      }}
-                    >
-                      <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tight">
-                        <span className="text-zinc-500">Distância Total:</span>
-                        <span className="text-white bg-zinc-800 px-3 py-1 rounded-full border border-white/5">
-                          {distancePart || "--"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tight">
-                        <span className="text-zinc-500">Tempo estimado:</span>
-                        <span className="text-emerald-400">{timePart || "Rápido ⚡"}</span>
-                      </div>
-                      {freightData.hasStairs && (
-                        <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tight">
-                          <span className="text-zinc-500">Taxa Escada:</span>
-                          <span className="text-yellow-400">
-                            + R$ {(parseFloat(marketConditions?.settings?.baseValues?.logistica_stairs) || 30).toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-                      )}
-                      {freightData.helpers > 0 && (
-                        <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tight">
-                          <span className="text-zinc-500">Ajudantes ({freightData.helpers}x):</span>
-                          <span className="text-yellow-400">
-                            + R$ {(freightData.helpers * (parseFloat(marketConditions?.settings?.baseValues?.logistica_helper) || 35)).toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                      {/* Removido o grid duplicado aqui pois agora está no topo do sheet */}
                   </div>
                 </div>
               </motion.section>
@@ -645,7 +631,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
 
-              <span className="relative z-10 text-black font-black text-xl tracking-tighter uppercase italic drop-shadow-sm">
+              <span className="relative z-10 text-black font-black text-xl tracking-tighter uppercase drop-shadow-sm">
                 {mobilityStep === 1 ? "Continuar" : "Confirmar Izi Logistics"}
               </span>
               <div className="relative z-10 size-10 rounded-2xl bg-black/10 flex items-center justify-center group-hover:translate-x-1.5 transition-transform duration-300 shadow-inner">
