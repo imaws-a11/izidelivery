@@ -312,50 +312,47 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                 {/* Tipo de Veículo */}
                 <div className="space-y-4">
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] px-2">Tipo de Veículo</p>
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar pt-4 pb-4 -mx-2 px-2">
                     {vehicleTypes.map((v, i) => {
                       const selected = freightData.vehicleType === v.name;
                       return (
                         <motion.button
                           key={v.id || i}
                           whileTap={{ scale: 0.93 }}
-                          animate={{ scale: selected ? 1.06 : 1 }}
+                          animate={{ scale: selected ? 1.05 : 1, y: selected ? -4 : 0 }}
                           onClick={() => {
                             updateFreight({ vehicleType: v.name });
                             setTransitData((prev: any) => ({ ...prev, vehicleCategory: v.name }));
                           }}
-                          className="min-w-[110px] p-5 rounded-[32px] flex flex-col items-center gap-4 transition-all duration-300 shrink-0"
+                          className={`min-w-[105px] p-4 rounded-[28px] flex flex-col items-center justify-between gap-3 transition-all duration-300 shrink-0 relative overflow-hidden`}
                           style={
                             selected
                               ? {
-                                  background: "linear-gradient(145deg, #facc15, #eab308)",
-                                  boxShadow: "inset 5px 5px 10px rgba(255,255,255,0.6), inset -5px -5px 10px rgba(0,0,0,0.18)",
-                                  border: "2px solid rgba(255,255,255,0.5)",
+                                  background: "#facc15",
+                                  boxShadow: "none",
+                                  border: "1px solid transparent",
                                   zIndex: 10,
                                 }
                               : {
-                                  background: "linear-gradient(145deg, #facc15, #d9a906)",
-                                  boxShadow: "inset 3px 3px 6px rgba(255,255,255,0.45), inset -3px -3px 6px rgba(0,0,0,0.15)",
-                                  border: "1px solid rgba(255,255,255,0.3)",
-                                  opacity: 0.75,
+                                  background: "#18181b",
+                                  boxShadow: "none",
+                                  border: "1px solid transparent",
+                                  zIndex: 1,
                                 }
                           }
                         >
+
                           <div
-                            className="size-12 rounded-2xl flex items-center justify-center"
-                            style={{
-                              background: "rgba(0,0,0,0.10)",
-                              boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.15)",
-                            }}
+                            className={`size-12 rounded-2xl flex items-center justify-center transition-colors duration-300 ${selected ? "bg-transparent" : "bg-zinc-800"}`}
                           >
                             <Icon
                               name={v.icon}
-                              size={24}
-                              className="text-black"
+                              size={26}
+                              className={selected ? "text-black drop-shadow-md" : "text-zinc-400"}
                             />
                           </div>
                           <span
-                            className="text-[9px] font-black uppercase text-center leading-tight text-black"
+                            className={`text-[10px] font-black uppercase tracking-widest text-center leading-tight mt-1 ${selected ? "text-black drop-shadow-sm" : "text-zinc-500"}`}
                           >
                             {v.name}
                           </span>

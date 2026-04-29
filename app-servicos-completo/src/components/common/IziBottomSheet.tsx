@@ -47,13 +47,13 @@ export const IziBottomSheet: React.FC<IziBottomSheetProps> = ({
 
   const handleDragEnd = (_: any, info: PanInfo) => {
     const snapValuesPixels = getSnapValues();
-    // No dragEnd, a posição top physical do elemento em relação ao container pai
-    // é aproximadamente Y que a pessoa arrastou.
-    // Vamos estimar a altura visível baseada na coordenada de tela do pointer (info.point.y)
-    // alturaVisível = windowHeight - info.point.y
-    const currentVisibleHeight = windowHeight - info.point.y;
     
-    // Encontra o snap point mais próximo pela altura visível
+    // Física Avançada: Projeta a posição final baseada na velocidade do dedo (Inércia)
+    // Se o usuário 'jogar' o painel rápido, ele desliza para o próximo ponto de ancoragem
+    const projectedY = info.point.y + (info.velocity.y * 0.15); 
+    const currentVisibleHeight = windowHeight - projectedY;
+    
+    // Encontra o snap point mais próximo pela altura visível projetada
     let closestSnap = 0;
     let minDistance = Math.abs(currentVisibleHeight - snapValuesPixels[0]);
 
@@ -68,9 +68,15 @@ export const IziBottomSheet: React.FC<IziBottomSheetProps> = ({
     // O targetY é a translação descendente que recobre a diferença
     const targetY = maxSnapHeight - snapValuesPixels[closestSnap];
     setCurrentSnap(closestSnap);
+    
     controls.start({ 
       y: targetY,
-      transition: { type: "spring", damping: 25, stiffness: 200 }
+      transition: { 
+        type: "spring", 
+        stiffness: 350,  // Mola mais ágil
+        damping: 35,     // Amortecimento natural, sem pular
+        mass: 0.8        // Leveza na queda
+      }
     });
   };
 
@@ -105,13 +111,16 @@ export const IziBottomSheet: React.FC<IziBottomSheetProps> = ({
           boxShadow: "0 -20px 40px rgba(0,0,0,0.6)",
         }}
       >
-        {/* Handle de arraste restrito ao topo */}
+        {/* Hitbox expandido de arraste (toda a zona superior) */}
         <div 
-          className="w-full flex justify-center pt-4 pb-4 cursor-grab active:cursor-grabbing"
+          className="w-full flex flex-col items-center pt-3 pb-6 cursor-grab active:cursor-grabbing relative"
           onPointerDown={(e) => dragControls.start(e)}
           style={{ touchAction: "none" }}
         >
-           <div className="w-12 h-1.5 rounded-full bg-zinc-800/80" />
+           {/* Área invisível gigante para facilitar o toque no celular */}
+           <div className="absolute inset-0 z-10" />
+           {/* Traço visual */}
+           <div className="w-14 h-1.5 rounded-full bg-zinc-600/60 shadow-inner z-20" />
         </div>
 
         {/* Conteúdo com Scroll - pb-56 garante que o botão fixo + nav bar não sobreponham o conteúdo */}

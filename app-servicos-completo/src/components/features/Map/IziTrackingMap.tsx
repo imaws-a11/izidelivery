@@ -19,6 +19,7 @@ interface IziTrackingMapProps {
   onMyLocationClick?: (force?: boolean) => void;
   boxed?: boolean;
   searching?: boolean;
+  bottomPadding?: number; // Permite deslocar o centro ótico do mapa para cima
 }
 
 // Opções de Estilo (Dark Mode Premium)
@@ -42,7 +43,8 @@ export function IziTrackingMap({
   originLabel = "COLETA", 
   onMyLocationClick,
   boxed = false,
-  searching = false
+  searching = false,
+  bottomPadding = 400 // Padrão de 400px de folga na base para BottomSheets
 }: IziTrackingMapProps) {
   const { isLoaded } = useGoogleMapsLoader();
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -64,6 +66,8 @@ export function IziTrackingMap({
         if (dLat < 0.00001 && dLng < 0.00001) return;
       }
       mapRef.current.panTo(loc);
+      // Fuga do BottomSheet em tempo real
+      mapRef.current.panBy(0, bottomPadding / 2.5);
       lastPanPos.current = loc;
     }
   }, []);
@@ -134,7 +138,10 @@ export function IziTrackingMap({
           mapRef.current = map;
           const initial = isValid(originLoc) ? originLoc! : isValid(userLoc) ? userLoc! : defaultCenter;
           map.setCenter(initial);
-          map.setZoom(17);
+          map.setZoom(15);
+          
+          // Deslocamento forçado na largada para salvar o pino do soterramento
+          map.panBy(0, bottomPadding / 2.5);
         }}
         onDragStart={() => {
           isInteracting.current = true;
