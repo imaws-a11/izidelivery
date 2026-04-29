@@ -1335,7 +1335,6 @@ function App() {
                     : (selectedOrder.merchant_lng || selectedOrder.pickup_lng || selectedOrder.longitude);
                 
                 if (!targetLat || !targetLng || isNaN(Number(targetLat))) {
-                    console.warn('[DISTANCE] Coordenadas de destino inválidas:', { targetLat, targetLng });
                     return;
                 }
                 
@@ -1375,11 +1374,9 @@ function App() {
                         setCalculatedDistance((route.distanceMeters / 1000).toFixed(1) + ' km');
                     }
                 } else {
-                    console.warn('[DISTANCE] Nenhuma rota encontrada');
                     setCalculatedDistance(selectedOrder.distance || 'Distância indisponível');
                 }
             } catch (err) {
-                console.error('[DISTANCE] Erro ao calcular:', err);
             }
         };
 
@@ -1924,7 +1921,6 @@ function App() {
         if (!driverId || !isAuthenticated) return;
 
         const localWantsOnline = localStorage.getItem('Izi_online') === 'true';
-        console.log(`[ONLINE-RESTORE] Autenticado! localStorage diz online=${localWantsOnline}`);
 
         // Setar estado local imediatamente (sem depender do banco)
         setIsOnline(localWantsOnline);
@@ -1945,7 +1941,6 @@ function App() {
                 .eq('id', driverId)
                 .then(({ error }) => {
                     if (error) console.error('[ONLINE-RESTORE] Erro ao sincronizar online no banco:', error.message);
-                    else console.log('[ONLINE-RESTORE] Banco sincronizado: is_online=true');
                 });
         }
     }, [driverId, isAuthenticated]);
@@ -1963,7 +1958,6 @@ function App() {
                 filter: `id=eq.${dId}` 
             }, (payload) => {
                 const updated = payload.new;
-                console.log('[REALTIME] Sincronização multi-dispositivo:', updated);
                 
                 // Sincronização multi-dispositivo de perfil e financeira
                 // REMOVIDO: Sincronização de is_online do banco para cá.
@@ -2015,7 +2009,6 @@ function App() {
                     ? { is_online: true, last_seen_at: new Date().toISOString() }
                     : { is_online: false };
                 await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
-                console.log(`[STATUS] ${nextState ? 'ONLINE' : 'OFFLINE'} - banco e storage sincronizados`);
 
                 // Gerenciar Foreground Service para o Moto-entregador
                 if (Capacitor.getPlatform() === 'android') {
@@ -2119,7 +2112,6 @@ function App() {
                             if (mData.latitude && mData.longitude) {
                                 officialPickupLat = Number(mData.latitude);
                                 officialPickupLng = Number(mData.longitude);
-                                console.log('[SYNC] Coordenadas oficiais encontradas:', officialPickupLat, officialPickupLng);
                             }
                         }
 
@@ -2134,7 +2126,6 @@ function App() {
                             }
                         }
                     } catch (mErr) {
-                        console.warn('[SYNC] Falha ao buscar endereço atualizado do lojista:', mErr);
                     }
                 }
 
@@ -2157,9 +2148,7 @@ function App() {
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
                 toastSuccess('Missão sincronizada!');
-                console.log('[SYNC] Missão restaurada do banco:', mission.realId);
             } else {
-                console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
                 
                 const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
                 if (cachedMissionRaw) {
@@ -2169,7 +2158,6 @@ function App() {
                         const isTerminal = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s);
                         
                         if (isTerminal) {
-                            console.log('[SYNC] Missão no cache já está finalizada. Limpando...');
                             setActiveMission(null);
                             localStorage.removeItem('Izi_active_mission');
                             return;
@@ -2180,7 +2168,6 @@ function App() {
                         
                         // Se a missão não é terminal e é muito recente (< 15s), mantemos por precaução contra delay de propagação
                         if (ageMs > 15000) {
-                            console.log('[SYNC] Limpando missão local (não ativa no servidor e tempo de proteção expirado).');
                             setActiveMission(null);
                             localStorage.removeItem('Izi_active_mission');
                         }
@@ -2194,7 +2181,6 @@ function App() {
             }
         } catch (err: any) {
             toastError('Erro ao sincronizar missão.');
-            console.error('[SYNC] Falha ao sincronizar missão:', err.message);
         } finally {
             setIsSyncingMission(false);
             setIsSyncing(false);
@@ -2219,13 +2205,11 @@ function App() {
 
         const slotsChannel = supabase.channel('driver_dedicated_slots_stream')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dedicated_slots_delivery' }, async (payload) => {
-                console.log('[DEDICATED] Nova vaga detectada!');
                 await fetchDedicatedSlotsRealtimeRef.current();
                 playIziSound('driver');
                 toastSuccess('Nova vaga dedicada disponível!');
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dedicated_slots_delivery' }, async (payload) => {
-                console.log('[DEDICATED] Atualização de vaga detectada!');
                 await fetchDedicatedSlotsRealtimeRef.current();
             })
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'dedicated_slots_delivery' }, (payload) => {
@@ -2234,7 +2218,6 @@ function App() {
                 stopIziSounds();
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'slot_applications' }, (payload) => {
-                console.log('âš¡ MUDANÃ‡A EM CANDIDATURAS (Realtime):', payload);
                 fetchDeep();
                 refreshMyApplicationsRef.current();
 
@@ -2246,7 +2229,6 @@ function App() {
                 }
             })
             .subscribe((status) => {
-                console.log('[REALTIME-STATUS] Vagas Dedicadas:', status);
             });
 
         return () => { supabase.removeChannel(slotsChannel); };
@@ -2262,11 +2244,7 @@ function App() {
             const { data: { session }, error: sessionErr } = await Promise.race([sessionPromise, timeoutPromise]) as any;
             
             if (sessionErr) {
-                console.error('[AUTH] Erro ao obter sessão em getSecureToken:', sessionErr.message);
                 if (sessionErr.message.includes("Refresh Token Not Found") || sessionErr.message.includes("invalid_refresh_token")) {
-                    console.warn("[AUTH] Token inválido detectado em getSecureToken.");
-                    // Não forçamos logout aqui para não sermos disruptivos em chamadas de background, 
-                    // mas retornamos a anon key como fallback.
                     return sKey;
                 }
             }
@@ -2278,7 +2256,6 @@ function App() {
                     try {
                         const { data: { session: refreshed }, error: refreshErr } = await supabase.auth.refreshSession();
                         if (refreshErr) {
-                            console.error('[AUTH] Erro ao renovar sessão:', refreshErr.message);
                             return session.access_token; // Retorna o atual mesmo quase expirado se o refresh falhar
                         }
                         if (refreshed?.access_token) return refreshed.access_token;
@@ -2326,18 +2303,13 @@ function App() {
             clearTimeout(timeoutId);
 
             if (res.status === 401) {
-                console.error('[AUTH] Token expirado ou inválido (401).');
-                // Opcional: Se estiver autenticado e der 401, pode ser necessário forçar logout ou refresh
                 if (isAuthenticated) {
-                    console.log('[AUTH] Tentando recuperar sessão para resolver 401...');
                     await supabase.auth.refreshSession();
                 }
                 throw new Error('Sessão expirada. Por favor, reinicie o aplicativo.');
             }
 
             if (!res.ok) {
-                const errText = await res.text();
-                console.error(`[DB-ERROR] ${res.status}:`, errText);
                 throw new Error(`DB Error: ${res.status}`);
             }
 
@@ -2371,7 +2343,6 @@ function App() {
                     if (String(updatedApp.driver_id) !== String(driverId)) return;
 
                     const status = updatedApp.status;
-                    console.log(`[REALTIME] Mudança de status detectada para você: ${status}`);
 
                     if (status === 'accepted') {
                         playIziSound('driver');
@@ -2388,7 +2359,7 @@ function App() {
                         
                         setShowApprovedSlotModal(true);
 
-                        toastSuccess("ðŸ VAGA CONFIRMADA! Clique para ver os detalhes.");
+                        toastSuccess("ðŸ   VAGA CONFIRMADA! Clique para ver os detalhes.");
                     }
                     
                     // Sincroniza estados após qualquer atualização minha
@@ -2397,7 +2368,6 @@ function App() {
                 }
             )
             .subscribe((status) => {
-                console.log('[REALTIME] Status da inscrição do canal:', status);
             });
 
         return () => {
@@ -2450,7 +2420,6 @@ function App() {
                     setScheduledOrders(filtered);
                 }
             } catch (error) {
-                console.error('[SCHEDULED] Erro ao buscar agendamentos:', error);
             }
         };
 
@@ -2504,7 +2473,6 @@ function App() {
             
             toastSuccess('Missão ocultada com sucesso.');
         } catch (e) {
-            console.error('Erro ao recusar pedido:', e);
         }
     };
 
@@ -2581,7 +2549,6 @@ function App() {
                 return newAvailable;
             });
         } catch (err) {
-            console.warn('[POLL-ERROR]', err);
         } finally {
             setIsSyncing(false);
         }
@@ -2674,7 +2641,7 @@ function App() {
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                 if (financialTypes.includes(o.service_type)) return;
 
-                // 2.1 FILTRAGEM POR PREFERÃŠNCIAS E VEÃCULOS
+                // 2.1 FILTRAGEM POR PREFERÃŠNCIAS E VEÃ CULOS
                 const isCompatible = () => {
                     const type = normalizeServiceType(o.service_type);
                     const pServices = prefServiceTypesRef.current;
@@ -2766,7 +2733,6 @@ function App() {
         const recoverActiveMission = async () => {
             if (!driverId || activeMission) return;
             
-            console.log('[RECOVERY] Buscando missão ativa no servidor...');
             const { data, error } = await supabase
                 .from('orders_delivery')
                 .select('*')
@@ -2774,10 +2740,7 @@ function App() {
                 .not('status', 'in', '(concluido,cancelado,finalizado,entregue,delivered)')
                 .maybeSingle();
 
-            if (error) console.error('[RECOVERY] Erro na query:', error);
-
             if (data && !error) {
-                console.log('[RECOVERY] Missão encontrada:', data.id);
                 const mission = { 
                     ...data, 
                     realId: data.id, 
@@ -2810,7 +2773,6 @@ function App() {
                         setMerchantCoords(null);
                     }
                 } catch (e) {
-                    console.error('[COORDS] Erro ao buscar coordenadas do lojista:', e);
                     setMerchantCoords(null);
                 }
             } else {
@@ -2841,22 +2803,17 @@ function App() {
     const handleAccept = async (order: Order) => {
         if (isAccepting) return;
         setIsAccepting(true);
-        console.group('[handleAccept] Processando aceite de pedido');
         
         try {
             // Validar UUID Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ order.id é o ID curto (8 chars), order.realId é o UUID completo
             const targetId = order.realId || order.id;
-            console.log('Target ID Identificado:', targetId, { orderId: order.id, realId: order.realId });
             
             // Validação de segurança básica: Relaxada para suportar listagens que usam apenas ID curto
             if (!targetId) {
-                 console.error('ID do pedido ausente na tentativa de aceite.');
-                 toastError('Ocorreu um erro ao identificar o pedido.');
                  setIsAccepting(false);
                  return;
             }
 
-            console.log('1. Verificando integridade via REST...');
             
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -2886,7 +2843,6 @@ function App() {
             const isScheduled = !!order.scheduled_at;
             const newStatus = isScheduled ? 'confirmado' : 'a_caminho_coleta';
 
-            console.log(`2. Gravando aceite via PATCH REST...`);
             const updateRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}`, {
                 method: 'PATCH',
                 headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -2899,7 +2855,6 @@ function App() {
 
             if (!updateRes.ok) throw new Error('Falha ao gravar aceite no banco.');
 
-            console.log('3. Aceite confirmado!');
             playIziSound('success');
 
             const mission = { 
@@ -2922,17 +2877,14 @@ function App() {
             }
 
         } catch (e: any) {
-            console.error('ERRO NO ACEITE:', e);
             toastError('Erro ao aceitar: ' + e.message);
         } finally {
             setIsAccepting(false);
-            console.groupEnd();
         }
     };
 
     const handleDecline = (order: Order) => {
         const targetId = order.realId || order.id;
-        console.log('[LOG-DRIVER] Recusando pedido:', targetId);
         
         // Salva no localStorage para ignorar este pedido por 30 minutos (ou até limpar cache)
         const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
@@ -3037,19 +2989,22 @@ function App() {
             }
 
             setStats(prev => ({ 
-                ...prev, balance, today: todaySum, weekly: weeklySum, totalEarnings: totalGanhos, 
-                count: orders?.length || 0, xp: (orders?.length || 0) * 15,
+                ...prev, 
+                balance: Number(balance.toFixed(2)), 
+                today: Number(todaySum.toFixed(2)), 
+                weekly: Number(weeklySum.toFixed(2)), 
+                totalEarnings: Number(totalGanhos.toFixed(2)), 
+                count: orders?.length || 0, 
+                xp: (orders?.length || 0) * 15,
                 level: Math.floor(((orders?.length || 0) * 15) / 100) + 1,
                 performance
             }));
 
-            console.log(`[FINANCE] Sincronização concluída. Saldo: ${balance}, Hoje: ${todaySum}`);
             if (txs) {
                 const todayTxs = txs.filter((t: any) => {
                     const d = new Date(t.created_at);
                     return d >= startOfDay;
                 });
-                console.log('[FINANCE] Transações de Hoje:', todayTxs.map((t: any) => `${t.type}: ${t.amount}`));
             }
         } catch (e) {
             console.error("[FINANCE] Error:", e);
