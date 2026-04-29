@@ -31,7 +31,7 @@ const darkMapStyle = [
 interface MerchantMapSelectorProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (data: { address: string; lat: number; lng: number }) => void;
+  onConfirm: (data: { address: string; lat: number; lng: number; placeId?: string }) => void;
   initialCoords?: { lat: number; lng: number };
   initialAddress?: string;
 }
@@ -41,6 +41,7 @@ export default function MerchantMapSelector({ isOpen, onClose, onConfirm, initia
   const [markerPos, setMarkerPos] = useState<{ lat: number; lng: number } | null>(initialCoords || null);
   const [address, setAddress] = useState(initialAddress || '');
   const [loading, setLoading] = useState(false);
+  const [placeId, setPlaceId] = useState('');
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   const getCurrentLocation = useCallback(() => {
@@ -78,8 +79,10 @@ export default function MerchantMapSelector({ isOpen, onClose, onConfirm, initia
       geocoder.geocode({ location: { lat, lng } }, (results, status) => {
         if (status === window.google.maps.GeocoderStatus.OK && results && results[0]) {
           setAddress(results[0].formatted_address);
+          setPlaceId(results[0].place_id);
         } else {
           setAddress('Endereço não encontrado');
+          setPlaceId('');
         }
         setLoading(false);
       });
@@ -113,7 +116,8 @@ export default function MerchantMapSelector({ isOpen, onClose, onConfirm, initia
       onConfirm({
         address,
         lat: markerPos.lat,
-        lng: markerPos.lng
+        lng: markerPos.lng,
+        placeId
       });
       onClose();
     }

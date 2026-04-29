@@ -37,6 +37,7 @@ export const AddressSearchInput = ({
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [detectedCoords, setDetectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const debounceRef = useRef<any>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,20 @@ export const AddressSearchInput = ({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    if (!userCoords && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setDetectedCoords({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          });
+        },
+        (err) => console.warn("Erro ao obter geolocalização para bias:", err)
+      );
+    }
+  }, [userCoords]);
+
   const updateDropdownPos = () => {
     if (wrapperRef.current) {
       const rect = wrapperRef.current.getBoundingClientRect();
@@ -63,6 +78,17 @@ export const AddressSearchInput = ({
     }
   };
 
+  const sessionTokenRef = useRef<any>(null);
+
+  const getSessionToken = () => {
+    if (!sessionTokenRef.current && window.google) {
+      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+    }
+    return sessionTokenRef.current;
+  };
+
+  const [apiError, setApiError] = useState<string | null>(null);
+
   const fetchSuggestions = async (input: string) => {
     if (!input || input.length < 3 || !isLoaded || !window.google) {
       setSuggestions([]);
@@ -71,34 +97,155 @@ export const AddressSearchInput = ({
     }
 
     setLoading(true);
-    try {
-      const service = new window.google.maps.places.AutocompleteService();
-      const request: google.maps.places.AutocompletionRequest = {
-        input,
-        componentRestrictions: { country: 'br' },
-        language: 'pt-BR'
-      };
+    setOpen(true);
+    setApiError(null);
+    
+    if (!isLoaded) {
+      console.warn("Maps SDK nÃ£o carregado ainda...");
+      return;
+    }
 
-      if (userCoords?.lat && userCoords?.lng) {
-        request.locationBias = new window.google.maps.LatLng(userCoords.lat, userCoords.lng);
-        request.radius = 10000;
+    try {
+      const bias = userCoords || detectedCoords;
+      console.log("GOOGLE STATUS:", { 
+        maps: !!window.google?.maps, 
+        places: !!window.google?.maps?.places,
+        AutocompleteService: !!window.google?.maps?.places?.AutocompleteService
+      });
+
+      const sessionToken = getSessionToken();
+      let results: any[] = [];
+
+      // ESTRATÉGIA 1: New Places API (AutocompleteSuggestion - RECOMENDADO PARA 2025)
+      try {
+        console.log("Tentando Strategy 1: AutocompleteSuggestion (New API)...");
+        const placesLib = await (window.google.maps as any).importLibrary("places");
+        const AutocompleteSuggestion = placesLib.AutocompleteSuggestion;
+        
+        if (AutocompleteSuggestion && (typeof AutocompleteSuggestion.fetchAutocompletePredictions === 'function' || typeof (AutocompleteSuggestion as any).fetchAutocompleteSuggestions === 'function')) {
+          const fetchMethod = AutocompleteSuggestion.fetchAutocompletePredictions || (AutocompleteSuggestion as any).fetchAutocompleteSuggestions;
+          const request: any = {
+            input,
+            includedRegionCodes: ['br'],
+            language: 'pt-BR',
+            sessionToken: sessionToken
+          };
+          if (bias) {
+            request.locationBias = { center: bias, radius: 15000 };
+            request.origin = bias;
+          }
+          const response = await fetchMethod.call(AutocompleteSuggestion, request);
+          if (response?.suggestions?.length > 0) {
+            results = response.suggestions.map((s: any) => ({
+              description: s.placePrediction.text.text,
+              place_id: s.placePrediction.placeId,
+              structured_formatting: {
+                main_text: s.placePrediction.text.text.split(',')[0],
+                secondary_text: s.placePrediction.text.text.split(',').slice(1).join(',').trim(),
+              },
+              distance_meters: s.placePrediction.distanceMeters
+            }));
+          }
+        } else {
+          console.warn("Strategy 1: AutocompleteSuggestion não disponível no SDK carregado.");
+        }
+      } catch (e) {
+        console.warn("Estratégia 1 falhou:", e);
       }
 
-      service.getPlacePredictions(request, (predictions, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          setSuggestions(predictions);
-          updateDropdownPos();
-          setOpen(true);
-        } else {
-          setSuggestions([]);
-          setOpen(false);
+      // ESTRATÉGIA 2: New Places API (Place Class Fallback)
+      if (results.length === 0) {
+        try {
+          console.log("Tentando Strategy 2: Place.fetchAutocompletePredictions...");
+          const { Place } = await (window.google.maps as any).importLibrary("places");
+          if (Place && typeof Place.fetchAutocompletePredictions === 'function') {
+            const response = await Place.fetchAutocompletePredictions({
+              input,
+              includedRegionCodes: ['br'],
+              language: 'pt-BR',
+              sessionToken: sessionToken,
+              locationBias: bias ? { center: bias, radius: 15000 } : undefined
+            });
+            if (response?.suggestions?.length > 0) {
+              results = response.suggestions.map((s: any) => ({
+                description: s.placePrediction.text.text,
+                place_id: s.placePrediction.placeId,
+                structured_formatting: {
+                  main_text: s.placePrediction.text.text.split(',')[0],
+                },
+                distance_meters: s.placePrediction.distanceMeters
+              }));
+            }
+          }
+        } catch (e) {
+          console.warn("Estratégia 2 falhou:", e);
         }
-        setLoading(false);
-      });
-    } catch (err) {
-      console.error("Erro ao buscar sugestões:", err);
+      }
+
+      // ESTRATÉGIA 3: AutocompleteService (Fallback Legado - Apenas para clientes antigos)
+      if (results.length === 0) {
+        try {
+          console.log("Tentando Strategy 3: AutocompleteService (Legacy Fallback)...");
+          const legacyResults = await new Promise<any[]>((resolve) => {
+            if (!window.google?.maps?.places?.AutocompleteService) {
+              resolve([]);
+              return;
+            }
+            const service = new window.google.maps.places.AutocompleteService();
+            service.getPlacePredictions({
+              input,
+              componentRestrictions: { country: 'br' },
+              locationBias: bias ? new window.google.maps.LatLng(bias.lat, bias.lng) : undefined,
+              radius: bias ? 15000 : undefined,
+              sessionToken: sessionToken
+            }, (predictions, status) => {
+              if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                resolve(predictions);
+              } else {
+                console.warn("Estratégia 3 Status:", status);
+                resolve([]);
+              }
+            });
+          });
+          results = legacyResults;
+        } catch (e) {
+          console.warn("Estratégia 3 falhou:", e);
+        }
+      }
+
+      // ESTRATÃ‰GIA 4: SearchByText (Ãšltimo recurso)
+      if (results.length === 0 && input.length > 5) {
+        try {
+          const { Place } = await (window.google.maps as any).importLibrary("places");
+          const { places } = await Place.searchByText({
+            textQuery: input,
+            includedType: 'address',
+            locationBias: bias ? { center: bias, radius: 20000 } : undefined,
+            language: 'pt-BR'
+          });
+          if (places?.length > 0) {
+            results = places.map((p: any) => ({
+              description: p.formattedAddress,
+              place_id: p.id,
+              structured_formatting: { main_text: p.displayName },
+            }));
+          }
+        } catch (e) {
+          console.warn("EstratÃ©gia 4 falhou:", e);
+        }
+      }
+
+      if (results.length === 0) {
+        setApiError("NÃ£o foi possÃ­vel carregar sugestÃµes. Verifique sua chave de API ou conexÃ£o.");
+      }
+
+      setSuggestions(results);
+      updateDropdownPos();
+    } catch (error) {
+      console.error("Falha crÃ­tica na busca:", error);
+      setApiError("Erro ao processar busca de endereÃ§o.");
       setSuggestions([]);
-      setOpen(false);
+    } finally {
       setLoading(false);
     }
   };
@@ -118,21 +265,44 @@ export const AddressSearchInput = ({
   const fetchPlaceDetails = async (placeId: string): Promise<{ lat: number; lng: number } | null> => {
     if (!isLoaded || !window.google) return null;
     
-    return new Promise((resolve) => {
-      const service = new window.google.maps.places.PlacesService(document.createElement('div'));
-      service.getDetails({
-        placeId,
-        fields: ['geometry.location']
-      }, (place, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
-          resolve({
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng()
-          });
-        } else {
-          resolve(null);
+    try {
+      // Tenta API Moderna primeiro
+      const { Place } = await (window.google.maps as any).importLibrary("places");
+      if (Place) {
+        const place = new Place({ id: placeId });
+        await place.fetchFields({ fields: ['location'] });
+        if (place.location) {
+          return {
+            lat: place.location.lat(),
+            lng: place.location.lng()
+          };
         }
-      });
+      }
+    } catch (e) {
+      console.warn("Falha ao buscar detalhes via Place Class, tentando fallback...", e);
+    }
+
+    // Fallback legado (apenas se a nova API falhar)
+    return new Promise((resolve) => {
+      try {
+        const div = document.createElement('div');
+        const service = new window.google.maps.places.PlacesService(div);
+        service.getDetails({
+          placeId,
+          fields: ['geometry.location']
+        }, (place, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+            resolve({
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng()
+            });
+          } else {
+            resolve(null);
+          }
+        });
+      } catch (e) {
+        resolve(null);
+      }
     });
   };
 
@@ -171,6 +341,7 @@ export const AddressSearchInput = ({
 
     onSelect({
       formatted_address: description,
+      place_id: prediction.place_id,
       ...(coords ?? {}),
     });
   };
@@ -191,7 +362,7 @@ export const AddressSearchInput = ({
   };
 
   const dropdown =
-    open && suggestions.length > 0
+    open 
       ? createPortal(
           <div
             onMouseDown={(e) => e.preventDefault()}
@@ -214,9 +385,32 @@ export const AddressSearchInput = ({
             <div style={{ padding: "12px 18px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{ width: "4px", height: "12px", background: "#ffd900", borderRadius: "10px" }} />
               <span style={{ fontSize: "9px", fontWeight: 900, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
-                {userCoords ? "ðŸ“ Sugestões por proximidade" : "ðŸ’¡ Sugestões de endereço"}
+                {userCoords ? "📍 Sugestões por proximidade" : "💡 Sugestões de endereço"}
               </span>
             </div>
+
+            {suggestions.length === 0 && (
+              <div style={{ padding: "32px 18px", textAlign: "center" }}>
+                {loading ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "24px", height: "24px", border: "3px solid rgba(255,217,0,0.1)", borderTopColor: "#ffd900", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                    <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>Buscando sugestões...</span>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: "24px", color: apiError ? "#ef4444" : "rgba(255,255,255,0.1)" }}>
+                      {apiError ? "error" : "location_off"}
+                    </span>
+                    <span style={{ fontSize: "11px", color: apiError ? "#ef4444" : "rgba(255,255,255,0.3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>
+                      {apiError || "Nenhum endereço encontrado"}
+                    </span>
+                    {apiError && (
+                      <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.2)", marginTop: "4px" }}>Verifique o console para detalhes técnicos</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {suggestions.map((s: any, i: number) => (
               <div
@@ -227,10 +421,10 @@ export const AddressSearchInput = ({
                   cursor: "pointer",
                   borderTop: i > 0 ? "1px solid rgba(255,255,255,0.04)" : "none",
                   display: "flex",
-                  alignItems: "center",
                   gap: "14px",
-                  transition: "background 0.15s",
+                  transition: "all 0.2s",
                 }}
+                className="hover:bg-white/5"
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,217,0,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
@@ -251,7 +445,7 @@ export const AddressSearchInput = ({
                     <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
                       {s.structured_formatting?.main_text || s.description}
                     </span>
-                    {s.distanceMeters > 0 && (
+                    {s.distance_meters > 0 && (
                       <span style={{ 
                         fontSize: "9px", 
                         background: "rgba(255,255,255,0.06)", 
@@ -261,7 +455,7 @@ export const AddressSearchInput = ({
                         fontWeight: 800,
                         flexShrink: 0
                       }}>
-                        {formatDistance(s.distanceMeters)}
+                        {formatDistance(s.distance_meters)}
                       </span>
                     )}
                   </div>
@@ -308,16 +502,19 @@ export const AddressSearchInput = ({
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          style={{ paddingRight: query ? "2.5rem" : undefined }}
+          style={{ paddingRight: extraRightPadding ? "8.5rem" : (query ? "2.5rem" : "0.75rem") }}
           onFocus={() => {
             updateDropdownPos();
-            if (suggestions.length > 0) setOpen(true);
+            setOpen(true);
+            if (query.length >= 3) {
+              fetchSuggestions(query);
+            }
           }}
         />
         {loading && (
           <div style={{ 
             position: "absolute", 
-            right: extraRightPadding ? (query ? "5.8rem" : "3.5rem") : (query ? "2.8rem" : "0.75rem"), 
+            right: extraRightPadding ? (query ? "155px" : "118px") : (query ? "2.8rem" : "0.75rem"), 
             display: "flex", 
             alignItems: "center" 
           }}>
@@ -332,7 +529,7 @@ export const AddressSearchInput = ({
             onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
             style={{
               position: "absolute",
-              right: extraRightPadding ? "52px" : "10px",
+              right: extraRightPadding ? "132px" : "10px",
               background: "rgba(100,116,139,0.15)",
               border: "none",
               borderRadius: "50%",

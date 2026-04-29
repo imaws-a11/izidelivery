@@ -698,11 +698,7 @@ const getServicePresentation = (order: any) => {
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
-if (!GOOGLE_MAPS_API_KEY) {
-  console.error("ðŸš¨ [CONFIG] VITE_GOOGLE_MAPS_API_KEY is missing in .env file!");
-} else {
-  console.log("âœ… [CONFIG] Google Maps API Key loaded successfully for Entregador.");
-}
+
 
 function App() {
     const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -790,7 +786,7 @@ function App() {
                     return;
                 }
 
-                console.log('[OVERLAY] Solicitando permissão de sobreposição...');
+
                 setOverlayBannerDismissed(false);
 
                 const result = await ForegroundService.requestManageOverlayPermission();
@@ -798,7 +794,7 @@ function App() {
             } catch (e) {
                 setOverlayBlocked(true);
                 setOverlayBannerDismissed(false);
-                console.warn('[OVERLAY] Permissão de sobreposição não disponível:', e);
+
             }
         };
         // Aguarda splash antes de solicitar
@@ -977,7 +973,7 @@ function App() {
         if (isFirstLoad.current) {
             orders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
             isFirstLoad.current = false;
-            console.log(`[SOM-WATCHER] Vigilante inicializado com ${heardOrderIds.current.size} missões conhecidas.`);
+
             return;
         }
 
@@ -985,7 +981,7 @@ function App() {
         const newOrders = orders.filter(o => !heardOrderIds.current.has(o.realId || o.id));
         
         if (newOrders.length > 0) {
-            console.log(`[SOM-WATCHER] ðŸ”Š ${newOrders.length} novas missões detectadas.`);
+
             
             // Marcar como conhecidas imediatamente
             newOrders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
@@ -1469,7 +1465,7 @@ function App() {
         
         const registerPush = async () => {
              if (!Capacitor.isNativePlatform()) {
-                 console.log('[PUSH] Pulando registro: ambiente WEB detectado.');
+
                  return;
              }
              try {
@@ -1500,7 +1496,7 @@ function App() {
 
                  // Listeners do registro nativo
                  PushNotifications.addListener('registration', async (token) => {
-                     console.log('Firebase Cloud Messaging Token:', token.value);
+ 
                      // Atualiza a coluna no supabase
                      await supabase.from('drivers_delivery').update({ push_token: token.value }).eq('id', driverId);
                  });
@@ -1510,7 +1506,7 @@ function App() {
                  });
 
                  PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-                     console.log('Push recebida via Firebase', notification);
+ 
                      playIziSound('driver');
                      
                      // Se receber notificação de novo pedido ou chamada, trazer o app para o primeiro plano (Pop-up)
@@ -1519,7 +1515,7 @@ function App() {
                              try {
                                  // Tenta trazer o app para frente
                                  await ForegroundService.moveToForeground();
-                                 console.log('[PUSH] App trazido para o primeiro plano com sucesso.');
+ 
                                  
                                  // Garante que o som toque mesmo que o sistema de notificações demore
                                  const audio = new Audio('/sounds/notification.mp3');
@@ -1538,7 +1534,7 @@ function App() {
                  });
 
                  PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-                     console.log('Usuário clicou na notificação', notification);
+ 
                      // Se o usuário clicar, trazer para o dashboard ou aba ativa
                      setActiveTab('dashboard');
                  });
@@ -1550,7 +1546,7 @@ function App() {
         
         const checkOverlayPermission = async () => {
             if (Capacitor.getPlatform() === 'android') {
-                console.log("Verificando permissão de sobreposição...");
+
                 // Lembrete visual para o motorista sobre a importância da sobreposição para receber chamadas
                 setTimeout(() => {
                     if (isOnline) {
@@ -1751,7 +1747,7 @@ function App() {
         const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("[AUTH] Evento Entregador:", event);
+
             
             if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
                 setIsAuthenticated(false);
@@ -1768,7 +1764,7 @@ function App() {
                 // BOOT ÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬Â¦áNICO: sÂ³ executa restauração completa na primeira vez
                 if (!hasBootedRef.current) {
                     hasBootedRef.current = true;
-                    console.log('[AUTH] Primeiro boot detectado. Carregando perfil...');
+
 
                     // Buscar perfil apenas para nome e chave pix (NÃO tocar no is_online aqui)
                     const { data: profile } = await supabase
@@ -1824,7 +1820,7 @@ function App() {
                     syncMissionWithDB();
                 } else {
                     // Renovações de token (TOKEN_REFRESHED): NÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O alterar nenhum estado
-                    console.log('[AUTH] Renovação de token. Ignorando reset de estado.');
+
                 }
             } else {
                 if (hasBootedRef.current) {

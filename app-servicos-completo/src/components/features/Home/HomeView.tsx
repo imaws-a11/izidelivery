@@ -121,6 +121,7 @@ interface HomeViewProps {
   setSelectedItem: (item: any) => void;
   onOpenDepositModal?: () => void;
   onReturnToPayment?: (order: any) => void;
+  onOpenCoinTracking?: (order: any) => void;
   availableCoupons: any[];
   copiedCoupon: string | null;
   setCopiedCoupon: (val: string | null) => void;
@@ -170,6 +171,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   isIziBlackMembership,
   setTab,
   onReturnToPayment,
+  onOpenCoinTracking,
   establishmentTypes,
 }) => {
    const [activeBannerIndex, setActiveBannerIndex] = React.useState(0);
@@ -657,7 +659,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {/* Background Glow */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 blur-[60px] -mr-16 -mt-16 group-hover:bg-blue-400/20 transition-all duration-700" />
               
-              <div className="flex items-center justify-between" onClick={() => { setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }}>
+              <div className="flex items-center justify-between" onClick={() => { 
+                if (onOpenCoinTracking) onOpenCoinTracking(coinOrder);
+                else { setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }
+              }}>
                 <div className="flex items-center gap-3 cursor-pointer">
                   <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden">
                     <img src={iziCoinImg} className="w-9 h-9 object-contain animate-pulse" alt="Izi Coin" />
@@ -677,7 +682,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
 
               <div className="space-y-4">
-                 <div className="flex flex-col gap-2" onClick={() => { setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }}>
+                 <div className="flex flex-col gap-2" onClick={() => { 
+                    if (onOpenCoinTracking) onOpenCoinTracking(coinOrder);
+                    else { setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }
+                 }}>
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400 cursor-pointer">
                       <span>Valor: R$ {Number(coinOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
                       <span className="text-white">Confirmando Transação...</span>
@@ -716,7 +724,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                        </p>
                     )}
                     <button 
-                       onClick={(e) => { e.stopPropagation(); setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }}
+                       onClick={(e) => { 
+                         e.stopPropagation(); 
+                         if (onOpenCoinTracking) onOpenCoinTracking(coinOrder);
+                         else { setSelectedItem(coinOrder); navigateSubView("izi_coin_tracking"); }
+                       }}
                        className="text-white text-[10px] font-black flex items-center justify-end gap-1 hover:gap-2 transition-all p-2"
                     >
                        VER DETALHES <span className="material-symbols-outlined text-sm text-blue-400">arrow_forward</span>

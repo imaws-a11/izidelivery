@@ -26,6 +26,7 @@ interface OrderListViewProps {
   navigateSubView: (view: string) => void;
   userId: string | null;
   fetchMyOrders: (uid: string) => void;
+  onOpenCoinTracking?: (order: any) => void;
 }
 
 export const OrderListView: React.FC<OrderListViewProps> = ({
@@ -35,6 +36,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
   navigateSubView,
   userId,
   fetchMyOrders,
+  onOpenCoinTracking,
 }) => {
   const [filterTab, setFilterTab] = useState("ativos");
 
@@ -122,7 +124,8 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
           const isHistory = ["concluido", "cancelado"].includes(order.status);
           
             if (isCoin) {
-              navigateSubView("izi_coin_tracking");
+              if (onOpenCoinTracking) onOpenCoinTracking(order);
+              else navigateSubView("izi_coin_tracking");
             } else if (isHistory) {
               navigateSubView("order_detail");
             } else if (isMobilityOrder || !!order.scheduled_at) {

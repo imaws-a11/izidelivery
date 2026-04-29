@@ -194,7 +194,12 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     if (activeTab === 'banner' && dataToSave.min_order_value !== appSettings.iziBlackFee) {
         const newSettings = { ...appSettings, iziBlackFee: dataToSave.min_order_value };
         setAppSettings(newSettings);
-        await supabase.from('app_settings_delivery').upsert(newSettings);
+        
+        const SETTINGS_ID = appSettings.id || 'c568f69e-1e96-48c3-8e7c-8e8e8e8e8e8e';
+        await supabase
+          .from('app_settings_delivery')
+          .update({ izi_black_fee: dataToSave.min_order_value })
+          .eq('id', SETTINGS_ID);
     }
 
     toastSuccess(`Promoção ${formData.id ? 'atualizada' : 'criada'} com sucesso!`);

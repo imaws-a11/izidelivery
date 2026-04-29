@@ -336,7 +336,7 @@ export default function MyStudioTab() {
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Meu endereço de coletas</label>
                        <div className="relative group">
                          <AddressSearchInput 
-                           className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 pr-24 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                           className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
                            initialValue={targetItem.store_address || ''}
                            userCoords={targetItem.latitude && targetItem.longitude ? { lat: targetItem.latitude, lng: targetItem.longitude } : null}
                            extraRightPadding={true}
@@ -345,7 +345,8 @@ export default function MyStudioTab() {
                                ...targetItem, 
                                store_address: addr.formatted_address,
                                latitude: addr.lat,
-                               longitude: addr.lng
+                               longitude: addr.lng,
+                               google_place_id: (addr as any).place_id
                              });
                            }}
                            placeholder="Av. Exemplo, 123 - Bairro"
@@ -354,7 +355,7 @@ export default function MyStudioTab() {
                            type="button"
                            onClick={() => getCurrentLocation(updateItem, targetItem)}
                            disabled={isLocating}
-                           className="absolute right-14 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 group-hover:bg-white dark:group-hover:bg-slate-700 shadow-sm"
+                           className="absolute right-[80px] top-1/2 -translate-y-1/2 w-[40px] h-[40px] rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 group-hover:bg-white dark:group-hover:bg-slate-700 shadow-sm"
                            title="Usar localização atual"
                          >
                            {isLocating ? (
@@ -366,7 +367,7 @@ export default function MyStudioTab() {
                          <button
                            type="button"
                            onClick={() => setIsMapSelectorOpen(true)}
-                           className="absolute right-3 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-slate-900 transition-all flex items-center justify-center shadow-sm"
+                           className="absolute right-[12px] top-1/2 -translate-y-1/2 w-[40px] h-[40px] rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-slate-900 transition-all flex items-center justify-center shadow-sm"
                            title="Selecionar no Mapa"
                          >
                            <span className="material-symbols-outlined text-xl">map</span>
@@ -383,7 +384,8 @@ export default function MyStudioTab() {
                              ...targetItem,
                              store_address: data.address,
                              latitude: data.lat,
-                             longitude: data.lng
+                             longitude: data.lng,
+                             google_place_id: (data as any).placeId
                            });
                            toastSuccess("Localização definida pelo mapa!");
                          }}
@@ -444,8 +446,16 @@ export default function MyStudioTab() {
                              if (admItem.is_active !== undefined) updates.is_active = admItem.is_active;
                            }
                            
+                           console.log('[DEBUG] Preparando atualização do lojista:', { targetId, updates });
+                            
                            const { error } = await supabase.from('admin_users').update(updates).eq('id', targetId);
-                           if (error) throw error;
+                            
+                           if (error) {
+                             console.error('[DEBUG] Erro ao atualizar lojista:', error);
+                             throw error;
+                           }
+                            
+                           console.log('[DEBUG] Atualização bem-sucedida!');
                            
                            toastSuccess('Configurações salvas com sucesso!');
 
