@@ -1288,7 +1288,7 @@ function App() {
     useEffect(() => {
         const localIntent = localStorage.getItem('Izi_online') === 'true';
         if (localIntent && !isOnline) {
-            console.warn('[WATCHDOG] Detectada divergência de status! Forçando ONLINE conforme localStorage.');
+
             setIsOnline(true);
         }
     }, [isOnline]);
@@ -5000,7 +5000,14 @@ function App() {
                                 </div>
                                 <div className="bg-white/5 p-4 rounded-[20px] border border-white/10 text-right flex flex-col justify-center shadow-lg">
                                     <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Total Pedido</p>
-                                    <span className="text-sm font-black text-white opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                    <div className="flex flex-wrap items-center justify-end gap-2">
+                                        {isCashPaid && (
+                                            <span className="text-[10px] font-black text-rose-400 bg-rose-400/10 px-2 py-1 rounded-lg border border-rose-400/20 whitespace-nowrap">
+                                                R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')} em mãos
+                                            </span>
+                                        )}
+                                        <span className="text-sm font-black text-white opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -6837,128 +6844,81 @@ function App() {
                             })()}
                         </div>
                     </section>
-
-                    {/* Pagamento Section */}
-                    <section className="space-y-3">
-                        <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest px-2">Pagamento e Operação</h2>
+                    
+                    {/* Resumo Financeiro e Operação Consolidados */}
+                    <section className="space-y-4">
+                        <div className="flex justify-between items-center px-2">
+                            <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest">Resumo da Missão</h2>
+                            <span className="text-yellow-400 font-black text-[10px] uppercase tracking-widest bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20">
+                                {paymentLabel}
+                            </span>
+                        </div>
                         
-                        <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-6 border-l-4 border-yellow-400 space-y-4`}>
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <Icon name="stars" className="text-yellow-400" />
-                                    <span className="text-white font-black text-xs uppercase tracking-tight">Seu Lucro Estimado</span>
-                                </div>
-                                <span className="text-yellow-400 text-2xl font-black">
-                                    R$ {netEarnings.toFixed(2).replace('.', ',')}
-                                </span>
-                            </div>
-
-                            <div className="h-px bg-white/5 w-full" />
-
-                            <div className="space-y-1">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-neutral-500 font-bold text-xs">Forma de Pagamento</span>
-                                    <span className="text-white font-black text-[10px] uppercase tracking-widest bg-white/5 px-2 py-1 rounded-md">{paymentLabel}</span>
+                        <div className={`bg-neutral-900 ${clayCardDark} rounded-[32px] p-6 border border-white/5 space-y-6 shadow-2xl relative overflow-hidden`}>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+                            
+                            {/* Breakdown Financeiro */}
+                            <div className="space-y-3 relative z-10">
+                                <div className="flex justify-between items-center text-[11px] font-bold">
+                                    <span className="text-neutral-500 uppercase tracking-widest">Total do Pedido</span>
+                                    <span className="text-white font-black">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                 </div>
                                 
-                                <div className="mt-4">
-                                    {isPaid || selectedOrder.payment_method === 'online' ? (
-                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
-                                            <Icon name="verified" className="text-emerald-400" />
-                                            <p className="text-emerald-400 text-[10px] font-black uppercase tracking-tight">Pedido já pago. Não cobrar no local.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-black/30 rounded-xl p-4 space-y-2 border border-white/5">
-                                            <div className="flex justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-tighter">
-                                                <span>Subtotal Itens:</span>
-                                                <span className="text-neutral-300">R$ {(Number(selectedOrder.total_price || 0) - Number(selectedOrder.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
-                                            </div>
-                                            <div className="flex justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-tighter pb-2 border-b border-white/5">
-                                                <span>Taxa de Entrega:</span>
-                                                <span className="text-neutral-300">R$ {Number(selectedOrder.delivery_fee || 0).toFixed(2).replace('.', ',')}</span>
-                                            </div>
-                                            <div className="flex justify-between items-end pt-1">
-                                                <span className="text-white font-black text-xs uppercase">Total a Cobrar</span>
-                                                <span className="text-yellow-400 text-xl font-black">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                                            </div>
-                                        </div>
-                                    )}
+                                <div className="flex justify-between items-center text-[11px] font-bold">
+                                    <span className="text-emerald-400/80 uppercase tracking-widest">Lucro Entregador (+)</span>
+                                    <span className="text-emerald-400 font-black">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                
+                                {(selectedOrder.payment_method === 'dinheiro' || selectedOrder.payment_method === 'cash') && (
+                                    <div className="flex justify-between items-center text-[11px] font-bold">
+                                        <span className="text-rose-400/80 uppercase tracking-widest">Recebido em Mãos (-)</span>
+                                        <span className="text-rose-400 font-black">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="h-px bg-white/5 w-full relative z-10" />
+                            
+                            {/* Saldo da Missão Principal */}
+                            <div className="flex justify-between items-center relative z-10 bg-black/20 p-4 rounded-2xl border border-white/5">
+                                <div className="flex flex-col">
+                                    <span className="text-white font-black text-xs uppercase tracking-tight">Saldo da Missão</span>
+                                    <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Impacto Final na Carteira</p>
+                                </div>
+                                <div className="text-right">
+                                    {(() => {
+                                        const isCash = selectedOrder.payment_method === 'dinheiro' || selectedOrder.payment_method === 'cash';
+                                        const cashVal = isCash ? Number(selectedOrder.total_price || 0) : 0;
+                                        const mBalance = netEarnings - cashVal;
+                                        return (
+                                            <span className={`text-2xl font-black tracking-tighter ${mBalance < 0 ? 'text-rose-400 drop-shadow-[0_2px_10px_rgba(251,113,133,0.3)]' : 'text-emerald-400 drop-shadow-[0_2px_10px_rgba(52,211,153,0.3)]'}`}>
+                                                {mBalance < 0 ? '-' : '+'} R$ {Math.abs(mBalance).toFixed(2).replace('.', ',')}
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
-                            {needsChange && (
-                                <div className="bg-neutral-950/50 rounded-xl p-4 flex items-center gap-3 border border-yellow-400/20">
-                                    <Icon name="account_balance_wallet" className="text-yellow-400" />
-                                    <p className="text-neutral-300 text-[11px] font-bold">
-                                        Troco para <span className="font-black text-white bg-yellow-400/20 px-1.5 py-0.5 rounded">R$ {Number(selectedOrder.change_for || 0).toFixed(2).replace('.', ',')}</span>
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* ── Breakdown financeiro: Desconto da plataforma ── */}
-                            {(() => {
-                                const isCash = ['cash', 'dinheiro', 'money'].includes(
-                                    (selectedOrder.payment_method || '').toLowerCase()
-                                );
-                                const discount = grossEarnings - netEarnings;
-                                const hasDiscount = discount > 0.01;
-                                if (!isCash && !hasDiscount) return null;
-                                return (
-                                    <div className="space-y-2">
-                                        <div className="bg-black/40 rounded-xl p-4 space-y-2 border border-white/5">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-neutral-500 mb-3">Breakdown Financeiro</p>
-                                            <div className="flex justify-between text-[11px] font-bold text-neutral-400">
-                                                <span>💵 Valor recebido do cliente</span>
-                                                <span className="text-neutral-200">R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
-                                            </div>
-                                            {hasDiscount && (
-                                                <div className="flex justify-between text-[11px] font-bold text-red-400">
-                                                    <span>🏪 Taxa da plataforma</span>
-                                                    <span>- R$ {discount.toFixed(2).replace('.', ',')}</span>
-                                                </div>
-                                            )}
-                                            <div className="h-px bg-white/5 w-full my-1" />
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-[11px] font-black text-white uppercase tracking-tight">💰 Seu lucro líquido</span>
-                                                <span className="text-emerald-400 font-black text-base">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Aviso de débito no saldo — só quando dinheiro + desconto */}
-                                        {isCash && hasDiscount && (
-                                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
-                                                <p className="text-amber-400 text-[9px] font-black uppercase tracking-[0.3em]">
-                                                    💳 Impacto no seu Saldo Izi
-                                                </p>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between text-[11px] font-bold">
-                                                        <span className="text-neutral-400">Recebido em dinheiro</span>
-                                                        <span className="text-white">+ R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-[11px] font-bold">
-                                                        <span className="text-neutral-400">Lucro líquido da missão</span>
-                                                        <span className="text-emerald-400">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
-                                                    </div>
-                                                    <div className="h-px bg-amber-500/20 w-full" />
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-amber-400 text-[11px] font-black uppercase tracking-tight">Saldo desta missão</span>
-                                                        <span className="text-red-400 font-black text-base">
-                                                            R$ {(netEarnings - grossEarnings).toFixed(2).replace('.', ',')}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <p className="text-neutral-400 text-[10px] leading-relaxed border-t border-amber-500/20 pt-2">
-                                                    O valor de{' '}
-                                                    <span className="text-amber-400 font-black">R$ {discount.toFixed(2).replace('.', ',')}</span>
-                                                    {' '}foi debitado automaticamente do seu saldo Izi.
-                                                </p>
-                                            </div>
-                                        )}
+                            {/* Alertas Operacionais */}
+                            <div className="relative z-10">
+                                {isPaid || selectedOrder.payment_method === 'online' ? (
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
+                                        <Icon name="verified" className="text-emerald-400" />
+                                        <p className="text-emerald-400 text-[10px] font-black uppercase tracking-tight">Pedido Pago via App. Não cobrar nada.</p>
                                     </div>
-                                );
-                            })()}
+                                ) : (
+                                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center gap-3 shadow-lg">
+                                        <Icon name="payments" className="text-rose-400" />
+                                        <div>
+                                            <p className="text-rose-400 text-[10px] font-black uppercase tracking-tight leading-none">Receber do Cliente</p>
+                                            <p className="text-white font-black text-sm mt-1">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </section>
+
 
                     {/* Observações e Ações Group */}
                     <section className={`bg-neutral-900 ${clayCard} rounded-[28px] border border-neutral-800/50 overflow-hidden`}>
