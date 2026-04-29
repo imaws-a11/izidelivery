@@ -268,7 +268,7 @@ export default function FinancialTab() {
                     <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">
                       <p className="line-clamp-1">{clientName || 'Cliente IZI'}</p>
                       <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">
-                        {tr.service_type === 'coin_purchase' ? 'Ã°Å¸â€ºâ€™ App' : tr.service_type || 'Pedido'}
+                        {tr.service_type === 'coin_purchase' ? '🛒 App' : tr.service_type || 'Pedido'}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">R$ {tr.total_price?.toFixed(2).replace('.', ',')}</td>
