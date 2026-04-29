@@ -100,6 +100,7 @@ function App() {
   const [fbComment, setFbComment] = useState<string>("");
   const [fbIsSubmitting, setFbIsSubmitting] = useState<boolean>(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showCoinTrackingModal, setShowCoinTrackingModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPixCode, setDepositPixCode] = useState("");
   const [depositPaymentMethod, setDepositPaymentMethod] = useState<"cartao" | "lightning" | "pix">("cartao");
@@ -545,9 +546,13 @@ function App() {
           { event: 'INSERT', schema: 'public', table: 'wallet_transactions_delivery', filter: `user_id=eq.${userId}` },
           (payload) => {
             const tx = payload.new as any;
-            // Ignorar transações exclusivas do entregador
             if (tx.type === 'vaga_dedicada') return;
-            if (tx.description && tx.description.startsWith('Ganhos: Missão')) return;
+            if (tx.description && (
+              tx.description.startsWith('Ganhos:') || 
+              tx.description.includes('pagamento em Dinheiro') ||
+              tx.description.startsWith('Saque') ||
+              tx.description.toLowerCase().includes('corrida finalizada')
+            )) return;
             console.log("[REALTIME] Nova transação detectada:", tx);
             setWalletTransactions(prev => [tx, ...prev].slice(0, 50));
           }
@@ -797,7 +802,10 @@ function App() {
         .select("*")
         .eq("user_id", uid)
         .not("type", "eq", "vaga_dedicada")
-        .not("description", "ilike", "Ganhos: Missão%")
+        .not("description", "ilike", "Ganhos:%")
+        .not("description", "ilike", "%pagamento em Dinheiro%")
+        .not("description", "ilike", "Saque%")
+        .not("description", "ilike", "corrida finalizada%")
         .order("created_at", { ascending: false })
         .limit(50);
       if (txData) setWalletTransactions(txData);
@@ -2432,7 +2440,7 @@ function App() {
       delivery_fee: deliveryFee,
       service_fee: Number(serviceFeeAmount.toFixed(2)),
       items: cart,
-      pickup_address: shopName,
+      pickup_address: activeShop?.store_address || activeShop?.address || shopName,
       delivery_address: `${userLocation?.address || "Endereço não informado"}`,
       payment_method: paymentMethod,
       service_type: activeShop?.type || "restaurant",
@@ -2998,6 +3006,7 @@ const navigateSubView = (target: string) => {
             longitude: m.longitude,
             coverageMode: m.delivery_coverage_mode || 'radius',
             zones: zonesByMerchant[m.id] || {},
+            store_address: m.store_address || '',
             hasPromotions
           };
         }) || [];
@@ -4256,10 +4265,10 @@ const navigateSubView = (target: string) => {
                 
                 <div className="w-full flex flex-col items-center gap-6">
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-zinc-700 line-through tracking-widest mb-1">R$ {deal.oldPrice.toFixed(2).replace('.', ',')}</span>
+                    <span className="text-[10px] font-black text-zinc-700 line-through tracking-widest mb-1">R$ {(deal.oldPrice || 0).toFixed(2).replace('.', ',')}</span>
                     <span className="text-4xl font-black text-white tracking-tighter flex items-center gap-2">
                       <span className="text-yellow-400 text-lg uppercase font-black">R$</span>
-                      {deal.price.toFixed(2).replace('.', ',')}
+                      {(deal.price || 0).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
                   
@@ -4426,7 +4435,7 @@ const navigateSubView = (target: string) => {
                          <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Aproveite</span>
                          <span className="bg-yellow-400 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Limitado</span>
                       </div>
-                      <h2 className="text-4xl font-black tracking-tighter leading-tight max-w-[250px] italic text-yellow-400">
+                      <h2 className="text-4xl font-black tracking-tighter leading-tight max-w-[250px] text-yellow-400">
                          {beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].title : "Oferta Izi"}
                       </h2>
                       <p className="text-[11px] font-bold text-white/60 mt-4 uppercase tracking-[0.2em]">
@@ -4969,7 +4978,7 @@ const navigateSubView = (target: string) => {
                   <span className="material-symbols-outlined text-4xl text-rose-500">error</span>
                </div>
                <div>
-                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Ops! Falha no QR Code</h3>
+                  <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Ops! Falha no QR Code</h3>
                   <p className="text-zinc-400 text-sm font-medium leading-relaxed px-4">
                      O pedido foi enviado ao lojista, mas não conseguimos gerar o QR Code Pix agora. 
                      {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " Você pode tentar pagar através de outro método ou falar com o suporte."}
@@ -5026,7 +5035,7 @@ const navigateSubView = (target: string) => {
                   merchant_id: isSubscription ? null : (selectedShop?.id || null),
                   total_price: total,
                   status: "pendente_pagamento",
-                  pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
+                  pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.store_address || selectedShop?.address || selectedShop?.name || "Estabelecimento"),
                   delivery_address: isSubscription ? "Serviço Digital" : (userLocation.address || "Endereço não informado"),
                   items: cart,
                   payment_method: "cartao",
@@ -5328,7 +5337,7 @@ const navigateSubView = (target: string) => {
             )}
             <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Total</span>
-              <span className="text-2xl font-black text-white italic tracking-tight">
+              <span className="text-2xl font-black text-white tracking-tight">
                 R$ {Number(selectedItem.total_price || 0).toFixed(2).replace(".", ",")}
               </span>
             </div>
@@ -5842,7 +5851,7 @@ const navigateSubView = (target: string) => {
             <div className="bg-zinc-950 p-6 rounded-[35px] border border-white/5">
               <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Valor da Transferência</p>
               <div className="flex items-center justify-center gap-3">
-                <span className="text-2xl font-black text-yellow-400 opacity-40 italic">IZI</span>
+                <span className="text-2xl font-black text-yellow-400 opacity-40">IZI</span>
                 <input 
                   type="number" 
                   placeholder="0,00"
@@ -6171,7 +6180,7 @@ const navigateSubView = (target: string) => {
               <span className="material-symbols-outlined text-white text-2xl">arrow_back</span>
             </motion.button>
             <div>
-              <h1 className="font-black text-2xl text-white tracking-tighter uppercase italic leading-none">Quests & Ranking</h1>
+              <h1 className="font-black text-2xl text-white tracking-tighter uppercase leading-none">Quests & Ranking</h1>
               <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-2">Nível {userLevel} • {userXP} XP Acumulado</p>
             </div>
           </div>
@@ -6187,7 +6196,7 @@ const navigateSubView = (target: string) => {
               <div className="space-y-1">
                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.4em]">Infinity Tier</p>
                 <div className="flex items-baseline gap-2">
-                   <h3 className="text-4xl font-black text-white italic tracking-tighter">Nível {userLevel}</h3>
+                   <h3 className="text-4xl font-black text-white tracking-tighter">Nível {userLevel}</h3>
                    <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                       <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Ativo</span>
                    </div>
@@ -6204,8 +6213,8 @@ const navigateSubView = (target: string) => {
 
             <div className="mt-8 space-y-4 relative z-10">
               <div className="flex justify-between items-end">
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">XP Progress</span>
-                <span className="text-sm font-black text-white italic tabular-nums">{userXP} <span className="text-zinc-600 text-[10px] font-bold">/ {nextLevelXP}</span></span>
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">XP Progress</span>
+                <span className="text-sm font-black text-white tabular-nums">{userXP} <span className="text-zinc-600 text-[10px] font-bold">/ {nextLevelXP}</span></span>
               </div>
               <div className="h-4 w-full bg-black/60 rounded-full p-1.5 shadow-inner border border-white/5 overflow-hidden">
                 <motion.div 
@@ -6220,7 +6229,7 @@ const navigateSubView = (target: string) => {
           {/* ACTIVE QUESTS - GRID */}
           <section>
             <div className="flex items-center justify-between mb-8 px-2">
-               <h2 className="font-black text-xl text-white tracking-tighter uppercase italic">Missões Ativas</h2>
+               <h2 className="font-black text-xl text-white tracking-tighter uppercase">Missões Ativas</h2>
                <div className="size-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center">
                   <span className="material-symbols-outlined text-zinc-500 text-lg">bolt</span>
                </div>
@@ -6262,7 +6271,7 @@ const navigateSubView = (target: string) => {
           {/* RANKING GLOBAL - CLAY LIST */}
           <section>
             <div className="flex items-center justify-between mb-8 px-2">
-               <h2 className="font-black text-xl text-white tracking-tighter uppercase italic">Ranking Semanal</h2>
+               <h2 className="font-black text-xl text-white tracking-tighter uppercase">Ranking Semanal</h2>
                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Cidade: São Paulo</span>
             </div>
 
@@ -6319,7 +6328,7 @@ const navigateSubView = (target: string) => {
               <span className="material-symbols-outlined text-white text-2xl">arrow_back</span>
             </motion.button>
             <div>
-              <h1 className="font-black text-2xl text-white tracking-tighter uppercase italic leading-none">Notificações</h1>
+              <h1 className="font-black text-2xl text-white tracking-tighter uppercase leading-none">Notificações</h1>
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-2">Seu resumo de atividades Izi</p>
             </div>
           </div>
@@ -6350,7 +6359,7 @@ const navigateSubView = (target: string) => {
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center justify-between">
                    <p className={`font-black text-sm tracking-tight ${n.unread ? 'text-white' : 'text-zinc-400'}`}>{n.title}</p>
-                   <span className="text-[9px] font-black text-zinc-600 uppercase italic shrink-0 ml-2">{n.time}</span>
+                   <span className="text-[9px] font-black text-zinc-600 uppercase shrink-0 ml-2">{n.time}</span>
                 </div>
                 <p className={`text-[11px] leading-relaxed ${n.unread ? 'text-zinc-300 font-medium' : 'text-zinc-500'}`}>{n.content}</p>
               </div>
@@ -6361,27 +6370,46 @@ const navigateSubView = (target: string) => {
     );
   };
 
-  const handlePurchaseCoins = async (amount: number, method: string) => {
+  const handlePurchaseCoins = async (amount: number, method: string, existingOrderId?: string) => {
     if (!userId) return;
     setIsLoading(true);
     try {
-      // 1. Criar um "pedido" de compra de moedas
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders_delivery")
-        .insert({
-          user_id: userId,
-          status: "pendente_pagamento",
-          total_price: amount,
-          pickup_address: `Compra de ${amount} IZI COINS`,
-          delivery_address: "Recarga de Carteira",
-          service_type: "coin_purchase",
-          payment_method: method === "lightning" ? "bitcoin_lightning" : "cartao",
-          delivery_fee: 0
-        })
-        .select()
-        .single();
+      let orderData: any;
 
-      if (orderError) throw orderError;
+      if (existingOrderId) {
+        // Atualizar o método de pagamento de um pedido existente
+        const { data: updated, error: updateError } = await supabase
+          .from("orders_delivery")
+          .update({
+            payment_method: method === "lightning" ? "bitcoin_lightning" : method === "pix" ? "pix" : "cartao",
+            status: "pendente_pagamento" // Garante que volta para pendente se estava em outro estado
+          })
+          .eq("id", existingOrderId)
+          .select()
+          .single();
+        
+        if (updateError) throw updateError;
+        orderData = updated;
+      } else {
+        // Criar um novo pedido
+        const { data: inserted, error: insertError } = await supabase
+          .from("orders_delivery")
+          .insert({
+            user_id: userId,
+            status: "pendente_pagamento",
+            total_price: amount,
+            pickup_address: `Compra de ${amount} IZI COINS`,
+            delivery_address: "Recarga de Carteira",
+            service_type: "coin_purchase",
+            payment_method: method === "lightning" ? "bitcoin_lightning" : method === "pix" ? "pix" : "cartao",
+            delivery_fee: 0
+          })
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        orderData = inserted;
+      }
 
       setShowDepositModal(false);
 
@@ -6449,7 +6477,7 @@ const navigateSubView = (target: string) => {
 
             <div className="px-10 pb-12 pt-6 text-center space-y-6">
                <div className="space-y-2">
-                 <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">{activeBroadcast.title}</h3>
+                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeBroadcast.title}</h3>
                  <p className="text-[12px] text-zinc-400 leading-relaxed font-medium">{activeBroadcast.message}</p>
                </div>
 
@@ -6482,12 +6510,18 @@ const navigateSubView = (target: string) => {
 
   const renderDepositModal = () => {
     const coinRate = appSettings?.iziCoinRate || 1.0;
-    const minVal = 1;
-    const maxVal = 500; 
-
     const coinsToReceive = (Number(depositAmount) || 0) / coinRate;
     const integerPart = Math.floor(coinsToReceive);
     const fractionalPart = (coinsToReceive - integerPart).toFixed(8).substring(2);
+    const isFinishingPayment = selectedItem?.service_type === 'coin_purchase' && selectedItem?.status === 'pendente_pagamento' && showDepositModal;
+    
+    // Se estiver finalizando, fixa o valor do deposito
+    useEffect(() => {
+      if (isFinishingPayment && selectedItem) {
+        setDepositAmount(selectedItem.total_price.toString());
+        setDepositPaymentMethod(selectedItem.payment_method === "bitcoin_lightning" ? "lightning" : selectedItem.payment_method);
+      }
+    }, [isFinishingPayment, selectedItem?.id]);
 
     return (
       <AnimatePresence>
@@ -6497,166 +6531,205 @@ const navigateSubView = (target: string) => {
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 italic"
+            className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             <motion.div 
               key="deposit-modal-content"
               initial={{ scale: 0.9, opacity: 0, y: 30 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
               exit={{ scale: 0.9, opacity: 0, y: 30 }} 
-              className="w-full max-w-lg bg-[#111111] border-2 border-white/5 rounded-[60px] shadow-[25px_25px_50px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.02)] relative max-h-[92vh] flex flex-col overflow-hidden"
+              className="w-full max-w-lg bg-black border-2 border-white/10 rounded-[40px] shadow-2xl relative max-h-[95vh] flex flex-col overflow-hidden"
             >
-              {/* Glow Premium */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-yellow-400/5 blur-[120px] rounded-full pointer-events-none" />
+              {/* Glow Accent */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-yellow-400/5 blur-[100px] rounded-full pointer-events-none" />
               
-              <header className="shrink-0 px-10 pt-10 pb-6 flex items-center justify-between relative z-50">
+              <header className="shrink-0 px-8 pt-10 pb-6 flex items-center justify-between relative z-50">
                 <div className="flex flex-col">
-                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Izi Store</h3>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.4em]">Câmbio Instantâneo</p>
+                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter">
+                    {isFinishingPayment ? "Pagar Pedido" : "Izi Store"}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="size-1.5 rounded-full bg-yellow-400" />
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">
+                      {isFinishingPayment ? "Escolha como pagar" : "Recarga Instantânea"}
+                    </p>
                   </div>
                 </div>
                 <motion.button 
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowDepositModal(false)}
-                  className="size-14 rounded-[28px] bg-[#0d0d0d] border-2 border-white/5 flex items-center justify-center text-white shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)]"
+                  onClick={() => {
+                    setShowDepositModal(false);
+                    if (isFinishingPayment) setSelectedItem(null);
+                  }}
+                  className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white"
                 >
-                  <span className="material-symbols-outlined font-black text-2xl">close</span>
+                  <span className="material-symbols-outlined font-black text-xl">close</span>
                 </motion.button>
               </header>
 
-              <div className="flex-1 overflow-y-auto no-scrollbar px-10 pb-10 space-y-12 relative z-10 italic">
-                {/* Display de Conversão Claymorphism */}
-                <section className="relative py-10 rounded-[45px] bg-[#0d0d0d] border-2 border-white/5 shadow-inner flex flex-col items-center justify-center overflow-hidden">
-                   <div className="absolute inset-0 bg-yellow-400/[0.02] pointer-events-none" />
-                   <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.6em] mb-6 relative z-10">Você Receberá</p>
-                      <div className="flex items-baseline justify-center relative z-10">
-                         <span className="text-6xl font-black text-white tracking-tighter italic tabular-nums">
+              <div className="flex-1 overflow-y-auto no-scrollbar px-8 pb-10 space-y-10 relative z-10">
+                {/* Visualizador de Saldo Final */}
+                <section className="relative py-12 rounded-[32px] bg-white/[0.03] border border-white/10 flex flex-col items-center justify-center overflow-hidden">
+                   <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] mb-4">Conversão Prevista</p>
+                      <div className="flex items-baseline justify-center">
+                         <span className="text-7xl font-black text-white tracking-tighter tabular-nums">
                            {integerPart.toLocaleString('pt-BR')}
                          </span>
-                         <span className="text-2xl font-black text-yellow-400/50 tracking-tighter italic ml-1 tabular-nums">
-                           ,{fractionalPart}
+                         <span className="text-2xl font-black text-yellow-400 tracking-tighter ml-1 tabular-nums">
+                           ,{fractionalPart.substring(0, 2)}
                          </span>
-                         <div className="size-16 ml-6 drop-shadow-[0_8px_15px_rgba(250,204,21,0.2)]">
-                            <img 
-                              src={iziCoinImg} 
-                              alt="Izi Coin" 
-                              className="w-full h-full object-contain"
-                            />
+                         <div className="size-12 ml-4">
+                            <img src={iziCoinImg} alt="" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]" />
                          </div>
                       </div>
-                   <div className="mt-8 px-5 py-2 rounded-full bg-black/40 border border-white/5">
-                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em]">Taxa Fixa: <span className="text-emerald-400">1 IZI = R$ {coinRate.toFixed(2).replace(".", ",")}</span></p>
+                   <div className="mt-8 px-6 py-2 rounded-full bg-yellow-400/10 border border-yellow-400/20">
+                      <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">1 IZI = R$ {coinRate.toFixed(2).replace(".", ",")}</p>
                    </div>
                 </section>
 
-                {/* Slider Control Claymorphism */}
-                <section className="space-y-10 px-2">
-                  <div className="flex justify-between items-end">
-                     <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Valor em Reais</label>
-                        <h4 className="text-3xl font-black text-white italic tracking-tight">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h4>
-                     </div>
-                     <div className="flex items-center gap-3 bg-zinc-900/50 px-4 py-2 rounded-2xl border border-white/5">
-                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Limite Diário</span>
-                        <span className="text-[10px] font-black text-white italic">R$ 5K</span>
-                     </div>
-                  </div>
-                  
-                  <div className="relative pt-2">
-                    <input 
-                      type="range"
-                      min={minVal}
-                      max={maxVal}
-                      step={1}
-                      value={depositAmount || minVal}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      className="w-full h-4 appearance-none bg-[#0a0a0a] rounded-full outline-none shadow-inner border border-white/5
-                               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-10 
-                               [&::-webkit-slider-thumb]:bg-yellow-400 [&::-webkit-slider-thumb]:rounded-[18px] 
-                               [&::-webkit-slider-thumb]:shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7),0_10px_20px_rgba(250,204,21,0.2)]
-                               [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform
-                               active:[&::-webkit-slider-thumb]:scale-90"
-                    />
-                    <div className="flex justify-between mt-6">
-                       <span className="text-[8px] font-black text-zinc-700 uppercase tracking-[0.4em]">Mín R$ {minVal}</span>
-                       <span className="text-[8px] font-black text-zinc-700 uppercase tracking-[0.4em]">Máx R$ {maxVal}</span>
-                    </div>
-                  </div>
-
-                  <div className="relative group">
-                    <div className="flex items-center gap-5 bg-[#0a0a0a] border-2 border-white/5 rounded-[40px] py-2 pl-10 pr-2 focus-within:border-yellow-400/20 transition-all shadow-inner">
-                       <span className="text-zinc-700 font-black text-xl italic">R$</span>
-                       <input 
-                        type="number"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                        placeholder="0,00"
-                        className="flex-1 bg-transparent border-none text-2xl font-black text-white outline-none italic py-5 tabular-nums"
-                      />
-                      <div className="size-14 rounded-[24px] bg-zinc-900 flex items-center justify-center border border-white/5 shadow-xl">
-                        <span className="material-symbols-outlined text-yellow-400 text-2xl font-black">keyboard</span>
+                {/* Seleção de Valores */}
+                {!isFinishingPayment && (
+                  <section className="space-y-6">
+                    <div className="flex justify-between items-end px-2">
+                      <label className="text-[11px] font-black text-white/40 uppercase tracking-[0.3em]">Escolha o valor</label>
+                      <div className="text-right">
+                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Total a Pagar</p>
+                         <p className="text-2xl font-black text-yellow-400 tracking-tighter">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                       </div>
                     </div>
-                  </div>
-                </section>
 
-                {/* Métodos de Pagamento Claymorphism */}
-                <section className="space-y-6">
-                   <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] px-2">Método de Checkout</h3>
-                   <div className="grid grid-cols-3 gap-5 pb-4">
+                    {/* Predefined Chips */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {[5, 10, 25, 50, 100, 200].map((val) => (
+                        <button
+                          key={val}
+                          onClick={() => setDepositAmount(val.toString())}
+                          className={`h-16 rounded-2xl border-2 font-black text-lg transition-all flex items-center justify-center
+                            ${Number(depositAmount) === val 
+                              ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/10' 
+                              : 'bg-white/5 border-white/5 text-white/60 hover:border-white/20 hover:text-white'}`}
+                        >
+                          <span className="text-xs mr-1 opacity-60">R$</span>{val}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Manual Input */}
+                    <div className="relative mt-8">
+                      <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-3xl p-2 pl-8 focus-within:border-yellow-400/50 transition-all">
+                         <span className="text-white/20 font-black text-xl">R$</span>
+                         <input 
+                          type="number"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          placeholder="Outro valor..."
+                          className="flex-1 bg-transparent border-none text-2xl font-black text-white outline-none py-6 tabular-nums placeholder:text-white/10"
+                        />
+                        <div className="size-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                          <span className="material-symbols-outlined text-white/40 text-2xl font-black">edit</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {isFinishingPayment && (
+                  <div className="py-6 flex flex-col items-center text-center">
+                     <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Valor do Pedido</p>
+                     <p className="text-4xl font-black text-yellow-400 tracking-tighter">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+
+                {/* Métodos de Pagamento */}
+                <section className="space-y-4">
+                   <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] px-2">Meio de Pagamento</h3>
+                   <div className="grid grid-cols-3 gap-3">
                       {[
-                        { id: 'cartao', icon: 'credit_card', label: 'Cartão', color: 'text-blue-400' },
-                        { id: 'pix', icon: 'pix', label: 'Pix', color: 'text-emerald-400' },
-                        { id: 'lightning', icon: 'bolt', label: 'Bitcoin Lightning', color: 'text-orange-400' }
-                      ].map((method, i) => (
+                        { id: 'cartao', icon: 'credit_card', label: 'Cartão' },
+                        { id: 'pix', icon: 'pix', label: 'Pix' },
+                        { id: 'lightning', icon: 'bolt', label: 'Lightning' }
+                      ].map((method) => (
                        <button
-                         key={method.id || `method-${i}`}
+                         key={method.id}
                          onClick={() => setDepositPaymentMethod(method.id)}
-                         className={`p-6 rounded-[35px] border-2 transition-all flex flex-col items-center justify-center gap-3 group italic relative active:scale-95
+                         className={`py-6 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2 active:scale-95
                            ${depositPaymentMethod === method.id 
-                             ? "bg-yellow-400 border-yellow-400 text-black shadow-[15px_15px_30px_rgba(250,204,21,0.1),inset_4px_4px_8px_rgba(255,255,255,0.6)]" 
-                             : "bg-[#0d0d0d] border-white/5 text-zinc-600 hover:border-white/10 shadow-[8px_8px_16px_rgba(0,0,0,0.2)]"
+                             ? "bg-yellow-400 border-yellow-400 text-black shadow-lg" 
+                             : "bg-white/5 border-white/5 text-white/40 hover:border-white/10"
                            }`}
                        >
-                         <div className={`size-12 rounded-[18px] flex items-center justify-center shadow-inner ${depositPaymentMethod === method.id ? 'bg-black/10' : 'bg-black/40'}`}>
-                           <span className={`material-symbols-outlined text-2xl font-black ${depositPaymentMethod === method.id ? 'text-black' : method.color + ' opacity-40'}`}>{method.icon}</span>
-                         </div>
-                         <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${depositPaymentMethod === method.id ? 'text-black' : 'text-zinc-700'}`}>{method.label}</span>
+                         <span className="material-symbols-outlined text-2xl font-black">{method.icon}</span>
+                         <span className="text-[9px] font-black uppercase tracking-widest leading-none">{method.label}</span>
                        </button>
                      ))}
                    </div>
                 </section>
               </div>
 
-              <footer className="shrink-0 p-10 pt-4 bg-[#0a0a0a] border-t border-white/5 relative z-20">
+              <footer className="shrink-0 p-8 pt-4 bg-black border-t border-white/10 relative z-20">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={!depositAmount || Number(depositAmount) <= 0 || isLoading}
-                  onClick={() => handlePurchaseCoins(Number(depositAmount), depositPaymentMethod)}
-                  className="w-full bg-yellow-400 text-black font-black h-[100px] rounded-[45px] shadow-[inset_4px_4px_12px_rgba(255,255,255,0.7),0_20px_40px_rgba(250,204,21,0.15)] flex justify-center items-center gap-5 group relative overflow-hidden italic"
+                  onClick={() => handlePurchaseCoins(Number(depositAmount), depositPaymentMethod, isFinishingPayment ? selectedItem?.id : undefined)}
+                  className="w-full bg-yellow-400 text-black font-black h-20 rounded-[28px] shadow-xl flex justify-center items-center gap-4 group relative overflow-hidden"
                 >
                   {isLoading ? (
-                    <div className="size-8 border-4 border-black/20 border-t-black rounded-full animate-spin" />
+                    <div className="size-6 border-4 border-black/20 border-t-black rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span className="uppercase tracking-[0.5em] text-sm pt-1">Iniciar Checkout</span>
-                      <div className="size-12 rounded-[18px] bg-black/10 flex items-center justify-center group-hover:bg-black/20 transition-colors">
-                        <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
-                      </div>
+                      <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar Depósito</span>
+                      <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
                     </>
                   )}
                 </motion.button>
                 <div className="flex items-center justify-center gap-3 mt-10 opacity-30">
                    <div className="h-px w-8 bg-zinc-800" />
-                   <span className="text-[10px] font-black text-zinc-600 italic tracking-[0.8em] uppercase">Powered by Izi Pay</span>
+                   <span className="text-[10px] font-black text-zinc-600 tracking-[0.8em] uppercase">Powered by Izi Pay</span>
                    <div className="h-px w-8 bg-zinc-800" />
                 </div>
               </footer>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  };
+
+  const renderCoinTrackingModal = () => {
+    if (!selectedItem || selectedItem.service_type !== 'coin_purchase') return null;
+
+    return (
+      <AnimatePresence>
+        {showCoinTrackingModal && (
+          <motion.div 
+            key="coin-tracking-modal"
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[1100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <div className="w-full max-w-lg relative">
+              <IziCoinTrackingView 
+                order={selectedItem}
+                onClose={() => setShowCoinTrackingModal(false)}
+                onGoToWallet={() => {
+                  setShowCoinTrackingModal(false);
+                  setTab("wallet");
+                }}
+                onSupport={() => {
+                  setShowCoinTrackingModal(false);
+                  setSubView("order_support");
+                }}
+                onReturnToPayment={() => {
+                  setShowCoinTrackingModal(false);
+                  setShowDepositModal(true);
+                }}
+                onCancel={handleCancelCoinOrder}
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -6810,7 +6883,7 @@ const navigateSubView = (target: string) => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-5xl font-black text-white uppercase tracking-tighter leading-none italic"
+              className="text-5xl font-black text-white uppercase tracking-tighter leading-none"
             >
               IZI <span className="text-yellow-500">BLACK</span>
             </motion.h2>
@@ -6924,7 +6997,7 @@ const navigateSubView = (target: string) => {
           >
             <span className="material-symbols-outlined text-white">arrow_back</span>
           </button>
-          <h1 className="text-sm font-black uppercase tracking-widest italic">Clube <span className="text-yellow-400">Izi Black</span></h1>
+          <h1 className="text-sm font-black uppercase tracking-widest">Clube <span className="text-yellow-400">Izi Black</span></h1>
         </header>
 
         <main className="max-w-xl mx-auto px-6 pt-12 space-y-10 w-full mb-10">
@@ -6943,8 +7016,8 @@ const navigateSubView = (target: string) => {
               <div className="mt-10 space-y-3">
                 <p className="text-[10px] text-zinc-500 font-extrabold tracking-[0.2em] uppercase">Economia total com o Clube</p>
                 <div className="flex items-center justify-center gap-1">
-                   <span className="text-xl font-black text-yellow-400 mb-4 italic">R$</span>
-                   <h2 className="font-black text-yellow-400 text-6xl tracking-tighter italic">76,50</h2>
+                   <span className="text-xl font-black text-yellow-400 mb-4">R$</span>
+                   <h2 className="font-black text-yellow-400 text-6xl tracking-tighter">76,50</h2>
                 </div>
                 <p className="text-zinc-400 text-[11px] px-4 font-medium leading-relaxed">Usuários que assinam o Clube economizam em média R$ 120 por mês.</p>
               </div>
@@ -6969,7 +7042,7 @@ const navigateSubView = (target: string) => {
           {/* Benefícios Section */}
           <section className="space-y-6">
             <div className="flex justify-between items-end px-1">
-              <h3 className="font-black text-2xl tracking-tighter text-white italic">Benefícios do Clube</h3>
+              <h3 className="font-black text-2xl tracking-tighter text-white">Benefícios do Clube</h3>
               <span className="text-yellow-400 font-black text-xs uppercase tracking-widest cursor-pointer">Ver tudo</span>
             </div>
             
@@ -7000,7 +7073,7 @@ const navigateSubView = (target: string) => {
 
           {/* Assinaturas e Parcerias Section */}
           <section className="space-y-6">
-            <h3 className="font-black text-2xl tracking-tighter text-white italic">Assinaturas e Parcerias</h3>
+            <h3 className="font-black text-2xl tracking-tighter text-white">Assinaturas e Parcerias</h3>
             
             <motion.div 
               whileTap={{ scale: 0.98 }}
@@ -7018,7 +7091,7 @@ const navigateSubView = (target: string) => {
                   <div className="flex items-center gap-2">
                     <span className="bg-yellow-400 text-black font-black text-[9px] px-2 py-0.5 rounded uppercase tracking-tighter">CLUBE</span>
                     <span className="text-white font-black text-2xl tracking-tighter">+</span>
-                    <span className="text-white font-black text-2xl tracking-tighter italic">Uber</span>
+                    <span className="text-white font-black text-2xl tracking-tighter">Uber</span>
                   </div>
                   <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest">Vantagens exclusivas para suas viagens.</p>
                 </div>
@@ -7166,7 +7239,7 @@ const navigateSubView = (target: string) => {
 
         <header className="px-8 pt-12 pb-6 flex items-center justify-between sticky top-0 z-40 bg-[#020617]/80 backdrop-blur-3xl border-b border-white/5">
           <div>
-            <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi <span className="text-yellow-400">Black</span></h2>
+            <h2 className="text-2xl font-black text-white tracking-tighter uppercase leading-none mb-1">Izi <span className="text-yellow-400">Black</span></h2>
             <p className="text-[9px] text-yellow-400/40 font-black uppercase tracking-[0.4em]">Protocolo VIP</p>
           </div>
           <button onClick={() => setShowIziBlackCard(false)} className="size-12 rounded-[20px] bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all shadow-2xl">
@@ -7185,8 +7258,8 @@ const navigateSubView = (target: string) => {
                 <defs><linearGradient id="cardProgressGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#FBBF24" /><stop offset="100%" stopColor="#B45309" /></linearGradient></defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }} className="text-6xl font-black text-white leading-none tracking-tighter italic">{userLevel}</motion.span>
-                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1 italic">Nível</span>
+                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }} className="text-6xl font-black text-white leading-none tracking-tighter">{userLevel}</motion.span>
+                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1">Nível</span>
               </div>
             </div>
             
@@ -7195,7 +7268,7 @@ const navigateSubView = (target: string) => {
                  <div className="size-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_8px_white]" />
                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{currentTierName} Member</span>
               </div>
-              <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase leading-tight">Membro <span className="text-yellow-400 italic">Fundador</span></h1>
+              <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-tight">Membro <span className="text-yellow-400">Fundador</span></h1>
               <div className="flex items-center justify-center gap-3">
                  <div className="h-1 w-20 bg-white/5 rounded-full overflow-hidden">
                     <motion.div initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} className="h-full bg-yellow-400" />
@@ -7215,7 +7288,7 @@ const navigateSubView = (target: string) => {
                 <div className="size-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_white]" />
                 <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">IziCoin Balance</p>
               </div>
-              <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4 italic">{iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString('pt-BR')}</h2>
+              <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4">{iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString('pt-BR')}</h2>
               <div className="inline-block px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
                 Acumule {globalSettings?.izi_coin_rate || 1} coins a cada R$ 1,00 gasto
               </div>
@@ -7234,7 +7307,7 @@ const navigateSubView = (target: string) => {
                    <Icon name={stat.icon} size={18} />
                 </div>
                 <div>
-                   <p className="text-lg font-black text-white tracking-tight leading-none italic">{stat.value}</p>
+                   <p className="text-lg font-black text-white tracking-tight leading-none">{stat.value}</p>
                    <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">{stat.label}</p>
                 </div>
               </div>
@@ -7244,7 +7317,7 @@ const navigateSubView = (target: string) => {
           {/* Perks Section */}
           <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="space-y-8">
             <div className="flex items-center justify-between px-2">
-               <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] italic leading-none">Vantagens de Membro</h3>
+               <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] leading-none">Vantagens de Membro</h3>
                <span className="text-[9px] font-black text-yellow-400/40 uppercase tracking-widest">Protocolo Ativado</span>
             </div>
             
@@ -7297,7 +7370,7 @@ const navigateSubView = (target: string) => {
                            <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                              <Icon name="local_shipping" size={20} />
                            </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Frete Grátis Ativado</h4>
+                           <h4 className="text-[13px] font-black text-white uppercase tracking-tighter">Frete Grátis Ativado</h4>
                         </div>
                         <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Você possui frete grátis ilimitado em todos os pedidos acima de R$ 50,00. O benefício é aplicado automaticamente no seu checkout.</p>
                       </div>
@@ -7309,12 +7382,12 @@ const navigateSubView = (target: string) => {
                            <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
                              <Icon name="monetization_on" size={20} />
                            </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Cashback Elite</h4>
+                           <h4 className="text-[13px] font-black text-white uppercase tracking-tighter">Cashback Elite</h4>
                         </div>
                         <div className="bg-black/40 rounded-3xl p-6 border border-white/5 flex items-center justify-between">
                            <div>
                               <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mb-1">Acumulado</p>
-                              <p className="text-3xl font-black text-white italic tracking-tighter">R$ {iziCashbackEarned.toFixed(2)}</p>
+                              <p className="text-3xl font-black text-white tracking-tighter">R$ {iziCashbackEarned.toFixed(2)}</p>
                            </div>
                            <div className="text-right">
                               <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none">5% OFF</p>
@@ -7332,7 +7405,7 @@ const navigateSubView = (target: string) => {
                            <div className="size-10 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400">
                              <Icon name="card_giftcard" size={20} />
                            </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Izi Surprise</h4>
+                           <h4 className="text-[13px] font-black text-white uppercase tracking-tighter">Izi Surprise</h4>
                         </div>
                         <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento às suas notificações!</p>
                       </div>
@@ -7371,7 +7444,7 @@ const navigateSubView = (target: string) => {
           </motion.section>
 
           <div className="text-center pt-8 pb-4">
-            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">Izi Black Â· Membro Fundador desde 2024</p>
+            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em]">Izi Black Â· Membro Fundador desde 2024</p>
           </div>
         </main>
       </div>
@@ -7612,7 +7685,7 @@ const navigateSubView = (target: string) => {
         <div className="relative z-10 -mt-12 bg-zinc-950 rounded-t-[48px] px-8 pt-12 pb-40 space-y-10 flex-1 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/5">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none">{selectedItem.name}</h2>
+              <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">{selectedItem.name}</h2>
             </div>
             {selectedShop && (
                <div className="bg-zinc-900 p-3 rounded-[24px] border border-white/5 flex flex-col items-center min-w-[72px] shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
@@ -8279,7 +8352,7 @@ const navigateSubView = (target: string) => {
                         transitData.type === 'van' ? 'Transporte de Carga' : 'Serviço de Entrega'
                       )}
                     </p>
-                    <h4 className="text-3xl font-black text-black tracking-tighter italic">
+                    <h4 className="text-3xl font-black text-black tracking-tighter">
                       {isCalculatingPrice ? (
                         <span className="animate-pulse opacity-50 text-xl uppercase">Calculando...</span>
                       ) : (
@@ -8295,7 +8368,7 @@ const navigateSubView = (target: string) => {
               
               <div className="mt-6 pt-6 border-t border-black/10 flex items-center gap-3 relative z-10">
                  <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                 <p className="text-[8px] font-black text-black/70 uppercase tracking-[0.2em] italic">Preço Izi Garantido • Inclui Taxas</p>
+                 <p className="text-[8px] font-black text-black/70 uppercase tracking-[0.2em]">Preço Izi Garantido • Inclui Taxas</p>
               </div>
             </motion.div>
           )}
@@ -8856,7 +8929,7 @@ const navigateSubView = (target: string) => {
               <div className="relative">
                 <motion.div animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }} transition={{ duration: 3, repeat: Infinity }} className="size-24 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-black text-yellow-400 italic tracking-tighter">IZI</span>
+                  <span className="text-2xl font-black text-yellow-400 tracking-tighter">IZI</span>
                 </div>
               </div>
               <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
@@ -8874,12 +8947,62 @@ const navigateSubView = (target: string) => {
               <AnimatePresence mode="wait">
                 {tab === "home" && (
                   <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                    <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} establishmentTypes={establishmentTypes} />
+                    <HomeView 
+                      userLevel={userLevel} 
+                      userId={userId} 
+                      userLocation={userLocation} 
+                      isIziBlackMembership={isIziBlackMembership}
+                      cart={cart} 
+                      myOrders={myOrders} 
+                      navigateSubView={navigateSubView} 
+                      setSubView={setSubView} 
+                      subView={subView} 
+                      searchQuery={searchQuery} 
+                      setSearchQuery={setSearchQuery} 
+                      setSelectedItem={setSelectedItem} 
+                      onOpenDepositModal={() => setShowDepositModal(true)}
+                      onReturnToPayment={(order) => {
+                        setSelectedItem(order);
+                        setShowDepositModal(true);
+                      }}
+                      onOpenCoinTracking={(order) => {
+                        setSelectedItem(order);
+                        setShowCoinTrackingModal(true);
+                      }}
+                      availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} 
+                      banners={availableCoupons.filter((c: any) => !c.coupon_code)} 
+                      copiedCoupon={copiedCoupon} 
+                      setCopiedCoupon={setCopiedCoupon} 
+                      showToast={showToast} 
+                      setShowMasterPerks={setShowMasterPerks} 
+                      ESTABLISHMENTS={ESTABLISHMENTS} 
+                      handleShopClick={handleShopClick} 
+                      flashOffers={flashOffers} 
+                      setActiveService={setActiveService} 
+                      transitData={transitData} 
+                      setTransitData={setTransitData} 
+                      setExploreCategoryState={setExploreCategoryState} 
+                      setRestaurantInitialCategory={setRestaurantInitialCategory} 
+                      setTab={setTab} 
+                      establishmentTypes={establishmentTypes} 
+                    />
                   </motion.div>
                 )}
                 {tab === "orders" && (
                   <motion.div key="orders-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <OrderListView myOrders={myOrders} userId={userId} setSubView={setSubView} setSelectedItem={setSelectedItem} navigateSubView={navigateSubView} fetchMyOrders={fetchMyOrders} tab={tab} />
+                     <OrderListView 
+                       myOrders={myOrders} 
+                       userId={userId} 
+                       setSubView={setSubView} 
+                       setSelectedItem={setSelectedItem} 
+                       navigateSubView={navigateSubView} 
+                       fetchMyOrders={fetchMyOrders} 
+                       tab={tab} 
+                       onOpenCoinTracking={(order) => {
+                         setSelectedItem(order);
+                         setShowCoinTrackingModal(true);
+                       }}
+                     />
                   </motion.div>
                 )}
                 {tab === "wallet" && (
@@ -8908,7 +9031,8 @@ const navigateSubView = (target: string) => {
                       handleAddToCart={handleAddToCart}
                       isIziBlack={isIziBlackMembership} 
                       deliveryFee={currentDeliveryFee} 
-                    />
+                      iziBlackRate={appSettings?.izi_black_cashback || 5}
+                      iziCoinRate={isIziBlackMembership ? (globalSettings?.izi_coin_rate || 1) : 0}                    />
                   </motion.div>
                 )}
                 {subView === "checkout" && (
@@ -8939,7 +9063,7 @@ const navigateSubView = (target: string) => {
                       deliveryFee={calculateDeliveryFee()} 
                       isIziBlack={isIziBlackMembership}
                       walletBalance={walletBalance}
-                      isShopOpen={selectedShop ? isShopCurrentlyOpen(selectedShop) : true}
+                      isShopOpen={selectedShop ? isStoreOpen(selectedShop.opening_hours, selectedShop.is_open, selectedShop.opening_mode) : true}
                       shopName={selectedShop?.name || "Izi Delivery"}
                     />
                   </motion.div>
@@ -9116,22 +9240,6 @@ const navigateSubView = (target: string) => {
                     />
                   </motion.div>
                 )}
-                {subView === "izi_coin_tracking" && (
-                  <motion.div key="izitrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
-                    <IziCoinTrackingView 
-                       order={selectedItem}
-                       onClose={() => window.history.back()}
-                       onGoToWallet={() => {
-                          setTab("wallet");
-                          setSubView("none");
-                          window.history.replaceState({ view: "app", tab: "wallet", subView: "none" }, "");
-                       }}
-                       onSupport={() => setSubView("order_support")}
-                       onReturnToPayment={() => window.history.back()}
-                       onCancel={handleCancelCoinOrder}
-                    />
-                  </motion.div>
-                )}
                 {subView === "active_order" && (
                   <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
                     <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} onCancelOrder={handleCancelOrder} />
@@ -9253,6 +9361,7 @@ const navigateSubView = (target: string) => {
         {renderMyQRModal()}
         {renderTransferModal()}
         {renderDepositModal()}
+        {renderCoinTrackingModal()}
         {renderBroadcastPopup()}
 
         <AnimatePresence>

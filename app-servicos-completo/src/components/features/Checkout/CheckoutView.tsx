@@ -103,8 +103,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   
   const total = Math.max(0, subtotal + (Number(deliveryFee) || 0) + serviceFeeAmount - (Number(couponDiscount) || 0) - (Number(coinDiscount) || 0));
 
-  const cashbackRate = isIziBlack ? (iziBlackCashback * (iziBlackCashbackMultiplier || 1)) : iziCoinRate;
-  const estimatedCashbackCoins = (total * (cashbackRate / 100));
+  const cashbackRate = isIziBlack ? (iziBlackCashback * (iziBlackCashbackMultiplier || 1)) : 0;
+  const estimatedCashbackCoins = (total * (cashbackRate / 100)) / (iziCoinValue || 1);
 
   const paymentOptions = [
     {
@@ -156,8 +156,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             <span className="material-symbols-outlined text-white text-xl">arrow_back</span>
           </motion.button>
           <div className="flex flex-col">
-            <h1 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">Finalizar Pedido</h1>
-            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-2 italic flex items-center gap-1.5">
+            <h1 className="text-xl font-black text-white uppercase tracking-tighter leading-none">Finalizar Pedido</h1>
+            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-2 flex items-center gap-1.5">
                <span className="size-1 rounded-full bg-yellow-400 animate-pulse" />
                Checkout Seguro
             </p>
@@ -168,10 +168,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       <div className="max-w-xl mx-auto px-6 py-10 w-full space-y-12">
         <section className="space-y-6">
           <div className="flex items-center justify-between px-1">
-            <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Local de Entrega</h2>
+            <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase">Local de Entrega</h2>
             <button
               onClick={() => setSubView("addresses")}
-              className="text-yellow-400 text-[10px] font-black tracking-[0.2em] uppercase italic underline underline-offset-4 decoration-yellow-400/20"
+              className="text-yellow-400 text-[10px] font-black tracking-[0.2em] uppercase underline underline-offset-4 decoration-yellow-400/20"
             >
               Alterar
             </button>
@@ -184,11 +184,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               <span className="material-symbols-outlined text-yellow-400 text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-black text-[15px] leading-tight group-hover:text-yellow-400 transition-colors uppercase italic truncate">
+              <p className="text-white font-black text-[15px] leading-tight group-hover:text-yellow-400 transition-colors uppercase truncate">
                 {userLocation.address || "Endereço não definido"}
               </p>
               <div className="flex items-center gap-2 mt-2">
-                 <span className="text-emerald-400 text-[10px] font-black uppercase italic tracking-tighter">Chega em 25-40 MIN</span>
+                 <span className="text-emerald-400 text-[10px] font-black uppercase tracking-tighter">Chega em 25-40 MIN</span>
                  <span className="size-1 rounded-full bg-zinc-700" />
                  <span className="text-zinc-600 text-[9px] font-black uppercase tracking-widest leading-none">Izi Fast Driver</span>
               </div>
@@ -197,7 +197,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         </section>
 
         <section className="space-y-6">
-          <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Como deseja pagar?</h2>
+          <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase">Como deseja pagar?</h2>
           <div className="grid grid-cols-2 gap-4">
             {paymentOptions.map((m, i) => (
               <button
@@ -250,7 +250,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 className="bg-zinc-900/60 rounded-3xl p-5 border border-white/5 space-y-4"
               >
                 <div className="flex items-center justify-between">
-                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Troco necessário?</p>
+                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Troco necessário?</p>
                    <span className="text-[9px] text-zinc-700 font-bold uppercase tracking-widest">Opcional</span>
                 </div>
                 <div className="relative">
@@ -277,7 +277,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   >
                     <div className="flex items-center gap-4">
                       <span className="material-symbols-outlined">credit_card</span>
-                      <span className="text-sm font-black italic tracking-wider">
+                      <span className="text-sm font-black tracking-wider">
                         {card.brand.toUpperCase()} •••• {card.last4}
                       </span>
                     </div>
@@ -291,7 +291,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
         <section className="space-y-8">
            <div className="flex items-center justify-between border-b border-white/5 pb-6">
-             <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Pedido em {shopName}</h2>
+             <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase">Pedido em {shopName}</h2>
              <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/10 shadow-lg shadow-yellow-400/5">
                 {cart.length} ITENS
              </span>
@@ -313,7 +313,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-black text-sm truncate uppercase italic tracking-tight">{item.name}</p>
+                    <p className="text-white font-black text-sm truncate uppercase tracking-tight">{item.name}</p>
                     {getAddonDetails(item).length > 0 ? (
                       <div className="mt-1.5 space-y-1">
                         {getAddonDetails(item).map((addon: any, idx: number) => (
@@ -336,7 +336,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
            <div className="pt-6">
              <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between mb-2">
-                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Possui um cupom?</p>
+                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Possui um cupom?</p>
                 </div>
                 <div className="relative flex items-center bg-zinc-900/60 rounded-3xl border border-white/5 focus-within:border-yellow-400/40 transition-all p-1.5 pr-2">
                    <span className="material-symbols-outlined text-zinc-600 pl-4">confirmation_number</span>
@@ -379,7 +379,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                       <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>monetization_on</span>
                    </div>
                    <div>
-                      <p className="text-white font-black text-xs uppercase tracking-tight italic">Utilizar meus Izi Coins</p>
+                      <p className="text-white font-black text-xs uppercase tracking-tight">Utilizar meus Izi Coins</p>
                       <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Saldo: {iziCoins} Coins</p>
                    </div>
                 </div>
@@ -400,17 +400,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                </div>
              )}
              <div className="flex justify-between items-center text-zinc-400">
-                <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em] italic">Subtotal</span>
+                <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em]">Subtotal</span>
                 <span className="text-white font-black text-sm">R$ {subtotal.toFixed(2).replace(".", ",")}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em] italic">Taxa Izi</span>
+                <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em]">Taxa Izi</span>
                 <div className="flex flex-col items-end">
                   <span className={deliveryFee > 0 ? "text-white font-black text-sm" : "text-emerald-400 font-black text-xs uppercase tracking-tighter"}>
                     {deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "Grátis"}
                   </span>
                   {deliveryFee === 0 && isIziBlack && (
-                    <span className="text-[8px] text-zinc-600 font-bold tracking-[0.2em] uppercase mt-1 italic">Benefício Izi Black</span>
+                    <span className="text-[8px] text-zinc-600 font-bold tracking-[0.2em] uppercase mt-1">Benefício Izi Black</span>
                   )}
                 </div>
               </div>
@@ -429,24 +429,36 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               )}
               {couponDiscount > 0 && (
                 <div className="flex justify-between items-center text-emerald-400">
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] italic">Desconto Cupom</span>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Desconto Cupom</span>
                   <span className="font-black text-sm">- R$ {couponDiscount.toFixed(2).replace(".", ",")}</span>
                 </div>
               )}
               {useCoins && (
                 <div className="flex justify-between items-center text-emerald-400">
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] italic">Desconto Coins</span>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Desconto Coins</span>
                   <span className="font-black text-sm">- R$ {coinDiscount.toFixed(2).replace(".", ",")}</span>
                 </div>
               )}
               <div className="pt-8 flex justify-between items-end border-t border-white/5">
                 <div className="flex flex-col h-full justify-end">
-                   <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.3em] mb-2 font-black italic underline underline-offset-4 decoration-yellow-400/20">Valor Final</p>
+                   <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.3em] mb-2 font-black underline underline-offset-4 decoration-yellow-400/20">Valor Final</p>
                    <p className="text-4xl font-black text-white leading-none tracking-tighter" style={{ textShadow: "0 0 40px rgba(255,255,255,0.05)" }}>
                      R$ {total.toFixed(2).replace(".", ",")}
                    </p>
                 </div>
-                {estimatedCashbackCoins > 0 && (
+                 {!isIziBlack ? (
+                   <motion.button 
+                     whileTap={{ scale: 0.98 }}
+                     onClick={() => setSubView("izi_black_purchase")}
+                     className="p-4 bg-zinc-900 border border-yellow-400/30 rounded-[28px] flex flex-col gap-2 group shadow-lg text-left"
+                   >
+                     <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Upgrade Izi Black</p>
+                     </div>
+                     <p className="text-[8px] text-white/50 font-bold uppercase leading-tight">Ganhe cashback nesta compra e benefícios exclusivos do Clube.</p>
+                   </motion.button>
+                 ) : estimatedCashbackCoins > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -454,9 +466,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   >
                     <div className="flex items-center gap-2">
                        <span className="material-symbols-outlined text-yellow-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                       <span className="text-[9px] font-black uppercase tracking-widest text-yellow-400/80 italic">Você receberá</span>
+                       <span className="text-[9px] font-black uppercase tracking-widest text-yellow-400/80">Você receberá</span>
                     </div>
-                    <span className="text-white font-black text-xs italic">
+                    <span className="text-white font-black text-xs">
                       +{estimatedCashbackCoins.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} IZI COINS
                     </span>
                   </motion.div>
@@ -484,14 +496,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
              <span className={"text-[8px] font-black uppercase tracking-[0.3em] leading-none mb-1.5 " + (isShopOpen ? "text-black/40" : "text-zinc-600")}>
                {isShopOpen ? "Confirmar meu" : "Estabelecimento"}
              </span>
-             <span className={"font-black text-base uppercase tracking-widest italic leading-none " + (isShopOpen ? "text-black" : "text-zinc-500")}>
+             <span className={"font-black text-base uppercase tracking-widest leading-none " + (isShopOpen ? "text-black" : "text-zinc-500")}>
                {isShopOpen ? "Concluir Pedido" : "Fechado agora"}
              </span>
           </div>
           <div className="flex items-center gap-4">
              <div className={"h-6 w-px " + (isShopOpen ? "bg-black/10" : "bg-white/5")} />
              <div className="flex flex-col items-end">
-                <span className={"font-black text-xl italic tracking-tighter leading-none " + (isShopOpen ? "text-black" : "text-zinc-400")}>
+                <span className={"font-black text-xl tracking-tighter leading-none " + (isShopOpen ? "text-black" : "text-zinc-400")}>
                   R$ {total.toFixed(2).replace(".", ",")}
                 </span>
              </div>

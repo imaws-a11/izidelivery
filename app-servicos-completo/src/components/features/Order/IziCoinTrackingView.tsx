@@ -40,145 +40,139 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
   const currentIdx = isConfirmed ? (status === "concluido" ? 2 : 1) : 0;
 
   return (
-    <div className="h-full w-full bg-black flex flex-col items-center justify-center p-3 italic overflow-hidden">
-      {/* Background Accents */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-24 -right-24 size-96 bg-yellow-400/10 rounded-full blur-[120px]" />
-        <div className="absolute -bottom-24 -left-24 size-96 bg-yellow-400/5 rounded-full blur-[120px]" />
-      </div>
+    <div className="h-full w-full flex items-center justify-center p-4 sm:p-8 overflow-hidden relative font-['Plus_Jakarta_Sans']">
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-lg bg-[#1a1a1a] border-[3px] border-white/10 rounded-[60px] p-10 shadow-[20px_20px_60px_rgba(0,0,0,0.6)] relative flex flex-col items-center text-center gap-10"
+        className="w-full max-w-2xl bg-[#121212] border-2 border-white/10 rounded-[40px] sm:rounded-[50px] p-8 relative flex flex-col gap-8 max-h-[95vh] overflow-y-auto no-scrollbar"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 size-10 rounded-[18px] bg-zinc-800/50 border border-white/5 flex items-center justify-center text-zinc-500 active:scale-90 transition-all z-20"
+          className="absolute top-8 right-8 size-10 rounded-[15px] bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white active:scale-90 transition-all z-20"
         >
           <Icon name="close" size={18} />
         </button>
 
-        {/* Header Section */}
-        <div className="space-y-1">
-          <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.4em]">Protocolo Financeiro</p>
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Recarga em Curso</h2>
-        </div>
+        <div className="flex flex-col md:flex-row gap-8 items-center md:items-stretch">
+          {/* Left Column: Hero & Info */}
+          <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">Protocolo Financeiro</p>
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Recarga em Curso</h2>
+            </div>
 
-        {/* Status Hero */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-yellow-400/20 blur-3xl rounded-full scale-150 animate-pulse" />
-          <motion.div
-            animate={{ 
-              rotate: isConfirmed ? 0 : [0, 5, -5, 0],
-              scale: isConfirmed ? [1, 1.1, 1] : 1
-            }}
-            transition={{ 
-              rotate: { repeat: Infinity, duration: 4 },
-              scale: { duration: 0.5 }
-            }}
-            className="size-32 rounded-[45px] bg-yellow-400 flex items-center justify-center shadow-[10px_10px_30px_rgba(250,204,21,0.3),inset_6px_6px_12px_rgba(255,255,255,0.6),inset_-6px_-6px_12px_rgba(0,0,0,0.2)] relative z-10 overflow-hidden"
-          >
-            {isConfirmed ? (
-              <span className="material-symbols-outlined text-black font-black text-6xl italic transform -rotate-12">
-                check_circle
-              </span>
-            ) : (
-              <img src={iziCoinImg} className="w-20 h-20 object-contain drop-shadow-lg" alt="Izi Coin" />
-            )}
-          </motion.div>
-        </div>
+            {/* Status Hero */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-yellow-400/20 blur-3xl rounded-full scale-150 animate-pulse" />
+              <motion.div
+                animate={{ 
+                  scale: isConfirmed ? [1, 1.1, 1] : 1
+                }}
+                className="size-28 rounded-[35px] bg-yellow-400 flex items-center justify-center shadow-lg relative z-10 overflow-hidden"
+              >
+                {isConfirmed ? (
+                  <span className="material-symbols-outlined text-black font-black text-5xl transform -rotate-12">
+                    check_circle
+                  </span>
+                ) : (
+                  <img src={iziCoinImg} className="w-16 h-16 object-contain drop-shadow-lg" alt="Izi Coin" />
+                )}
+              </motion.div>
+            </div>
 
-        {/* Amount Display */}
-        <div className="bg-black/30 p-8 rounded-[40px] border border-white/5 w-full shadow-inner flex flex-col items-center">
-          <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] mb-4">Total de Coins</span>
-          <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-black text-white tracking-tighter italic">
-              {order?.total_price?.toLocaleString('pt-BR')}
-            </span>
-            <span className="text-xl font-black text-yellow-400 uppercase tracking-widest italic opacity-60">IZI</span>
+            {/* Amount Display */}
+            <div className="bg-white/[0.03] p-6 rounded-[35px] border border-white/5 w-full flex flex-col items-center">
+              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-2">Total de Coins</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-white tracking-tighter">
+                  {order?.total_price?.toLocaleString('pt-BR')}
+                </span>
+                <span className="text-lg font-black text-yellow-400 uppercase tracking-widest opacity-60">IZI</span>
+              </div>
+              <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mt-4">
+                Ref: #COIN-{String(order?.id || "000000").slice(0, 6).toUpperCase()}
+              </p>
+            </div>
           </div>
-          <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-6 bg-zinc-900/50 px-4 py-2 rounded-full border border-white/5">
-            Ref: #COIN-{String(order?.id || "000000").slice(0, 6).toUpperCase()}
-          </p>
-        </div>
 
-        {/* Timeline */}
-        <div className="w-full space-y-6 px-4">
-          {steps.map((step, idx) => (
-            <div key={step.id || idx} className="flex items-center gap-6 relative group">
-              {idx < steps.length - 1 && (
-                <div className={`absolute left-6 top-10 w-0.5 h-6 transition-colors duration-500 ${idx < currentIdx ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]" : "bg-zinc-800"}`} />
+          {/* Vertical Divider (Desktop) */}
+          <div className="hidden md:block w-px bg-white/5 self-stretch" />
+
+          {/* Right Column: Timeline & Actions */}
+          <div className="flex-1 flex flex-col gap-8 justify-center">
+            {/* Timeline */}
+            <div className="space-y-5">
+              {steps.map((step, idx) => (
+                <div key={step.id || idx} className="flex items-center gap-4 relative">
+                  {idx < steps.length - 1 && (
+                    <div className={`absolute left-5 top-8 w-0.5 h-5 transition-colors duration-500 ${idx < currentIdx ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]" : "bg-zinc-800"}`} />
+                  )}
+                  
+                  <div 
+                    className={`size-10 rounded-[14px] flex items-center justify-center transition-all duration-500 z-10 
+                      ${idx <= currentIdx 
+                        ? "bg-yellow-400 text-black shadow-lg scale-105" 
+                        : "bg-zinc-800 text-zinc-700 shadow-inner"
+                      }`}
+                  >
+                    <Icon name={step.icon} size={18} />
+                  </div>
+                  
+                  <div className="flex-1 text-left">
+                    <p className={`text-xs font-black tracking-tight transition-colors duration-500 ${idx <= currentIdx ? "text-white" : "text-zinc-700"}`}>
+                      {step.label}
+                    </p>
+                    {idx === currentIdx && (
+                      <p className="text-[8px] font-bold text-yellow-400/50 uppercase tracking-widest animate-pulse mt-0.5">Sincronizando...</p>
+                    )}
+                  </div>
+
+                  <AnimatePresence>
+                    {idx < currentIdx && (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-emerald-500">
+                        <Icon name="check_circle" size={16} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="space-y-3">
+              {!isConfirmed && (
+                <div className="flex flex-col gap-2">
+                  <button
+                     onClick={onReturnToPayment}
+                     className="w-full py-4 rounded-[20px] bg-yellow-400 text-black font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+                  >
+                    Alterar Pagamento
+                  </button>
+                  
+                  <button
+                     onClick={() => onCancel?.(order?.id)}
+                     className="w-full py-4 rounded-[20px] bg-white/5 text-zinc-500 font-black text-[10px] uppercase tracking-widest border border-white/5 active:scale-95 transition-all"
+                  >
+                    Cancelar Recarga
+                  </button>
+                </div>
+              )}
+
+              {isConfirmed && (
+                <button
+                  onClick={onGoToWallet}
+                  className="w-full py-5 rounded-[25px] bg-yellow-400 text-black font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg"
+                >
+                  <span>Ver Carteira</span>
+                  <Icon name="arrow_forward" size={16} />
+                </button>
               )}
               
-              <div 
-                className={`size-12 rounded-[18px] flex items-center justify-center transition-all duration-500 z-10 
-                  ${idx <= currentIdx 
-                    ? "bg-yellow-400 text-black shadow-[6px_6px_15px_rgba(0,0,0,0.3),inset_3px_3px_6px_rgba(255,255,255,0.5)] scale-110" 
-                    : "bg-zinc-800 text-zinc-700 shadow-inner"
-                  }`}
-              >
-                <Icon name={step.icon} size={20} />
-              </div>
-              
-              <div className="flex-1 text-left">
-                <p className={`text-sm font-black tracking-tight transition-colors duration-500 ${idx <= currentIdx ? "text-white italic" : "text-zinc-700"}`}>
-                  {step.label}
-                </p>
-                {idx === currentIdx && (
-                  <p className="text-[9px] font-bold text-yellow-400/50 uppercase tracking-widest animate-pulse">Sincronizando com a Blockchain Izi</p>
-                )}
-              </div>
-
-              <AnimatePresence>
-                {idx < currentIdx && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-emerald-500">
-                    <Icon name="check_circle" size={18} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <p className="text-[8px] font-black text-zinc-700 uppercase tracking-[0.4em] text-center pt-2">Izi Pay &copy; 2026</p>
             </div>
-          ))}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="w-full space-y-3">
-          {!isConfirmed && (
-            <div className="flex flex-col gap-3 w-full">
-              <button
-                 onClick={onReturnToPayment}
-                 className="w-full py-4 rounded-[28px] bg-zinc-800 text-yellow-400 font-black text-xs uppercase tracking-widest border border-yellow-400/20 active:scale-95 transition-all shadow-lg"
-              >
-                Voltar ao Pagamento
-              </button>
-              
-              <button
-                 onClick={() => onCancel?.(order?.id)}
-                 className="w-full py-4 rounded-[28px] bg-red-500/10 text-red-500 font-black text-xs uppercase tracking-widest border border-red-500/20 active:scale-95 transition-all"
-              >
-                Cancelar Recarga
-              </button>
-            </div>
-          )}
-
-          <button
-            onClick={isConfirmed ? onGoToWallet : onSupport}
-            className={`w-full py-6 rounded-[35px] font-black text-sm uppercase tracking-[0.25em] italic transition-all active:scale-95 flex items-center justify-center gap-4 h-[88px] 
-              ${isConfirmed 
-                ? "bg-yellow-400 text-black shadow-lg" 
-                : "bg-zinc-800 text-white border border-white/5"
-              }`}
-          >
-            <span>{isConfirmed ? "Ver Minha Carteira" : "Suporte VIP"}</span>
-            <Icon 
-              name={isConfirmed ? "arrow_forward" : "support_agent"} 
-              size={18}
-              className={`${isConfirmed ? "text-black" : "text-yellow-400"}`} 
-            />
-          </button>
-          
-          <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em] pt-4">Izi Pay &copy; 2026</p>
+          </div>
         </div>
       </motion.div>
     </div>

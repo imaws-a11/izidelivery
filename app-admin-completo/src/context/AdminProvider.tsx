@@ -28,7 +28,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: GOOGLE_MAPS_LIBRARIES,
     language: 'pt-BR',
-    region: 'BR'
+    region: 'BR',
+    version: 'weekly'
   });
 
   const ORDERS_PER_PAGE = 50;
@@ -503,6 +504,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             delivery_radius: data.delivery_radius || 15,
             opening_hours: data.opening_hours || {},
             store_address: data.store_address || '',
+            latitude: data.latitude,
+            longitude: data.longitude,
+            google_place_id: data.google_place_id,
             dispatch_priority: data.dispatch_priority || 'global',
             scheduling_priority: data.scheduling_priority || 'global',
             is_open: data.is_open ?? true,
@@ -2402,7 +2406,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [merchantProfile]);
 
-  const handleUpdateDispatchSettings = async (_field: string, _value: string) => {};
+  const handleUpdateDispatchSettings = async (field: 'dispatch_priority' | 'scheduling_priority', value: string) => {
+    try {
+      await handleUpdateMerchantProfile({ [field]: value } as any);
+      toastSuccess('Configuração de despacho atualizada com sucesso!');
+    } catch (e) {
+      console.error('Erro ao atualizar configurações de despacho', e);
+      toastError('Erro ao atualizar configuração.');
+    }
+  };
   const handleSeedCategories = async () => {};
 
   const handleSaveAppSettings = useCallback(async () => {

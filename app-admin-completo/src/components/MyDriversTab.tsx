@@ -8,7 +8,9 @@ export default function MyDriversTab() {
     setSelectedDriverStudio,
     setEditingItem,
     setEditType,
-    handleDeleteMyDriver
+    handleDeleteMyDriver,
+    merchantProfile,
+    handleUpdateDispatchSettings
   } = useAdmin();
 
   return (
@@ -41,16 +43,26 @@ export default function MyDriversTab() {
                   {[
                     { id: 'exclusive', label: 'Meus Motoboys Primeiro', desc: 'O pedido toca primeiro para sua frota' },
                     { id: 'global', label: 'Todos os Motoboys', desc: 'Toca simultâneo para todos (Padrão)' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => {}}
-                      className="p-4 rounded-2xl border text-left transition-all bg-white/5 border-white/10 text-slate-400 hover:bg-white/10"
-                    >
-                      <p className="text-xs font-black uppercase tracking-tight">{opt.label}</p>
-                      <p className="text-[10px] opacity-70 mt-0.5">{opt.desc}</p>
-                    </button>
-                  ))}
+                  ].map((opt) => {
+                    const isSelected = merchantProfile?.dispatch_priority === opt.id || (!merchantProfile?.dispatch_priority && opt.id === 'global');
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleUpdateDispatchSettings('dispatch_priority', opt.id)}
+                        className={`p-4 rounded-2xl border text-left transition-all ${
+                          isSelected 
+                            ? 'bg-primary/20 border-primary text-primary' 
+                            : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className={`text-xs font-black uppercase tracking-tight ${isSelected ? 'text-primary' : ''}`}>{opt.label}</p>
+                          {isSelected && <span className="material-symbols-outlined text-primary text-sm">check_circle</span>}
+                        </div>
+                        <p className="text-[10px] opacity-70 mt-0.5">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

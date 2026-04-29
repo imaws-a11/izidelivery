@@ -45,6 +45,8 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
   const [newBairro, setNewBairro] = useState('');
   const [newBairroFee, setNewBairroFee] = useState('');
   const [newCustomSpecialty, setNewCustomSpecialty] = useState('');
+  const [slotType, setSlotType] = useState<'recurring' | 'fixed'>(slot?.slot_date ? 'fixed' : 'recurring');
+  
   
   const [activeTab, setActiveTab] = useState<'config' | 'candidates'>('config');
   const [applications, setApplications] = useState<any[]>([]);
@@ -402,6 +404,90 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
                       placeholder="0.00"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Data ou Recorrência</label>
+                  <div className="flex gap-4">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setSlotType('recurring');
+                        setEditingItem(prev => ({ ...prev, slot_date: null }));
+                      }}
+                      className={`flex-1 p-5 rounded-3xl border transition-all flex flex-col items-center gap-2 ${slotType === 'recurring' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-slate-500'}`}
+                    >
+                      <span className="material-symbols-outlined">repeat</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest">Recorrente</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setSlotType('fixed');
+                        setEditingItem(prev => ({ ...prev, day_of_week: null }));
+                      }}
+                      className={`flex-1 p-5 rounded-3xl border transition-all flex flex-col items-center gap-2 ${slotType === 'fixed' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-slate-500'}`}
+                    >
+                      <span className="material-symbols-outlined">calendar_today</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest">Data Única</span>
+                    </button>
+                  </div>
+                     {slotType === 'recurring' ? (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {[
+                        { val: 'Monday', label: 'Seg' },
+                        { val: 'Tuesday', label: 'Ter' },
+                        { val: 'Wednesday', label: 'Qua' },
+                        { val: 'Thursday', label: 'Qui' },
+                        { val: 'Friday', label: 'Sex' },
+                        { val: 'Saturday', label: 'Sáb' },
+                        { val: 'Sunday', label: 'Dom' }
+                      ].map(day => {
+                        const isSelected = editingItem.day_of_week?.split(',').includes(day.val);
+                        return (
+                          <button
+                            key={day.val}
+                            type="button"
+                            onClick={() => {
+                              const currentStr = editingItem.day_of_week || '';
+                              let current = currentStr === 'Daily' ? [] : currentStr.split(',').filter(Boolean);
+                              const next = current.includes(day.val) 
+                                ? current.filter(d => d !== day.val)
+                                : [...current, day.val];
+                              setEditingItem({ ...editingItem, day_of_week: next.join(',') });
+                            }}
+                            className={`px-4 py-3 rounded-2xl border font-bold text-xs transition-all ${
+                              isSelected 
+                                ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
+                                : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                            }`}
+                          >
+                            {day.label}
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setEditingItem({ ...editingItem, day_of_week: 'Daily' })}
+                        className={`px-4 py-3 rounded-2xl border font-bold text-xs transition-all ${
+                          editingItem.day_of_week === 'Daily'
+                            ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
+                            : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                        }`}
+                      >
+                        Diário
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <input 
+                        type="date" 
+                        value={editingItem.slot_date || ''} 
+                        onChange={e => setEditingItem({...editingItem, slot_date: e.target.value})}
+                        className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-sm outline-none text-white [color-scheme:dark]"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
