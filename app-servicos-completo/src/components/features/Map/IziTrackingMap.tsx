@@ -1,10 +1,11 @@
 import { GoogleMap, OverlayView, Polyline } from '@react-google-maps/api';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleMapsLoader } from '../../../hooks/useGoogleMapsLoader';
 import { useRef, useCallback, useState, useEffect } from 'react';
 
 /**
- * IZI TRACKING MAP V6 - RECONSTRUÇÃO PASSO A PASSO
- * Etapa 1: Mapa Limpo + Você + Botão de Localização.
+ * IZI TRACKING MAP V7 - ESTABILIDADE TOTAL
+ * Implementa mapa não controlado para evitar jitter e sobreposição.
  */
 
 interface IziTrackingMapProps {
@@ -15,10 +16,21 @@ interface IziTrackingMapProps {
   routePolyline?: string | any[] | null;
   vehicleIcon?: string;
   originLabel?: string;
-  onMyLocationClick?: () => void;
+  onMyLocationClick?: (force?: boolean) => void;
   boxed?: boolean;
   searching?: boolean;
 }
+
+// Opções de Estilo (Dark Mode Premium)
+const MAP_OPTIONS: google.maps.MapOptions = {
+  disableDefaultUI: true,
+  gestureHandling: 'greedy',
+  clickableIcons: false,
+  maxZoom: 20,
+  minZoom: 3,
+};
+
+const isValid = (c: any) => c && typeof c.lat === 'number' && c.lat !== 0 && !isNaN(c.lat);
 
 export function IziTrackingMap({ 
   driverLoc, 
@@ -29,145 +41,193 @@ export function IziTrackingMap({
   vehicleIcon = "directions_car", 
   originLabel = "COLETA", 
   onMyLocationClick,
-  boxed,
-  searching
+  boxed = false,
+  searching = false
 }: IziTrackingMapProps) {
   const { isLoaded } = useGoogleMapsLoader();
   const mapRef = useRef<google.maps.Map | null>(null);
   const [centered, setCentered] = useState(false);
-  const [isRelocating, setIsRelocating] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(true);
+  const isInteracting = useRef(false);
+  const lastPanPos = useRef<{ lat: number, lng: number } | null>(null);
 
-  const isValid = (c: any) => c && typeof c.lat === 'number' && c.lat !== 0;
+  // Centro padrão de fallback alterado de BH para Suzano (Rua Henry Karam 660)
+  const defaultCenter = { lat: -23.540134, lng: -46.311746 };
 
-  // Radar effect component
-  const RadarOverlay = ({ pos }: { pos: { lat: number, lng: number } }) => (
-    <OverlayView position={pos} mapPaneName={OverlayView.FLOAT_PANE}>
-      <div className="relative -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <div className="absolute inset-0 size-64 -translate-x-1/2 -translate-y-1/2">
-           <div className="absolute inset-0 bg-yellow-400/20 rounded-full animate-[ping_3s_linear_infinite]" />
-           <div className="absolute inset-0 bg-yellow-400/10 rounded-full animate-[ping_3s_linear_infinite_1.5s] scale-75" />
-           <div className="absolute inset-0 border-2 border-yellow-400/30 rounded-full animate-[pulse_2s_ease-in-out_infinite]" />
-        </div>
-        <div className="size-4 bg-yellow-400 rounded-full border-2 border-white shadow-lg relative z-10" />
-      </div>
-    </OverlayView>
-  );
-
-  // Centralização automática e manual
-  const centerMap = useCallback((loc: { lat: number, lng: number }, zoom = 17) => {
+  // Função centralizadora com threshold (limiar) de 5 metros aprox.
+  const smoothPan = useCallback((loc: { lat: number, lng: number }) => {
     if (mapRef.current && isValid(loc)) {
-      mapRef.current.setCenter(loc);
-      mapRef.current.setZoom(zoom);
+      if (lastPanPos.current) {
+        const dLat = Math.abs(lastPanPos.current.lat - loc.lat);
+        const dLng = Math.abs(lastPanPos.current.lng - loc.lng);
+        // Se a mudança for menor que ~1 metro (0.00001), ignora para evitar trepidação
+        if (dLat < 0.00001 && dLng < 0.00001) return;
+      }
+      mapRef.current.panTo(loc);
+      lastPanPos.current = loc;
     }
   }, []);
 
-  const lastUserLoc = useRef<{ lat: number; lng: number } | null>(null);
-
+  // Se o endereço de origem mudar (usuário digitou/selecionou), força a retomada do foco
   useEffect(() => {
-    if (isLoaded && mapRef.current && isValid(userLoc)) {
-      const loc = userLoc!;
-      const isFirstCenter = !centered;
-      
-      // Verifica se a coordenada física realmente mudou
-      const hasChanged = !lastUserLoc.current || 
-                         lastUserLoc.current.lat !== loc.lat || 
-                         lastUserLoc.current.lng !== loc.lng;
+    if (isValid(originLoc)) {
+      setIsFollowing(true);
+    }
+  }, [originLoc]);
 
-      if (isFirstCenter) {
-        centerMap(loc, 17);
-        setCentered(true);
-        lastUserLoc.current = loc;
-      } else if (hasChanged) {
-        // Apenas acompanha se o GPS atualizou a posição real
-        mapRef.current.panTo(loc);
-        lastUserLoc.current = loc;
+  // Efeito principal de seguimento
+  useEffect(() => {
+    if (isLoaded && mapRef.current && isFollowing && !isInteracting.current) {
+      // Prioridade: Entregador > Origem Digitada > Usuário Real
+      const target = driverLoc && isValid(driverLoc) ? driverLoc : (isValid(originLoc) ? originLoc : userLoc);
+      
+      if (isValid(target)) {
+        if (!centered) {
+          mapRef.current.setCenter(target!);
+          mapRef.current.setZoom(17);
+          setCentered(true);
+        } else {
+          smoothPan(target!);
+        }
       }
     }
-  }, [isLoaded, userLoc, centered, centerMap]);
+  }, [isLoaded, userLoc, originLoc, driverLoc, isFollowing, centered, smoothPan]);
 
-  if (!isLoaded) return <div className="w-full h-full bg-zinc-900" />;
+  // Ajuste de Bounds quando tem Rota
+  useEffect(() => {
+    if (isLoaded && mapRef.current && isValid(originLoc) && isValid(destLoc)) {
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(originLoc!);
+      bounds.extend(destLoc!);
+      mapRef.current.fitBounds(bounds, { top: 120, bottom: 350, left: 60, right: 60 });
+      setIsFollowing(false); // Quando vê a rota, para de seguir automaticamente
+    }
+  }, [isLoaded, originLoc, destLoc]);
+
+  const handleRecenter = () => {
+    if (isValid(driverLoc)) {
+      // Se há entregador, o botão foca nele e ativa o seguimento
+      setIsFollowing(true);
+      mapRef.current?.panTo(driverLoc!);
+    } else {
+      // Se não há entregador, o botão vai para o GPS do usuário e para de focar no Card de Origem
+      setIsFollowing(false);
+      const target = isValid(userLoc) ? userLoc : originLoc;
+      if (isValid(target)) mapRef.current?.panTo(target!);
+    }
+    mapRef.current?.setZoom(17);
+    if (onMyLocationClick) onMyLocationClick(true);
+  };
+
+  if (!isLoaded) return (
+    <div className="w-full h-full bg-zinc-950 flex items-center justify-center">
+      <div className="size-10 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="relative w-full h-full bg-white">
+    <div className={`relative w-full h-full bg-zinc-50 ${boxed ? "rounded-[40px] overflow-hidden" : ""}`}>
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
-        onLoad={(map) => { mapRef.current = map; }}
-        onUnmount={() => { mapRef.current = null; }}
-        options={{ 
-          disableDefaultUI: true,
-          gestureHandling: 'greedy', // Melhora interação em mobile
-          clickableIcons: false
+        options={MAP_OPTIONS}
+        onLoad={(map) => {
+          mapRef.current = map;
+          const initial = isValid(originLoc) ? originLoc! : isValid(userLoc) ? userLoc! : defaultCenter;
+          map.setCenter(initial);
+          map.setZoom(17);
+        }}
+        onDragStart={() => {
+          isInteracting.current = true;
+          setIsFollowing(false);
+        }}
+        onDragEnd={() => {
+          isInteracting.current = false;
+        }}
+        onZoomChanged={() => {
+          // Se o zoom mudar manualmente, paramos de seguir o GPS para não dar trancos
+          setIsFollowing(false);
         }}
       >
-        {/* RADAR DE BUSCA */}
-        {searching && isValid(originLoc || userLoc) && (
-          <RadarOverlay pos={(originLoc || userLoc)!} />
-        )}
-
-        {/* ROTA TRAÇADA (PRE-PREENCHIDA OU COMPRADA) */}
+        {/* Rota */}
         {routePolyline && (
           <Polyline
-            path={
-              typeof routePolyline === 'string'
-                ? google.maps.geometry.encoding.decodePath(routePolyline)
-                : routePolyline
-            }
-            options={{
-              strokeColor: '#facc15', // Tailwind yellow-400
-              strokeOpacity: 0.9,
-              strokeWeight: 4,
-            }}
+            path={typeof routePolyline === 'string' ? google.maps.geometry.encoding.decodePath(routePolyline) : routePolyline}
+            options={{ strokeColor: '#facc15', strokeOpacity: 0.9, strokeWeight: 5 }}
           />
         )}
 
-        {/* MARCADOR DE ORIGEM (COLETA) */}
-        {isValid(originLoc) && (
-          <OverlayView position={originLoc!} mapPaneName={OverlayView.FLOAT_PANE}>
-            <div className="relative -translate-x-1/2 -translate-y-full mb-1">
-               <div className="bg-white px-3 py-1.5 rounded-full shadow-2xl border border-zinc-200 flex items-center gap-2">
-                  <div className="size-2 rounded-full bg-orange-500 animate-pulse" />
-                  <span className="text-[10px] font-black text-black uppercase italic">{originLabel}</span>
-               </div>
-               <div className="w-px h-3 bg-zinc-300 mx-auto" />
-            </div>
-          </OverlayView>
-        )}
-
-        {/* MARCADOR DE VOCÊ */}
+        {/* Marcador de Usuário (Blue Dot) */}
         {isValid(userLoc) && (
-          <OverlayView position={userLoc!} mapPaneName={OverlayView.FLOAT_PANE}>
+          <OverlayView position={userLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative -translate-x-1/2 -translate-y-1/2">
-               <div className="size-10 bg-blue-500/20 rounded-full flex items-center justify-center animate-pulse">
-                  <div className="size-5 bg-blue-600 rounded-full border-2 border-white shadow-lg" />
-               </div>
+              <div className="size-6 bg-blue-500/20 rounded-full flex items-center justify-center animate-pulse">
+                <div className="size-4 bg-blue-600 rounded-full border-2 border-white shadow-xl" />
+              </div>
             </div>
           </OverlayView>
         )}
 
-        {/* MARCADOR DE DESTINO */}
+
+
+        {/* Marcador de Entrega */}
         {isValid(destLoc) && (
-          <OverlayView position={destLoc!} mapPaneName={OverlayView.FLOAT_PANE}>
-            <div className="relative -translate-x-1/2 -translate-y-full mb-1">
-               <div className="size-10 bg-black rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white">
-                  <span className="material-symbols-rounded text-white text-xl">flag</span>
-               </div>
-               <div className="w-0.5 h-3 bg-black mx-auto" />
+          <OverlayView position={destLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <div className="relative -translate-x-1/2 -translate-y-full mb-2">
+              <div className="size-12 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white">
+                <span className="material-symbols-rounded text-yellow-400 text-2xl font-black">flag</span>
+              </div>
+              <div className="w-0.5 h-3 bg-white mx-auto -mt-0.5" />
             </div>
           </OverlayView>
         )}
 
-        {/* MARCADOR DO MOTORISTA */}
+        {/* Marcador do Motorista */}
         {isValid(driverLoc) && (
-          <OverlayView position={driverLoc!} mapPaneName={OverlayView.FLOAT_PANE}>
+          <OverlayView position={driverLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative -translate-x-1/2 -translate-y-1/2">
-               <div className="size-14 bg-yellow-400 rounded-3xl flex items-center justify-center shadow-2xl border-2 border-white">
-                  <span className="material-symbols-rounded text-black text-2xl font-black">{vehicleIcon}</span>
-               </div>
+              <div className="size-14 bg-yellow-400 rounded-[28px] flex items-center justify-center shadow-2xl border-2 border-white ring-8 ring-yellow-400/10">
+                <span className="material-symbols-rounded text-black text-3xl font-black">{vehicleIcon}</span>
+              </div>
             </div>
           </OverlayView>
         )}
       </GoogleMap>
 
+      {/* Botão de Localização */}
+      <div className="absolute top-44 right-6 z-[200]">
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          onClick={handleRecenter}
+          className="size-14 rounded-2xl bg-white/95 backdrop-blur-2xl border border-zinc-200 flex items-center justify-center text-zinc-900 shadow-[0_15px_35px_rgba(0,0,0,0.2)] active:bg-zinc-100 transition-colors"
+        >
+          <span className={`material-symbols-rounded text-2xl ${isFollowing ? 'text-blue-500 animate-pulse' : 'text-zinc-600'}`}>
+            {isFollowing ? 'gps_fixed' : 'my_location'}
+          </span>
+        </motion.button>
+      </div>
+
+      {/* Radar de Busca */}
+      <AnimatePresence>
+        {searching && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-none z-[210]"
+          >
+             <div className="flex flex-col items-center gap-6">
+                <div className="relative size-24">
+                  <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-4 bg-yellow-400/10 rounded-full animate-pulse" />
+                </div>
+                <div className="px-8 py-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl">
+                   <p className="text-white font-black text-[11px] uppercase tracking-[0.4em]">Buscando Entregadores</p>
+                </div>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

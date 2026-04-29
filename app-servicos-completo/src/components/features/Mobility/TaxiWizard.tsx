@@ -103,26 +103,18 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
           userLoc={(userLocation?.lat && userLocation?.lng)
             ? { lat: userLocation.lat as number, lng: userLocation.lng as number }
             : null}
+          originLoc={(transitData.origin?.lat && transitData.origin?.lng)
+            ? { lat: Number(transitData.origin.lat), lng: Number(transitData.origin.lng) }
+            : null}
+          destLoc={(transitData.destination?.lat && transitData.destination?.lng)
+            ? { lat: Number(transitData.destination.lat), lng: Number(transitData.destination.lng) }
+            : null}
+          originLabel="MEU ENDEREÇO"
           onMyLocationClick={updateLocation}
           boxed={false}
         />
       </div>
 
-      {/* Botão de Localização do Mapa (Fixed para não sumir no scroll) */}
-      <div className="fixed right-4 bottom-[45vh] z-[120] pointer-events-none">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => updateLocation()}
-          className="size-12 rounded-xl flex items-center justify-center pointer-events-auto active:scale-95 transition-all text-yellow-500 shadow-2xl"
-          style={{
-            background: "rgba(20, 20, 22, 1)",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.6), inset 1px 1px 1px rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          <span className="material-symbols-rounded text-xl font-black">my_location</span>
-        </motion.button>
-      </div>
 
       {/* ── BOTTOM SHEET REAL (DRAGÁVEL) ── */}
       <IziBottomSheet snapPoints={["40vh", "65vh", "90vh"]} initialSnap={1}>
