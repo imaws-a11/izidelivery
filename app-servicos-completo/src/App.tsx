@@ -594,6 +594,19 @@ function App() {
           return;
         }
 
+        // Cria canal dedicado no Android 8+ para garantir som e vibração
+        if (Capacitor.getPlatform() === 'android') {
+          await PushNotifications.createChannel({
+            id: 'order_updates',
+            name: 'Atualizações de Pedidos',
+            description: 'Notificações sobre status de pedidos e entregas',
+            sound: 'notification',
+            importance: 5,
+            visibility: 1,
+            vibration: true
+          });
+        }
+
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', async (token) => {
@@ -604,9 +617,17 @@ function App() {
             .eq('id', userId);
         });
 
+        PushNotifications.addListener('registrationError', (error) => {
+          console.error('[PUSH] Erro no registro:', error);
+        });
+
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
           console.log('[PUSH] Recebida:', notification);
           showToast(`${notification.title}: ${notification.body}`, 'info');
+        });
+
+        PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          console.log('[PUSH] Ação do usuário:', notification);
         });
 
       } catch (err) {

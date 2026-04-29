@@ -846,10 +846,10 @@ function App() {
         return saved ? JSON.parse(saved) : null;
     });
 
-    // Parar sons se houver missão ativa ou se mudar
-    useEffect(() => {
-        if (activeMission) stopIziSounds();
-    }, [activeMission]);
+    // Lista de TODAS as missões ativas do entregador (multi-missão)
+    const [activeMissions, setActiveMissions] = useState<Order[]>([]);
+
+    // Sons não são mais bloqueados por missão ativa — o entregador precisa ouvir novas chamadas sempre
     const activeMissionRef = useRef(activeMission);
     useEffect(() => { activeMissionRef.current = activeMission; }, [activeMission]);
 
@@ -994,8 +994,8 @@ function App() {
             // Marcar como conhecidas imediatamente
             newOrders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
 
-            // Tocar som se estiver online e disponível
-            if (isOnlineRef.current && !activeMissionRef.current) {
+            // Tocar som se estiver online (mesmo com missão ativa)
+            if (isOnlineRef.current) {
                 playIziSound('driver');
                 
                 if (window.Notification && Notification.permission === 'granted') {
@@ -2082,11 +2082,12 @@ function App() {
             const orders = await fetchFromDB('orders_delivery', `driver_id=eq.${dId}&order=created_at.desc&limit=10`);
 
             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
-            const activeOrder = orders?.find((o: any) => 
+            const allActiveOrders = (orders || []).filter((o: any) => 
                 !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase()) &&
                 !financialTypes.includes(o.service_type) &&
-                o.driver_id === dId // RIGOROSO: SÂ³ é missão ativa se for MINHA
+                o.driver_id === dId
             );
+            const activeOrder = allActiveOrders[0] || null;
 
             if (activeOrder) {
                 // NOVO: Buscar endereço oficial e atualizado do Lojista no banco de dados
@@ -2148,10 +2149,39 @@ function App() {
                     preparation_status: activeOrder.preparation_status || 'preparando',
                     customer: activeOrder.user_name || 'Cliente Izi' 
                 };
-                setActiveMission(mission);
+                // Salvar no localStorage como backup (para recuperação no boot)
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                setActiveTab('active_mission');
-                toastSuccess('Missão sincronizada!');
+
+                // Mapear TODAS as missões ativas para o array multi-missão
+                const allMissions = await Promise.all(allActiveOrders.map(async (ao: any) => {
+                    let pickup = ao.pickup_address || 'Origem';
+                    let pLat = ao.pickup_lat;
+                    let pLng = ao.pickup_lng;
+                    if (ao.merchant_id) {
+                        try {
+                            const md = await fetchFromDB('admin_users', `select=store_address,latitude,longitude&id=eq.${ao.merchant_id}&limit=1`);
+                            if (md?.[0]) {
+                                if (md[0].store_address) pickup = md[0].store_address;
+                                if (md[0].latitude) { pLat = Number(md[0].latitude); pLng = Number(md[0].longitude); }
+                            }
+                        } catch {}
+                    }
+                    return {
+                        ...ao,
+                        realId: ao.id,
+                        type: ao.service_type || 'delivery',
+                        origin: pickup,
+                        pickup_address: pickup,
+                        pickup_lat: pLat,
+                        pickup_lng: pLng,
+                        destination: ao.delivery_address || 'Destino',
+                        price: ao.total_price || 0,
+                        status: ao.status,
+                        preparation_status: ao.preparation_status || 'preparando',
+                        customer: ao.user_name || 'Cliente Izi'
+                    };
+                }));
+                setActiveMissions(allMissions);
             } else {
                 
                 const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
@@ -2547,7 +2577,7 @@ function App() {
 
             setOrders(prev => {
                 const hasNew = newAvailable.some(no => !prev.find(po => po.realId === no.realId));
-                if (hasNew && isOnlineRef.current && !activeMissionRef.current && localStorage.getItem('pref_sound') !== 'false') {
+                if (hasNew && isOnlineRef.current && localStorage.getItem('pref_sound') !== 'false') {
                     playIziSound('driver');
                 }
                 return newAvailable;
@@ -2613,11 +2643,18 @@ function App() {
                         customer: o.user_name || 'Cliente Izi',
                         store_name: o.store_name || 'Parceiro Izi'
                     };
-                    setActiveMission(mission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                    
-                    if (activeTabRef.current !== 'active_mission') {
-                        setActiveTab('active_mission');
+
+                    // Atualizar a missão na lista multi-missão
+                    setActiveMissions(prev => {
+                        const exists = prev.find(m => m.realId === o.id || m.id === o.id);
+                        if (exists) return prev.map(m => (m.realId === o.id || m.id === o.id) ? mission : m);
+                        return [...prev, mission];
+                    });
+
+                    // Só atualiza activeMission se o usuário já estiver vendo ESTA missão específica
+                    if (currentMission && (currentMission.realId === o.id || currentMission.id === o.id)) {
+                        setActiveMission(mission);
                     }
                     return;
                 }
@@ -2709,7 +2746,7 @@ function App() {
                         return prev.map(x => x.realId === o.id ? mappedOrder : x);
                     }
                     
-                    if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
+                    if (isOnlineRef.current && shouldSound) {
                         playIziSound('driver');
                         if (Notification.permission === 'granted') {
                             new Notification('ðŸš€ Nova Missão Izi!', { 
@@ -2859,6 +2896,8 @@ function App() {
 
             if (!updateRes.ok) throw new Error('Falha ao gravar aceite no banco.');
 
+            // Para o som de chamada em loop antes de tocar o som de sucesso
+            stopIziSounds();
             playIziSound('success');
 
             const mission = { 
@@ -3445,7 +3484,7 @@ function App() {
     };
 
     const renderBottomNavigation = () => {
-        if (activeTab === 'active_mission') return null;
+        if (activeTab === 'active_mission' && activeMission) return null; // Esconde navbar apenas quando está na tela de mapa de uma missão específica
         const isSlotDetailActive = !!selectedSlot;
 
         return (
@@ -3482,7 +3521,14 @@ function App() {
                                     return (
                                         <button
                                             key={item.id}
-                                            onClick={() => setActiveTab(item.id as any)}
+                                            onClick={() => {
+                                                if (item.id === 'active_mission') {
+                                                    // Ao clicar em "Missão" na navbar, limpa a seleção para mostrar a lista
+                                                    setActiveMission(null);
+                                                    syncMissionWithDB();
+                                                }
+                                                setActiveTab(item.id as any);
+                                            }}
                                             className={`flex flex-col items-center gap-1 py-1.5 px-0.5 rounded-[20px] transition-all relative flex-1 min-w-0 ${
                                                 isActive ? 'text-primary' : 'text-white/30'
                                             }`}
@@ -6346,10 +6392,95 @@ function App() {
         );
     };
 
-    const renderActiveMissionView = () => { // UPDATED
+    const getStatusLabel = (status: string) => {
+        switch(status?.toLowerCase()) {
+            case 'saiu_para_coleta': case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-500/20', icon: 'navigation' };
+            case 'no_local_coleta': case 'chegou_coleta': return { label: 'No local', color: 'text-amber-400', bg: 'bg-amber-500/20', icon: 'location_on' };
+            case 'preparando': case 'no_preparo': return { label: 'Em preparo', color: 'text-purple-400', bg: 'bg-purple-500/20', icon: 'soup_kitchen' };
+            case 'pronto': return { label: 'Pronto!', color: 'text-emerald-400', bg: 'bg-emerald-500/20', icon: 'check_circle' };
+            case 'picked_up': return { label: 'Coletado', color: 'text-emerald-400', bg: 'bg-emerald-500/20', icon: 'package_2' };
+            case 'a_caminho': case 'em_rota': return { label: 'Em rota', color: 'text-yellow-400', bg: 'bg-yellow-500/20', icon: 'moped' };
+            case 'no_local': return { label: 'No destino', color: 'text-blue-400', bg: 'bg-blue-500/20', icon: 'person_pin_circle' };
+            default: return { label: 'Em andamento', color: 'text-white/50', bg: 'bg-white/10', icon: 'radar' };
+        }
+    };
+
+    const renderActiveMissionView = () => {
+        // TELA DE SELEÇÃO: Se não tem missão selecionada, mostra a lista de missões ativas
         if (!activeMission) {
+            // Se tem missões ativas no array, mostra os cards de seleção
+            if (activeMissions.length > 0) {
+                return (
+                    <motion.div key="mission-selector" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black pt-14 pb-36 px-4 font-['Plus_Jakarta_Sans']">
+                        <div className="flex items-center gap-3 mb-6">
+                            <button onClick={() => setActiveTab('dashboard')} className="size-10 rounded-2xl bg-zinc-900 flex items-center justify-center">
+                                <Icon name="arrow_back" size={20} className="text-white/60" />
+                            </button>
+                            <div>
+                                <h2 className="text-lg font-black text-white tracking-tight">Missões Ativas</h2>
+                                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">{activeMissions.length} missão(ões) em andamento</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {activeMissions.map((m, idx) => {
+                                const st = getStatusLabel(m.status || '');
+                                const storeName = (m as any).merchant_name || (m as any).store_name || 'Loja Parceira';
+                                const destAddr = cleanAddressText((m as any).delivery_address || (m as any).destination || '');
+                                return (
+                                    <motion.button
+                                        key={m.realId || m.id}
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => {
+                                            setActiveMission(m);
+                                            localStorage.setItem('Izi_active_mission', JSON.stringify(m));
+                                        }}
+                                        className="w-full p-5 rounded-[28px] bg-zinc-900 text-left flex items-start gap-4 transition-all active:bg-zinc-800"
+                                    >
+                                        {/* Ícone de status */}
+                                        <div className={`size-14 rounded-2xl ${st.bg} flex items-center justify-center shrink-0`}>
+                                            <Icon name={st.icon} size={28} className={st.color} />
+                                        </div>
+                                        
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${st.color}`}>{st.label}</span>
+                                                <span className="text-[9px] text-white/20">•</span>
+                                                <span className="text-[9px] text-white/30 font-bold">#{(m.realId || m.id || '').slice(0,6)}</span>
+                                            </div>
+                                            <p className="text-sm font-black text-white truncate">{storeName}</p>
+                                            <p className="text-[11px] text-white/40 truncate mt-0.5">{destAddr || 'Destino'}</p>
+                                            <div className="flex items-center gap-3 mt-2">
+                                                <span className="text-sm font-black text-yellow-400">R$ {Number((m as any).price || (m as any).total_price || 0).toFixed(2)}</span>
+                                                <span className="text-[9px] text-white/20 uppercase font-bold">{(m as any).service_type || (m as any).type || 'delivery'}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Seta */}
+                                        <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center shrink-0 self-center">
+                                            <Icon name="arrow_forward" size={20} className="text-black" />
+                                        </div>
+                                    </motion.button>
+                                );
+                            })}
+                        </div>
+
+                        <button 
+                            onClick={() => { syncMissionWithDB(); toastSuccess("Sincronizando..."); }}
+                            disabled={isSyncingMission}
+                            className="mt-6 h-14 bg-zinc-900 text-white/50 font-black text-[10px] uppercase tracking-[0.2em] rounded-[24px] w-full active:scale-95 transition-all flex items-center justify-center gap-3"
+                        >
+                            {isSyncingMission ? <Icon name="sync" className="animate-spin text-yellow-400" size={18} /> : <Icon name="cloud_sync" size={18} />}
+                            {isSyncingMission ? 'Sincronizando...' : 'Atualizar Lista'}
+                        </button>
+                    </motion.div>
+                );
+            }
+
+            // Sem missões — tela vazia
             return (
-                <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
+                <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
                     <div className="size-28 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center mb-8 shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02)]">
                         <Icon name="route" size={48} className="text-white/20" />
                     </div>
@@ -6480,7 +6611,7 @@ function App() {
                         pickupAddress={pickupOnly}
                         deliveryAddress={addressOnly}
                         driverCoords={driverCoords}
-                        missionPhase={['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(activeMission.status) ? 'to_delivery' : 'to_pickup'}
+                        missionPhase={['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega', 'no_local'].includes(activeMission.status) ? 'to_delivery' : 'to_pickup'}
                         onRouteInfo={(info) => setRealTimeRoute(info)}
                     />
                 </div>
@@ -6494,11 +6625,10 @@ function App() {
                             const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
                             const currentStatus = (activeMission?.status || '').toLowerCase().trim();
                             if (terminalStatuses.includes(currentStatus)) {
-                                // Missão em estado terminal: limpar antes de voltar
-                                setActiveMission(null);
                                 localStorage.removeItem('Izi_active_mission');
                             }
-                            setActiveTab('dashboard');
+                            // Volta para a lista de missões (não para o dashboard)
+                            setActiveMission(null);
                         }} 
                         className="pointer-events-auto size-12 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-lg"
                     >
