@@ -32,6 +32,7 @@ Thumbs.db
 *.tsbuildinfo
 
 # Arquivos de debug/dev temporários (não enviar para produção)
+_dev_archive/
 fix_*.js
 fix_*.cjs
 fix_*.ps1
