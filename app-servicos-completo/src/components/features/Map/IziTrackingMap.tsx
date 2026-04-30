@@ -88,7 +88,7 @@ export function IziTrackingMap({
       if (isValid(target)) {
         if (!centered) {
           mapRef.current.setCenter(target!);
-          mapRef.current.setZoom(17);
+          mapRef.current.setZoom(14);
           setCentered(true);
         } else {
           smoothPan(target!);
@@ -109,17 +109,16 @@ export function IziTrackingMap({
   }, [isLoaded, originLoc, destLoc]);
 
   const handleRecenter = () => {
+    // Sempre ativa o seguimento para que o mapa acompanhe as coords GPS quando chegarem
+    setIsFollowing(true);
+    
     if (isValid(driverLoc)) {
-      // Se há entregador, o botão foca nele e ativa o seguimento
-      setIsFollowing(true);
       mapRef.current?.panTo(driverLoc!);
     } else {
-      // Se não há entregador, o botão vai para o GPS do usuário e para de focar no Card de Origem
-      setIsFollowing(false);
       const target = isValid(userLoc) ? userLoc : originLoc;
       if (isValid(target)) mapRef.current?.panTo(target!);
     }
-    mapRef.current?.setZoom(17);
+    mapRef.current?.setZoom(14);
     if (onMyLocationClick) onMyLocationClick(true);
   };
 
@@ -138,7 +137,7 @@ export function IziTrackingMap({
           mapRef.current = map;
           const initial = isValid(originLoc) ? originLoc! : isValid(userLoc) ? userLoc! : defaultCenter;
           map.setCenter(initial);
-          map.setZoom(15);
+          map.setZoom(13);
           
           // Deslocamento forçado na largada para salvar o pino do soterramento
           map.panBy(0, bottomPadding / 2.5);
