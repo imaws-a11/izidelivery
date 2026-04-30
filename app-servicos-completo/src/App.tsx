@@ -5156,7 +5156,7 @@ const navigateSubView = (target: string) => {
                 {/* Mobilidade */}
                 {["taxi_wizard", "freight_wizard", "van_wizard", "mobility_payment", "excursion_wizard", "excursion_detail"].includes(subView) && (
                   <motion.div key="mobility-wizard" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[115]">
-                    <MobilityWizardView updateLocation={updateLocation} />
+                    <MobilityWizardView updateLocation={updateLocation} userLocation={userLocation} />
                   </motion.div>
                 )}
                 {subView === "logistics_tracking" && (
