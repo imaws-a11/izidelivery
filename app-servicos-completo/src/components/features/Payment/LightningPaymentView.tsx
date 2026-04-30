@@ -1,8 +1,6 @@
 import React from "react";
 import { useApp } from "../../../hooks/useApp";
 import { supabase } from "../../../lib/supabase";
-import { toastSuccess, toastError } from "../../common/Toast";
-
 export const LightningPaymentView: React.FC = () => {
   const {
     selectedItem,
@@ -11,7 +9,9 @@ export const LightningPaymentView: React.FC = () => {
     setSubView,
     setTab,
     appSettings,
-    lightningData, // Assumindo que estará no useApp
+    lightningData,
+    toastSuccess,
+    toastError
   } = useApp();
 
   const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";

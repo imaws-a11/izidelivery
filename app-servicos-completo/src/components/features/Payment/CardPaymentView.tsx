@@ -2,7 +2,6 @@ import React from "react";
 import { useApp } from "../../../hooks/useApp";
 import { useOrder } from "../../../hooks/useOrder";
 import { supabase } from "../../../lib/supabase";
-import { toastSuccess, toastError } from "../../common/Toast";
 import { MercadoPagoCardForm } from "../../MercadoPagoCardForm";
 
 export const CardPaymentView: React.FC = () => {
@@ -17,6 +16,8 @@ export const CardPaymentView: React.FC = () => {
     setIsLoading,
     appSettings,
     setIsIziBlackMembership,
+    toastSuccess,
+    toastError,
   } = useApp();
 
   const { getCartSubtotal, cart, clearCart, selectedShop } = useOrder();

@@ -48,6 +48,16 @@ interface AppContextData {
   userLocation: { lat: number | null; lng: number | null; loading: boolean; error: string | null; address?: string };
   updateLocation: (highAccuracy?: boolean) => Promise<void>;
   setUserLocation: (loc: any) => void;
+
+  // Carrinho e Checkout
+  cart: any[];
+  setCart: React.Dispatch<React.SetStateAction<any[]>>;
+  appliedCoupon: any | null;
+  setAppliedCoupon: (coupon: any | null) => void;
+  useCoins: boolean;
+  setUseCoins: (use: boolean) => void;
+  getCartSubtotal: () => number;
+  clearCart: () => void;
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -81,6 +91,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Localização
   const [userLocation, setUserLocation] = useState({ lat: null as number | null, lng: null as number | null, loading: false, error: null as string | null, address: undefined as string | undefined });
+
+  // Carrinho e Checkout
+  const [cart, setCart] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("izi_cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [useCoins, setUseCoins] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("izi_cart", JSON.stringify(cart));
+  }, [cart]);
+
+  const getCartSubtotal = useCallback(() => {
+    return cart.reduce((sum, item) => {
+      const basePrice = Number(item.price) || 0;
+      const addons = Array.isArray(item.options) ? item.options : (Array.isArray(item.addonDetails) ? item.addonDetails : []);
+      const addonsPrice = addons.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
+      return sum + (basePrice + addonsPrice) * (item.quantity || 1);
+    }, 0);
+  }, [cart]);
+
+  const clearCart = useCallback(() => {
+    setCart([]);
+    setAppliedCoupon(null);
+    setUseCoins(false);
+  }, []);
 
   const updateLocation = async (highAccuracy = false) => {
     setUserLocation(prev => ({ ...prev, loading: true, error: null }));
@@ -240,7 +279,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLightningData,
       userLocation,
       updateLocation,
-      setUserLocation
+      setUserLocation,
+      cart,
+      setCart,
+      appliedCoupon,
+      setAppliedCoupon,
+      useCoins,
+      setUseCoins,
+      getCartSubtotal,
+      clearCart
     }}>
       {children}
     </AppContext.Provider>

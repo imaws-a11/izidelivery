@@ -3,8 +3,6 @@ import { motion } from "framer-motion";
 import { useApp } from "../../../hooks/useApp";
 import { useOrder } from "../../../hooks/useOrder";
 import { supabase } from "../../../lib/supabase";
-import { toastSuccess, toastError } from "../../common/Toast";
-
 export const PixPaymentView: React.FC = () => {
   const {
     selectedItem,
@@ -21,6 +19,8 @@ export const PixPaymentView: React.FC = () => {
     setPixConfirmed,
     globalSettings,
     isIziBlackMembership,
+    toastSuccess,
+    toastError,
   } = useApp();
 
   const { getCartSubtotal, cart, appliedCoupon, useCoins, iziCoins, setIziCoins, selectedShop } = useOrder();
