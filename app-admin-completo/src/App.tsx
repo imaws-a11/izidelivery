@@ -42,9 +42,12 @@ function App() {
     activeTab,
     merchantProfile,
     handleLogout,
+    editType,
     showActiveOrdersModal,
     setShowActiveOrdersModal
   } = useAdmin();
+
+
 
   const [email, setEmail] = useState(() => localStorage.getItem('izi_admin_remember_email') || '');
   const [password, setPassword] = useState('');
@@ -268,10 +271,17 @@ function App() {
               {activeTab === 'gamification' && <GamificationTab />}
             </motion.div>
           </AnimatePresence>
-
-          {/* Global Studios & Modals Provider */}
-          <MyStudioTab />
         </main>
+
+        {/* Global Studios & Modals Provider (Absolute/Fixed elements only) */}
+        <MyStudioTab />
+
+        {/* Estúdio de Novo Lojista (Overlay) */}
+        {editType === 'new_merchant' && (
+          <div className="fixed inset-0 z-[120]">
+            <MerchantStudio />
+          </div>
+        )}
       </div>
 
       {/* Global Modals Portal */}

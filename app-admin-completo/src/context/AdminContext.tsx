@@ -116,8 +116,8 @@ export interface AdminContextType {
   // Edit state
   editingItem: any;
   setEditingItem: (i: any) => void;
-  editType: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | 'partner' | null;
-  setEditType: (t: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | 'partner' | null) => void;
+  editType: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | 'partner' | 'new_merchant' | null;
+  setEditType: (t: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | 'partner' | 'new_merchant' | null) => void;
   editingSlotId: string | null;
   setEditingSlotId: (id: string | null) => void;
   isSaving: boolean;

@@ -1960,7 +1960,7 @@ export default function MyStudioTab() {
       }
 
       {
-        editingItem && editType !== 'partner' && (
+        editingItem && editType !== 'partner' && editType !== 'new_merchant' && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 text-slate-900">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setEditingItem(null)}></div>
             <motion.div

@@ -8,8 +8,13 @@ export const CategoryListView = () => {
     subView, 
     setSubView, 
     activeService, 
-    establishments, 
-    setSelectedShop 
+    ESTABLISHMENTS: establishments, 
+    setSelectedShop,
+    searchQuery,
+    setSearchQuery,
+    navigateSubView,
+    cart,
+    handleShopClick
   } = useApp();
 
   const handleBack = () => setSubView("none");
@@ -20,7 +25,7 @@ export const CategoryListView = () => {
       case "daily_menus": return "Pratos do Dia";
       case "market_list": return "Mercados";
       case "pharmacy_list": return "Farmácias";
-      case "drinks_list": return "Bebidas & Adega";
+      case "beverages_list": return "Bebidas & Adega";
       case "pets_list": return "Pet Shop";
       default: return activeService?.label || "Explorar";
     }
@@ -31,8 +36,40 @@ export const CategoryListView = () => {
       case "explore_restaurants": return "Os melhores sabores da região";
       case "daily_menus": return "Economia e praticidade hoje";
       case "market_list": return "Sua despensa sempre cheia";
+      case "beverages_list": return "Acompanhamentos e geladas";
       default: return "Selecionados para você";
     }
+  };
+
+  const getFilterFn = () => {
+    return (estab: any) => {
+      const type = (estab.type || "").toLowerCase();
+      const foodCats = Array.isArray(estab.foodCategory) 
+        ? estab.foodCategory.map((c: any) => (c || "").toLowerCase())
+        : [(estab.foodCategory || "").toLowerCase()];
+
+      switch (subView) {
+        case "explore_restaurants": 
+          return type === "restaurant" || type === "food";
+        case "market_list": 
+          return type === "market";
+        case "pharmacy_list": 
+          return type === "pharmacy";
+        case "beverages_list": 
+          // Filtro mais estrito: apenas lojas cujo tipo principal é bebidas
+          // Isso evita que restaurantes que vendem bebidas apareçam aqui
+          return type === "beverages" || type === "adegas";
+        case "pets_list": 
+          return type === "petshop" || type === "pet";
+        default: 
+          // Se for uma lista genérica ou desconhecida, tentamos filtrar pelo activeService
+          if (activeService?.id) {
+            const serviceId = activeService.id.toLowerCase();
+            return type === serviceId || foodCats.includes(serviceId);
+          }
+          return true;
+      }
+    };
   };
 
   return (
@@ -53,13 +90,18 @@ export const CategoryListView = () => {
         </div>
       </header>
 
-      <main className="px-6 py-6">
+      <main className="flex-1">
         <EstablishmentListView 
-          establishments={establishments} 
-          onSelect={(shop) => {
-            setSelectedShop(shop);
-            setSubView("restaurant_menu");
-          }} 
+          title={getTitle()}
+          subtitle={getSubtitle()}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          setSubView={setSubView}
+          establishments={establishments}
+          filterFn={getFilterFn()}
+          onShopClick={handleShopClick}
+          cartLength={cart.length}
+          navigateSubView={navigateSubView}
         />
       </main>
     </div>
