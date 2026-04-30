@@ -58,6 +58,13 @@ interface AppContextData {
   setUseCoins: (use: boolean) => void;
   getCartSubtotal: () => number;
   clearCart: () => void;
+
+  // Estabelecimentos (Migrado do App.tsx)
+  ESTABLISHMENTS: any[];
+  setESTABLISHMENTS: React.Dispatch<React.SetStateAction<any[]>>;
+  handleShopClick: (shop: any) => Promise<void>;
+  establishmentTypes: any[];
+  setEstablishmentTypes: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -102,6 +109,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [useCoins, setUseCoins] = useState(false);
 
+  // Estados de Estabelecimento
+  const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
+  const [establishmentTypes, setEstablishmentTypes] = useState<any[]>([]);
+
   useEffect(() => {
     localStorage.setItem("izi_cart", JSON.stringify(cart));
   }, [cart]);
@@ -114,6 +125,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return sum + (basePrice + addonsPrice) * (item.quantity || 1);
     }, 0);
   }, [cart]);
+
+  const handleShopClick = useCallback(async (shop: any) => {
+    if (!shop.isOpen) {
+      // toastError(`Desculpe! ${shop.name} está fechado no momento. 🕒`);
+      return;
+    }
+    
+    setSelectedShop(shop);
+    // Note: setActiveCategory e outros estados específicos de Menu ainda podem estar no App.tsx
+    // mas a navegação básica pode ser feita aqui ou via props no App.tsx
+    navigateSubView("restaurant_menu");
+  }, [setSelectedShop]);
 
   const clearCart = useCallback(() => {
     setCart([]);
@@ -287,7 +310,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       useCoins,
       setUseCoins,
       getCartSubtotal,
-      clearCart
+      clearCart,
+      ESTABLISHMENTS,
+      setESTABLISHMENTS,
+      handleShopClick,
+      establishmentTypes,
+      setEstablishmentTypes
     }}>
       {children}
     </AppContext.Provider>

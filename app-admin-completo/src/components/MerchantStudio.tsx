@@ -10,6 +10,8 @@ export default function MerchantStudio() {
     establishmentTypes, appSettings, setActiveTab, setEditType
   } = useAdmin();
 
+
+
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState<'logo' | 'banner' | null>(null);
 
@@ -112,13 +114,17 @@ export default function MerchantStudio() {
   };
 
   return (
-    <div className="flex flex-col h-full font-display">
+    <div className="flex flex-col h-full font-display bg-white dark:bg-slate-900 p-6 md:p-10 overflow-y-auto">
       {/* HEADER DO ESTÚDIO */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <button 
-              onClick={() => setActiveTab('merchants')}
+              onClick={() => {
+                setEditType(null);
+                setEditingItem(null);
+                setActiveTab('merchants');
+              }}
               className="size-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center hover:bg-primary hover:text-slate-900 transition-all group"
             >
               <span className="material-symbols-outlined text-xl group-hover:font-black transition-all">arrow_back</span>
@@ -541,82 +547,7 @@ export default function MerchantStudio() {
           </div>
         </div>
 
-        {/* LADO DIREITO: PREVIEW (Claymorphism) */}
-        <div className="w-full lg:w-[400px] flex flex-col gap-8">
-          <div className="bg-slate-900 dark:bg-black p-10 rounded-[48px] shadow-2xl relative overflow-hidden group">
-            {/* Efeitos de Fundo */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
-            <div className="relative z-10 space-y-8">
-               <div className="flex items-center justify-between">
-                  <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    Card Preview
-                  </div>
-                  <div className="flex gap-1">
-                    <div className="size-2 rounded-full bg-primary" />
-                    <div className="size-2 rounded-full bg-white/20" />
-                    <div className="size-2 rounded-full bg-white/20" />
-                  </div>
-               </div>
-
-               <div className="space-y-6">
-                  <div className="relative">
-                    <div className="w-full h-40 bg-white/5 rounded-[32px] overflow-hidden border border-white/5">
-                      {editingItem.store_banner && <img src={editingItem.store_banner} className="w-full h-full object-cover opacity-60" />}
-                    </div>
-                    <div className="absolute -bottom-6 left-8 size-20 rounded-2xl bg-slate-800 p-0.5 border-4 border-slate-900 shadow-2xl overflow-hidden">
-                       {editingItem.store_logo ? <img src={editingItem.store_logo} className="w-full h-full object-cover rounded-xl" /> : <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/20"><span className="material-symbols-outlined">add_a_photo</span></div>}
-                    </div>
-                  </div>
-
-                  <div className="pt-6 space-y-2">
-                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter truncate">
-                      {editingItem.store_name || 'Nome da Loja'}
-                    </h3>
-                    <div className="flex items-center gap-3">
-                       <span className="text-primary font-black text-[9px] uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded">
-                          {establishmentTypes.find(t => t.value === editingItem.store_type)?.name || 'Restaurante'}
-                       </span>
-                       <span className="text-slate-500 font-bold text-[9px] uppercase tracking-widest flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">star</span> 5.0
-                       </span>
-                    </div>
-                    <p className="text-slate-400 text-[10px] font-medium leading-relaxed line-clamp-2">
-                      {editingItem.store_description || 'A descrição aparecerá aqui para os clientes no aplicativo...'}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                     <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Entrega</span>
-                        <span className="text-[10px] font-black text-white uppercase italic">25 - 45 min</span>
-                     </div>
-                     <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Pedido Mín.</span>
-                        <span className="text-[10px] font-black text-white uppercase italic">R$ 20,00</span>
-                     </div>
-                  </div>
-               </div>
-
-               <button className="w-full py-4 bg-primary text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest opacity-20 pointer-events-none">
-                  Ver Cardápio
-               </button>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900/50 p-8 rounded-[40px] border border-slate-100 dark:border-white/5 flex items-center gap-5">
-             <div className="size-16 rounded-[24px] bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                <span className="material-symbols-outlined text-3xl font-black">support_agent</span>
-             </div>
-             <div>
-                <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Precisa de Ajuda?</h4>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                   Consulte nosso guia de onboarding para novos parceiros ou fale com o suporte.
-                </p>
-             </div>
-          </div>
-        </div>
       </div>
     </div>
   );

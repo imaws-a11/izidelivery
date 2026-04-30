@@ -109,6 +109,7 @@ export default function MerchantsTab() {
 
           <button 
              onClick={() => {
+
                 setEditType('new_merchant');
                 setEditingItem({
                   store_name: '',
@@ -120,7 +121,7 @@ export default function MerchantsTab() {
                   is_active: true,
                   role: 'merchant'
                 });
-                setActiveTab('merchant_studio');
+                // O overlay global renderiza MerchantStudio via editType === 'new_merchant'
              }}
              className="h-16 px-10 bg-primary text-slate-900 rounded-[28px] shadow-2xl shadow-primary/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all group overflow-hidden relative"
           >

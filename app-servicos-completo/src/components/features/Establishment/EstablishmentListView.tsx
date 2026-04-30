@@ -131,7 +131,7 @@ export const EstablishmentListView = ({
         )}
 
         <div className="flex flex-col gap-4 pb-10">
-          {establishments.filter(filterFn).filter(shop => shop.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop, i) => (
+          {(establishments || []).filter(filterFn || (() => true)).filter(shop => shop.name && shop.name.toLowerCase().includes((searchQuery || "").toLowerCase())).map((shop, i) => (
             <MerchantCard 
               key={shop.id || i}
               shop={shop}

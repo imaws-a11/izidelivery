@@ -59,7 +59,8 @@ export default function MerchantMapSelector({ isOpen, onClose, onConfirm, initia
         () => {
           toastError('Não foi possível obter sua localização');
           setLoading(false);
-        }
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
       );
     }
   }, [map]);

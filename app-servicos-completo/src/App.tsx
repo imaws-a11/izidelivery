@@ -2486,7 +2486,12 @@ const navigateSubView = (target: string) => {
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
 
 
-  const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
+  const { 
+    ESTABLISHMENTS, 
+    setESTABLISHMENTS, 
+    establishmentTypes,
+    setEstablishmentTypes 
+  } = useApp();
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: any, mode: string = 'auto') => {
     // 1. Garantir que manualOpen seja tratado corretamente (default true se null)
@@ -2914,7 +2919,7 @@ const navigateSubView = (target: string) => {
     [userLocation.lat, userLocation.lng, cart, selectedShop, isIziBlackMembership, ESTABLISHMENTS, marketConditions]
   );
 
-  const [establishmentTypes, setEstablishmentTypes] = useState<any[]>([]);
+
 
   useEffect(() => {
     const fetchEstablishmentTypes = async () => {
