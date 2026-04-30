@@ -47,11 +47,14 @@ export const VanWizard: React.FC<VanWizardProps> = ({
   showToast,
 }) => {
 
+  // Proteção contra undefined
+  const safeTransitData = transitData || {};
+
   const totalValue = React.useMemo(() => {
-    const base = distancePrices[transitData.type] || 0;
+    const base = distancePrices[safeTransitData.type] || 0;
     const distanceMultiplier = parseFloat(routeDistance) || 0;
     return base + (distanceMultiplier * 4.5);
-  }, [distancePrices, transitData.type, routeDistance]);
+  }, [distancePrices, safeTransitData.type, routeDistance]);
 
   React.useEffect(() => {
     updateLocation();
@@ -67,11 +70,11 @@ export const VanWizard: React.FC<VanWizardProps> = ({
           routePolyline={routePolyline} 
           driverLoc={driverLocation} 
           userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
-          originLoc={(transitData.origin?.lat && transitData.origin?.lng)
-            ? { lat: Number(transitData.origin.lat), lng: Number(transitData.origin.lng) }
+          originLoc={(safeTransitData.origin?.lat && safeTransitData.origin?.lng)
+            ? { lat: Number(safeTransitData.origin.lat), lng: Number(safeTransitData.origin.lng) }
             : null}
-          destLoc={(transitData.destination?.lat && transitData.destination?.lng)
-            ? { lat: Number(transitData.destination.lat), lng: Number(transitData.destination.lng) }
+          destLoc={(safeTransitData.destination?.lat && safeTransitData.destination?.lng)
+            ? { lat: Number(safeTransitData.destination.lat), lng: Number(safeTransitData.destination.lng) }
             : null}
           originLabel="MEU ENDEREÇO"
           onMyLocationClick={updateLocation} 
@@ -194,8 +197,8 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                         <div className="flex-1 min-w-0 pr-1">
                           <AddressSearchInput
                             placeholder="Endereço de Coleta"
-                            onSelect={(addr) => setTransitData((p: any) => ({...p, origin: addr}))}
-                            initialValue={transitData.origin?.address}
+                            onSelect={(addr) => setTransitData((p: any) => ({...(p || {}), origin: addr}))}
+                            initialValue={safeTransitData.origin?.address}
                             className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
                           />
                         </div>
@@ -203,7 +206,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                           whileTap={{ scale: 0.9 }}
                           onClick={() => updateLocation((addr, lat, lng) => {
                             setTransitData((p: any) => ({
-                              ...p, 
+                              ...(p || {}), 
                               origin: { 
                                 address: addr,
                                 lat: lat,
@@ -226,8 +229,8 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                       <div className="flex-1 min-w-0 pr-4">
                         <AddressSearchInput
                           placeholder="Endereço de Entrega"
-                          onSelect={(addr) => setTransitData((p: any) => ({...p, destination: addr}))}
-                          initialValue={transitData.destination?.address}
+                          onSelect={(addr) => setTransitData((p: any) => ({...(p || {}), destination: addr}))}
+                          initialValue={safeTransitData.destination?.address}
                           className="bg-transparent text-white font-black text-xs w-full outline-none placeholder:text-zinc-700"
                         />
                       </div>
@@ -309,13 +312,13 @@ export const VanWizard: React.FC<VanWizardProps> = ({
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               if (mobilityStep === 1) {
-                if (!transitData.origin || !transitData.destination) {
+                if (!safeTransitData.origin || !safeTransitData.destination) {
                   showToast("Defina a rota da van", "warning");
                   return;
                 }
                 setMobilityStep(2);
               } else {
-                setTransitData((prev: any) => ({ ...prev, estPrice: totalValue }));
+                setTransitData((prev: any) => ({ ...(prev || {}), estPrice: totalValue }));
                 setPaymentsOrigin("checkout");
                 navigateSubView("mobility_payment");
               }

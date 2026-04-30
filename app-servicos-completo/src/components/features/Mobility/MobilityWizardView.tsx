@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { useApp } from "../../../contexts/AppContext";
 import { TaxiWizard } from "./TaxiWizard";
@@ -7,7 +8,11 @@ import { MobilityPaymentView } from "./MobilityPaymentView";
 import { ExcursionWizard } from "../Excursions/ExcursionWizard";
 import { ExcursionDetail } from "../Excursions/ExcursionDetail";
 
-export const MobilityWizardView = () => {
+interface MobilityWizardViewProps {
+  updateLocation?: (force?: boolean, onSuccess?: (address: string, lat: number, lng: number) => void) => void;
+}
+
+export const MobilityWizardView: React.FC<MobilityWizardViewProps> = ({ updateLocation: updateLocationProp }) => {
   const {
     subView,
     setSubView,
@@ -16,7 +21,7 @@ export const MobilityWizardView = () => {
     mobilityStep,
     setMobilityStep,
     userLocation,
-    updateLocation,
+    updateLocation: updateLocationCtx,
     routePolyline,
     routeDistance,
     driverLocation,
@@ -45,6 +50,9 @@ export const MobilityWizardView = () => {
     setShowDatePicker,
     setShowTimePicker
   } = useApp();
+
+  // Usa a versão robusta do App.tsx (com geocoding) se disponível, senão fallback para contexto
+  const updateLocation = updateLocationProp || updateLocationCtx;
 
   if (subView === "taxi_wizard") {
     return (

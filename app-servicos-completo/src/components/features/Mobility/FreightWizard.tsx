@@ -45,7 +45,9 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   showToast,
 }) => {
 
-  const freightData = transitData.freightData || {
+  // Define valores padrão se transitData for null/undefined
+  const safeTransitData = transitData || {};
+  const freightData = safeTransitData.freightData || {
     vehicleType: "",
     hasStairs: false,
     helpers: 0,
@@ -53,10 +55,13 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   };
 
   const updateFreight = (updates: any) => {
-    setTransitData((prev: any) => ({
-      ...prev,
-      freightData: { ...(prev.freightData || freightData), ...updates }
-    }));
+    setTransitData((prev: any) => {
+      const p = prev || {};
+      return {
+        ...p,
+        freightData: { ...(p.freightData || freightData), ...updates }
+      };
+    });
   };
 
   React.useEffect(() => {
@@ -107,11 +112,11 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
           userLoc={(userLocation?.lat && userLocation?.lng)
             ? { lat: userLocation.lat as number, lng: userLocation.lng as number }
             : null}
-          originLoc={(transitData.origin?.lat && transitData.origin?.lng)
-            ? { lat: Number(transitData.origin.lat), lng: Number(transitData.origin.lng) }
+          originLoc={(safeTransitData.origin?.lat && safeTransitData.origin?.lng)
+            ? { lat: Number(safeTransitData.origin.lat), lng: Number(safeTransitData.origin.lng) }
             : null}
-          destLoc={(transitData.destination?.lat && transitData.destination?.lng)
-            ? { lat: Number(transitData.destination.lat), lng: Number(transitData.destination.lng) }
+          destLoc={(safeTransitData.destination?.lat && safeTransitData.destination?.lng)
+            ? { lat: Number(safeTransitData.destination.lat), lng: Number(safeTransitData.destination.lng) }
             : null}
           originLabel="MEU ENDEREÇO"
           onMyLocationClick={updateLocation}
@@ -254,8 +259,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                         <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1">Meu endereço</p>
                         <AddressSearchInput
                           placeholder="Local de coleta..."
-                          onSelect={(addr) => setTransitData((p: any) => ({ ...p, origin: addr }))}
-                          initialValue={transitData.origin?.address}
+                          onSelect={(addr) => setTransitData((p: any) => ({ ...(p || {}), origin: addr }))}
+                          initialValue={safeTransitData.origin?.address}
                           className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
                         />
                       </div>
@@ -263,7 +268,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                         whileTap={{ scale: 0.9 }}
                         onClick={() => updateLocation(true, (addr, lat, lng) => {
                           setTransitData((p: any) => ({
-                            ...p,
+                            ...(p || {}),
                             origin: {
                               address: addr,
                               lat: lat,
@@ -301,8 +306,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                       <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest mb-1">Entrega</p>
                       <AddressSearchInput
                         placeholder="Local de entrega..."
-                        onSelect={(addr) => setTransitData((p: any) => ({ ...p, destination: addr }))}
-                        initialValue={transitData.destination?.address}
+                        onSelect={(addr) => setTransitData((p: any) => ({ ...(p || {}), destination: addr }))}
+                        initialValue={safeTransitData.destination?.address}
                         className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
                       />
                     </div>
@@ -322,7 +327,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                           animate={{ scale: selected ? 1.05 : 1, y: selected ? -4 : 0 }}
                           onClick={() => {
                             updateFreight({ vehicleType: v.name });
-                            setTransitData((prev: any) => ({ ...prev, vehicleCategory: v.name }));
+                            setTransitData((prev: any) => ({ ...(prev || {}), vehicleCategory: v.name }));
                           }}
                           className={`min-w-[105px] p-4 rounded-[28px] flex flex-col items-center justify-between gap-3 transition-all duration-300 shrink-0 relative overflow-hidden`}
                           style={
@@ -605,7 +610,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
               whileTap={{ scale: 0.96 }}
               onClick={() => {
                 if (mobilityStep === 1) {
-                  if (!transitData.origin || !transitData.destination) {
+                  if (!safeTransitData.origin || !safeTransitData.destination) {
                     showToast("Escolha os locais de coleta e entrega", "warning");
                     return;
                   }
@@ -615,7 +620,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                   }
                   setMobilityStep(2);
                 } else {
-                  setTransitData((prev: any) => ({ ...prev, estPrice: totalValue }));
+                  setTransitData((prev: any) => ({ ...(prev || {}), estPrice: totalValue }));
                   setPaymentsOrigin("checkout");
                   navigateSubView("mobility_payment");
                 }

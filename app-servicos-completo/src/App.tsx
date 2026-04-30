@@ -430,8 +430,14 @@ function App() {
       }
 
       try {
-        // 1. ATUALIZA MAPA E ESTADO IMEDIATAMENTE (Sem Lag)
+        // PROTEÇÃO: Nunca sobrescrever coordenadas boas com piores
+        // Se já temos coords com boa precisão, rejeita atualizações com precisão muito pior
         setUserLocation(prev => {
+          const prevAccuracy = prev.accuracy as number | undefined;
+          if (prevAccuracy && accuracy && prevAccuracy < 200 && accuracy > prevAccuracy * 3) {
+            console.log(`[GPS] Ignorando coords ruins (${accuracy.toFixed(0)}m) — já temos ${prevAccuracy.toFixed(0)}m`);
+            return prev; // Mantém as coords atuais, melhores
+          }
           return { ...prev, lat: latitude, lng: longitude, accuracy, loading: false };
         });
         
@@ -552,14 +558,47 @@ function App() {
       setUserLocation({ address: "Geolocalização não disponível", loading: false });
       return;
     }
+
+    const tryGoogleGeolocationAPI = async () => {
+      // Google Geolocation API - muito mais precisa que navigator.geolocation em desktops
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/geolocation/v1/geolocate?key=${GMAPS_KEY}`,
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ considerIp: true }) }
+        );
+        const data = await res.json();
+        if (data.location) {
+          console.log(`[GPS] Google Geolocation API: ${data.location.lat}, ${data.location.lng} (precisão: ${data.accuracy}m)`);
+          await processCoords(data.location.lat, data.location.lng, data.accuracy);
+          return true;
+        }
+      } catch (e) {
+        console.warn("[GPS] Google Geolocation API falhou:", e);
+      }
+      return false;
+    };
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        await processCoords(position.coords.latitude, position.coords.longitude, position.coords.accuracy);
+        const { latitude, longitude, accuracy } = position.coords;
+        console.log(`[GPS] Browser geolocation: ${latitude}, ${longitude} (precisão: ${accuracy?.toFixed(0)}m)`);
+        await processCoords(latitude, longitude, accuracy);
       },
-      () => {
-        setUserLocation({ address: "Permissão de localização negada", loading: false });
+      async (error) => {
+        console.warn("[GPS] Browser geolocation falhou:", error.message);
+        // Só usa Google Geolocation API se NÃO temos coordenadas prévias
+        const hasExistingCoords = userLocation.lat && userLocation.lng;
+        if (!hasExistingCoords) {
+          console.log("[GPS] Sem coords prévias. Tentando Google Geolocation API...");
+          const ok = await tryGoogleGeolocationAPI();
+          if (!ok) {
+            setUserLocation(prev => ({ ...prev, address: "Não foi possível obter localização", loading: false }));
+          }
+        } else {
+          console.log("[GPS] Mantendo coords existentes (browser timeout mas já temos GPS).");
+        }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -610,8 +649,11 @@ function App() {
               };
             });
           },
-          () => {},
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          (err) => {
+            // watchPosition pode dar timeout em desktop - não faz nada, mantém coords existentes
+            console.log("[GEO] Watch timeout/erro (normal em desktop):", err?.message);
+          },
+          { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
         );
       }
     }
@@ -5114,7 +5156,7 @@ const navigateSubView = (target: string) => {
                 {/* Mobilidade */}
                 {["taxi_wizard", "freight_wizard", "van_wizard", "mobility_payment", "excursion_wizard", "excursion_detail"].includes(subView) && (
                   <motion.div key="mobility-wizard" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[115]">
-                    <MobilityWizardView />
+                    <MobilityWizardView updateLocation={updateLocation} />
                   </motion.div>
                 )}
                 {subView === "logistics_tracking" && (
