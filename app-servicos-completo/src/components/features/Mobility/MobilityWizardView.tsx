@@ -10,9 +10,10 @@ import { ExcursionDetail } from "../Excursions/ExcursionDetail";
 
 interface MobilityWizardViewProps {
   updateLocation?: (force?: boolean, onSuccess?: (address: string, lat: number, lng: number) => void) => void;
+  userLocation?: any;
 }
 
-export const MobilityWizardView: React.FC<MobilityWizardViewProps> = ({ updateLocation: updateLocationProp }) => {
+export const MobilityWizardView: React.FC<MobilityWizardViewProps> = ({ updateLocation: updateLocationProp, userLocation: userLocationProp }) => {
   const {
     subView,
     setSubView,
@@ -20,7 +21,7 @@ export const MobilityWizardView: React.FC<MobilityWizardViewProps> = ({ updateLo
     setTransitData,
     mobilityStep,
     setMobilityStep,
-    userLocation,
+    userLocation: userLocationCtx,
     updateLocation: updateLocationCtx,
     routePolyline,
     routeDistance,
@@ -51,8 +52,9 @@ export const MobilityWizardView: React.FC<MobilityWizardViewProps> = ({ updateLo
     setShowTimePicker
   } = useApp();
 
-  // Usa a versão robusta do App.tsx (com geocoding) se disponível, senão fallback para contexto
+  // Usa versões robustas do App.tsx se disponíveis, senão fallback para contexto
   const updateLocation = updateLocationProp || updateLocationCtx;
+  const userLocation = userLocationProp || userLocationCtx;
 
   if (subView === "taxi_wizard") {
     return (
