@@ -904,9 +904,22 @@ function App() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            // Busca principal de vagas ativas
+            // Busca principal de vagas ativas + Vagas Aceitas (Agenda)
             const today = new Date().toLocaleDateString('en-CA');
-            const response = await fetch(`${supabaseUrl}/rest/v1/dedicated_slots_delivery?select=*&is_active=eq.true&or=(slot_date.is.null,slot_date.gte.${today})&order=created_at.desc`, {
+            
+            // Pega IDs de vagas onde o entregador já foi aceito para garantir que elas apareçam mesmo se o lojista as "desativar" no mercado
+            const cachedAppsRaw = localStorage.getItem(`izi_apps_${driverId}`);
+            const acceptedSlotIds = cachedAppsRaw 
+                ? JSON.parse(cachedAppsRaw)
+                    .filter((app: any) => app.status === 'accepted')
+                    .map((app: any) => app.slot_id)
+                    .filter(Boolean)
+                : [];
+
+            // Constrói a query com suporte a vagas aceitas (Agenda)
+            const queryParams = `select=*&or=(is_active.eq.true${acceptedSlotIds.length > 0 ? `,id.in.(${acceptedSlotIds.join(',')})` : ''})&or=(slot_date.is.null,slot_date.gte.${today})&order=created_at.desc`;
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/dedicated_slots_delivery?${queryParams}`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 signal: controller.signal
             });
@@ -942,7 +955,7 @@ function App() {
             console.error("[CRITICAL] Falha na sincronização de vagas:", err.message);
             // Mantém o estado anterior em caso de erro de rede momentâneo
         }
-    }, []);
+    }, [driverId]);
 
     const [activeTab, setActiveTab] = useState<View>(() => (localStorage.getItem('izi_driver_active_tab') as View) || 'dashboard');
     const activeTabRef = useRef(activeTab);
@@ -3980,36 +3993,60 @@ function App() {
                   </button>
                     </div>
                     <div className="grid gap-4">
-                        {dedicatedSlots.length === 0 ? (
-                            <p className="text-[10px] text-white/30 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>
-                        ) : (
-                            dedicatedSlots.slice(0, 2).map((slot: any) => {
+                        {(() => {
+                            const todayStr = new Date().toLocaleDateString('en-CA');
+                            const currentDayEng = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+                            const visibleSlots = dedicatedSlots
+                                .filter(slot => {
+                                    const application = myApplications.find(app => String(app.slot_id) === String(slot.id));
+                                    const isAccepted = application?.status === 'accepted';
+                                    
+                                    // [CRITICAL] Se a vaga foi aceita, ela é parte da agenda do entregador e DEVE aparecer
+                                    if (isAccepted) {
+                                        // Para vagas recorrentes sem data fixa, mostra apenas por 1h após o aceite se for o caso, 
+                                        // mas aqui simplificamos para mostrar sempre que for pertinente ao dia ou agenda ativa
+                                        if (!slot.slot_date && application.updated_at) {
+                                            const acceptedAt = new Date(application.updated_at).getTime();
+                                            const oneHourMs = 60 * 60 * 1000;
+                                            if (Date.now() - acceptedAt > oneHourMs && !slot.day_of_week?.includes(currentDayEng)) return false;
+                                        }
+                                        return true;
+                                    }
+                                    
+                                    // Se não for aceita, só mostra se estiver ativa e for para hoje
+                                    if (!slot.is_active) return false;
+                                    
+                                    if (slot.slot_date) {
+                                        return slot.slot_date === todayStr;
+                                    } else if (slot.day_of_week && slot.day_of_week !== 'Daily') {
+                                        const days = slot.day_of_week.split(',');
+                                        return days.includes(currentDayEng);
+                                    }
+                                    return true;
+                                })
+                                .sort((a, b) => {
+                                    // Prioridade 1: Vagas Aceitas (Agenda)
+                                    const appA = myApplications.find(app => String(app.slot_id) === String(a.id));
+                                    const appB = myApplications.find(app => String(app.slot_id) === String(b.id));
+                                    const isAccA = appA?.status === 'accepted';
+                                    const isAccB = appB?.status === 'accepted';
+                                    
+                                    if (isAccA && !isAccB) return -1;
+                                    if (!isAccA && isAccB) return 1;
+                                    return 0;
+                                })
+                                .slice(0, 2);
+
+                            if (visibleSlots.length === 0) {
+                                return <p className="text-[10px] text-white/30 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>;
+                            }
+
+                            return visibleSlots.map((slot: any) => {
                                 const application = myApplications.find(app => String(app.slot_id) === String(slot.id));
                                 const hasApplied = !!application;
                                 const isAccepted = application?.status === 'accepted';
                                 const maxDeliveries = (slot.metadata?.base_deliveries || slot.max_deliveries || 0);
-                                
-                                // Oculta o card se não for pertinente a hoje
-                                const todayStr = new Date().toLocaleDateString('en-CA');
-                                const currentDayEng = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-                                
-                                if (slot.slot_date) {
-                                    // Vaga com data fixa: só mostra no dia
-                                    if (slot.slot_date !== todayStr) return null;
-                                } else if (slot.day_of_week && slot.day_of_week !== 'Daily') {
-                                    // Vaga recorrente: só mostra se hoje for um dos dias selecionados
-                                    const days = slot.day_of_week.split(',');
-                                    if (!days.includes(currentDayEng)) return null;
-                                }
-
-                                // Se a vaga foi aceita, controla a visibilidade (regra de 1h para recorrentes sem data)
-                                if (isAccepted && application?.updated_at) {
-                                    if (!slot.slot_date) {
-                                        const acceptedAt = new Date(application.updated_at).getTime();
-                                        const oneHourMs = 60 * 60 * 1000;
-                                        if (Date.now() - acceptedAt > oneHourMs) return null;
-                                    }
-                                }
                                 
                                 return (
                                     <motion.button 
@@ -4108,7 +4145,7 @@ function App() {
                                     </motion.button>
                                 );
                             })
-                        )}
+                        })()}
                     </div>
                 </section>
 
@@ -7110,6 +7147,36 @@ function App() {
                                 </div>
                             </div>
 
+                            {/* Detalhes Financeiros Detalhados */}
+                            <div className="space-y-4 relative z-10 px-2 py-2">
+                                <div className="flex justify-between items-center text-[10px] font-black">
+                                    <span className="text-zinc-500 uppercase tracking-[0.2em]">Valor Total Pedido</span>
+                                    <span className="text-white">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-black">
+                                    <span className="text-zinc-500 uppercase tracking-[0.2em]">Seu Ganho Bruto</span>
+                                    <span className="text-emerald-400">R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-black">
+                                    <span className="text-zinc-500 uppercase tracking-[0.2em]">Taxa Izi (Desconto)</span>
+                                    <span className="text-rose-400">- R$ {(grossEarnings - netEarnings).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                
+                                {(() => {
+                                    const isCash = selectedOrder.payment_method === 'dinheiro' || selectedOrder.payment_method === 'cash';
+                                    if (!isCash) return null;
+                                    return (
+                                        <div className="flex justify-between items-center text-[10px] font-black pt-3 border-t border-white/5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="size-2 rounded-full bg-amber-400 animate-pulse" />
+                                                <span className="text-amber-400 uppercase tracking-[0.2em]">Recebido em Dinheiro</span>
+                                            </div>
+                                            <span className="text-amber-400">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
                             {/* Alertas Operacionais */}
                             <div className="relative z-10">
                                 {isPaid || selectedOrder.payment_method === 'online' ? (
@@ -7130,6 +7197,38 @@ function App() {
                         </div>
                     </section>
 
+
+                    {/* Logística e Rota */}
+                    <section className="space-y-4">
+                        <div className="flex justify-between items-center px-2">
+                            <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest">Rota do Pedido</h2>
+                        </div>
+                        <div className={`bg-neutral-900 ${clayCardDark} rounded-[32px] p-6 border border-white/5 space-y-6 shadow-2xl`}>
+                            <div className="flex gap-4">
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className="size-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                        <Icon name="store" className="text-blue-400" size={16} />
+                                    </div>
+                                    <div className="w-0.5 h-10 bg-gradient-to-b from-blue-500/50 to-emerald-500/50" />
+                                    <div className="size-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                        <Icon name="location_on" className="text-emerald-400" size={16} />
+                                    </div>
+                                </div>
+                                <div className="flex-1 space-y-8">
+                                    <div>
+                                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Coleta em</p>
+                                        <p className="text-white font-bold text-sm mt-1">{selectedOrder.merchant_name || 'Parceiro Izi'}</p>
+                                        <p className="text-zinc-400 text-xs mt-0.5 line-clamp-1">{selectedOrder.merchant_address || 'Endereço de coleta disponível na missão'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Entregar para</p>
+                                        <p className="text-white font-bold text-sm mt-1">{selectedOrder.customer_name || 'Cliente Izi'}</p>
+                                        <p className="text-zinc-400 text-xs mt-0.5 line-clamp-1">{selectedOrder.address || selectedOrder.customer_address || 'Endereço de entrega'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
                     {/* Observações e Ações Group */}
                     <section className={`bg-neutral-900 ${clayCard} rounded-[28px] border border-neutral-800/50 overflow-hidden`}>

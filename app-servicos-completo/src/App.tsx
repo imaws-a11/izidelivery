@@ -79,22 +79,41 @@ function App() {
     // Global / Config
     isInitializing, initError, globalSettings, appSettings, 
     activeBroadcast, closeBroadcast,
+    pixCpf, setPixCpf, pixConfirmed, setPixConfirmed, lightningData, setLightningData,
 
     // Orquestração de View
-    view, setView, tab, setTab, subView, setSubView, navigateSubView,
-    selectedItem, setSelectedItem, paymentsOrigin, setPaymentsOrigin,
-    userLocation, updateLocation,
+    view, setView, tab, setTab, subView, setSubView, navigateSubView: _ignoredNavigate,
+    selectedItem, setSelectedItem, selectedShop, setSelectedShop, activeService, setActiveService, paymentsOrigin, setPaymentsOrigin,
+    userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versões locais legadas
 
     // Outros Contextos
     walletBalance, iziCoins, userXP, iziCashbackEarned, isIziBlackMembership, walletTransactions, fetchWalletData,
     orders, activeOrder, fetchOrders, setActiveOrder,
     savedAddresses, saveAddress, deleteAddress, setActiveAddress,
 
+    // Checkout & Cart
+    cart, setCart, appliedCoupon, setAppliedCoupon, useCoins, setUseCoins, getCartSubtotal, clearCart: _ignoredClearCart,
+
     // Libs
     toastSuccess, toastError, showConfirm
   } = useApp();
 
   const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
+  const userLevel = useMemo(() => Math.floor((userXP || 0) / 100) + 1, [userXP]);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showMasterPerks, setShowMasterPerks] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [aiMessage, setAiMessage] = useState("Olá! Como posso ajudar você hoje?");
+  const [showCoinTrackingModal, setShowCoinTrackingModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
+  const [savedCards, setSavedCards] = useState<any[]>([]);
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
+  
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   const triggerCartAnimation = (e: React.MouseEvent, img: string) => {
     const id = Date.now().toString() + Math.random();
@@ -105,6 +124,7 @@ function App() {
   };
 
   const [showSplash, setShowSplash] = useState(true);
+  const [flashOffers, setFlashOffers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isInitializing) {
@@ -137,14 +157,12 @@ function App() {
 
 
 
-  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
 
   // As funções de endereço e cartões foram migradas para AddressContext e WalletContext
 
   useEffect(() => {
     fetchMarketData();
     fetchFlashOffers();
-    fetchGlobalSettings();
     fetchBeveragePromo();
     const interval = setInterval(fetchMarketData, 20000);
     const flashChannel = supabase.channel('flash_offers_realtime')
@@ -611,11 +629,9 @@ function App() {
       setView("app");
       window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
       
-      fetchMyOrders(userId!);
-      fetchWalletBalance(userId!);
+      fetchOrders();
+      fetchWalletData();
       fetchSavedCards(userId!);
-      fetchSavedAddresses(userId!);
-      fetchCartData(userId!);
       fetchCoupons();
       fetchBeveragePromo();
       fetchFlashOffers();
@@ -637,7 +653,7 @@ function App() {
           if (!newOrder || newOrder.user_id !== userIdRef.current) return;
 
           // Sempre atualizar a lista local para refletir no F5 ou navegações
-          if (userIdRef.current) fetchMyOrders(userIdRef.current);
+          if (userIdRef.current) fetchOrders();
 
           // Verificar transições de status para Toasts
           const statusChanged = oldOrder && oldOrder.status && newOrder.status !== oldOrder.status;
@@ -791,7 +807,7 @@ function App() {
         { event: "*", schema: "public", table: "orders_delivery", filter: `user_id=eq.${userId}` },
         (payload) => {
           console.log("[SYNC] Pedido atualizado, atualizando lista e visualização...");
-          fetchMyOrders(userId);
+          fetchOrders();
           // Se o pedido atual for o que estamos vendo, atualiza o item selecionado
           if (selectedItemRef.current && (payload.new as any).id === selectedItemRef.current.id) {
              setSelectedItem(payload.new);
@@ -806,27 +822,21 @@ function App() {
       supabase.removeChannel(orderSub);
     };
   }, [userId]);
-  
-  const fetchMyOrders = async (uid: string) => {
-    if (!uid) return;
-    const { data } = await supabase
-      .from("orders_delivery")
-      .select("*, drivers_delivery!driver_id(name, license_plate, avatar_url, phone, rating)")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: false });
-    
-    if (data) {
-      const mappedOrders = data.map((o: any) => ({
-        ...o,
-        driver_name: o.drivers_delivery?.name || o.driver_name,
-        driver_vehicle_plate: o.drivers_delivery?.license_plate || o.driver_vehicle_plate,
-        driver_avatar: o.drivers_delivery?.avatar_url || o.driver_avatar,
-        driver_phone: o.drivers_delivery?.phone || o.driver_phone,
-        driver_rating: o.drivers_delivery?.rating || o.driver_rating
-      }));
-      setMyOrders(mappedOrders);
+
+  const fetchSavedCards = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setSavedCards(data || []);
+    } catch (err) {
+      console.error("Erro ao buscar cartões:", err);
     }
   };
+  
 
   const handleCancelOrder = async (orderId: string) => {
     console.log("[DEBUG] Iniciando cancelamento do pedido:", orderId);
@@ -855,7 +865,7 @@ function App() {
       console.log("[DEBUG] Pedido cancelado/excluído no banco com sucesso.");
       toastSuccess("Pedido cancelado com sucesso!");
       
-      if (userId) fetchMyOrders(userId);
+      if (userId) fetchOrders();
       setSelectedItem(null);
       setTab("orders");
       setSubView("none");
@@ -890,7 +900,7 @@ function App() {
 
       toastSuccess("Recarga cancelada com sucesso!");
       
-      if (userId) fetchMyOrders(userId);
+      if (userId) fetchOrders();
       setSelectedItem(null);
       setSubView("none");
       setTab("home");
@@ -1444,7 +1454,7 @@ function App() {
       }).eq("id", userId);
       
       fetchCartData(userId); // Refetch to sync state
-      fetchMyOrders(userId);
+      fetchOrders();
     }
   };
 
@@ -1535,29 +1545,10 @@ function App() {
     }
   };
 
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponInput, setCouponInput] = useState("");
   const [, setCouponError] = useState("");
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  const [cart, setCart] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem("izi_cart");
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
-
-  const getCartSubtotal = useCallback(() => {
-    return cart.reduce((sum, item) => {
-      const basePrice = Number(item.price) || 0;
-      const addons = Array.isArray(item.options) ? item.options : (Array.isArray(item.addonDetails) ? item.addonDetails : []);
-      const addonsPrice = addons.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
-      return sum + (basePrice + addonsPrice) * (item.quantity || 1);
-    }, 0);
-  }, [cart]);
-
-  // Evitar sobrescrever a nuvem com carrinho vazio de um novo aparelho (Race condition do Login)
-  const isFirstEmptySync = useRef(cart.length === 0);
 
   // Persistir carrinho no localStorage e Supabase sempre que mudar
   useEffect(() => {
@@ -1607,8 +1598,9 @@ function App() {
   const tabRef = useRef(tab);
   const subViewRef = useRef(subView);
   const userIdRef = useRef(userId);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+
   const selectedItemRef = useRef(selectedItem);
+  const previousSubViewRef = useRef(subView);
   const cartRef = useRef(cart);
 
   useEffect(() => { subViewRef.current = subView; }, [subView]);
@@ -1955,11 +1947,11 @@ function App() {
       const straightLine = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       // Multiplicador de rota real vs linha reta (~30% a mais)
       distKm = straightLine * 1.3;
-      console.log(`[DELIVERY] Distância calculada em tempo real: ${distKm.toFixed(3)} km (linha reta: ${straightLine.toFixed(3)} km)`);
+      // console.log(`[DELIVERY] Distância calculada em tempo real: ${distKm.toFixed(3)} km (linha reta: ${straightLine.toFixed(3)} km)`);
     } else {
       // Fallback: distância pré-computada no carregamento dos lojistas ou padrão
       distKm = activeShop.distKm || 1.5;
-      console.warn(`[DELIVERY] GPS do usuário não disponível. Usando distância estimada de ${distKm.toFixed(1)} km`);
+      // console.warn(`[DELIVERY] GPS do usuário não disponível. Usando distância estimada de ${distKm.toFixed(1)} km`);
     }
 
     // Cálculo PROPORCIONAL (sem arredondamento por km)
@@ -1975,7 +1967,7 @@ function App() {
       ? dynamicCalculated
       : (fixedShopFee !== null ? fixedShopFee : dynamicCalculated);
 
-    console.log(`[DELIVERY] Taxa final (Modo: ${activeShop.coverageMode}, Dist: ${distKm.toFixed(3)} km): R$ ${finalFee}`);
+    // console.log(`[DELIVERY] Taxa final (Modo: ${activeShop.coverageMode}, Dist: ${distKm.toFixed(3)} km): R$ ${finalFee}`);
     return finalFee;
   };
 
@@ -2379,7 +2371,7 @@ const navigateSubView = (target: string) => {
         }
 
         // Atualizar lista de pedidos também se o usuário estiver logado
-        if (userId) fetchMyOrders(userId);
+        if (userId) fetchOrders();
       })
       .subscribe();
 
@@ -2695,7 +2687,7 @@ const navigateSubView = (target: string) => {
           filter: `user_id=eq.${userId}`
         },
         () => {
-          fetchMyOrders(userId);
+          fetchOrders();
         }
       )
       .subscribe();
@@ -2705,17 +2697,17 @@ const navigateSubView = (target: string) => {
     };
   }, [userId]);
   
-  const [myOrders, setMyOrders] = useState<any[]>([]);
+
 
   // Sincroniza o selectedItem com as atualizações em tempo real
   useEffect(() => {
     if (selectedItem?.id) {
-      const updated = myOrders.find(o => o.id === selectedItem.id);
+      const updated = orders.find(o => o.id === selectedItem.id);
       if (updated && JSON.stringify(updated) !== JSON.stringify(selectedItem)) {
         setSelectedItem(updated);
       }
     }
-  }, [myOrders]);
+  }, [orders]);
 
   // Atualiza automaticamente as telas PIX/Lightning se o pagamento for confirmado em tempo real
   // Usa selectedItem.id (não o objeto inteiro) como dependência para evitar loops de re-render
@@ -2723,7 +2715,7 @@ const navigateSubView = (target: string) => {
     if ((subView !== "pix_payment" && subView !== "lightning_payment")) return;
     if (!selectedItem?.id || selectedItem.id === "temp") return;
 
-    const liveOrder = myOrders.find((o: any) => o.id === selectedItem.id);
+    const liveOrder = orders.find((o: any) => o.id === selectedItem.id);
     if (!liveOrder || !liveOrder.status) return;
 
     // PRIORIDADE 1: Pagamento confirmado (paid ou novo)
@@ -2747,14 +2739,14 @@ const navigateSubView = (target: string) => {
       toastError("Pagamento recusado ou pedido cancelado.");
       setSubView("payment_error");
     }
-  }, [myOrders, subView, selectedItem?.id]); // selectedItem.id previne loop
+  }, [orders, subView, selectedItem?.id]); // selectedItem.id previne loop
 
   // Sincroniza logistics_tracking em tempo real
   useEffect(() => {
     if (subView !== "logistics_tracking") return;
     if (!selectedItem?.id) return;
 
-    const liveOrder = myOrders.find((o: any) => o.id === selectedItem.id);
+    const liveOrder = orders.find((o: any) => o.id === selectedItem.id);
     if (!liveOrder || !liveOrder.status) return;
 
     // Atualiza dados do motorista/status em tempo real sem loop
@@ -2777,7 +2769,7 @@ const navigateSubView = (target: string) => {
     if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
       toastError("Serviço cancelado.");
     }
-  }, [myOrders, subView, selectedItem?.id, selectedItem?.status, selectedItem?.driver_id]);
+  }, [orders, subView, selectedItem?.id, selectedItem?.status, selectedItem?.driver_id]);
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
 
@@ -2827,7 +2819,7 @@ const navigateSubView = (target: string) => {
   const [profileCpf, setProfileCpf] = useState<string>("");
   const [orderNotes] = useState<string>("");
   const [showPixPayment, setShowPixPayment] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(0);
+
   const [driverPos, setDriverPos] = useState<{ lat: number | null, lng: number | null }>({ lat: null, lng: null });
   const [adIndex, setAdIndex] = useState(0);
   const [beverageBanners, setBeverageBanners] = useState<any[]>([]);
@@ -4153,7 +4145,15 @@ const navigateSubView = (target: string) => {
       lightningData?.btcPrice || 
       lightningData?.btc_price_brl || 
       appSettings?.lastBtcPrice || 
-      500000 // Fallback final para evitar divisão por zero
+      500000
+    );
+
+    return (
+      <div className="flex flex-col h-full bg-zinc-950">
+        <main className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="bg-zinc-900/50 rounded-3xl p-8 border border-white/5 text-center">
+             <p className="text-zinc-400 text-sm">
+               Pagamento via Lightning: {invoice.slice(0, 32)}...
              </p>
           </div>
         </main>
@@ -4928,7 +4928,7 @@ const navigateSubView = (target: string) => {
                       userLocation={userLocation} 
                       isIziBlackMembership={isIziBlackMembership}
                       cart={cart} 
-                      myOrders={myOrders} 
+                      myOrders={orders} 
                       navigateSubView={navigateSubView} 
                       setSubView={setSubView} 
                       subView={subView} 
@@ -4966,12 +4966,12 @@ const navigateSubView = (target: string) => {
                 {tab === "orders" && (
                   <motion.div key="orders-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
                      <OrderListView 
-                       myOrders={myOrders} 
+                       orders={orders} 
                        userId={userId} 
                        setSubView={setSubView} 
                        setSelectedItem={setSelectedItem} 
                        navigateSubView={navigateSubView} 
-                       fetchMyOrders={fetchMyOrders} 
+                       fetchMyOrders={fetchOrders} 
                        tab={tab} 
                        onOpenCoinTracking={(order) => {
                          setSelectedItem(order);
@@ -4982,7 +4982,7 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "wallet" && (
                   <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 0.0} isIziBlack={isIziBlackMembership} />
+                     <WalletView walletTransactions={walletTransactions} orders={orders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 0.0} isIziBlack={isIziBlackMembership} />
                   </motion.div>
                 )}
                 {tab === "profile" && (
@@ -5035,7 +5035,7 @@ const navigateSubView = (target: string) => {
                       setSubView={(v: any) => setSubView(v)} 
                       iziCoins={iziCoins} 
                       iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 1.0} 
-                      deliveryFee={calculateDeliveryFee()} 
+                      deliveryFee={currentDeliveryFee} 
                       isIziBlack={isIziBlackMembership}
                       walletBalance={walletBalance}
                       isShopOpen={selectedShop ? isStoreOpen(selectedShop.opening_hours, selectedShop.is_open, selectedShop.opening_mode) : true}
@@ -5197,8 +5197,6 @@ const navigateSubView = (target: string) => {
           ))}
         </AnimatePresence>
 
-        {renderMyQRModal()}
-        {renderTransferModal()}
         {renderDepositModal()}
         {renderCoinTrackingModal()}
         {renderBroadcastPopup()}

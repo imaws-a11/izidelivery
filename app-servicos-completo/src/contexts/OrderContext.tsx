@@ -26,7 +26,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .from("orders_delivery")
         .select(`
           *,
-          merchants_delivery (name, logo_url),
           drivers_delivery (name, avatar_url, phone, lat, lng)
         `)
         .eq("user_id", userId)

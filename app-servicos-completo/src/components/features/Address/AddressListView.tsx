@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useAddress } from "../../../hooks/useAddress";
 import { useApp } from "../../../hooks/useApp";
-import { AddressSearchInput } from "../../common/AddressSearchInput";
+import { AddressSearchInput } from "./AddressSearchInput";
 
 export const AddressListView = () => {
   const { 

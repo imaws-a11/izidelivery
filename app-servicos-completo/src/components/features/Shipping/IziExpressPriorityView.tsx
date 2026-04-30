@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useApp } from "../../../hooks/useApp";
-import { Icon } from "../../ui/Icon";
+import { Icon } from "../../common/Icon";
 
 export const IziExpressPriorityView = () => {
   const { 

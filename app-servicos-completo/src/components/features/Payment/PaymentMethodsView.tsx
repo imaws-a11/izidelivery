@@ -1,24 +1,20 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { useWallet } from "../../../hooks/useWallet";
 import { useApp } from "../../../hooks/useApp";
 import { Icon } from "../../common/Icon";
 
 export const PaymentMethodsView = () => {
-  const { 
-    savedCards, 
-    handleDeleteCard, 
-    walletBalance, 
-    iziCoins 
-  } = useWallet();
-
   const { 
     setSubView, 
     selectedCard, 
     setSelectedCard, 
     paymentMethod, 
     setPaymentMethod,
-    globalSettings
+    globalSettings,
+    savedCards, 
+    handleDeleteCard, 
+    walletBalance, 
+    iziCoins 
   } = useApp();
 
   const [isAddingCard, setIsAddingCard] = useState(false);

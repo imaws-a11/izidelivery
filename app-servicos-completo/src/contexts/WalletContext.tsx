@@ -49,8 +49,21 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(50);
-      
-      if (txs) setWalletTransactions(txs);
+
+      if (txs) {
+        // Filtra transações que pertencem exclusivamente ao fluxo de entregador
+        const userTxs = txs.filter(tx => {
+          if (tx.type === 'vaga_dedicada') return false;
+          if (tx.description && (
+            tx.description.startsWith('Ganhos:') || 
+            tx.description.includes('pagamento em Dinheiro') ||
+            tx.description.startsWith('Saque') ||
+            tx.description.toLowerCase().includes('corrida finalizada')
+          )) return false;
+          return true;
+        });
+        setWalletTransactions(userTxs);
+      }
     } catch (e) {
       console.error("Erro ao carregar dados da carteira:", e);
     } finally {
