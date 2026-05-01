@@ -1,4 +1,5 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { useAdmin } from '../context/AdminContext';
 import type { DynamicRatesState } from '../lib/types';
 
@@ -47,6 +48,69 @@ export default function DynamicRatesTab() {
 
   // Tempo Médio (Estimativa baseada em volume)
   const avgPickup = ratio > 1.5 ? '15-20' : (ratio > 1 ? '10-12' : '5-8');
+
+  // Gestão de Ícones
+  const [serviceIcons, setServiceIcons] = useState<Record<string, string>>({});
+  const [uploadingIcon, setUploadingIcon] = useState<string | null>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
+  const activeIconKey = useRef<string | null>(null);
+
+  const fetchIcons = async () => {
+    const { data } = await supabase.from('izi_service_categories').select('category_key, icon_url');
+    if (data) {
+      const mapping = data.reduce((acc: any, item: any) => {
+        acc[item.category_key] = item.icon_url;
+        return acc;
+      }, {});
+      setServiceIcons(mapping);
+    }
+  };
+
+  useEffect(() => { fetchIcons(); }, []);
+
+  const onUploadIcon = (key: string) => {
+    activeIconKey.current = key;
+    iconInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const key = activeIconKey.current;
+    if (!file || !key) return;
+
+    setUploadingIcon(key);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${key}_${Date.now()}.${fileExt}`;
+      const filePath = `service-icons/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('assets')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('assets')
+        .getPublicUrl(filePath);
+
+      const { error: dbError } = await supabase
+        .from('izi_service_categories')
+        .update({ icon_url: publicUrl })
+        .eq('category_key', key);
+
+      if (dbError) throw dbError;
+
+      setServiceIcons(prev => ({ ...prev, [key]: publicUrl }));
+      alert(`Ícone para ${key} atualizado com sucesso!`);
+    } catch (err) {
+      console.error('Erro no upload:', err);
+      alert('Erro ao fazer upload do ícone.');
+    } finally {
+      setUploadingIcon(null);
+      if (iconInputRef.current) iconInputRef.current.value = '';
+    }
+  };
 
   return (
     <>
@@ -361,7 +425,20 @@ export default function DynamicRatesTab() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                       {cat.vehicles.map((v: any) => (
                         <div key={v.minKey} className="p-5 rounded-3xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-                           <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{v.title}</p>
+                           <div className="flex items-center justify-between">
+                              <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{v.title}</p>
+                              <div className="flex items-center gap-2">
+                                 {serviceIcons[v.minKey.replace('_min', '')] && (
+                                    <img src={serviceIcons[v.minKey.replace('_min', '')]} className="size-6 object-contain opacity-50" alt="" />
+                                 )}
+                                 <button 
+                                   onClick={() => onUploadIcon(v.minKey.replace('_min', ''))}
+                                   className="size-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all"
+                                 >
+                                   {uploadingIcon === v.minKey.replace('_min', '') ? <div className="size-3 border border-primary border-t-transparent animate-spin rounded-full" /> : <span className="material-symbols-outlined text-xs">upload_file</span>}
+                                 </button>
+                              </div>
+                           </div>
                            <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Min (R$)</label>
@@ -505,10 +582,19 @@ export default function DynamicRatesTab() {
                       <div className={`size-14 rounded-2xl ${p.bg} ${p.color} flex items-center justify-center border border-current/10 shadow-sm`}>
                          <span className="material-symbols-outlined font-black text-2xl">{p.icon}</span>
                       </div>
-                      <div className="flex flex-col">
-                         <span className="font-black text-slate-900 dark:text-white uppercase tracking-tight italic">{p.label}</span>
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ajuste de margem de urgência</span>
-                      </div>
+                       <div className="flex flex-col">
+                          <span className="font-black text-slate-900 dark:text-white uppercase tracking-tight italic">{p.label}</span>
+                          <div className="flex items-center gap-3 mt-1">
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ajuste de margem de urgência</span>
+                             <button 
+                               onClick={() => onUploadIcon(p.id)}
+                               className="px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-900 text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-amber-500 border border-slate-100 dark:border-slate-700 transition-all flex items-center gap-1"
+                             >
+                               {uploadingIcon === p.id ? '...' : 'Alterar Ícone'}
+                               <span className="material-symbols-outlined text-[10px]">upload_file</span>
+                             </button>
+                          </div>
+                       </div>
                    </div>
 
                    <div className="flex items-center gap-6">
@@ -773,6 +859,13 @@ export default function DynamicRatesTab() {
           </div>
         </section>
       </div>
+      <input 
+        type="file" 
+        ref={iconInputRef} 
+        onChange={handleFileChange} 
+        className="hidden" 
+        accept="image/*" 
+      />
     </>
   );
 }

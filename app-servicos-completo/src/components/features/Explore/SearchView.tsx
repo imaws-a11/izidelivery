@@ -13,7 +13,7 @@ export const SearchView: React.FC<SearchViewProps> = ({ onCategoryClick, onSearc
     { id: 'mercado', label: 'Mercado', img: 'https://cdn-icons-png.flaticon.com/512/3081/3081986.png', color: '#00a35e' },
     { id: 'farmacia', label: 'Farmácia', img: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png', color: '#ff7a00', badge: 'receba rápido' },
     { id: 'bebidas', label: 'Bebidas', img: 'https://cdn-icons-png.flaticon.com/512/3125/3125713.png', color: '#facc15' },
-    { id: 'corridas', label: 'Corridas', img: 'https://cdn-icons-png.flaticon.com/512/3125/3125724.png', color: '#000000', brand: 'Uber' },
+    { id: 'corridas', label: 'Viagens', img: 'https://cdn-icons-png.flaticon.com/512/3125/3125724.png', color: '#000000', brand: 'Uber' },
     { id: 'canarinho', label: 'Canarinho Izi', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132721.png', color: '#facc15' },
   ];
 

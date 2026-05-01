@@ -11,18 +11,18 @@ export const BakeryExploreView: React.FC<BakeryExploreViewProps> = (props) => {
     { label: "Pães", img: "https://cdn-icons-png.flaticon.com/512/3014/3014535.png" },
     { label: "Bolos", img: "https://cdn-icons-png.flaticon.com/512/3014/3014545.png" },
     { label: "Salgados", img: "https://cdn-icons-png.flaticon.com/512/3132/3132693.png" },
-    { label: "Frios", img: "https://cdn-icons-png.flaticon.com/512/3143/3143640.png" },
-    { label: "Leite & Ovos", img: "https://cdn-icons-png.flaticon.com/512/3105/3105814.png" },
+    { label: "Doces", img: "https://cdn-icons-png.flaticon.com/512/3132/3132709.png" },
+    { label: "Café", img: "https://cdn-icons-png.flaticon.com/512/3132/3132715.png" },
   ];
 
   return (
     <GenericCategoryExplorer
       {...props}
       title="Padarias"
-      placeholder="Buscar em Padarias"
+      placeholder="Pão quentinho e muito mais"
       activeService="Padaria"
       categories={categories}
-      listTitle="Padarias Próximas"
+      listTitle="Padarias e Confeitarias"
       serviceType="bakery"
     />
   );

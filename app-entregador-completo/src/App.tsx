@@ -16,26 +16,50 @@ import { IziBottomSheet } from './components/common/IziBottomSheet';
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
 
+const sClayLight: React.CSSProperties = {
+  background: 'linear-gradient(145deg, #ffffff, #f4f4f5)',
+  boxShadow: '15px 15px 35px rgba(0,0,0,0.05), inset 5px 5px 12px rgba(255,255,255,0.8)',
+  borderRadius: '32px'
+};
+
+const sClayDark: React.CSSProperties = {
+  background: 'linear-gradient(145deg, #18181b, #09090b)',
+  boxShadow: '15px 15px 35px rgba(0,0,0,0.4), inset 5px 5px 12px rgba(255,255,255,0.05)',
+  borderRadius: '32px'
+};
+
+const sClayYellow: React.CSSProperties = {
+  background: 'linear-gradient(145deg, #facc15, #eab308)',
+  boxShadow: '0 20px 45px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.5), inset -8px -8px 16px rgba(0,0,0,0.15)',
+  borderRadius: '32px'
+};
+
+const sClayIcon: React.CSSProperties = {
+  background: '#f8fafc',
+  border: '1px solid rgba(0,0,0,0.05)',
+  borderRadius: '20px'
+};
+
 const mapContainerStyle = { width: '100%', height: '100%' };
 const mapOptions = {
     disableDefaultUI: true,
     zoomControl: false,
     gestureHandling: 'greedy',
-    backgroundColor: '#111111',
+    backgroundColor: '#ffffff',
     styles: [
-        { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#888888" }] },
+        { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#64748b" }] },
         { "featureType": "all", "elementType": "labels.text.stroke", "stylers": [{ "visibility": "off" }] },
         { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
-        { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#1a1a1a" }] },
+        { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#f8fafc" }] },
         { "featureType": "poi", "elementType": "all", "stylers": [{ "visibility": "off" }] },
-        { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#2c2c2c" }] },
-        { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#3c3c3c" }] },
-        { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#FACD05" }, { "weight": 4 }] },
-        { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "visibility": "off" }] },
-        { "featureType": "road.arterial", "elementType": "geometry", "stylers": [{ "color": "#333333" }] },
-        { "featureType": "road.local", "elementType": "geometry", "stylers": [{ "color": "#282828" }] },
+        { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
+        { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#fde047" }] },
+        { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#eab308" }, { "visibility": "on" }, { "weight": 1 }] },
+        { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+        { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "color": "#e2e8f0" }, { "visibility": "on" }] },
+        { "featureType": "road.local", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
         { "featureType": "transit", "elementType": "all", "stylers": [{ "visibility": "off" }] },
-        { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0e1626" }] }
+        { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#bae6fd" }] }
     ]
 };
 
@@ -254,19 +278,18 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
   }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress, missionPhase]);
 
   const mapStyle = [
-    { "elementType": "geometry", "stylers": [{ "color": "#e2e8f0" }] },
+    { "elementType": "geometry", "stylers": [{ "color": "#f1f5f9" }] },
     { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-    { "elementType": "labels.text.fill", "stylers": [{ "color": "#475569" }] },
+    { "elementType": "labels.text.fill", "stylers": [{ "color": "#64748b" }] },
     { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }, { "weight": 3 }] },
     { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
     { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
     { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#94a3b8" }, { "visibility": "on" }, { "weight": 1.5 }] },
+    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#cbd5e1" }, { "visibility": "on" }, { "weight": 1 }] },
     { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-    { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "color": "#cbd5e1" }, { "visibility": "on" }, { "weight": 2 }] },
-    { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-    { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#94a3b8" }, { "visibility": "on" }, { "weight": 2.5 }] },
-    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#7dd3fc" }] }
+    { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#fef08a" }] },
+    { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#facc15" }, { "visibility": "on" }] },
+    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#bae6fd" }] }
   ];
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -286,7 +309,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
     }
   }, [map, isLoaded, routePolyline, vPickup?.lat, vDelivery?.lat]);
 
-  if (!isLoaded) return <div className="w-full h-full bg-black animate-pulse" />;
+  if (!isLoaded) return <div className="w-full h-full bg-white animate-pulse" />;
 
   const mapCenter = routeInfo?.start || vPickup || vDelivery || { lat: -19.9167, lng: -43.9345 };
 
@@ -300,7 +323,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
         options={{
           disableDefaultUI: true,
           styles: mapStyle,
-          backgroundColor: '#f8fafc',
+          backgroundColor: '#ffffff',
           gestureHandling: 'greedy',
           zoomControl: false,
           streetViewControl: false,
@@ -312,9 +335,9 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
         <Polyline 
           path={window.google.maps.geometry.encoding.decodePath(routePolyline)} 
           options={{ 
-            strokeColor: '#3b82f6',
+            strokeColor: '#facc15',
             strokeOpacity: 1.0,
-            strokeWeight: 6,
+            strokeWeight: 8,
           }} 
         />
       )}
@@ -398,19 +421,17 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
   const mapOptions = {
     disableDefaultUI: true,
     styles: [
-      { "elementType": "geometry", "stylers": [{ "color": "#e2e8f0" }] },
+      { "elementType": "geometry", "stylers": [{ "color": "#f8fafc" }] },
       { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-      { "elementType": "labels.text.fill", "stylers": [{ "color": "#475569" }] },
+      { "elementType": "labels.text.fill", "stylers": [{ "color": "#94a3b8" }] },
       { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }, { "weight": 3 }] },
       { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
       { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
       { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-      { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#94a3b8" }, { "visibility": "on" }, { "weight": 1.5 }] },
-      { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-      { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "color": "#fcd34d" }, { "visibility": "on" }, { "weight": 2 }] },
+      { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#e2e8f0" }, { "visibility": "on" }, { "weight": 1 }] },
       { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#fde047" }] },
-      { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#eab308" }, { "visibility": "on" }, { "weight": 2.5 }] },
-      { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#7dd3fc" }] }
+      { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#eab308" }, { "visibility": "on" }] },
+      { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#bae6fd" }] }
     ],
     gestureHandling: "greedy" as const
   };
@@ -475,9 +496,9 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
           <Polyline 
             path={window.google.maps.geometry.encoding.decodePath(routeData.poly)} 
             options={{ 
-              strokeColor: '#FACD05', 
+              strokeColor: '#facc15', 
               strokeOpacity: 0.9, 
-              strokeWeight: 6,
+              strokeWeight: 8,
             }} 
           />
         )}
@@ -486,10 +507,14 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
       {/* Indicador de Rota Ultra Minimalista */}
       {routeData && (
         <div className="absolute top-[115px] left-6 z-[60] animate-in fade-in slide-in-from-left-4 duration-700">
-           <div className="px-3 py-1.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full flex items-center gap-2">
-              <span className="text-[10px] font-black text-primary uppercase">{routeData.dur}</span>
-              <div className="w-[1px] h-3 bg-white/10" />
-              <span className="text-[10px] font-bold text-white/50 uppercase">{routeData.dist}</span>
+           <div className="px-4 py-2 bg-white/90 backdrop-blur-xl border border-zinc-100 rounded-2xl flex items-center gap-3 shadow-lg">
+              <div className="size-8 rounded-xl bg-yellow-400 flex items-center justify-center shadow-inner">
+                <Icon name="schedule" size={14} className="text-zinc-900" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black text-zinc-900 uppercase tracking-tighter leading-none">{routeData.dur}</span>
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">{routeData.dist}</span>
+              </div>
            </div>
         </div>
       )}
@@ -1402,11 +1427,15 @@ function App() {
     }, [selectedOrder, showOrderModal, driverCoords]);
 
     // Limpar modal ao trocar de aba ou sair
+    const prevTabRef = useRef<string>(activeTab);
     useEffect(() => {
-        if (activeTab !== 'dashboard') {
+        if (activeTab !== prevTabRef.current) {
             setShowOrderModal(false);
             setSelectedOrder(null);
+            setSelectedScheduledOrder(null);
+            setSelectedSlot(null);
         }
+        prevTabRef.current = activeTab;
     }, [activeTab]);
 
     const getPaymentLabel = (order: any) => {
@@ -3509,7 +3538,7 @@ function App() {
                 <motion.div 
                     layout
                     initial={false}
-                    className="clay-card-dark rounded-[32px] p-2 flex items-center justify-between border-white/5 backdrop-blur-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] pointer-events-auto overflow-hidden"
+                    className="clay-card rounded-[32px] p-2 flex items-center justify-between border-zinc-100 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.05)] pointer-events-auto overflow-hidden"
                 >
                     <AnimatePresence mode="wait">
                         {!isSlotDetailActive ? (
@@ -3539,6 +3568,16 @@ function App() {
                                         <button
                                             key={item.id}
                                             onClick={() => {
+                                                // Limpeza de Modais ao trocar de aba para evitar fluxos errados
+                                                setShowOrderModal(false);
+                                                setShowBankDetails(false);
+                                                setShowPlateModal(false);
+                                                setShowPreferences(false);
+                                                setShowWithdrawModal(false);
+                                                setShowWithdrawHistory(false);
+                                                setShowWithdrawDetail(false);
+                                                setSelectedSlot(null);
+                                                
                                                 if (item.id === 'active_mission') {
                                                     // Ao clicar em "Missão" na navbar, limpa a seleção para mostrar a lista
                                                     setActiveMission(null);
@@ -3547,31 +3586,31 @@ function App() {
                                                 setActiveTab(item.id as any);
                                             }}
                                             className={`flex flex-col items-center gap-1 py-1.5 px-0.5 rounded-[20px] transition-all relative flex-1 min-w-0 ${
-                                                isActive ? 'text-primary' : 'text-white/30'
+                                                isActive ? 'text-yellow-600' : 'text-zinc-400'
                                             }`}
                                         >
                                             <div className={`size-10 sm:size-12 rounded-[16px] sm:rounded-[20px] flex items-center justify-center transition-all duration-300 ${
                                                 isActive 
-                                                    ? 'bg-primary shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),_inset_-3px_-3px_8px_rgba(0,0,0,0.2),_0_8px_20px_rgba(250,204,21,0.4)] scale-105 border border-yellow-300' 
+                                                    ? 'bg-yellow-400 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),_inset_-3px_-3px_8px_rgba(0,0,0,0.1),_0_8px_20px_rgba(250,204,21,0.2)] scale-105 border border-yellow-300' 
                                                     : 'bg-transparent'
                                             }`}>
                                                 <Icon 
                                                     name={item.icon} 
                                                     size={isActive ? 22 : 20} 
-                                                    className={isActive ? 'text-zinc-950 drop-shadow-sm' : 'text-white/30'} 
+                                                    className={isActive ? 'text-zinc-900 drop-shadow-sm' : 'text-zinc-400'} 
                                                 />
                                                 {item.badge > 0 && (
-                                                    <span className="absolute top-0 right-0 size-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-[inset_1px_1px_3px_rgba(255,255,255,0.4)]">
+                                                    <span className="absolute top-0 right-0 size-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
                                                         {item.badge}
                                                     </span>
                                                 )}
                                             </div>
                                             <span className={`text-[8px] font-black uppercase tracking-widest transition-all text-center pb-1 ${
-                                                isActive ? 'opacity-100 drop-shadow-[0_2px_8px_rgba(250,204,21,0.5)]' : 'opacity-0 h-0 hidden'
+                                                isActive ? 'opacity-100 text-zinc-900' : 'opacity-0 h-0 hidden'
                                             }`}>
                                                 {item.label}
                                             </span>
-                                            {isActive && <div className="absolute -bottom-1 size-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(250,204,21,0.8)]" />}
+                                            {isActive && <div className="absolute -bottom-1 size-1.5 rounded-full bg-yellow-500" />}
                                         </button>
                                     );
                                 })}
@@ -3586,7 +3625,7 @@ function App() {
                             >
                                 <button 
                                     onClick={() => { setSelectedSlot(null); stopIziSounds(); }}
-                                    className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all font-black"
+                                    className="size-14 rounded-2xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-900 active:scale-90 transition-all font-black"
                                 >
                                     <Icon name="close" size={24} />
                                 </button>
@@ -3599,40 +3638,32 @@ function App() {
                                         const isAccepted = application?.status === 'accepted';
                                         return (
                                             <div
-                                                className={`flex-1 flex items-center justify-center gap-4 h-15 rounded-[22px] font-black text-xs uppercase tracking-[0.3em] shadow-2xl relative overflow-hidden transition-all duration-500 ${
+                                                className={`flex-1 flex items-center justify-center gap-4 h-15 rounded-[22px] font-black text-xs uppercase tracking-[0.3em] shadow-lg relative overflow-hidden transition-all duration-500 ${
                                                     isAccepted 
-                                                        ? 'bg-gradient-to-r from-emerald-500/80 to-teal-600/80 text-white border border-emerald-400/30 backdrop-blur-md' 
-                                                        : 'bg-white/5 text-white border border-white/10 backdrop-blur-2xl'
+                                                        ? 'bg-emerald-500 text-white border border-emerald-400/30' 
+                                                        : 'bg-zinc-100 text-zinc-900 border border-zinc-200'
                                                 }`}
                                             >
-                                                {/* Efeito de brilho Superior */}
-                                                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                                                
                                                 <div className={`size-9 rounded-xl flex items-center justify-center shadow-inner ${
-                                                    isAccepted ? 'bg-white/20' : 'bg-primary/10 border border-primary/20'
+                                                    isAccepted ? 'bg-white/20' : 'bg-yellow-400/20 border border-yellow-400/20'
                                                 }`}>
                                                     <Icon 
                                                         name={isAccepted ? 'verified' : 'history'} 
                                                         size={22} 
-                                                        className={!isAccepted ? 'text-primary animate-pulse' : 'text-white'} 
+                                                        className={!isAccepted ? 'text-yellow-600 animate-pulse' : 'text-white'} 
                                                     />
                                                 </div>
                                                 <div className="flex flex-col items-start leading-none gap-1.5">
-                                                    <span className={`text-[10px] font-black tracking-[0.1em] ${isAccepted ? 'text-white' : 'text-primary'}`}>
+                                                    <span className={`text-[10px] font-black tracking-[0.1em] ${isAccepted ? 'text-white' : 'text-yellow-600'}`}>
                                                         {isAccepted ? 'Vaga Confirmada' : 'Aguardando Lojista'}
                                                     </span>
                                                     <div className="flex items-center gap-1.5">
-                                                        {!isAccepted && <div className="size-1 rounded-full bg-primary animate-ping" />}
-                                                        <span className={`text-[8px] font-bold uppercase ${isAccepted ? 'opacity-70' : 'text-slate-400'}`}>
-                                                            {isAccepted ? 'VOCÃŠ Ã‰ EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
+                                                        {!isAccepted && <div className="size-1 rounded-full bg-yellow-500 animate-ping" />}
+                                                        <span className={`text-[8px] font-bold uppercase ${isAccepted ? 'opacity-70' : 'text-zinc-400'}`}>
+                                                            {isAccepted ? 'VOCÃŠ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
                                                         </span>
                                                     </div>
                                                 </div>
-
-                                                {/* Raio de luz decorativo para o modo aguardando */}
-                                                {!isAccepted && (
-                                                    <div className="absolute -inset-x-20 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent blur-sm opacity-50" />
-                                                )}
                                             </div>
                                         );
                                     }
@@ -3641,17 +3672,17 @@ function App() {
                                         <button 
                                             disabled={!!applyingSlotId || hasApplied}
                                             onClick={() => selectedSlot && handleApplyToSlot(selectedSlot)}
-                                            className="flex-1 h-15 clay-card-exclusive overflow-hidden relative group active:scale-95 transition-all flex items-center justify-center gap-3 border border-primary/20 disabled:opacity-50"
+                                            className="flex-1 h-15 bg-white border border-yellow-400/20 rounded-[22px] shadow-lg relative group active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                         >
-                                            <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-10 transition-opacity" />
+                                            <div className="absolute inset-0 bg-yellow-400 opacity-10 group-hover:opacity-20 transition-opacity" />
                                             {applyingSlotId ? (
-                                                <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                                <div className="size-6 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
                                             ) : (
                                                 <>
-                                                    <div className="size-8 rounded-xl bg-primary/20 flex items-center justify-center">
-                                                        <Icon name="touch_app" size={20} className="text-primary" />
+                                                    <div className="size-8 rounded-xl bg-yellow-400/20 flex items-center justify-center">
+                                                        <Icon name="touch_app" size={20} className="text-yellow-600" />
                                                     </div>
-                                                    <span className="text-sm font-black text-primary uppercase tracking-[0.2em]">Candidatar Agora</span>
+                                                    <span className="text-sm font-black text-yellow-600 uppercase tracking-[0.2em]">Candidatar Agora</span>
                                                 </>
                                             )}
                                         </button>
@@ -3683,14 +3714,14 @@ function App() {
     };
 
     const renderDashboard = () => (
-        <div className="flex-1 flex flex-col relative overflow-hidden">
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-zinc-50">
             {/* Pull to Refresh Indicator */}
             <motion.div 
                 style={{ y: pullY - 60 }}
                 className="absolute top-0 left-0 right-0 flex justify-center z-50 pointer-events-none"
             >
-                <div className="bg-yellow-400 size-10 rounded-full flex items-center justify-center shadow-2xl border-2 border-white/20">
-                    <Icon name="sync" className={`text-zinc-900 ${isRefreshing ? 'animate-spin' : ''}`} size={20} />
+                <div className="bg-white size-10 rounded-full flex items-center justify-center shadow-lg border border-zinc-100">
+                    <Icon name="sync" className={`text-yellow-500 ${isRefreshing ? 'animate-spin' : ''}`} size={20} />
                 </div>
             </motion.div>
 
@@ -3720,37 +3751,37 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
-                    <header className="bg-yellow-400 rounded-[3rem] overflow-hidden relative p-10 flex flex-col items-center text-center gap-8 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+                    <header className="bg-yellow-400 rounded-[3rem] overflow-hidden relative p-10 flex flex-col items-center text-center gap-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
                     {/* Elementos Decorativos de Fundo */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/40 rounded-full blur-[100px] pointer-events-none" />
-                    <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-black/10 rounded-full blur-[80px] pointer-events-none" />
+                    <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-black/5 rounded-full blur-[80px] pointer-events-none" />
 
                     {/* Perfil Centralizado */}
                     <div className="relative z-10 flex flex-col items-center gap-4">
                         <div 
                             onClick={() => setActiveTab('profile')}
-                            className="w-24 h-24 rounded-[32px] border-4 border-white overflow-hidden shadow-2xl bg-stone-100 rotate-3 hover:rotate-0 transition-transform duration-500 cursor-pointer relative group"
+                            className="w-24 h-24 rounded-[32px] border-4 border-white overflow-hidden shadow-2xl bg-zinc-100 rotate-3 hover:rotate-0 transition-transform duration-500 cursor-pointer relative group"
                         >
                             {driverAvatar ? (
                                 <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <Icon name="person" size={48} className="text-black" />
+                                    <Icon name="person" size={48} className="text-zinc-900" />
                                 </div>
                             )}
                             
                             {/* Pequeno badge indicativo */}
-                            <div className="absolute bottom-1 right-1 size-6 rounded-full bg-black flex items-center justify-center border-2 border-white shadow-lg">
-                                <Icon name="photo_camera" size={10} className="text-white" />
+                            <div className="absolute bottom-1 right-1 size-6 rounded-full bg-white flex items-center justify-center border border-zinc-100 shadow-lg">
+                                <Icon name="photo_camera" size={10} className="text-zinc-900" />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <h1 className="text-3xl font-black text-black tracking-tight leading-none uppercase">
+                            <h1 className="text-3xl font-black text-zinc-900 tracking-tight leading-none uppercase">
                                 {driverName || 'Piloto Izi'}
                             </h1>
-                            <div className="flex items-center justify-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-black/5 backdrop-blur-md">
-                                <Icon name="military_tech" size={14} className="text-black" />
-                                <span className="text-black text-[10px] font-black uppercase tracking-[0.2em]">
+                            <div className="flex items-center justify-center gap-2 bg-white/20 px-4 py-1.5 rounded-full border border-white/20 backdrop-blur-md">
+                                <Icon name="military_tech" size={14} className="text-zinc-900" />
+                                <span className="text-zinc-900 text-[10px] font-black uppercase tracking-[0.2em]">
                                     Nível {stats.level} • VIP
                                 </span>
                             </div>
@@ -3759,47 +3790,47 @@ function App() {
 
                     {/* Ganhos de Hoje Centralizados e Gigantes */}
                     <div className="relative z-10 w-full">
-                        <p className="text-[10px] font-black uppercase text-black tracking-[0.4em] mb-2">Ganhos de Hoje</p>
+                        <p className="text-[10px] font-black uppercase text-zinc-900 tracking-[0.4em] mb-2">Ganhos de Hoje</p>
                         <div className="flex flex-col items-center">
                             <div className="flex items-start justify-center leading-none">
-                                <span className="text-4xl font-black text-black mt-4 mr-1">R$</span>
-                                <span className="text-[7rem] font-black text-black tracking-tighter leading-none">
+                                <span className="text-4xl font-black text-zinc-900 mt-4 mr-1">R$</span>
+                                <span className="text-[7rem] font-black text-zinc-900 tracking-tighter leading-none">
                                     {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
                                 </span>
-                                <span className="text-4xl font-black text-black mt-4 ml-1">,{stats.today.toFixed(2).split('.')[1]}</span>
+                                <span className="text-4xl font-black text-zinc-900 mt-4 ml-1">,{stats.today.toFixed(2).split('.')[1]}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Resumo Semanal e Barra de Progresso */}
                     <div className="relative z-10 w-full space-y-6">
-                        <div className="flex justify-around items-center py-4 bg-black/5 rounded-[2rem] border border-black/5">
+                        <div className="flex justify-around items-center py-4 bg-white/20 rounded-[2rem] border border-white/20">
                             <div className="text-center">
-                                <p className="text-[8px] font-black uppercase text-black tracking-widest mb-1">Esta Semana</p>
-                                <p className="text-xl font-black text-black">R$ {stats.weekly.toFixed(0)}</p>
+                                <p className="text-[8px] font-black uppercase text-zinc-900 tracking-widest mb-1">Esta Semana</p>
+                                <p className="text-xl font-black text-zinc-900">R$ {stats.weekly.toFixed(0)}</p>
                             </div>
                             <div className="w-px h-8 bg-black/10" />
                             <div className="text-center">
-                                <p className="text-[8px] font-black uppercase text-black tracking-widest mb-1">Entregas</p>
-                                <p className="text-xl font-black text-black">{stats.deliveries || 0}</p>
+                                <p className="text-[8px] font-black uppercase text-zinc-900 tracking-widest mb-1">Entregas</p>
+                                <p className="text-xl font-black text-zinc-900">{stats.deliveries || 0}</p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <div className="flex justify-between items-end px-2">
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl font-black text-black leading-none">{stats.xp}</span>
-                                    <span className="text-[10px] font-black text-black uppercase tracking-widest">XP</span>
+                                    <span className="text-2xl font-black text-zinc-900 leading-none">{stats.xp}</span>
+                                    <span className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">XP</span>
                                 </div>
-                                <p className="text-[9px] font-black text-black uppercase tracking-widest">Meta Nível {stats.level + 1}</p>
+                                <p className="text-[9px] font-black text-zinc-900 uppercase tracking-widest">Meta Nível {stats.level + 1}</p>
                             </div>
                             
-                            <div className="relative h-3 w-full bg-black/10 rounded-full overflow-hidden p-0.5 border border-black/5">
+                            <div className="relative h-3 w-full bg-white/30 rounded-full overflow-hidden p-0.5 border border-white/20">
                                 <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${Math.min((stats.xp % 100), 98)}%` }}
                                     transition={{ duration: 1.5, ease: "circOut" }}
-                                    className="h-full rounded-full bg-black"
+                                    className="h-full rounded-full bg-zinc-900"
                                 />
                             </div>
                         </div>
@@ -3808,24 +3839,24 @@ function App() {
 
 
                 <section className="space-y-2">
-                    <p className="text-stone-400 font-medium uppercase tracking-widest text-xs">Disponível para entregas</p>
-                    <h2 className="text-white text-4xl font-extrabold tracking-tight text-center uppercase">Missões e <span className="text-yellow-400">Vagas</span></h2>
+                    <p className="text-zinc-500 font-medium uppercase tracking-widest text-[10px] text-center">Disponível para entregas</p>
+                    <h2 className="text-zinc-900 text-3xl font-black tracking-tight text-center uppercase">Missões e <span className="text-yellow-600">Vagas</span></h2>
                 </section>
 
                 <section className="space-y-6">
                     <div className="flex flex-col items-center justify-center gap-4 text-center">
                         <div className="flex items-center justify-center gap-3">
-                                                    <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm text-center">Novos Pedidos</h3>
+                                                    <h3 className="text-xl font-black text-zinc-900 tracking-tighter uppercase drop-shadow-sm text-center">Novos Pedidos</h3>
                             <button 
                                 onClick={() => fetchOrders()}
                                 disabled={isSyncing || !isOnline}
                                 className={`size-10 flex items-center justify-center rounded-xl transition-all ${
                                     isOnline 
                                         ? isSyncing 
-                                            ? 'bg-yellow-400 text-black shadow-[inset_2px_2px_6px_rgba(255,255,255,0.5),inset_-2px_-2px_6px_rgba(0,0,0,0.2)]' 
-                                            : 'bg-neutral-800 text-neutral-400 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] hover:bg-neutral-700/80' 
-                                        : 'bg-neutral-900/50 text-neutral-700 cursor-not-allowed opacity-50'
-                                } border border-white/5 active:scale-90`}
+                                            ? 'bg-yellow-400 text-zinc-900' 
+                                            : 'bg-white text-zinc-400 hover:bg-zinc-100' 
+                                        : 'bg-zinc-100 text-zinc-300 cursor-not-allowed opacity-50'
+                                } border border-zinc-200 active:scale-90`}
                             >
                                 <motion.div
                                     animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
@@ -3835,9 +3866,9 @@ function App() {
                                 </motion.div>
                             </button>
                         </div>
-                        <div className="flex items-center gap-2 clay-card-dark px-5 py-2.5 rounded-full border border-white/5 shadow-inner">
-                            <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
-                            <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] drop-shadow-sm">Radar Ativo</p>
+                        <div className="flex items-center gap-2 bg-white px-5 py-2.5 rounded-full border border-zinc-100 shadow-inner">
+                            <div className="size-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.4)]" />
+                            <p className="text-yellow-600 font-black text-[10px] uppercase tracking-[0.3em]">Radar Ativo</p>
                         </div>
                     </div>
                     <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar -mx-6 px-6">
@@ -3852,15 +3883,12 @@ function App() {
                                         animate={{ opacity: 1, y: 0 }}
                                         className="flex-shrink-0 w-[90vw] max-w-[420px] relative pt-14 pb-4"
                                     >
-                                        <div className="bg-[#1e1e1e] rounded-[3rem] p-8 relative flex flex-col items-center text-center border border-white/5"
-                                             style={{
-                                                 boxShadow: 'inset 8px 8px 16px rgba(255, 255, 255, 0.02), inset -8px -8px 16px rgba(0, 0, 0, 0.4), 0 30px 60px rgba(0,0,0,0.6)'
-                                             }}
+                                        <div className="bg-white rounded-[3rem] p-8 relative flex flex-col items-center text-center border border-zinc-100 shadow-xl"
                                         >
-                                            {/* Floating 3D Icon Overlay — Design Claymorphic Gold */}
-                                            <div className="absolute -top-14 bg-gradient-to-br from-yellow-300 via-yellow-500 to-yellow-600 w-28 h-28 rounded-[2.5rem] flex items-center justify-center shadow-[0_20px_40px_rgba(234,179,8,0.3),inset_4px_4px_12px_rgba(255,255,255,0.6),inset_-4px_-4px_12px_rgba(0,0,0,0.2)] transition-all transform hover:rotate-6 active:scale-95"
+                                            {/* Floating 3D Icon Overlay — Design Claymorphic */}
+                                            <div className="absolute -top-14 bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 w-28 h-28 rounded-[2.5rem] flex items-center justify-center shadow-lg transition-all transform hover:rotate-6 active:scale-95"
                                             >
-                                                <Icon name={presentation.details.icon} className="text-black text-[56px] drop-shadow-lg" />
+                                                <Icon name={presentation.details.icon} className="text-zinc-900 text-[56px]" />
                                             </div>
 
                                             <div className="mt-8 w-full">
@@ -3868,13 +3896,13 @@ function App() {
                                                     NOVA OPORTUNIDADE
                                                 </div>
 
-                                                {/* NOVO: Feedback de Preparo */}
+                                                {/* Feedback de Preparo */}
                                                 {(order.preparation_status || order.status) && (
                                                     <div className="flex justify-center mb-4">
                                                         <div className={`px-3 py-1 rounded-lg flex items-center gap-2 border ${
                                                             (order.preparation_status === 'pronto' || order.status === 'pronto')
-                                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                                                                : 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                                                                ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
+                                                                : 'bg-orange-50 border-orange-200 text-orange-600'
                                                         }`}>
                                                             <div className={`size-1.5 rounded-full animate-pulse ${
                                                                 (order.preparation_status === 'pronto' || order.status === 'pronto') ? 'bg-emerald-400' : 'bg-orange-400'
@@ -3886,45 +3914,45 @@ function App() {
                                                     </div>
                                                 )}
 
-                                                <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight tracking-tight mb-2">
+                                                <h1 className="text-xl sm:text-2xl font-black text-zinc-900 leading-tight tracking-tight mb-2 uppercase">
                                                     Nova Entrega Disponível
                                                 </h1>
-                                                <p className="text-white/50 text-[10px] sm:text-[11px] mb-6 sm:mb-8 px-2 leading-relaxed">
-                                                    Uma missão de entrega de alta prioridade foi atribuída disponível.
+                                                <p className="text-zinc-400 text-[10px] sm:text-[11px] mb-6 sm:mb-8 px-2 leading-relaxed font-bold uppercase tracking-widest">
+                                                    Uma missão de entrega de alta prioridade disponível.
                                                 </p>
 
                                                 {/* Payment Highlight Box */}
-                                                <div className="bg-[#121212] rounded-2xl p-4 sm:p-6 border border-white/5 mb-6 sm:mb-8 shadow-inner">
-                                                    <p className="text-white/30 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
+                                                <div className="bg-zinc-50 rounded-2xl p-4 sm:p-6 border border-zinc-100 mb-6 sm:mb-8 shadow-inner">
+                                                    <p className="text-zinc-400 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-yellow-400 text-3xl sm:text-4xl font-black drop-shadow-xl">
+                                                        <span className="text-yellow-600 text-3xl sm:text-4xl font-black">
                                                             R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}
                                                         </span>
-                                                        <Icon name="local_fire_department" className="text-yellow-400 text-2xl sm:text-3xl" />
+                                                        <Icon name="local_fire_department" className="text-yellow-500 text-2xl sm:text-3xl" />
                                                     </div>
-                                                    <p className="text-white/20 text-[8px] sm:text-[9px] mt-2">+ Gorjeta do cliente (se houver)</p>
+                                                    <p className="text-zinc-300 text-[8px] sm:text-[9px] mt-2 font-bold uppercase tracking-tighter">+ Gorjeta do cliente</p>
                                                 </div>
 
                                                 {/* Delivery Details Grid */}
                                                 <div className="grid grid-cols-2 gap-3 sm:gap-4 text-left w-full mb-6 sm:mb-8">
-                                                    <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2">
-                                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-yellow-400/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
-                                                        <span className="text-yellow-400 text-xs sm:text-sm font-black leading-tight uppercase mb-1 truncate" title={order.store_name || order.merchant_name}>
+                                                    <div className="flex flex-col bg-zinc-50 p-3 rounded-xl border border-zinc-100 col-span-2">
+                                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-yellow-600/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
+                                                        <span className="text-yellow-600 text-xs sm:text-sm font-black leading-tight uppercase mb-1 truncate">
                                                             {order.store_name || order.merchant_name || 'Estabelecimento Parceiro'}
                                                         </span>
-                                                        <span className="text-white/90 text-[11px] sm:text-xs font-medium leading-relaxed drop-shadow-md break-words">
+                                                        <span className="text-zinc-800 text-[11px] sm:text-xs font-bold leading-relaxed break-words">
                                                             {cleanAddressText(order.origin || order.pickup_address) || presentation.pickupText || 'Endereço de coleta não informado'}
                                                         </span>
                                                     </div>
 
-                                                    <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2 relative pb-8">
-                                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Destino Final</span>
-                                                        <span className="text-white/90 text-[11px] sm:text-xs font-medium leading-relaxed drop-shadow-md break-words pr-12">
+                                                    <div className="flex flex-col bg-zinc-50 p-3 rounded-xl border border-zinc-100 col-span-2 relative pb-8">
+                                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-zinc-400 tracking-widest mb-1">Destino Final</span>
+                                                        <span className="text-zinc-800 text-[11px] sm:text-xs font-bold leading-relaxed break-words pr-12">
                                                             {cleanAddressText(order.destination || order.delivery_address) || presentation.destinationText || 'Destino não informado'}
                                                         </span>
                                                         
                                                         {/* Floating Distance Badge */}
-                                                        <div className="absolute bottom-2 right-2 bg-yellow-400 text-black px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase tracking-tight shadow-md">
+                                                        <div className="absolute bottom-2 right-2 bg-yellow-400 text-zinc-900 px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase tracking-tight shadow-md">
                                                             {order.distance_km ? `${parseFloat(order.distance_km).toFixed(1)} km` : (order.distance ? `${order.distance}` : '')}
                                                         </div>
                                                     </div>
@@ -3938,13 +3966,10 @@ function App() {
                                                             handleAccept(order);
                                                         }}
                                                         disabled={isAccepting}
-                                                        className="w-full py-4 sm:py-5 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black font-black uppercase text-xs sm:text-[13px] tracking-widest flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-[0_10px_30px_rgba(250,204,21,0.2)] disabled:opacity-50"
-                                                        style={{
-                                                            boxShadow: 'inset 4px 4px 8px rgba(255, 255, 255, 0.4), inset -4px -4px 8px rgba(0, 0, 0, 0.2)'
-                                                        }}
+                                                        className="w-full py-4 sm:py-5 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-zinc-900 font-black uppercase text-xs sm:text-[13px] tracking-widest flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-lg shadow-yellow-500/20 disabled:opacity-50"
                                                     >
                                                         {isAcceptingThis ? (
-                                                            <div className="size-5 border-4 border-black/20 border-t-black rounded-full animate-spin" />
+                                                            <div className="size-5 border-4 border-zinc-900/20 border-t-zinc-900 rounded-full animate-spin" />
                                                         ) : (
                                                             <>
                                                                 <Icon name="check" className="text-lg" />
@@ -3959,7 +3984,7 @@ function App() {
                                                                 setSelectedOrder(order);
                                                                 setShowOrderModal(true);
                                                             }}
-                                                            className="flex-1 py-3 rounded-xl text-white/50 font-bold uppercase text-[9px] tracking-widest active:scale-95 transition-all hover:text-white hover:bg-white/5"
+                                                            className="flex-1 py-3 rounded-xl text-zinc-400 font-bold uppercase text-[9px] tracking-widest active:scale-95 transition-all hover:text-zinc-600 hover:bg-zinc-100"
                                                         >
                                                             Detalhes
                                                         </button>
@@ -3969,7 +3994,7 @@ function App() {
                                                                     handleDeclineOrder(order.realId || order.id);
                                                                 }
                                                             }}
-                                                            className="flex-[0.5] py-3 rounded-xl text-red-500/50 font-bold uppercase text-[9px] tracking-widest active:scale-95 transition-all hover:text-red-400 hover:bg-red-500/10"
+                                                            className="flex-[0.5] py-3 rounded-xl text-red-500/50 font-bold uppercase text-[9px] tracking-widest active:scale-95 transition-all hover:text-red-500 hover:bg-red-50"
                                                         >
                                                             Recusar
                                                         </button>
@@ -3987,13 +4012,13 @@ function App() {
                 {/* Seção de Vagas Dedicadas no Dashboard */}
                 <section className="space-y-6">
                     <div className="flex flex-col items-center justify-center gap-4 text-center">
-                                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm text-center">Vagas Dedicadas</h3>
+                                                <h3 className="text-xl font-black text-zinc-900 tracking-tighter uppercase text-center">Vagas Dedicadas</h3>
                                           <button 
                     onClick={() => setActiveTab('dedicated')} 
-                    className="clay-card-dark flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm group active:scale-95 transition-all"
+                    className="bg-white flex items-center gap-2 px-5 py-2.5 rounded-full border border-zinc-100 shadow-inner group active:scale-95 transition-all"
                   >
-                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
-                    <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] drop-shadow-sm">Ver Todas</p>
+                    <div className="size-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.4)]" />
+                    <p className="text-yellow-600 font-black text-[10px] uppercase tracking-[0.3em]">Ver Todas</p>
                   </button>
                     </div>
                     <div className="grid gap-4">
@@ -4043,7 +4068,7 @@ function App() {
                                 .slice(0, 2);
 
                             if (visibleSlots.length === 0) {
-                                return <p className="text-[10px] text-white/30 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>;
+                                return <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>;
                             }
 
                             return visibleSlots.map((slot: any) => {
@@ -4053,45 +4078,40 @@ function App() {
                                 const maxDeliveries = (slot.metadata?.base_deliveries || slot.max_deliveries || 0);
                                 
                                 return (
-                                    <motion.button 
+                                        <motion.button 
                                         key={slot.id}
                                         onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                        className={`relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-2xl ${isAccepted ? 'border-2 border-emerald-500/40' : 'border border-white/5'}`}
-                                        style={{
-                                            background: isAccepted 
-                                                ? "linear-gradient(145deg, #062016, #0a0a0c)" 
-                                                : "linear-gradient(145deg, #1a1a1d, #121214)",
-                                        }}
+                                        className={`relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-xl ${isAccepted ? 'border-2 border-emerald-500/40 bg-emerald-50' : 'border border-zinc-100 bg-white'}`}
                                     >
 
 
                                         <div className="relative z-10 flex items-start justify-between">
                                             <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
-                                                <div className={`size-16 rounded-[24px] bg-zinc-900 border flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative ${isAccepted ? 'border-emerald-500/20' : 'border-white/5'}`}>
+                                                <div className={`size-16 rounded-[24px] bg-white border flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative ${isAccepted ? 'border-emerald-500/20' : 'border-zinc-100'}`}>
                                                     {slot.admin_users?.store_logo ? (
                                                         <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                                     ) : (
                                                         <div className={`size-full flex items-center justify-center ${isAccepted ? 'bg-emerald-500/10' : 'bg-yellow-400/10'}`}>
-                                                            <Icon name="military_tech" className={isAccepted ? 'text-emerald-400' : 'text-yellow-400'} size={32} />
+                                                            <Icon name="military_tech" className={isAccepted ? 'text-emerald-500' : 'text-yellow-600'} size={32} />
                                                         </div>
                                                     )}
                                                 </div>
                                                 
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1.5">
-                                                        <div className={`size-4 rounded-full flex items-center justify-center border ${isAccepted ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-blue-500/20 border-blue-500/30'}`}>
-                                                            <Icon name="verified" className={isAccepted ? 'text-emerald-400' : 'text-blue-400'} size={10} />
+                                                        <div className={`size-4 rounded-full flex items-center justify-center border ${isAccepted ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
+                                                            <Icon name="verified" className={isAccepted ? 'text-emerald-500' : 'text-blue-500'} size={10} />
                                                         </div>
-                                                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] truncate ${isAccepted ? 'text-emerald-400' : 'text-blue-400'}`}>
+                                                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] truncate ${isAccepted ? 'text-emerald-600' : 'text-blue-600'}`}>
                                                             {slot.admin_users?.store_name || 'Parceiro Izi'}
                                                         </p>
                                                     </div>
-                                                    <h4 className={`text-lg font-black tracking-tight truncate leading-tight mb-1 ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{slot.title}</h4>
+                                                    <h4 className={`text-lg font-black tracking-tight truncate leading-tight mb-1 ${isAccepted ? 'text-emerald-700' : 'text-zinc-900'}`}>{slot.title}</h4>
                                                     <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                                        <Icon name="location_on" className="text-zinc-600" size={10} />
+                                                        <Icon name="location_on" className="text-zinc-400" size={10} />
                                                         <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 mt-1">
+                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-yellow-600 mt-1">
                                                         <Icon name="event" size={10} />
                                                         <span>
                                                             {slot.slot_date 
@@ -4107,14 +4127,14 @@ function App() {
                                                 </div>
                                             </div>
                                             
-                                            <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5">
+                                            <div className="text-right shrink-0 bg-white p-4 rounded-[28px] border border-zinc-100 shadow-inner">
                                                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
                                                 <div className="flex flex-col items-end">
-                                                    <p className={`text-2xl font-black leading-none ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                                    <p className={`text-2xl font-black leading-none ${isAccepted ? 'text-emerald-600' : 'text-yellow-600'}`}>
                                                         <span className="text-xs mr-0.5 not-italic font-bold opacity-60">R$</span>
                                                         {parseFloat(slot.fee_per_day || 0).toFixed(0)}
                                                     </p>
-                                                    <div className={`mt-2 py-1 px-3 ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-400'} text-black rounded-full shadow-lg`}>
+                                                    <div className={`mt-2 py-1 px-3 ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-400'} text-zinc-900 rounded-full shadow-lg`}>
                                                         <p className="text-[8px] font-black uppercase tracking-tight">Até {maxDeliveries} Entregas</p>
                                                     </div>
                                                 </div>
@@ -4122,27 +4142,27 @@ function App() {
                                         </div>
 
                                         {hasApplied && (
-                                            <div className={`relative z-10 mx-6 mt-2 px-6 py-3 rounded-2xl flex items-center justify-between border bg-black/40 backdrop-blur-md ${isAccepted ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-yellow-500/10'}`}>
+                                            <div className={`relative z-10 mx-6 mt-2 px-6 py-3 rounded-2xl flex items-center justify-between border bg-white/40 backdrop-blur-md ${isAccepted ? 'border-emerald-500/20' : 'border-yellow-500/20'}`}>
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`size-2 rounded-full animate-pulse ${isAccepted ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
-                                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                                    <div className={`size-2 rounded-full animate-pulse ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+                                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isAccepted ? 'text-emerald-600' : 'text-yellow-600'}`}>
                                                         {isAccepted ? 'VAGA CONQUISTADA' : 'AGUARDANDO LOJISTA'}
                                                     </span>
                                                 </div>
-                                                <Icon name={isAccepted ? 'verified' : 'hourglass_empty'} size={16} className={isAccepted ? 'text-emerald-400' : 'text-yellow-400'} />
+                                                <Icon name={isAccepted ? 'verified' : 'hourglass_empty'} size={16} className={isAccepted ? 'text-emerald-500' : 'text-yellow-600'} />
                                             </div>
                                         )}
 
-                                        <div className="relative z-10 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                        <div className="relative z-10 w-full h-px bg-zinc-100" />
 
                                         <div className="relative z-10 flex items-center justify-between w-full">
                                             <div className="flex items-center gap-3">
                                                 <div className={`size-8 rounded-xl flex items-center justify-center border shrink-0 ${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-yellow-400/10 border-yellow-400/20'}`}>
-                                                    <Icon name="schedule" className={isAccepted ? 'text-emerald-400' : 'text-yellow-400'} size={14} />
+                                                    <Icon name="schedule" className={isAccepted ? 'text-emerald-600' : 'text-yellow-600'} size={14} />
                                                 </div>
-                                                <p className="text-[11px] text-zinc-300 font-bold uppercase tracking-wider">{slot.working_hours}</p>
+                                                <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider">{slot.working_hours}</p>
                                             </div>
-                                            <div className={`flex items-center gap-2 font-black uppercase text-[10px] tracking-widest ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                            <div className={`flex items-center gap-2 font-black uppercase text-[10px] tracking-widest ${isAccepted ? 'text-emerald-600' : 'text-yellow-600'}`}>
                                                 {isAccepted ? 'Ver Posto de Trabalho' : 'Ver Detalhes'} <Icon name="arrow_forward" size={14} />
                                             </div>
                                         </div>
@@ -4157,13 +4177,13 @@ function App() {
                 {(isOnline || scheduledOrders.some(o => !o.driver_id)) && (
                     <section className="space-y-6">
                         <div className="flex flex-col items-center justify-center gap-4 text-center">
-                                                        <h3 className="text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm text-center">Agendamentos</h3>
+                                                        <h3 className="text-xl font-black text-zinc-900 tracking-tighter uppercase text-center">Agendamentos</h3>
                                                         <button 
                                 onClick={() => setActiveTab('scheduled')} 
-                                className="clay-card-dark flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/5 shadow-inner drop-shadow-sm group active:scale-95 transition-all"
+                                className="bg-white flex items-center gap-2 px-5 py-2.5 rounded-full border border-zinc-100 shadow-inner group active:scale-95 transition-all"
                             >
-                                <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
-                                <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] drop-shadow-sm">Ver Calendário</p>
+                                <div className="size-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.4)]" />
+                                <p className="text-yellow-600 font-black text-[10px] uppercase tracking-[0.3em]">Ver Calendário</p>
                             </button>
                         </div>
                         {scheduledOrders.filter(o => !o.driver_id).length > 0 ? (
@@ -4174,49 +4194,44 @@ function App() {
                                         <motion.button 
                                             key={order.id}
                                             onClick={() => { setSelectedScheduledOrder(order); setActiveTab('scheduled'); }}
-                                            className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-2xl"
-                                            style={{
-                                                background: "linear-gradient(145deg, #1a1a1d, #121214)",
-                                                border: "1px solid rgba(250,204,21,0.12)"
-                                            }}
+                                            className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-xl bg-white border border-zinc-100"
                                         >
 
                                             
                                             <div className="relative z-10 flex items-start justify-between">
                                                 <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
-                                                    <div className="size-16 rounded-[24px] bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-[10px_10px_25px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05)] overflow-hidden relative">
-                                                        <div className="size-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex flex-col items-center justify-center">
-                                                            <p className="text-[10px] font-black text-yellow-500 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.','')}</p>
-                                                            <p className="text-xl font-black text-yellow-400 leading-none">{dt.getDate()}</p>
+                                                    <div className="size-16 rounded-[24px] bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative">
+                                                        <div className="size-full bg-gradient-to-br from-yellow-50 to-orange-50 flex flex-col items-center justify-center">
+                                                            <p className="text-[10px] font-black text-yellow-600 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.','')}</p>
+                                                            <p className="text-xl font-black text-yellow-600 leading-none">{dt.getDate()}</p>
                                                         </div>
-                                                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
                                                     </div>
                                                     
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-1.5">
-                                                            <div className="size-4 rounded-full bg-yellow-400/20 flex items-center justify-center border border-yellow-400/30">
-                                                                <Icon name="schedule" className="text-yellow-400" size={10} />
+                                                            <div className="size-4 rounded-full bg-yellow-100 flex items-center justify-center border border-yellow-200">
+                                                                <Icon name="schedule" className="text-yellow-600" size={10} />
                                                             </div>
-                                                            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.2em] drop-shadow-[0_0_12px_rgba(250,204,21,0.5)] truncate">
+                                                            <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.2em] truncate">
                                                                 {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h
                                                             </p>
                                                         </div>
-                                                        <h4 className="text-lg font-black text-white tracking-tight truncate leading-tight mb-1">{order.store_name || order.merchant_name || 'Agendamento Izi'}</h4>
-                                                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                                            <Icon name="location_on" className="text-zinc-600" size={10} />
+                                                        <h4 className="text-lg font-black text-zinc-900 tracking-tight truncate leading-tight mb-1">{order.store_name || order.merchant_name || 'Agendamento Izi'}</h4>
+                                                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                                            <Icon name="location_on" className="text-zinc-300" size={10} />
                                                             <span className="truncate">{order.pickup_address || 'Endereço Indisponível'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)]">
-                                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">LÃQUIDO</p>
+                                                <div className="text-right shrink-0 bg-zinc-100 p-4 rounded-[28px] border border-white/5 shadow-inner">
+                                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">LÃ QUIDO</p>
                                                     <div className="flex flex-col items-end">
-                                                        <p className="text-xl font-black text-emerald-400 leading-none">
-                                                            <span className="text-[10px] mr-0.5 not-italic text-emerald-400/60 font-bold">R$</span>
+                                                        <p className="text-xl font-black text-emerald-600 leading-none">
+                                                            <span className="text-[10px] mr-0.5 not-italic text-emerald-600/60 font-bold">R$</span>
                                                             {getNetEarnings(order).toFixed(2).replace('.', ',')}
                                                         </p>
-                                                        <div className="mt-2 py-1 px-3 bg-emerald-500 text-white rounded-full shadow-[2px_2px_8px_rgba(16,185,129,0.2)]">
+                                                        <div className="mt-2 py-1 px-3 bg-emerald-500 text-white rounded-full">
                                                             <p className="text-[9px] font-black uppercase tracking-tight">
                                                                 ESCALA
                                                             </p>
@@ -4225,17 +4240,17 @@ function App() {
                                                 </div>
                                             </div>
 
-                                            <div className="relative z-10 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                            <div className="relative z-10 w-full h-px bg-zinc-100" />
 
                                             <div className="relative z-10 flex items-center justify-between w-full">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="size-8 rounded-xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20 shrink-0">
-                                                        <Icon name="info" className="text-yellow-400" size={14} />
+                                                    <div className="size-8 rounded-xl bg-yellow-100 flex items-center justify-center border border-yellow-200 shrink-0">
+                                                        <Icon name="info" className="text-yellow-600" size={14} />
                                                     </div>
-                                                    <p className="text-[11px] text-zinc-300 font-bold uppercase tracking-wider">Detalhes da Entrega</p>
+                                                    <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider">Detalhes da Entrega</p>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-2 text-yellow-400 font-black uppercase text-[10px] tracking-widest drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
+                                                <div className="flex items-center gap-2 text-yellow-600 font-black uppercase text-[10px] tracking-widest">
                                                     Aceitar <Icon name="chevron_right" size={14} />
                                                 </div>
                                             </div>
@@ -4244,7 +4259,7 @@ function App() {
                                 })}
                             </div>
                         ) : (
-                            <div className="p-10 rounded-[32px] border border-white/5 border-dashed flex flex-col items-center gap-3 text-center opacity-40">
+                            <div className="p-10 rounded-[32px] border border-zinc-100 border-dashed flex flex-col items-center gap-3 text-center opacity-40">
                                 <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escala disponível</p>
                             </div>
                         )}
@@ -4265,40 +4280,26 @@ function App() {
         const isPending = !isAccepted && !order.driver_id && !['cancelado', 'canceled', 'concluido', 'delivered', 'finalizado'].includes(order.status);
 
         return (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="fixed inset-0 z-[1000] bg-black flex flex-col">
-                <header className="fixed top-0 w-full z-50 bg-zinc-950/70 backdrop-blur-xl flex justify-between items-center px-6 py-4 shadow-xl shadow-black/40">
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="fixed inset-0 z-[1000] bg-white flex flex-col">
+                <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl flex justify-between items-center px-6 py-4 border-b border-zinc-100">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setSelectedScheduledOrder(null)} className="text-yellow-400 p-2 rounded-full active:scale-95 transition-all">
-                            <span className="material-symbols-outlined text-3xl">arrow_back</span>
+                        <button onClick={() => setSelectedScheduledOrder(null)} className="text-zinc-900 p-2 rounded-full active:scale-95 transition-all">
+                            <Icon name="arrow_back" size={24} />
                         </button>
-                        <h1 className="font-black text-yellow-400 text-xl tracking-tighter uppercase">
+                        <h1 className="font-black text-zinc-900 text-xl tracking-tighter uppercase">
                             {isMine ? 'Detalhes do Agendamento' : 'Aceitar Agendamento'}
                         </h1>
                     </div>
                 </header>
                 
-                {/* Estilos Claymorphism */}
-                {(() => {
-                    const sClayDark: React.CSSProperties = {
-                        background: '#121212',
-                        borderRadius: '2.5rem',
-                        boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
-                    };
-                    const sClayIcon: React.CSSProperties = {
-                        background: '#1A1A1A',
-                        boxShadow: '4px 4px 8px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.02)',
-                    };
-                
-                    return (
-                        <>
                 <main className="pt-24 px-6 space-y-8 overflow-y-auto pb-40 no-scrollbar">
-                     <div className="clay-card-yellow p-8 text-black relative overflow-hidden">
+                     <div className="bg-yellow-400 rounded-[2.5rem] p-8 text-zinc-900 relative overflow-hidden shadow-xl">
                         <div className="absolute -right-4 -top-4 opacity-10 transform rotate-12">
                             <Icon name="local_shipping" size={160} />
                         </div>
                         <div className="relative z-10">
                             <div className="flex justify-between items-start mb-8">
-                                <div className="bg-black/10 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Detalhes da Escala</div>
+                                <div className="bg-zinc-900/10 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Detalhes da Escala</div>
                                 <div className="text-right">
                                     <p className="text-[10px] font-black opacity-60 uppercase">Ganho Líquido</p>
                                     <p className="text-4xl font-black">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
@@ -4306,7 +4307,7 @@ function App() {
                             </div>
                             <div className="space-y-6">
                                 <div className="flex flex-col items-center gap-4 w-full text-center">
-                                    <div className="size-16 bg-black rounded-2xl flex items-center justify-center shadow-2xl">
+                                    <div className="size-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg">
                                         <Icon name="calendar_month" size={32} className="text-yellow-400" />
                                     </div>
                                     <div>
@@ -4315,15 +4316,15 @@ function App() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-center gap-4 w-full text-center">
-                                    <div className="size-16 bg-black/5 border border-black/10 rounded-2xl flex items-center justify-center">
-                                        <Icon name="schedule" size={32} className="text-black" />
+                                    <div className="size-16 bg-white/20 border border-white/20 rounded-2xl flex items-center justify-center">
+                                        <Icon name="schedule" size={32} className="text-zinc-900" />
                                     </div>
                                     <div>
                                         <p className="text-xs font-black uppercase opacity-60 tracking-widest">Horário de Início</p>
                                         <p className="text-xl font-black uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
                                     </div>
                                 </div>
-                                <div className="p-6 bg-black/5 border border-black/10 rounded-[32px] space-y-4">
+                                <div className="p-6 bg-white/20 border border-black/5 rounded-[32px] space-y-4">
                                     <div className="flex items-start gap-3">
                                         <Icon name="location_on" size={20} className="mt-1" />
                                         <div>
@@ -4353,7 +4354,7 @@ function App() {
                                                     <Icon name="chat_bubble" size={20} className="mt-1" />
                                                     <div>
                                                         <p className="text-[10px] font-black uppercase opacity-40 mb-1">Observações do Cliente</p>
-                                                        <p className="font-bold text-sm leading-snug text-stone-800">{obsText}</p>
+                                                        <p className="font-bold text-sm leading-snug">{obsText}</p>
                                                     </div>
                                                 </div>
                                             </>
@@ -4363,35 +4364,35 @@ function App() {
                             </div>
                         </div>
                      </div>
-                     <div className="p-8 border border-white/5 backdrop-blur-md" style={sClayDark}>
+                     <div className="p-8 border border-zinc-100 bg-white rounded-[2.5rem] shadow-lg">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="size-10 rounded-xl flex items-center justify-center border border-white/5" style={sClayIcon}>
-                                <Icon name="info" size={18} className="text-yellow-400" />
+                            <div className="size-10 rounded-xl flex items-center justify-center border border-zinc-100 bg-zinc-50">
+                                <Icon name="info" size={18} className="text-yellow-600" />
                             </div>
-                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Regras do Agendamento</h4>
+                            <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-[0.2em]">Regras do Agendamento</h4>
                         </div>
                         <ul className="space-y-4">
-                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                            <li className="flex gap-4 text-xs text-zinc-500 font-bold items-start leading-relaxed uppercase tracking-tight">
+                                <span className="text-yellow-500 font-black">•</span> 
                                 Comparecer ao local com 15 min de antecedência.
                             </li>
-                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                            <li className="flex gap-4 text-xs text-zinc-500 font-bold items-start leading-relaxed uppercase tracking-tight">
+                                <span className="text-yellow-500 font-black">•</span> 
                                 Estar com bateria do celular acima de 80%.
                             </li>
-                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                            <li className="flex gap-4 text-xs text-zinc-500 font-bold items-start leading-relaxed uppercase tracking-tight">
+                                <span className="text-yellow-500 font-black">•</span> 
                                 Traje profissional e baú limpo.
                             </li>
-                            <li className="flex gap-4 text-xs text-yellow-400/70 font-black items-start leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-400 font-black">•</span> 
+                            <li className="flex gap-4 text-xs text-yellow-600 font-black items-start leading-relaxed uppercase tracking-tight">
+                                <span className="text-yellow-500 font-black">•</span> 
                                 O início da missão só é liberado no horário exato.
                             </li>
                         </ul>
                      </div>
                 </main>
 
-                <div className="fixed bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black via-black to-transparent z-[1020]">
+                <div className="fixed bottom-0 left-0 w-full p-8 bg-gradient-to-t from-white via-white to-transparent z-[1020]">
                     {isPending ? (
                         <button 
                             onClick={() => {
@@ -4411,7 +4412,7 @@ function App() {
                                 });
                                 setSelectedScheduledOrder(null);
                             }}
-                            className="w-full h-20 bg-yellow-400 text-black rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-[0_20px_40px_rgba(250,204,21,0.3)] active:scale-95 transition-all"
+                            className="w-full h-20 bg-yellow-400 text-zinc-900 rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-lg active:scale-95 transition-all"
                         >
                             Aceitar
                         </button>
@@ -4419,18 +4420,17 @@ function App() {
                         (() => {
                             const now = new Date();
                             const scheduledDate = new Date(order.scheduled_at);
-                            // Permite iniciar a partir do horário exato do agendamento
                             const canStartVisible = now.getTime() >= scheduledDate.getTime();
                             
                             if (!canStartVisible) {
                                 return (
-                                    <div className="w-full h-20 border border-white/5 flex flex-col items-center justify-center gap-1 backdrop-blur-md opacity-70" style={sClayDark}>
+                                    <div className="w-full h-20 border border-zinc-100 flex flex-col items-center justify-center gap-1 bg-white rounded-[28px] shadow-inner">
                                         <div className="flex items-center gap-2">
-                                            <Icon name="schedule" className="text-yellow-400" size={18} />
-                                            <span className="text-yellow-400 font-bold uppercase tracking-widest text-[11px]">Início Bloqueado</span>
+                                            <Icon name="schedule" className="text-yellow-500" size={18} />
+                                            <span className="text-yellow-600 font-bold uppercase tracking-widest text-[11px]">Início Bloqueado</span>
                                         </div>
-                                        <p className="text-[10px] font-black text-white/50 uppercase tracking-tighter">
-                                            Disponível em {scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h do dia {scheduledDate.getDate()}/{scheduledDate.getMonth()+1}
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
+                                            Disponível em {scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h
                                         </p>
                                     </div>
                                 );
@@ -4446,7 +4446,7 @@ function App() {
                                             localStorage.removeItem('Izi_active_mission');
                                             setActiveTab('dashboard');
                                         }}
-                                        className="w-full h-20 bg-zinc-900 text-white rounded-[28px] font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/10"
+                                        className="w-full h-20 bg-zinc-900 text-white rounded-[28px] font-black text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3"
                                     >
                                         <Icon name="check_circle" className="text-emerald-400" />
                                         Missão Concluída • Fechar
@@ -4457,7 +4457,6 @@ function App() {
                             return (
                                 <button 
                                     onClick={() => {
-                                        // Ao iniciar um agendamento, ele se torna a missão ativa
                                         const mission = { 
                                             ...order, 
                                             realId: order.id,
@@ -4469,7 +4468,7 @@ function App() {
                                         setSelectedScheduledOrder(null);
                                         setActiveTab('active_mission');
                                     }}
-                                    className="w-full h-20 bg-emerald-500 text-white rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-[0_20px_40px_rgba(16,185,129,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3"
+                                    className="w-full h-20 bg-emerald-500 text-white rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                                 >
                                     <Icon name="play_arrow" size={32} />
                                     Iniciar Missão
@@ -4477,22 +4476,19 @@ function App() {
                             );
                         })()
                     ) : isAccepted ? (
-                        <div className="w-full h-20 rounded-[28px] border-2 border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center gap-3 backdrop-blur-md">
-                            <Icon name="verified" className="text-emerald-400" size={28} />
-                            <span className="text-emerald-400 font-black uppercase tracking-widest">Já está na sua agenda</span>
+                        <div className="w-full h-20 rounded-[28px] border-2 border-emerald-500/30 bg-emerald-50 flex items-center justify-center gap-3">
+                            <Icon name="verified" className="text-emerald-500" size={28} />
+                            <span className="text-emerald-600 font-black uppercase tracking-widest">Já está na sua agenda</span>
                         </div>
                     ) : (
                         <button 
                             onClick={() => setSelectedScheduledOrder(null)}
-                            className="w-full h-18 bg-zinc-800 text-white font-black text-sm uppercase tracking-widest rounded-[24px]"
+                            className="w-full h-18 bg-zinc-100 text-zinc-900 font-black text-sm uppercase tracking-widest rounded-[24px]"
                         >
                             Voltar
                         </button>
                     )}
                 </div>
-                        </>
-                    );
-                })()}
             </motion.div>
         );
     };
@@ -4512,26 +4508,25 @@ function App() {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="pb-32 px-4 max-w-2xl mx-auto space-y-6 pt-4">
                 <section className="px-2">
                     <div className="flex flex-col gap-4">
-                        <div>
-                            <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-1">Planejamento</p>
-                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase text-center">Agenda de Entregas</h2>
+                        <div className="text-center">
+                            <p className="text-zinc-400 font-black uppercase tracking-[0.4em] text-[10px] mb-1">Planejamento</p>
+                            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">Agenda de Entregas</h2>
                         </div>
                         
-                        {/* Tab Selector */}
-                        <div className="flex bg-black/40 backdrop-blur-xl p-1.5 rounded-[24px] border border-white/5 shadow-inner">
+                        <div className="flex bg-zinc-100 p-1.5 rounded-[24px] border border-zinc-200">
                             <button 
                                 onClick={() => setSubTabScheduled('confirmed')}
                                 className={`flex-1 h-12 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
                                     subTabScheduled === 'confirmed' 
-                                    ? 'bg-yellow-400 text-black shadow-[0_4px_15px_rgba(250,204,21,0.3)]' 
-                                    : 'text-zinc-500 hover:text-zinc-400'
+                                    ? 'bg-yellow-400 text-zinc-900 shadow-lg' 
+                                    : 'text-zinc-400'
                                 }`}
                             >
                                 <Icon name="event_available" size={16} />
                                 Minha Agenda
                                 {myAgenda.length > 0 && (
                                     <span className={`size-5 rounded-full flex items-center justify-center text-[9px] font-black ${
-                                        subTabScheduled === 'confirmed' ? 'bg-black text-yellow-400' : 'bg-zinc-800 text-zinc-500'
+                                        subTabScheduled === 'confirmed' ? 'bg-white' : 'bg-zinc-200'
                                     }`}>
                                         {myAgenda.length}
                                     </span>
@@ -4541,15 +4536,15 @@ function App() {
                                 onClick={() => setSubTabScheduled('available')}
                                 className={`flex-1 h-12 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
                                     subTabScheduled === 'available' 
-                                    ? 'bg-yellow-400 text-black shadow-[0_4px_15px_rgba(250,204,21,0.3)]' 
-                                    : 'text-zinc-500 hover:text-zinc-400'
+                                    ? 'bg-yellow-400 text-zinc-900 shadow-lg' 
+                                    : 'text-zinc-400'
                                 }`}
                             >
                                 <Icon name="explore" size={16} />
                                 Disponíveis
                                 {availableAgenda.length > 0 && (
                                     <span className={`size-5 rounded-full flex items-center justify-center text-[9px] font-black ${
-                                        subTabScheduled === 'available' ? 'bg-black text-yellow-400' : 'bg-zinc-800 text-zinc-500'
+                                        subTabScheduled === 'available' ? 'bg-white' : 'bg-zinc-200'
                                     }`}>
                                         {availableAgenda.length}
                                     </span>
@@ -4561,18 +4556,13 @@ function App() {
 
                 <div className="space-y-6">
                     {currentList.length === 0 ? (
-                        <div className="py-24 bg-white/[0.02] border border-white/5 border-dashed rounded-[40px] flex flex-col items-center gap-6 text-center px-8">
-                            <div className="size-20 rounded-full bg-white/5 flex items-center justify-center">
-                                <Icon name={subTabScheduled === 'confirmed' ? 'calendar_today' : 'search'} className="text-4xl text-white/20" />
+                        <div className="py-24 bg-white border border-zinc-100 rounded-[40px] flex flex-col items-center gap-6 text-center px-8">
+                            <div className="size-20 rounded-full bg-zinc-50 flex items-center justify-center">
+                                <Icon name={subTabScheduled === 'confirmed' ? 'calendar_today' : 'search'} className="text-4xl text-zinc-200" />
                             </div>
                             <div className="space-y-2">
-                                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
                                     {subTabScheduled === 'confirmed' ? 'Sua agenda está vazia' : 'Nenhum agendamento aberto'}
-                                </p>
-                                <p className="text-xs text-white/20 px-6 leading-relaxed">
-                                    {subTabScheduled === 'confirmed' 
-                                        ? 'Confirme entregas agendadas na aba Disponíveis para organizar seu dia.' 
-                                        : 'Fique de olho! Novos agendamentos podem aparecer a qualquer momento.'}
                                 </p>
                             </div>
                         </div>
@@ -4580,65 +4570,44 @@ function App() {
                         currentList.map((order: any, i: number) => {
                             const dt = new Date(order.scheduled_at);
                             const isConfirmed = !!order.driver_id;
-                            const isOdd = i % 2 !== 0; 
-                            const cardClass = isConfirmed ? "clay-card-yellow" : (isOdd ? "clay-card-dark" : "clay-card-yellow");
-                            const textColor = isConfirmed ? "text-black" : (isOdd ? "text-white" : "text-black");
-                            const iconBg = isConfirmed ? "bg-black text-yellow-400" : (isOdd ? "bg-yellow-400 text-black" : "bg-black text-yellow-400");
-                            const btnClass = isConfirmed 
-                                ? "bg-black text-yellow-400 shadow-lg"
-                                : (isOdd ? "bg-yellow-400 text-black shadow-[0_4px_15px_rgba(250,204,21,0.3)]" : "bg-black text-yellow-400 shadow-lg");
-
+                            
                             return (
                                 <motion.div 
                                     key={order.id}
                                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     transition={{ delay: i * 0.05 }}
-                                    className={`${cardClass} p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all`}
+                                    className="bg-white p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all border border-zinc-100 rounded-[2.5rem] shadow-lg"
                                     onClick={() => setSelectedScheduledOrder(order)}
                                 >
-                                    <div className={`absolute -right-4 -top-4 opacity-[0.08] transform rotate-12 group-hover:scale-110 transition-transform duration-500 ${textColor}`}>
-                                        <Icon name={order.service_type === 'package' ? 'package_2' : 'local_shipping'} size={140} />
-                                    </div>
-
                                     <div className="relative z-10">
                                         <div className="flex justify-between items-start mb-6">
-                                            <div className={`${isConfirmed || !isOdd ? 'bg-black/10 text-black' : 'bg-yellow-400 text-black'} px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2`}>
-                                                <div className={`size-1.5 rounded-full ${isConfirmed ? 'bg-green-600 animate-pulse' : 'bg-yellow-500'}`} />
+                                            <div className="bg-yellow-400 text-zinc-900 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                                <div className={`size-1.5 rounded-full ${isConfirmed ? 'bg-emerald-600 animate-pulse' : 'bg-yellow-600'}`} />
                                                 {order.service_type || 'Entrega Expressa'}
                                             </div>
                                             <div className="text-right">
-                                                <p className={`text-[8px] font-black uppercase tracking-widest opacity-60`}>Valor Líquido</p>
-                                                <p className={`text-2xl font-black`}>R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-zinc-400">Valor Líquido</p>
+                                                <p className="text-2xl font-black text-zinc-900">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
                                             </div>
                                         </div>
 
-                                        <div className={`flex items-center gap-4 mb-6 ${textColor}`}>
-                                            <div className={`${iconBg} size-12 rounded-2xl flex items-center justify-center shadow-lg`}>
+                                        <div className="flex items-center gap-4 mb-6 text-zinc-900">
+                                            <div className="bg-yellow-400 size-12 rounded-2xl flex items-center justify-center shadow-lg">
                                                 <Icon name="calendar_month" size={24} />
                                             </div>
                                             <div>
                                                 <p className="font-black text-lg leading-none uppercase tracking-tighter">
                                                     {dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }).replace('.', '')}
                                                 </p>
-                                                <p className={`text-sm font-bold mt-1 opacity-70`}>
+                                                <p className="text-sm font-bold mt-1 opacity-70">
                                                     {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className={`space-y-4 mb-8 ${textColor}`}>
-                                            <div className="flex items-start gap-3">
-                                                <Icon name="location_on" size={18} className="opacity-60" />
-                                                <div className="space-y-1">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50">Rotas de Coleta/Entrega</p>
-                                                    <p className="font-bold text-sm leading-tight">{cleanAddressText(order.pickup_address).split(',')[0]} â†’ {cleanAddressText(order.delivery_address).split(',')[0]}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         <div className="flex gap-4">
-                                            <button className={`flex-1 ${btnClass} font-black text-[10px] uppercase tracking-[0.2em] py-4 rounded-[22px] active:scale-95 transition-all flex items-center justify-center gap-3`}>
+                                            <button className="flex-1 bg-zinc-900 text-yellow-400 font-black text-[10px] uppercase tracking-[0.2em] py-4 rounded-[22px] active:scale-95 transition-all flex items-center justify-center gap-3">
                                                 {isConfirmed ? (
                                                     <><Icon name="task_alt" size={18} /> Ver Minha Agenda</>
                                                 ) : (
@@ -4670,9 +4639,9 @@ function App() {
                     </header>
 
                     {dedicatedSlots.length === 0 ? (
-                        <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[40px] flex flex-col items-center gap-4 text-center">
-                            <Icon name="sentiment_dissatisfied" className="text-4xl text-white/10" />
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhuma vaga disponível</p>
+                        <div className="py-20 bg-zinc-50 border border-zinc-100 border-dashed rounded-[40px] flex flex-col items-center gap-4 text-center">
+                            <Icon name="sentiment_dissatisfied" className="text-4xl text-zinc-200" />
+                            <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest">Nenhuma vaga disponível</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -4708,8 +4677,8 @@ function App() {
                                         onClick={() => setSelectedSlot(s)}
                                         className={`w-full transition-all p-8 flex items-center gap-6 group text-left relative overflow-hidden active:scale-[0.98] ${
                                             isAccepted 
-                                            ? 'clay-card-dark border-2 border-emerald-500' 
-                                            : 'bg-zinc-900 border border-white/10 rounded-[32px]'
+                                            ? 'clay-card border-2 border-emerald-500' 
+                                            : 'bg-white border border-zinc-100 rounded-[32px] shadow-lg'
                                         }`}
                                     >
                                         {/* Efeito sutil para vagas aprovadas */}
@@ -4717,27 +4686,27 @@ function App() {
                                             <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />
                                         )}
 
-                                        <div className="size-16 rounded-[24px] bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
+                                        <div className="size-16 rounded-[24px] bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
                                             {s.admin_users?.store_logo
                                                 ? <img src={s.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
-                                                : <div className="bg-primary/10 size-full flex items-center justify-center"><Icon name="stars" size={28} className="text-primary" /></div>}
+                                                : <div className="bg-yellow-50 size-full flex items-center justify-center"><Icon name="stars" size={28} className="text-yellow-500" /></div>}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className={`size-1.5 rounded-full ${isAccepted ? 'bg-emerald-400' : 'bg-primary'}`}></span>
-                                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] truncate">
+                                                <span className={`size-1.5 rounded-full ${isAccepted ? 'bg-emerald-400' : 'bg-yellow-500'}`}></span>
+                                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] truncate">
                                                     {s.admin_users?.store_name || 'Parceiro Exclusivo'}
                                                 </p>
                                             </div>
-                                            <p className={`text-xl font-black tracking-tight leading-tight group-hover:text-primary transition-colors ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{s.title}</p>
+                                            <p className={`text-xl font-black tracking-tight leading-tight group-hover:text-yellow-600 transition-colors ${isAccepted ? 'text-emerald-400' : 'text-zinc-900'}`}>{s.title}</p>
                                             <div className="flex items-center gap-3 mt-3">
-                                                <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                                                    <Icon name="schedule" size={12} className="text-primary" />
-                                                    <p className="text-[9px] text-white/70 font-black uppercase tracking-wider">{s.working_hours || 'A combinar'}</p>
+                                                <div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1 rounded-full border border-zinc-100">
+                                                    <Icon name="schedule" size={12} className="text-yellow-600" />
+                                                    <p className="text-[9px] text-zinc-500 font-black uppercase tracking-wider">{s.working_hours || 'A combinar'}</p>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                                                    <Icon name="event" size={12} className="text-primary" />
-                                                    <p className="text-[9px] text-white/70 font-black uppercase tracking-wider">
+                                                <div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1 rounded-full border border-zinc-100">
+                                                    <Icon name="event" size={12} className="text-yellow-600" />
+                                                    <p className="text-[9px] text-zinc-500 font-black uppercase tracking-wider">
                                                         {s.slot_date 
                                                             ? new Date(s.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
                                                             : (s.day_of_week === 'Daily' ? 'Diário' : (
@@ -4751,19 +4720,19 @@ function App() {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                            <div className={`${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-primary/10 border-primary/20'} border px-4 py-2 rounded-2xl transition-all`}>
-                                                <p className={`text-xl font-black leading-none ${isAccepted ? 'text-emerald-400' : 'text-primary'}`}>R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
-                                                <p className={`text-[7px] font-black uppercase tracking-tighter text-center ${isAccepted ? 'text-emerald-400/60' : 'text-primary/60'}`}>p/ dia</p>
+                                            <div className={`${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-yellow-400/10 border-yellow-400/20'} border px-4 py-2 rounded-2xl transition-all shadow-inner`}>
+                                                <p className={`text-xl font-black leading-none ${isAccepted ? 'text-emerald-400' : 'text-yellow-600'}`}>R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
+                                                <p className={`text-[7px] font-black uppercase tracking-tighter text-center ${isAccepted ? 'text-emerald-400/60' : 'text-yellow-600/60'}`}>p/ dia</p>
                                             </div>
                                             {hasApplied && (
                                                 <div className="flex flex-col items-end gap-1.5 mt-2 transition-all">
-                                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isAccepted ? 'bg-emerald-500 text-black shadow-lg' : 'bg-white/10 text-white/60 border border-white/10'}`}>
+                                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isAccepted ? 'bg-emerald-500 text-black shadow-lg' : 'bg-zinc-100 text-zinc-500 border border-zinc-200'}`}>
                                                         {isAccepted ? (
                                                             <><Icon name="verified" size={10} /> Vaga Confirmada</>
                                                         ) : (
                                                             'Em Análise'
                                                         )}
-                                                        {application?.status === 'pending' && <div className="size-1 bg-yellow-400 rounded-full animate-pulse" />}
+                                                        {application?.status === 'pending' && <div className="size-1 bg-yellow-500 rounded-full animate-pulse" />}
                                                     </div>
                                                 </div>
                                             )}
@@ -4784,15 +4753,15 @@ function App() {
         const neighborhoodExtras = slot.metadata?.bairros_extras || slot.metadata?.neighborhood_extras || [];
         const requirements: string[] = slot.metadata?.custom_specialties || [];
 
-        const sClayDark: React.CSSProperties = {
-            background: '#121212',
+        const sClayLight: React.CSSProperties = {
+            background: '#ffffff',
             borderRadius: '2.5rem',
-            border: '1px solid rgba(255,255,255,0.05)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(0,0,0,0.05)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
         };
         const sClayIcon: React.CSSProperties = {
-            background: '#1A1A1A',
-            border: '1px solid rgba(255,255,255,0.05)',
+            background: '#f8fafc',
+            border: '1px solid rgba(0,0,0,0.05)',
         };
 
         return (
@@ -4800,20 +4769,20 @@ function App() {
                 initial={{ opacity: 0, y: 30 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: 30 }} 
-                className="fixed inset-0 z-[150] bg-black overflow-y-auto no-scrollbar pb-48"
+                className="fixed inset-0 z-[150] bg-white overflow-y-auto no-scrollbar pb-48"
             >
                 {/* Hero Header */}
                 <header className="relative h-80 w-full shrink-0">
                     {slot.admin_users?.store_banner ? (
                         <img src={slot.admin_users.store_banner} className="w-full h-full object-cover" alt="" />
                     ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-stone-900 via-zinc-950 to-black" />
+                        <div className="w-full h-full bg-gradient-to-br from-zinc-100 via-white to-zinc-50" />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent" />
                     
                     <button 
                         onClick={() => setSelectedSlot(null)}
-                        className="absolute top-8 left-6 size-12 rounded-2xl bg-black/60 backdrop-blur-2xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all z-20"
+                        className="absolute top-8 left-6 size-12 rounded-2xl bg-white/60 backdrop-blur-2xl border border-zinc-100 flex items-center justify-center text-zinc-900 active:scale-90 transition-all z-20 shadow-lg"
                     >
                         <Icon name="arrow_back" size={24} />
                     </button>
@@ -4829,10 +4798,10 @@ function App() {
                             </div>
                             <div className="flex-1 min-w-0 pb-2">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <span className="px-2.5 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/20 text-yellow-400 text-[8px] font-black uppercase tracking-widest">Verificado</span>
+                                    <span className="px-2.5 py-1 rounded-full bg-yellow-400 text-zinc-900 text-[8px] font-black uppercase tracking-widest shadow-sm">Verificado</span>
                                 </div>
-                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
-                                <h2 className="text-4xl font-black text-white tracking-tighter leading-none text-center uppercase">{slot.title}</h2>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
+                                <h2 className="text-4xl font-black text-zinc-900 tracking-tighter leading-none text-center uppercase">{slot.title}</h2>
                             </div>
                         </div>
                     </div>
@@ -4878,24 +4847,24 @@ function App() {
 
                     {/* Benefícios e Extras */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayDark}>
-                            <div className="size-12 rounded-2xl flex items-center justify-center border border-white/5" style={sClayIcon}>
-                                <Icon name="location_on" size={20} className="text-primary" />
+                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayLight}>
+                            <div className="size-12 rounded-2xl flex items-center justify-center border border-zinc-100" style={sClayIcon}>
+                                <Icon name="location_on" size={20} className="text-yellow-600" />
                             </div>
                             <div className="space-y-1 w-full overflow-hidden px-2">
-                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Endereço Base</p>
-                                <p className="text-xs font-black text-white break-words line-clamp-2 w-full leading-tight uppercase tracking-tight" title={slot.admin_users?.store_address || slot.city}>
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Endereço Base</p>
+                                <p className="text-xs font-black text-zinc-900 break-words line-clamp-2 w-full leading-tight uppercase tracking-tight" title={slot.admin_users?.store_address || slot.city}>
                                     {slot.admin_users?.store_address || slot.city || 'Sua Região'}
                                 </p>
                             </div>
                         </div>
-                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayDark}>
-                            <div className="size-12 rounded-2xl flex items-center justify-center border border-white/5" style={sClayIcon}>
-                                <Icon name="analytics" size={20} className="text-primary" />
+                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayLight}>
+                            <div className="size-12 rounded-2xl flex items-center justify-center border border-zinc-100" style={sClayIcon}>
+                                <Icon name="analytics" size={20} className="text-yellow-600" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Após {slot.metadata?.base_deliveries || 0} saídas</p>
-                                <p className="text-sm font-black text-white">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')} extra</p>
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Após {slot.metadata?.base_deliveries || 0} saídas</p>
+                                <p className="text-sm font-black text-zinc-900">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')} extra</p>
                             </div>
                         </div>
                     </div>
@@ -4903,19 +4872,19 @@ function App() {
                     {/* Bonus Extra */}
                     {customBenefits.length > 0 && (
                         <section className="space-y-6">
-                            <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
-                                <span className="size-2 rounded-full bg-primary" />
+                            <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+                                <span className="size-2 rounded-full bg-yellow-500" />
                                 Bônus e Extras
                             </h3>
                             <div className="flex overflow-x-auto gap-4 -mx-6 px-6 no-scrollbar pb-2">
                                 {customBenefits.map((ben: any, idx: number) => (
-                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-white/5" style={sClayDark}>
+                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-zinc-100" style={sClayLight}>
                                         <div className="size-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                            <Icon name="star" className="text-primary" size={20} />
+                                            <Icon name="star" className="text-yellow-600" size={20} />
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{ben.label || ben.title || 'Incentivo'}</p>
-                                            <p className="text-lg font-black text-primary leading-none">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{ben.label || ben.title || 'Incentivo'}</p>
+                                            <p className="text-lg font-black text-yellow-600 leading-none">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -4926,19 +4895,19 @@ function App() {
                     {/* Regiões Extras */}
                     {neighborhoodExtras.length > 0 && (
                         <section className="space-y-6">
-                            <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
-                                <span className="size-2 rounded-full bg-primary" />
+                            <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+                                <span className="size-2 rounded-full bg-yellow-500" />
                                 Taxas por Região
                             </h3>
                             <div className="flex overflow-x-auto gap-4 -mx-6 px-6 no-scrollbar pb-2">
                                 {neighborhoodExtras.map((item: any, idx: number) => (
-                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-white/5" style={sClayDark}>
+                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-zinc-100" style={sClayLight}>
                                         <div className="size-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                            <Icon name="location_on" className="text-primary" size={20} />
+                                            <Icon name="location_on" className="text-yellow-600" size={20} />
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{item.label}</p>
-                                            <p className="text-lg font-black text-primary leading-none">+ R$ {parseFloat(item.fee || item.value || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{item.label}</p>
+                                            <p className="text-lg font-black text-yellow-600 leading-none">+ R$ {parseFloat(item.fee || item.value || 0).toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -4949,37 +4918,37 @@ function App() {
                     {/* Descrição */}
                     {slot.description && (
                         <section className="space-y-6">
-                             <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
-                                <span className="size-2 rounded-full bg-primary" />
+                             <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+                                <span className="size-2 rounded-full bg-yellow-500" />
                                 Sobre a Vaga
                             </h3>
-                            <div className="p-6 border border-white/5 leading-relaxed" style={sClayDark}>
-                                <p className="text-sm font-medium text-white/60">{slot.description}</p>
+                            <div className="p-6 border border-zinc-100 leading-relaxed shadow-sm" style={sClayLight}>
+                                <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">{slot.description}</p>
                             </div>
                         </section>
                     )}
 
                     {/* Requisitos */}
                     <section className="space-y-6">
-                        <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
-                            <span className="size-2 rounded-full bg-primary" />
+                        <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+                            <span className="size-2 rounded-full bg-yellow-500" />
                             Requisitos
                         </h3>
                         {requirements.length === 0 ? (
-                            <div className="p-5 border border-white/5 rounded-[2rem] flex items-center gap-4 opacity-40" style={sClayDark}>
-                                <Icon name="check_circle" size={20} className="text-primary shrink-0" />
-                                <p className="text-xs font-bold text-white/50 uppercase tracking-wide">Nenhum requisito específico cadastrado</p>
+                            <div className="p-5 border border-zinc-100 rounded-[2rem] flex items-center gap-4 opacity-40 shadow-sm" style={sClayLight}>
+                                <Icon name="check_circle" size={20} className="text-yellow-600 shrink-0" />
+                                <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Nenhum requisito específico cadastrado</p>
                             </div>
                         ) : (
                             <div className="grid gap-4">
                                 {requirements.map((req: any, idx: number) => (
-                                    <div key={idx} className="p-2 pr-6 flex items-center gap-5 border border-white/5" style={sClayDark}>
-                                        <div className="size-12 rounded-[20px] flex items-center justify-center shrink-0" style={sClayIcon}>
-                                            <Icon name="check" size={20} className="text-primary" />
+                                    <div key={idx} className="p-2 pr-6 flex items-center gap-5 border border-zinc-100" style={sClayLight}>
+                                        <div className="size-12 rounded-[20px] flex items-center justify-center shrink-0 shadow-inner" style={sClayIcon}>
+                                            <Icon name="check" size={20} className="text-yellow-600" />
                                         </div>
                                         <div className="flex-1 py-2">
-                                            <p className="text-xs font-black text-white uppercase tracking-wide">{typeof req === 'string' ? req : req.label}</p>
-                                            {req.detail && <p className="text-[10px] font-medium text-white/30 mt-0.5">{req.detail}</p>}
+                                            <p className="text-xs font-black text-zinc-900 uppercase tracking-widest">{typeof req === 'string' ? req : req.label}</p>
+                                            {req.detail && <p className="text-[10px] font-bold text-zinc-400 mt-0.5 uppercase tracking-tighter">{req.detail}</p>}
                                         </div>
                                     </div>
                                 ))}
@@ -5020,20 +4989,20 @@ function App() {
         return (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
             <header className="flex flex-col items-center text-center gap-1">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Histórico</p>
-                <h2 className="text-3xl font-black text-white tracking-tight text-center uppercase">Sua Jornada</h2>
-                <p className="text-xs text-white/40 mt-1">Registro consolidado de suas corridas e ganhos.</p>
+                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em]">Histórico</p>
+                <h2 className="text-3xl font-black text-zinc-900 tracking-tight text-center uppercase">Sua Jornada</h2>
+                <p className="text-xs text-zinc-400 mt-1 font-bold uppercase tracking-widest">Registro consolidado de suas corridas e ganhos.</p>
             </header>
 
             <div className="space-y-4">
                 {history.length === 0 ? (
-                    <div className="py-24 clay-card-dark rounded-[40px] flex flex-col items-center gap-6 text-center shadow-2xl relative overflow-hidden">
-                        <div className="size-20 rounded-full bg-[#1A1616] border border-white/5 flex items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
-                            <Icon name="history_toggle_off" className="text-4xl text-primary/50" />
+                    <div className="py-24 clay-card rounded-[40px] flex flex-col items-center gap-6 text-center shadow-2xl relative overflow-hidden bg-white">
+                        <div className="size-20 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner">
+                            <Icon name="history_toggle_off" className="text-4xl text-yellow-600/50" />
                         </div>
                         <div>
-                            <p className="text-sm font-black text-white uppercase tracking-widest mb-1">Nenhuma Jornada</p>
-                            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Você ainda não completou corridas</p>
+                            <p className="text-sm font-black text-zinc-900 uppercase tracking-widest mb-1">Nenhuma Jornada</p>
+                            <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Você ainda não completou corridas</p>
                         </div>
                     </div>
                 ) : (
@@ -5060,37 +5029,37 @@ function App() {
                                 setSelectedOrder(order);
                                 setShowOrderModal(true);
                             }}
-                            className="clay-card-dark rounded-[32px] p-6 space-y-5 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+                            className="clay-card rounded-[32px] p-6 space-y-5 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all bg-white"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full transition-opacity group-hover:bg-primary/20" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-3xl -mr-16 -mt-16 rounded-full transition-opacity group-hover:bg-yellow-400/20" />
                             
                             <div className="flex items-center justify-between relative z-10">
-                                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] bg-black/20 px-3 py-1 rounded-full shadow-inner">
+                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] bg-zinc-50 px-3 py-1 rounded-full shadow-inner border border-zinc-100">
                                     #{order.id.slice(0, 8).toUpperCase()}
                                 </span>
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 drop-shadow-[0_2px_10px_rgba(52,211,153,0.3)]">
-                                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm">
+                                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                     Finalizado
                                 </span>
                             </div>
 
-                            <div className="bg-[#120F0F] rounded-3xl p-5 border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.5)] relative z-10">
+                            <div className="bg-zinc-50 rounded-3xl p-5 border border-zinc-100 shadow-inner relative z-10">
                                 <div className="space-y-4">
                                     <div className="flex items-start gap-4">
                                         <div className="flex flex-col items-center gap-1 mt-1">
-                                            <div className="size-2 rounded-full border-2 border-primary bg-[#120F0F]" />
-                                            <div className="w-[1px] h-6 border-l border-dashed border-white/10" />
-                                            <div className="size-2 rounded-full border-2 border-white/20 bg-[#120F0F]" />
+                                            <div className="size-2 rounded-full border-2 border-yellow-500 bg-white" />
+                                            <div className="w-[1px] h-6 border-l border-dashed border-zinc-200" />
+                                            <div className="size-2 rounded-full border-2 border-zinc-300 bg-white" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-0.5">{serviceTypeLabel(order.service_type)}</p>
-                                            <p className="text-sm font-black text-white leading-tight">{cleanAddressText(order.delivery_address || order.destination || 'Endereço Indisponível')}</p>
+                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{serviceTypeLabel(order.service_type)}</p>
+                                            <p className="text-sm font-black text-zinc-900 leading-tight uppercase tracking-tighter">{cleanAddressText(order.delivery_address || order.destination || 'Endereço Indisponível')}</p>
                                         </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-3 pt-3 mt-3 border-t border-white/5">
-                                        <Icon name="event" size={14} className="text-white/20" />
-                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
+                                    <div className="flex items-center gap-3 pt-3 mt-3 border-t border-zinc-100">
+                                        <Icon name="event" size={14} className="text-zinc-300" />
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                                             {new Date(completedAt).toLocaleDateString('pt-BR')} <span className="mx-1 opacity-40">•</span> {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
@@ -5098,26 +5067,26 @@ function App() {
                             </div>
                             
                             <div className="grid grid-cols-2 gap-3 relative z-10">
-                                <div className="bg-[#120F0F] p-4 rounded-[20px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] flex flex-col justify-between">
+                                <div className="bg-zinc-50 p-4 rounded-[20px] border border-zinc-100 shadow-inner flex flex-col justify-between">
                                     <div className="flex justify-between items-start mb-2">
-                                        <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] line-clamp-1 mt-0.5">Lucro Líquido</p>
-                                        <span className={`text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCashPaid ? 'text-rose-400 bg-rose-400/10 border-rose-400/20' : 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'}`}>
+                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] line-clamp-1 mt-0.5">Lucro Líquido</p>
+                                        <span className={`text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCashPaid ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}>
                                             {isCashPaid ? 'Dinheiro' : 'Online'}
                                         </span>
                                     </div>
-                                    <span className={`text-xl font-black tracking-tighter ${isNegative ? 'text-rose-400 drop-shadow-[0_2px_10px_rgba(251,113,133,0.3)]' : 'text-primary drop-shadow-[0_2px_10px_rgba(250,204,21,0.3)]'}`}>
+                                    <span className={`text-xl font-black tracking-tighter ${isNegative ? 'text-rose-600 drop-shadow-sm' : 'text-yellow-600 drop-shadow-sm'}`}>
                                         {netEarningsLabel}
                                     </span>
                                 </div>
-                                <div className="bg-white/5 p-4 rounded-[20px] border border-white/10 text-right flex flex-col justify-center shadow-lg">
-                                    <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Total Pedido</p>
+                                <div className="bg-zinc-100 p-4 rounded-[20px] border border-zinc-200 text-right flex flex-col justify-center shadow-inner">
+                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Total Pedido</p>
                                     <div className="flex flex-wrap items-center justify-end gap-2">
                                         {isCashPaid && (
-                                            <span className="text-[10px] font-black text-rose-400 bg-rose-400/10 px-2 py-1 rounded-lg border border-rose-400/20 whitespace-nowrap">
+                                            <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-1 rounded-lg border border-rose-100 whitespace-nowrap">
                                                 R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')} em mãos
                                             </span>
                                         )}
-                                        <span className="text-sm font-black text-white opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                        <span className="text-sm font-black text-zinc-900 opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -5130,14 +5099,15 @@ function App() {
     };
 
     const renderEarningsView = () => {
-        const sClayDark: React.CSSProperties = {
+        const sClayLight: React.CSSProperties = {
             borderRadius: '35px',
-            background: '#18181b',
-            boxShadow: '12px 12px 24px #09090b, -8px -8px 16px rgba(255,255,255,0.02), inset 4px 4px 8px rgba(255,255,255,0.03)',
+            background: '#ffffff',
+            boxShadow: '12px 12px 24px rgba(0,0,0,0.05), -8px -8px 16px rgba(255,255,255,0.8), inset 4px 4px 8px rgba(255,255,255,0.5)',
+            border: '1px solid rgba(0,0,0,0.05)'
         };
         const sClayIcon: React.CSSProperties = {
-            background: 'rgba(255,217,0,0.05)',
-            boxShadow: 'inset 2px 22px 4px rgba(255,255,255,0.05), inset -2px -2px 4px rgba(0,0,0,0.3)',
+            background: 'rgba(255,217,0,0.1)',
+            boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.5), inset -2px -2px 4px rgba(0,0,0,0.05)',
         };
         const sClayYellow: React.CSSProperties = {
             borderRadius: '45px',
@@ -5155,8 +5125,8 @@ function App() {
                 <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
 
                 <header className="flex flex-col items-center text-center gap-1 px-2">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Izi Pay ðŸš€</p>
-                    <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase text-center">Seus Resultados</h2>
+                    <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.5em] opacity-70">Izi Pay ðŸš€</p>
+                    <h2 className="text-4xl font-black text-zinc-900 tracking-tighter drop-shadow-sm uppercase text-center">Seus Resultados</h2>
                 </header>
 
                 {/* Claymorphic Balance Card Premium */}
@@ -5199,11 +5169,11 @@ function App() {
                         </div>
 
                         <motion.button 
-                            whileTap={{ scale: 0.96 }}
-                            onClick={handleWithdrawRequest}
-                            className="w-full h-18 bg-stone-950 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(0,0,0,0.3)] active:shadow-none transition-all flex items-center justify-center gap-4 group"
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowWithdrawModal(true)}
+                            className="w-full h-18 bg-zinc-900 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 group"
                         >
-                            <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-primary transition-colors">
+                            <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
                                 <Icon name="payments" size={20} />
                             </div>
                             Sacar Ganhos
@@ -5213,48 +5183,48 @@ function App() {
 
                 {/* Premium Stats Grid */}
                 <div className="grid grid-cols-2 gap-5 px-1">
-                    <div className="rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden" style={sClayDark}>
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 blur-2xl rounded-full" />
-                        <div className="size-12 rounded-2xl flex items-center justify-center border border-primary/20" style={sClayIcon}>
-                            <Icon name="today" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
+                    <div className="rounded-[35px] p-6 space-y-4 border border-zinc-100 relative overflow-hidden bg-white shadow-xl" style={sClayLight}>
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-400/5 blur-2xl rounded-full" />
+                        <div className="size-12 rounded-2xl flex items-center justify-center border border-yellow-400/20 shadow-inner" style={sClayIcon}>
+                            <Icon name="today" size={24} className="text-yellow-600 drop-shadow-sm" />
                         </div>
                         <div>
-                            <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Ganhos hoje</p>
-                            <p className="text-2xl font-black text-white tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                            <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Ganhos hoje</p>
+                            <p className="text-2xl font-black text-zinc-900 tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
                         </div>
                     </div>
                     
-                    <div className="rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden" style={sClayDark}>
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-secondary/5 blur-2xl rounded-full" />
-                        <div className="size-12 rounded-2xl flex items-center justify-center border border-secondary/20" style={sClayIcon}>
-                            <Icon name="local_shipping" size={24} className="text-secondary drop-shadow-[0_0_8px_rgba(100,100,255,0.5)]" />
+                    <div className="rounded-[35px] p-6 space-y-4 border border-zinc-100 relative overflow-hidden bg-white shadow-xl" style={sClayLight}>
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-blue-400/5 blur-2xl rounded-full" />
+                        <div className="size-12 rounded-2xl flex items-center justify-center border border-blue-400/20 shadow-inner" style={{...sClayIcon, background: 'rgba(59,130,246,0.1)'}}>
+                            <Icon name="local_shipping" size={24} className="text-blue-600 drop-shadow-sm" />
                         </div>
                         <div>
-                            <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Entregas</p>
-                            <p className="text-2xl font-black text-white tracking-tighter">{stats.count}</p>
+                            <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Entregas</p>
+                            <p className="text-2xl font-black text-zinc-900 tracking-tighter">{stats.count}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Performance Chart - CANDLESTICKS */}
-                <div className="rounded-[40px] p-8 space-y-8 border border-white/5 relative overflow-hidden" style={sClayDark}>
+                <div className="rounded-[40px] p-8 space-y-8 border border-zinc-100 relative overflow-hidden bg-white shadow-xl" style={sClayLight}>
                     <div className="flex items-center justify-between">
                         <div className="flex flex-col gap-1">
-                            <h3 className="text-white font-black text-[10px] uppercase tracking-[0.3em]">Performance Alpha</h3>
-                            <p className="text-[9px] text-white/20 font-bold uppercase">Meta de Trading: 92%</p>
+                            <h3 className="text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em]">Performance Alpha</h3>
+                            <p className="text-[9px] text-zinc-400 font-bold uppercase">Meta de Trading: 92%</p>
                         </div>
-                        <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                            <Icon name="monitoring" size={18} className="text-emerald-400" />
+                        <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-inner">
+                            <Icon name="monitoring" size={18} className="text-emerald-600" />
                         </div>
                     </div>
                     
                     <div className="h-44 flex items-end justify-between gap-2 px-1 pt-6 relative">
                         {/* Grade de fundo do gráfico */}
-                        <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none opacity-[0.03]">
-                            <div className="h-px bg-white w-full" />
-                            <div className="h-px bg-white w-full" />
-                            <div className="h-px bg-white w-full" />
-                            <div className="h-px bg-white w-full" />
+                        <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none opacity-[0.05]">
+                            <div className="h-px bg-zinc-200 w-full" />
+                            <div className="h-px bg-zinc-200 w-full" />
+                            <div className="h-px bg-zinc-200 w-full" />
+                            <div className="h-px bg-zinc-200 w-full" />
                         </div>
 
                         {stats.performance.map((val, i) => {
@@ -5308,7 +5278,7 @@ function App() {
                                             </div>
                                         )}
                                     </div>
-                                    <span className={`text-[8px] font-black uppercase tracking-widest ${isToday ? 'text-primary' : 'text-white/20'}`}>
+                                    <span className={`text-[8px] font-black uppercase tracking-widest ${isToday ? 'text-yellow-600' : 'text-zinc-300'}`}>
                                         {['S','T','Q','Q','S','S','D'][i]}
                                     </span>
                                 </div>
@@ -5318,15 +5288,15 @@ function App() {
                 </div>
 
                 {/* Info Message Claymorphic - PAGAMENTO SEGURO */}
-                <div className="rounded-[32px] p-6 flex items-center gap-5 border border-white/5 relative overflow-hidden" style={sClayDark}>
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-                    <div className="size-14 rounded-2xl flex items-center justify-center shrink-0 border border-primary/20 shadow-lg" style={sClayIcon}>
-                        <Icon name="verified_user" className="text-primary" size={24} />
+                <div className="rounded-[32px] p-6 flex items-center gap-5 border border-zinc-100 relative overflow-hidden bg-zinc-50" style={sClayLight}>
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-yellow-400/5 to-transparent pointer-events-none" />
+                    <div className="size-14 rounded-2xl flex items-center justify-center shrink-0 border border-yellow-400/20 shadow-inner bg-white">
+                        <Icon name="verified_user" className="text-yellow-600" size={24} />
                     </div>
                     <div className="space-y-1 relative z-10">
-                        <p className="text-[10px] text-white font-black uppercase tracking-widest leading-none">Pagamento Seguro Auditado</p>
-                        <p className="text-[9px] text-white/30 font-bold leading-relaxed">
-                            Suas transferências PIX são protegidas por <span className="text-primary/60">criptografia Izi</span> e liberadas em até 24h.
+                        <p className="text-[10px] text-zinc-900 font-black uppercase tracking-widest leading-none">Pagamento Seguro Auditado</p>
+                        <p className="text-[9px] text-zinc-400 font-bold leading-relaxed">
+                            Suas transferências PIX são protegidas por <span className="text-yellow-600/60">criptografia Izi</span> e liberadas em até 24h.
                         </p>
                     </div>
                 </div>
@@ -5362,13 +5332,13 @@ function App() {
 
                 <div className="space-y-4 pb-20">
                     {withdrawHistory.length === 0 ? (
-                        <div className="clay-card-dark rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6 border border-white/5 mt-10">
-                            <div className="size-20 rounded-full bg-white/5 flex items-center justify-center">
-                                <Icon name="history_edu" size={40} className="text-white/20" />
+                        <div className="bg-white rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6 border border-zinc-100 mt-10 shadow-xl" style={sClayLight}>
+                            <div className="size-20 rounded-full bg-zinc-50 flex items-center justify-center border border-zinc-100">
+                                <Icon name="history_edu" size={40} className="text-zinc-200" />
                             </div>
                             <div className="space-y-2">
-                                <p className="text-white font-black uppercase text-[10px] tracking-widest">Nada por aqui</p>
-                                <p className="text-white/30 text-[9px] font-bold">Você ainda não realizou nenhum saque.</p>
+                                <p className="text-zinc-900 font-black uppercase text-[10px] tracking-widest">Nada por aqui</p>
+                                <p className="text-zinc-400 text-[9px] font-bold">Você ainda não realizou nenhum saque.</p>
                             </div>
                         </div>
                     ) : (
@@ -5379,23 +5349,24 @@ function App() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
                                 onClick={() => { setSelectedWithdraw(tx); setShowWithdrawDetail(true); }}
-                                className="clay-card-dark rounded-[30px] p-6 border border-white/5 flex items-center gap-5 relative overflow-hidden transition-all active:scale-95 cursor-pointer hover:border-primary/30"
+                                className="bg-white rounded-[30px] p-6 border border-zinc-100 flex items-center gap-5 relative overflow-hidden transition-all active:scale-95 cursor-pointer hover:border-yellow-400/30 shadow-sm"
+                                style={sClayLight}
                             >
-                                <div className={`size-14 rounded-2xl flex items-center justify-center border shadow-lg ${
-                                    tx.status === 'concluido' ? 'bg-emerald-500/10 border-emerald-500/20' : 
-                                    tx.status === 'recusado' ? 'bg-rose-500/10 border-rose-500/20' :
-                                    'bg-primary/10 border-primary/20'
+                                <div className={`size-14 rounded-2xl flex items-center justify-center border shadow-sm ${
+                                    tx.status === 'concluido' ? 'bg-emerald-50 border-emerald-100' : 
+                                    tx.status === 'recusado' ? 'bg-rose-50 border-rose-100' :
+                                    'bg-yellow-50 border-yellow-100'
                                 }`}>
                                     <Icon 
                                         name={tx.status === 'concluido' ? 'verified' : tx.status === 'recusado' ? 'close' : 'sync'} 
                                         size={24} 
-                                        className={tx.status === 'concluido' ? 'text-emerald-400' : tx.status === 'recusado' ? 'text-rose-400' : 'text-primary'} 
+                                        className={tx.status === 'concluido' ? 'text-emerald-500' : tx.status === 'recusado' ? 'text-rose-500' : 'text-yellow-600'} 
                                     />
                                 </div>
 
                                 <div className="flex-1 space-y-1">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-white font-black text-xl tracking-tighter">R$ {Number(tx.amount).toFixed(2).replace('.', ',')}</p>
+                                        <p className="text-zinc-900 font-black text-xl tracking-tighter">R$ {Number(tx.amount).toFixed(2).replace('.', ',')}</p>
                                         <div className="flex items-center gap-2">
                                             {tx.receipt_url && (
                                                 <div className="bg-emerald-500/20 text-emerald-400 text-[7px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -5404,20 +5375,20 @@ function App() {
                                                 </div>
                                             )}
                                             <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${
-                                                tx.status === 'concluido' ? 'bg-emerald-500/20 text-emerald-400' : 
-                                                tx.status === 'recusado' ? 'bg-rose-500/20 text-rose-400' :
-                                                'bg-primary/20 text-primary'
+                                                tx.status === 'concluido' ? 'bg-emerald-50 text-emerald-500' : 
+                                                tx.status === 'recusado' ? 'bg-rose-50 text-rose-500' :
+                                                'bg-yellow-50 text-yellow-600'
                                             }`}>
                                                 {tx.status || 'Pendente'}
                                             </span>
                                         </div>
                                     </div>
-                                    <p className="text-[9px] text-white/30 font-bold uppercase truncate max-w-[150px]">
+                                    <p className="text-[9px] text-zinc-400 font-bold uppercase truncate max-w-[150px]">
                                         {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                     </p>
-                                    <p className="text-[8px] text-white/20 font-medium line-clamp-1">{tx.description}</p>
+                                    <p className="text-[8px] text-zinc-300 font-medium line-clamp-1">{tx.description}</p>
                                 </div>
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.01] blur-3xl -z-10 rounded-full" />
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-400/[0.02] blur-3xl -z-10 rounded-full" />
                             </motion.div>
                         ))
                     )}
@@ -5431,12 +5402,12 @@ function App() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[200] bg-black/95 flex flex-col p-6 items-center justify-center gap-8"
+                            className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-xl flex flex-col p-6 items-center justify-center gap-8"
                         >
                             <div className="w-full flex justify-between items-center px-2">
                                 <div className="flex flex-col gap-1">
-                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Transação ðŸ§¾</p>
-                                    <h2 className="text-3xl font-black text-white tracking-tighter drop-shadow-lg uppercase text-center">Comprovante</h2>
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Transação 🧾</p>
+                                    <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase text-center">Comprovante</h2>
                                 </div>
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
@@ -5454,7 +5425,7 @@ function App() {
                                     className="w-full h-full object-contain"
                                 />
                                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-8 text-center">
-                                    <p className="text-[10px] text-white/40 font-bold">
+                                    <p className="text-[10px] text-zinc-400 font-bold">
                                         Este documento foi emitido pelo sistema IziDelivery e serve como prova de transferência.
                                     </p>
                                 </div>
@@ -5490,94 +5461,94 @@ function App() {
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col p-6 overflow-y-auto"
+                className="fixed inset-0 z-[100] bg-zinc-50 backdrop-blur-md flex flex-col p-6 overflow-y-auto"
             >
                 <header className="flex items-center justify-between mb-8">
-                    <button onClick={() => setShowWithdrawDetail(false)} className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
-                        <Icon name="arrow_back" className="text-white" />
+                    <button onClick={() => setShowWithdrawDetail(false)} className="size-12 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center active:scale-90 transition-all">
+                        <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
                     <div className="text-center">
                         <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Detalhamento</p>
-                        <h2 className="text-xl font-black text-white">Fluxo de Saque</h2>
+                        <h2 className="text-xl font-black text-zinc-900">Fluxo de Saque</h2>
                     </div>
                     <div className="size-12" />
                 </header>
 
                 <div className="space-y-6">
                     {/* Main Clay Card */}
-                    <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full -mr-16 -mt-16" />
+                    <div className="bg-white rounded-[40px] p-8 border border-zinc-100 relative overflow-hidden group shadow-xl" style={sClayLight}>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-3xl -mr-16 -mt-16 rounded-full" />
                         
                         <div className="flex flex-col items-center text-center space-y-4 mb-8">
-                            <div className={`size-20 rounded-[30px] flex items-center justify-center border shadow-2xl ${
-                                tx.status === 'concluido' ? 'bg-emerald-500/10 border-emerald-500/20' : 
-                                tx.status === 'recusado' ? 'bg-rose-500/10 border-rose-500/20' :
-                                'bg-primary/10 border-primary/20'
+                            <div className={`size-20 rounded-[30px] flex items-center justify-center border shadow-lg ${
+                                tx.status === 'concluido' ? 'bg-emerald-50 border-emerald-100' : 
+                                tx.status === 'recusado' ? 'bg-rose-50 border-rose-100' :
+                                'bg-yellow-50 border-yellow-100'
                             }`}>
                                 <Icon 
                                     name={tx.status === 'concluido' ? 'verified' : tx.status === 'recusado' ? 'close' : 'sync'} 
                                     size={36} 
-                                    className={tx.status === 'concluido' ? 'text-emerald-400' : tx.status === 'recusado' ? 'text-rose-400' : 'text-primary'} 
+                                    className={tx.status === 'concluido' ? 'text-emerald-500' : tx.status === 'recusado' ? 'text-rose-500' : 'text-yellow-600'} 
                                 />
                             </div>
                             <div>
                                 <span className={`text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border ${
-                                    tx.status === 'concluido' ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 
-                                    tx.status === 'recusado' ? 'text-rose-400 bg-rose-400/10 border-rose-400/20' :
-                                    'text-primary bg-primary/10 border-primary/20'
+                                    tx.status === 'concluido' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 
+                                    tx.status === 'recusado' ? 'text-rose-600 bg-rose-50 border-rose-100' :
+                                    'text-yellow-700 bg-yellow-50 border-yellow-100'
                                 }`}>
                                     {tx.status === 'concluido' ? 'Pago com Sucesso' : tx.status === 'recusado' ? 'Saque Recusado' : 'Aguardando Processamento'}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="space-y-4 bg-black/20 rounded-[32px] p-6 border border-white/5 shadow-inner">
+                        <div className="space-y-4 bg-zinc-100/50 rounded-[32px] p-6 border border-zinc-100 shadow-inner">
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">ID Transação</span>
-                                <span className="text-[10px] font-mono text-white/60">#{tx.id.slice(0, 12).toUpperCase()}</span>
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID Transação</span>
+                                <span className="text-[10px] font-mono text-zinc-900">#{tx.id.slice(0, 12).toUpperCase()}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Data e Hora</span>
-                                <span className="text-[10px] font-bold text-white/60 uppercase">
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Data e Hora</span>
+                                <span className="text-[10px] font-bold text-zinc-900 uppercase">
                                     {new Date(tx.created_at).toLocaleDateString('pt-BR')} às {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Método</span>
-                                <span className="text-[10px] font-bold text-white/60 uppercase">PIX</span>
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Método</span>
+                                <span className="text-[10px] font-bold text-zinc-900 uppercase">PIX</span>
                             </div>
-                            <div className="w-full h-[1px] bg-white/5" />
+                            <div className="w-full h-[1px] bg-zinc-200" />
                             <div className="flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Chave PIX Utilizada</span>
-                                <span className="text-xs font-black text-white truncate">{pixKey || 'Chave não registrada'}</span>
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Chave PIX Utilizada</span>
+                                <span className="text-xs font-black text-zinc-900 truncate">{pixKey || 'Chave não registrada'}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Breakdown Card */}
-                    <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 space-y-6">
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <div className="clay-card-dark rounded-[40px] p-8 border border-zinc-100 space-y-6">
+                        <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
                             <Icon name="analytics" size={16} className="text-primary" />
                             Valores e Taxas
                         </h3>
 
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Valor Bruto</span>
-                                <span className="text-sm font-black text-white">R$ {grossAmount.toFixed(2).replace('.', ',')}</span>
+                                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Valor Bruto</span>
+                                <span className="text-sm font-black text-zinc-900">R$ {grossAmount.toFixed(2).replace('.', ',')}</span>
                             </div>
                             
                             {feeAmount > 0 && (
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Taxa de Saque</span>
+                                        <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Taxa de Saque</span>
                                         <span className="text-[8px] font-black text-rose-500/50 border border-rose-500/20 px-2 py-0.5 rounded-full">{feePercent}%</span>
                                     </div>
                                     <span className="text-sm font-black text-rose-500">- R$ {feeAmount.toFixed(2).replace('.', ',')}</span>
                                 </div>
                             )}
 
-                            <div className="w-full h-[1px] bg-white/5" />
+                            <div className="w-full h-[1px] bg-zinc-200" />
 
                             <div className="flex justify-between items-end pt-2">
                                 <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Valor Líquido</span>
@@ -5596,7 +5567,7 @@ function App() {
                                 setSelectedReceiptUrl(tx.receipt_url);
                                 setShowReceipt(true);
                             }}
-                            className="w-full py-6 rounded-[30px] bg-white text-black font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl active:bg-neutral-200 transition-colors"
+                            className="w-full py-6 rounded-[30px] bg-zinc-900 text-white font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl transition-colors"
                         >
                             <Icon name="description" size={20} />
                             Ver Comprovante Oficial
@@ -5604,7 +5575,7 @@ function App() {
                     )}
                 </div>
 
-                <p className="mt-8 text-center text-[9px] font-bold text-white/20 uppercase tracking-widest">
+                <p className="mt-8 text-center text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
                     Izi Delivery Financial Security
                 </p>
             </motion.div>
@@ -5738,7 +5709,7 @@ function App() {
                     htmlFor="avatar-upload"
                     onClick={() => console.log('[AVATAR] Label clicado')}
                     className="size-28 rounded-[40px] flex items-center justify-center mb-6 relative group cursor-pointer select-none"
-                    style={{ background: '#1A1A1A', boxShadow: '12px 12px 24px rgba(0,0,0,0.5), -8px -8px 16px rgba(255,255,255,0.02)' }}
+                    style={{ background: '#FFFFFF', boxShadow: '12px 12px 24px rgba(0,0,0,0.05), -8px -8px 16px rgba(255,255,255,0.8)' }}
                 >
                     {driverAvatar ? (
                         <img
@@ -5761,9 +5732,9 @@ function App() {
 
                     {/* Badge de câmera Claymorphic */}
                     <div 
-                        className="absolute -bottom-1 -right-1 size-10 rounded-full bg-primary flex items-center justify-center shadow-[inset_3px_3px_6px_rgba(255,255,255,0.7),inset_-3px_-3px_6px_rgba(0,0,0,0.2),0_10px_20px_rgba(0,0,0,0.4)] border-4 border-[#0a0a0a]"
+                        className="absolute -bottom-1 -right-1 size-10 rounded-full bg-primary flex items-center justify-center shadow-[inset_3px_3px_6px_rgba(255,255,255,0.7),inset_-3px_-3px_6px_rgba(0,0,0,0.2),0_10px_20px_rgba(0,0,0,0.4)] border-4 border-[#FFFFFF]"
                     >
-                        <Icon name="photo_camera" size={16} className="text-slate-950" />
+                        <Icon name="photo_camera" size={16} className="text-zinc-950" />
                     </div>
                 </label>
 
@@ -5780,21 +5751,21 @@ function App() {
                         }
                     }}
                 />
-                <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
+                <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{driverName}</h2>
                 <div className="flex items-center gap-2 mt-2">
                     <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi • Nível {stats.level}</span>
                 </div>
                 
                 <div className="flex items-center gap-4 mt-8">
-                    <div className="flex flex-col items-center gap-1 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] px-6 py-4 rounded-[28px] min-w-[100px] border-none">
+                    <div className="flex flex-col items-center gap-1 bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] px-6 py-4 rounded-[28px] min-w-[100px] border border-zinc-100">
                         <Icon name="star" className="text-primary text-lg" />
-                        <span className="text-lg font-black text-white">4.98</span>
-                        <span className="text-[8px] font-black text-white/20 uppercase">Rating</span>
+                        <span className="text-lg font-black text-zinc-900">4.98</span>
+                        <span className="text-[8px] font-black text-zinc-400 uppercase">Rating</span>
                     </div>
-                    <div className="flex flex-col items-center gap-1 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] px-6 py-4 rounded-[28px] min-w-[100px] border-none">
+                    <div className="flex flex-col items-center gap-1 bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] px-6 py-4 rounded-[28px] min-w-[100px] border border-zinc-100">
                         <Icon name="route" className="text-emerald-400 text-lg" />
-                        <span className="text-lg font-black text-white">{stats.count}</span>
-                        <span className="text-[8px] font-black text-white/20 uppercase">Viagens</span>
+                        <span className="text-lg font-black text-zinc-900">{stats.count}</span>
+                        <span className="text-[8px] font-black text-zinc-400 uppercase">Viagens</span>
                     </div>
                 </div>
             </div>
@@ -5813,35 +5784,35 @@ function App() {
                             if (item.label === 'Veículo & Placa') setShowPlateModal(true);
                             if (item.label === 'Preferências') setShowPreferences(true);
                         }}
-                        className="w-full bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]"
+                        className="w-full bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]"
                     >
                         <div className="flex items-center gap-4">
-                            <div className={`size-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/10 ${item.color}`}>
+                            <div className={`size-12 rounded-[18px] bg-zinc-50 flex items-center justify-center border border-zinc-100 ${item.color}`}>
                                 <Icon name={item.icon} className="text-xl" />
                             </div>
-                            <span className="text-sm font-bold text-white/80">{item.label}</span>
+                            <span className="text-sm font-bold text-zinc-900">{item.label}</span>
                         </div>
-                        <Icon name="chevron_right" className="text-white/20 group-hover:text-white/40 transition-colors" />
+                        <Icon name="chevron_right" className="text-zinc-900/20 group-hover:text-zinc-900/40 transition-colors" />
                     </button>
                 ))}
             </div>
             
-            <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] rounded-[32px] p-6 space-y-4">
+            <div className="bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 rounded-[32px] p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="size-12 rounded-[18px] bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
                             <Icon name="layers" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-black text-white">Sobreposição</span>
-                            <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Ver chamadas sobre outros apps</span>
+                            <span className="text-sm font-black text-zinc-900">Sobreposição</span>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Ver chamadas sobre outros apps</span>
                         </div>
                     </div>
                     <button 
                         onClick={async () => {
                             await openOverlaySettings();
                         }}
-                        className="px-5 py-3 bg-primary text-black rounded-2xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all"
+                        className="px-5 py-3 bg-primary text-zinc-900 rounded-2xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all"
                     >
                         Configurar
                     </button>
@@ -5850,25 +5821,25 @@ function App() {
 
             <button 
                 onClick={handleLogout} 
-                className="w-full py-6 mt-4 rounded-[32px] font-black text-[11px] uppercase tracking-[0.2em] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none text-red-500 active:scale-95 transition-all"
+                className="w-full py-6 mt-4 rounded-[32px] font-black text-[11px] uppercase tracking-[0.2em] bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 text-red-500 active:scale-95 transition-all"
             >
                 Encerrar Sessão
             </button>
 
-            <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] rounded-[32px] p-8 space-y-5 mt-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
+            <div className="bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 rounded-[32px] p-8 space-y-5 mt-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
                 <div className="relative z-10">
                     <h3 className="text-xs font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
                         <Icon name="admin_panel_settings" size={16} /> Zona de Segurança
                     </h3>
-                    <p className="text-[11px] text-white/40 leading-relaxed mt-2">
+                    <p className="text-[11px] text-zinc-400 leading-relaxed mt-2">
                         Use estas ferramentas apenas em caso de erros no sistema ou se precisar resetar seu estado de disponibilidade.
                     </p>
                 </div>
                 <div className="flex gap-3 pt-2 relative z-10">
                     <button 
                         onClick={syncMissionWithDB}
-                        className="flex-1 h-12 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] text-white/60 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                        className="flex-1 h-12 bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] text-zinc-400 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
                     >
                         Sincronizar
                     </button>
@@ -5881,7 +5852,7 @@ function App() {
                                 toastSuccess('Limpeza concluída!');
                             }
                         }}
-                        className="flex-1 h-12 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                        className="flex-1 h-12 bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
                     >
                         Resetar Estado
                     </button>
@@ -5897,39 +5868,39 @@ function App() {
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                className="fixed inset-0 z-[250] bg-[#0A0A0A] flex flex-col no-scrollbar overflow-y-auto"
+                className="fixed inset-0 z-[250] bg-white flex flex-col no-scrollbar overflow-y-auto"
             >
-                <header className="sticky top-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-white/5">
+                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100">
                     <button 
                         onClick={() => {
                             setShowPlateModal(false);
                             setDriverPlate(localStorage.getItem('izi_driver_plate') || '');
                             setIsEditingPlate(false);
                         }}
-                        className="size-12 rounded-[20px] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center active:scale-95 transition-transform border border-white/5"
+                        className="size-12 rounded-[20px] bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
                     >
-                        <Icon name="arrow_back" className="text-white" />
+                        <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
                     <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">Izi Pilot</p>
-                        <h2 className="text-lg font-black text-white">Veículo</h2>
+                        <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em]">Izi Pilot</p>
+                        <h2 className="text-lg font-black text-zinc-900">Veículo</h2>
                     </div>
                 </header>
 
                 <div className="px-5 pt-8 pb-32 space-y-8">
-                    <div className="clay-card-dark rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="rounded-[40px] p-8 relative overflow-hidden group bg-zinc-50 border border-zinc-100 shadow-xl" style={sClayLight}>
                         <div className="absolute -right-8 -bottom-8 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-700">
-                            <Icon name="directions_car" size={180} className="text-white" />
+                            <Icon name="directions_car" size={180} className="text-zinc-900" />
                         </div>
                         <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
                         
                         <div className="relative z-10 space-y-4">
-                            <div className="size-14 rounded-[20px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.1)]">
-                                <Icon name="badge" className="text-yellow-400 text-[28px] drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                            <div className="size-14 rounded-[20px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05)]">
+                                <Icon name="badge" className="text-yellow-600 text-[28px]" />
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter">Placa do Veículo</h3>
-                                <p className="text-[11px] text-white/40 leading-relaxed font-bold max-w-[240px] mt-2">
+                                <h3 className="text-2xl font-black text-zinc-900 tracking-tighter">Placa do Veículo</h3>
+                                <p className="text-[11px] text-zinc-400 leading-relaxed font-bold max-w-[240px] mt-2">
                                     Mantenha sua placa atualizada para que lojistas e clientes identifiquem seu veículo facilmente.
                                 </p>
                             </div>
@@ -5937,8 +5908,8 @@ function App() {
                     </div>
 
                     <div className="space-y-4">
-                        <label className="flex items-center gap-2 block text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-2">
-                            <Icon name="tag" size={14} className="text-white/20" /> Placa (Ex: ABC1234 ou ABC1D23)
+                        <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
+                            <Icon name="tag" size={14} className="text-zinc-200" /> Placa (Ex: ABC1234 ou ABC1D23)
                         </label>
                         <div className="relative">
                             <input 
@@ -5949,11 +5920,11 @@ function App() {
                                     setIsEditingPlate(true);
                                 }}
                                 placeholder="ABC1234"
-                                className="w-full h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_8px_rgba(255,255,255,0.02)] border-none rounded-[28px] px-6 text-white font-bold md:text-sm text-base placeholder:text-white/20 focus:ring-2 focus:ring-yellow-400/30 transition-all outline-none"
+                                className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 transition-all outline-none"
                             />
                             {isEditingPlate && (
                                 <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
                                 </div>
                             )}
                         </div>
@@ -5965,8 +5936,8 @@ function App() {
                             disabled={driverPlate.length < 7 || isSavingPlate}
                             className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
                                 (driverPlate.length >= 7)
-                                    ? 'bg-primary text-black shadow-[inset_2px_2px_6px_rgba(255,255,255,0.8),inset_-3px_-3px_10px_rgba(0,0,0,0.2),0_10px_30px_rgba(250,204,21,0.4)] hover:scale-[1.02] active:scale-95 border border-yellow-300' 
-                                    : 'bg-[#121212] text-white/20 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] opacity-50 cursor-not-allowed border border-white/5'
+                                    ? 'bg-yellow-400 text-zinc-900 shadow-[0_10px_30px_rgba(250,204,21,0.3)] hover:scale-[1.02] active:scale-95 border border-yellow-300' 
+                                    : 'bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed border border-zinc-100'
                             }`}
                         >
                             {isSavingPlate ? (
@@ -5989,42 +5960,41 @@ function App() {
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                className="fixed inset-0 z-[250] bg-[#0A0A0A] flex flex-col no-scrollbar overflow-y-auto"
+                className="fixed inset-0 z-[250] bg-white flex flex-col no-scrollbar overflow-y-auto"
             >
-                <header className="sticky top-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-white/5">
+                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100">
                     <button 
                         onClick={() => {
                             setShowBankDetails(false);
-                            // reverter as alterações se a chave não for salva
                             setPixKey(localStorage.getItem('izi_driver_pix') || '');
                             setBankName(localStorage.getItem('izi_driver_bank_name') || '');
                             setIsEditingPix(false);
                         }}
-                        className="size-12 rounded-[20px] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center active:scale-95 transition-transform border border-white/5"
+                        className="size-12 rounded-[20px] bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
                     >
-                        <Icon name="arrow_back" className="text-white" />
+                        <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
                     <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Izi Pay</p>
-                        <h2 className="text-lg font-black text-white">Dados Bancários</h2>
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em]">Izi Pay</p>
+                        <h2 className="text-lg font-black text-zinc-900">Dados Bancários</h2>
                     </div>
                 </header>
 
                 <div className="px-5 pt-8 pb-32 space-y-8">
                     {/* Header Card */}
-                    <div className="clay-card-dark rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="rounded-[40px] p-8 relative overflow-hidden group bg-zinc-50 border border-zinc-100 shadow-xl" style={sClayLight}>
                         <div className="absolute -right-8 -bottom-8 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-700">
-                            <Icon name="account_balance" size={180} className="text-white" />
+                            <Icon name="account_balance" size={180} className="text-zinc-900" />
                         </div>
                         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
                         
                         <div className="relative z-10 space-y-4">
-                            <div className="size-14 rounded-[20px] bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.1)]">
-                                <Icon name="pix" className="text-emerald-400 text-[28px] drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                            <div className="size-14 rounded-[20px] bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05)]">
+                                <Icon name="pix" className="text-emerald-600 text-[28px]" />
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter">Receba via PIX</h3>
-                                <p className="text-[11px] text-white/40 leading-relaxed font-bold max-w-[240px] mt-2">
+                                <h3 className="text-2xl font-black text-zinc-900 tracking-tighter">Receba via PIX</h3>
+                                <p className="text-[11px] text-zinc-400 leading-relaxed font-bold max-w-[240px] mt-2">
                                     Cadastre a sua chave abaixo. Os seus ganhos serão transferidos automaticamente mediante solicitação de saque.
                                 </p>
                             </div>
@@ -6033,8 +6003,8 @@ function App() {
 
                     {/* Inputs */}
                     <div className="space-y-4">
-                        <label className="flex items-center gap-2 block text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-2">
-                            <Icon name="account_balance" size={14} className="text-white/20" /> Nome do Banco
+                        <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
+                            <Icon name="account_balance" size={14} className="text-zinc-200" /> Nome do Banco
                         </label>
                         <div className="relative">
                             <input 
@@ -6045,12 +6015,12 @@ function App() {
                                     setIsEditingPix(true);
                                 }}
                                 placeholder="Itaú, Nubank, Inter..."
-                                className="w-full h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_8px_rgba(255,255,255,0.02)] border-none rounded-[28px] px-6 text-white font-bold md:text-sm text-base placeholder:text-white/20 focus:ring-2 focus:ring-primary/30 transition-all outline-none"
+                                className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-emerald-400/30 transition-all outline-none"
                             />
                         </div>
 
-                        <label className="flex items-center gap-2 block text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-2 mt-4">
-                            <Icon name="key" size={14} className="text-white/20" /> Sua Chave Principal
+                        <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2 mt-4">
+                            <Icon name="key" size={14} className="text-zinc-200" /> Sua Chave Principal
                         </label>
                         <div className="relative">
                             <input 
@@ -6061,18 +6031,18 @@ function App() {
                                     setIsEditingPix(true);
                                 }}
                                 placeholder="CPF, Celular, E-mail..."
-                                className="w-full h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_8px_rgba(255,255,255,0.02)] border-none rounded-[28px] px-6 text-white font-bold md:text-sm text-base placeholder:text-white/20 focus:ring-2 focus:ring-primary/30 transition-all outline-none"
+                                className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-emerald-400/30 transition-all outline-none"
                             />
                             {isEditingPix && pixKey.length > 4 && (
                                 <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest hidden sm:block">Não Salvo</span>
-                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+                                    <span className="text-[9px] font-black text-yellow-600 uppercase tracking-widest hidden sm:block">Não Salvo</span>
+                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
                                 </div>
                             )}
                         </div>
-                        <div className="bg-[#121212] rounded-[24px] p-5 flex gap-4 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.02),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] mt-4">
-                            <div className="mt-0.5"><Icon name="shield" size={16} className="text-white/20" /></div>
-                            <p className="text-[9px] font-bold text-white/30 flex-1">
+                        <div className="bg-zinc-50 rounded-[24px] p-5 flex gap-4 border border-zinc-100 mt-4">
+                            <div className="mt-0.5"><Icon name="shield" size={16} className="text-zinc-300" /></div>
+                            <p className="text-[9px] font-bold text-zinc-400 flex-1">
                                 A chave fornecida será vinculada de forma definitiva ao seu CPF/CNPJ via nossa integradora financeira de segurança. Revise antes de salvar.
                             </p>
                         </div>
@@ -6087,8 +6057,8 @@ function App() {
                             disabled={pixKey.length < 5 || bankName.length < 2 || isSavingPix}
                             className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
                                 (pixKey.length >= 5 && bankName.length >= 2)
-                                    ? 'bg-primary text-black shadow-[inset_2px_2px_6px_rgba(255,255,255,0.8),inset_-3px_-3px_10px_rgba(0,0,0,0.2),0_10px_30px_rgba(250,204,21,0.4)] hover:scale-[1.02] active:scale-95 border border-yellow-300' 
-                                    : 'bg-[#121212] text-white/20 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] opacity-50 cursor-not-allowed border border-white/5'
+                                    ? 'bg-emerald-500 text-white shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-95 border border-emerald-400' 
+                                    : 'bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed border border-zinc-100'
                             }`}
                         >
                             {isSavingPix ? (
@@ -6110,14 +6080,14 @@ function App() {
                 onClick={onToggle}
                 className={`relative w-14 h-8 rounded-full transition-all duration-300 flex-shrink-0 ${
                     enabled 
-                        ? 'bg-primary shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.3),0_4px_12px_rgba(250,204,21,0.4)]'
-                        : 'bg-[#1a1a1a] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_6px_rgba(255,255,255,0.03)]'
+                        ? 'bg-yellow-400 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.3)]'
+                        : 'bg-zinc-200 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.8)]'
                 }`}
             >
-                <div className={`absolute top-1 size-6 rounded-full transition-all duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.5)] ${
+                <div className={`absolute top-1 size-6 rounded-full transition-all duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.2)] ${
                     enabled 
-                        ? 'left-7 bg-black' 
-                        : 'left-1 bg-white/30'
+                        ? 'left-7 bg-white' 
+                        : 'left-1 bg-white'
                 }`} />
             </button>
         );
@@ -6190,37 +6160,37 @@ function App() {
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                className="fixed inset-0 z-[250] bg-[#0A0A0A] flex flex-col overflow-hidden"
+                className="fixed inset-0 z-[250] bg-white flex flex-col overflow-hidden"
             >
                 {/* Header */}
-                <header className="sticky top-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-white/5 flex-shrink-0">
+                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100 flex-shrink-0">
                     <button
                         onClick={() => setShowPreferences(false)}
-                        className="size-12 rounded-[20px] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center active:scale-95 transition-transform border border-white/5"
+                        className="size-12 rounded-[20px] bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
                     >
-                        <Icon name="arrow_back" className="text-white" />
+                        <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
                     <div className="flex flex-col items-end">
                         <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Configurações</p>
-                        <h2 className="text-lg font-black text-white">Preferências</h2>
+                        <h2 className="text-lg font-black text-zinc-900">Preferências</h2>
                     </div>
                 </header>
 
                 <div className="flex-1 overflow-y-auto no-scrollbar px-5 pt-6 pb-32 space-y-6">
 
                     {/* Notificações */}
-                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
                             <div className="size-8 rounded-[12px] bg-primary/10 flex items-center justify-center">
                                 <Icon name="notifications" size={16} className="text-primary" />
                             </div>
                             <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">Notificações</h3>
                         </div>
-                        <div className="divide-y divide-white/5">
+                        <div className="divide-y divide-zinc-100">
                             <div className="flex items-center justify-between px-6 py-5">
                                 <div>
-                                    <p className="text-sm font-bold text-white/90">Sons de Pedidos</p>
-                                    <p className="text-[10px] text-white/30 mt-0.5">Alerta sonoro ao receber novas missões</p>
+                                    <p className="text-sm font-bold text-zinc-900">Sons de Pedidos</p>
+                                    <p className="text-[10px] text-zinc-400 mt-0.5">Alerta sonoro ao receber novas missões</p>
                                 </div>
                                 <ClayToggle enabled={prefSoundEnabled} onToggle={() => {
                                     const v = !prefSoundEnabled;
@@ -6230,8 +6200,8 @@ function App() {
                             </div>
                             <div className="flex items-center justify-between px-6 py-5">
                                 <div>
-                                    <p className="text-sm font-bold text-white/90">Vibração</p>
-                                    <p className="text-[10px] text-white/30 mt-0.5">Vibrar ao receber pedido ou atualização</p>
+                                    <p className="text-sm font-bold text-zinc-900">Vibração</p>
+                                    <p className="text-[10px] text-zinc-400 mt-0.5">Vibrar ao receber pedido ou atualização</p>
                                 </div>
                                 <ClayToggle enabled={prefVibrationEnabled} onToggle={() => {
                                     const v = !prefVibrationEnabled;
@@ -6243,33 +6213,33 @@ function App() {
                     </div>
 
                     {/* Navegação */}
-                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
                             <div className="size-8 rounded-[12px] bg-blue-500/10 flex items-center justify-center">
-                                <Icon name="navigation" size={16} className="text-blue-400" />
+                                <Icon name="navigation" size={16} className="text-blue-500" />
                             </div>
-                            <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em]">App de Navegação</h3>
+                            <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.25em]">App de Navegação</h3>
                         </div>
                         <div className="p-4 flex flex-col gap-3">
                             {[
-                                { key: 'google', label: 'Google Maps', sub: 'Recomendado', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },
-                                { key: 'waze', label: 'Waze', sub: 'Trânsito em tempo real', color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20' },
-                                { key: 'apple', label: 'Apple Maps', sub: 'Apenas iOS', color: 'text-white/60', bg: 'bg-white/5 border-white/10' },
+                                { key: 'google', label: 'Google Maps', sub: 'Recomendado', color: 'text-green-500', bg: 'bg-green-500/10 border-green-500/20' },
+                                { key: 'waze', label: 'Waze', sub: 'Trânsito em tempo real', color: 'text-blue-500', bg: 'bg-blue-500/10 border-blue-500/20' },
+                                { key: 'apple', label: 'Apple Maps', sub: 'Apenas iOS', color: 'text-zinc-400', bg: 'bg-zinc-100 border-zinc-200' },
                             ].map(nav => (
                                 <button
                                     key={nav.key}
                                     onClick={() => { setPrefNavApp(nav.key as any); savePreference('pref_nav_app', nav.key); }}
                                     className={`w-full flex items-center justify-between p-4 rounded-[22px] transition-all border ${
                                         prefNavApp === nav.key
-                                            ? `${nav.bg} shadow-[inset_2px_2px_6px_rgba(255,255,255,0.08)] active:scale-[0.98]`
+                                            ? `${nav.bg} active:scale-[0.98]`
                                             : 'bg-transparent border-transparent active:scale-[0.98]'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Icon name="map" size={18} className={nav.color} />
                                         <div className="text-left">
-                                            <p className="text-sm font-bold text-white/90">{nav.label}</p>
-                                            <p className="text-[9px] text-white/30">{nav.sub}</p>
+                                            <p className="text-sm font-bold text-zinc-900">{nav.label}</p>
+                                            <p className="text-[9px] text-zinc-400">{nav.sub}</p>
                                         </div>
                                     </div>
                                     {prefNavApp === nav.key && (
@@ -6283,54 +6253,54 @@ function App() {
                     </div>
 
                     {/* Serviços de Entrega */}
-                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
+                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
                         <div className="flex items-center justify-between px-6 py-5">
                             <div className="flex items-center gap-3">
-                                <div className="size-12 rounded-[18px] bg-emerald-400/10 border border-emerald-400/10 flex items-center justify-center shadow-[inset_2px_2px_6px_rgba(255,255,255,0.06)]">
-                                    <Icon name="local_shipping" size={22} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                                <div className="size-12 rounded-[18px] bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center">
+                                    <Icon name="local_shipping" size={22} className="text-emerald-500" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-white/90">Serviços de Entrega</p>
-                                    <p className="text-[10px] text-white/30 mt-0.5">Restaurantes, Mercados, Farmácias e mais</p>
+                                    <p className="text-sm font-bold text-zinc-900">Serviços de Entrega</p>
+                                    <p className="text-[10px] text-zinc-400 mt-0.5">Restaurantes, Mercados, Farmácias e mais</p>
                                 </div>
                             </div>
                             <ClayToggle enabled={allServicesEnabled} onToggle={toggleAllServices} />
                         </div>
                         {allServicesEnabled && (
                             <div className="px-6 pb-5">
-                                <div className="bg-emerald-400/5 border border-emerald-400/10 rounded-[20px] p-4 flex items-center gap-3">
-                                    <Icon name="check_circle" size={16} className="text-emerald-400 flex-shrink-0" />
-                                    <p className="text-[10px] text-emerald-400/80 font-bold">Você aceitará todos os tipos de entrega: restaurantes, mercados, farmácias, pet shops e mais.</p>
+                                <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[20px] p-4 flex items-center gap-3">
+                                    <Icon name="check_circle" size={16} className="text-emerald-500 flex-shrink-0" />
+                                    <p className="text-[10px] text-emerald-500/80 font-bold">Você aceitará todos os tipos de entrega: restaurantes, mercados, farmácias, pet shops e mais.</p>
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* Mobilidade */}
-                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
                             <div className="size-8 rounded-[12px] bg-blue-500/10 flex items-center justify-center">
-                                <Icon name="route" size={16} className="text-blue-400" />
+                                <Icon name="route" size={16} className="text-blue-500" />
                             </div>
                             <div>
-                                <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em]">Mobilidade</h3>
-                                <p className="text-[9px] text-white/30 mt-0.5">Selecione os serviços de transporte que aceita</p>
+                                <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.25em]">Mobilidade</h3>
+                                <p className="text-[9px] text-zinc-400 mt-0.5">Selecione os serviços de transporte que aceita</p>
                             </div>
                         </div>
-                        <div className="divide-y divide-white/5">
+                        <div className="divide-y divide-zinc-100">
                             {mobilityOptions.map(mob => {
                                 const active = prefServiceTypes.includes(mob.key);
                                 return (
                                     <div key={mob.key} className="flex items-center justify-between px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className={`size-10 rounded-[14px] flex items-center justify-center transition-all ${
-                                                active ? 'bg-blue-500/15 border border-blue-400/20' : 'bg-white/3 border border-white/5'
+                                                active ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-zinc-50 border border-zinc-100'
                                             }`}>
-                                                <Icon name={mob.icon} size={18} className={active ? 'text-blue-400' : 'text-white/20'} />
+                                                <Icon name={mob.icon} size={18} className={active ? 'text-blue-500' : 'text-zinc-300'} />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-white/90">{mob.label}</p>
-                                                <p className="text-[9px] text-white/30 mt-0.5">{mob.sub}</p>
+                                                <p className="text-sm font-bold text-zinc-900">{mob.label}</p>
+                                                <p className="text-[9px] text-zinc-400 mt-0.5">{mob.sub}</p>
                                             </div>
                                         </div>
                                         <ClayToggle enabled={active} onToggle={() => toggleMobility(mob.key)} />
@@ -6341,17 +6311,17 @@ function App() {
                     </div>
 
                     {/* Veículo */}
-                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
                             <div className="size-8 rounded-[12px] bg-orange-400/10 flex items-center justify-center">
-                                <Icon name="local_shipping" size={16} className="text-orange-400" />
+                                <Icon name="local_shipping" size={16} className="text-orange-500" />
                             </div>
                             <div>
-                                <h3 className="text-[10px] font-black text-orange-400 uppercase tracking-[0.25em]">Meus Veículos</h3>
-                                <p className="text-[9px] text-white/30 mt-0.5">Selecione todos os veículos que você possui</p>
+                                <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-[0.25em]">Meus Veículos</h3>
+                                <p className="text-[9px] text-zinc-400 mt-0.5">Selecione todos os veículos que você possui</p>
                             </div>
                         </div>
-                        <div className="divide-y divide-white/5">
+                        <div className="divide-y divide-zinc-100">
                             {[
                                 { key: 'moto',       label: 'Moto',              icon: 'two_wheeler',    sub: 'Motocicleta de qualquer cilindrada' },
                                 { key: 'bike',       label: 'Bicicleta',         icon: 'pedal_bike',     sub: 'Bike convencional ou elétrica' },
@@ -6369,13 +6339,13 @@ function App() {
                                     <div key={v.key} className="flex items-center justify-between px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className={`size-10 rounded-[14px] flex items-center justify-center transition-all ${
-                                                active ? 'bg-orange-400/15 border border-orange-400/20' : 'bg-white/3 border border-white/5'
+                                                active ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-zinc-50 border border-zinc-100'
                                             }`}>
-                                                <Icon name={v.icon} size={18} className={active ? 'text-orange-400' : 'text-white/20'} />
+                                                <Icon name={v.icon} size={18} className={active ? 'text-orange-500' : 'text-zinc-300'} />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-white/90">{v.label}</p>
-                                                <p className="text-[9px] text-white/30 mt-0.5">{v.sub}</p>
+                                                <p className="text-sm font-bold text-zinc-900">{v.label}</p>
+                                                <p className="text-[9px] text-zinc-400 mt-0.5">{v.sub}</p>
                                             </div>
                                         </div>
                                         <ClayToggle enabled={active} onToggle={() => {
@@ -6393,20 +6363,20 @@ function App() {
                     </div>
 
                     {/* Raio Máximo */}
-                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] p-6">
+                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] p-6">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="size-8 rounded-[12px] bg-purple-500/10 flex items-center justify-center">
-                                <Icon name="radar" size={16} className="text-purple-400" />
+                                <Icon name="radar" size={16} className="text-purple-500" />
                             </div>
                             <div>
-                                <h3 className="text-[10px] font-black text-purple-400 uppercase tracking-[0.25em]">Raio de Atuação</h3>
-                                <p className="text-[9px] text-white/30 mt-0.5">Distância máxima para aceitar pedidos</p>
+                                <h3 className="text-[10px] font-black text-purple-500 uppercase tracking-[0.25em]">Raio de Atuação</h3>
+                                <p className="text-[9px] text-zinc-400 mt-0.5">Distância máxima para aceitar pedidos</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4 mb-4">
-                            <div className="flex-1 h-2 bg-[#0a0a0a] rounded-full shadow-[inset_2px_2px_6px_rgba(0,0,0,0.8)] relative">
+                            <div className="flex-1 h-2 bg-zinc-100 rounded-full relative">
                                 <div
-                                    className="absolute top-0 left-0 h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.5)]"
+                                    className="absolute top-0 left-0 h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
                                     style={{ width: `${(prefMaxRadius / 30) * 100}%` }}
                                 />
                                 <input
@@ -6418,9 +6388,9 @@ function App() {
                                     className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
                                 />
                             </div>
-                            <div className="bg-[#0a0a0a] shadow-[inset_2px_2px_6px_rgba(0,0,0,0.8)] rounded-[16px] px-4 py-2 min-w-[72px] text-center">
-                                <span className="text-lg font-black text-white">{prefMaxRadius}</span>
-                                <span className="text-[9px] font-black text-white/30 ml-0.5">km</span>
+                            <div className="bg-zinc-50 border border-zinc-100 rounded-[16px] px-4 py-2 min-w-[72px] text-center">
+                                <span className="text-lg font-black text-zinc-900">{prefMaxRadius}</span>
+                                <span className="text-[9px] font-black text-zinc-400 ml-0.5">km</span>
                             </div>
                         </div>
                         <div className="flex justify-between">
@@ -6429,7 +6399,7 @@ function App() {
                                     key={km}
                                     onClick={() => { setPrefMaxRadius(km); savePreference('pref_max_radius', String(km)); }}
                                     className={`text-[9px] font-black px-2 py-1 rounded-full transition-all ${
-                                        prefMaxRadius === km ? 'text-purple-400 bg-purple-400/10' : 'text-white/20'
+                                        prefMaxRadius === km ? 'text-purple-500 bg-purple-500/10' : 'text-zinc-300'
                                     }`}
                                 >{km}km</button>
                             ))}
@@ -6443,14 +6413,14 @@ function App() {
 
     const getStatusLabel = (status: string) => {
         switch(status?.toLowerCase()) {
-            case 'saiu_para_coleta': case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-500/20', icon: 'navigation' };
-            case 'no_local_coleta': case 'chegou_coleta': return { label: 'No local', color: 'text-amber-400', bg: 'bg-amber-500/20', icon: 'location_on' };
-            case 'preparando': case 'no_preparo': return { label: 'Em preparo', color: 'text-purple-400', bg: 'bg-purple-500/20', icon: 'soup_kitchen' };
-            case 'pronto': return { label: 'Pronto!', color: 'text-emerald-400', bg: 'bg-emerald-500/20', icon: 'check_circle' };
-            case 'picked_up': return { label: 'Coletado', color: 'text-emerald-400', bg: 'bg-emerald-500/20', icon: 'package_2' };
-            case 'a_caminho': case 'em_rota': return { label: 'Em rota', color: 'text-yellow-400', bg: 'bg-yellow-500/20', icon: 'moped' };
-            case 'no_local': return { label: 'No destino', color: 'text-blue-400', bg: 'bg-blue-500/20', icon: 'person_pin_circle' };
-            default: return { label: 'Em andamento', color: 'text-white/50', bg: 'bg-white/10', icon: 'radar' };
+            case 'saiu_para_coleta': case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: 'navigation' };
+            case 'no_local_coleta': case 'chegou_coleta': return { label: 'No local', color: 'text-amber-500', bg: 'bg-amber-500/10', icon: 'location_on' };
+            case 'preparando': case 'no_preparo': return { label: 'Em preparo', color: 'text-purple-500', bg: 'bg-purple-500/10', icon: 'soup_kitchen' };
+            case 'pronto': return { label: 'Pronto!', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: 'check_circle' };
+            case 'picked_up': return { label: 'Coletado', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: 'package_2' };
+            case 'a_caminho': case 'em_rota': return { label: 'Em rota', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: 'moped' };
+            case 'no_local': return { label: 'No destino', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: 'person_pin_circle' };
+            default: return { label: 'Em andamento', color: 'text-zinc-400', bg: 'bg-zinc-100', icon: 'radar' };
         }
     };
 
@@ -6460,14 +6430,14 @@ function App() {
             // Se tem missões ativas no array, mostra os cards de seleção
             if (activeMissions.length > 0) {
                 return (
-                    <motion.div key="mission-selector" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black pt-14 pb-36 px-4 font-['Plus_Jakarta_Sans']">
+                    <motion.div key="mission-selector" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-zinc-50 pt-14 pb-36 px-4 font-['Plus_Jakarta_Sans']">
                         <div className="flex items-center gap-3 mb-6">
-                            <button onClick={() => setActiveTab('dashboard')} className="size-10 rounded-2xl bg-zinc-900 flex items-center justify-center">
-                                <Icon name="arrow_back" size={20} className="text-white/60" />
+                            <button onClick={() => setActiveTab('dashboard')} className="size-10 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center">
+                                <Icon name="arrow_back" size={20} className="text-zinc-400" />
                             </button>
                             <div>
-                                <h2 className="text-lg font-black text-white tracking-tight">Missões Ativas</h2>
-                                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">{activeMissions.length} missão(ões) em andamento</p>
+                                <h2 className="text-lg font-black text-zinc-900 tracking-tight">Missões Ativas</h2>
+                                <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">{activeMissions.length} missão(ões) em andamento</p>
                             </div>
                         </div>
 
@@ -6484,7 +6454,7 @@ function App() {
                                             setActiveMission(m);
                                             localStorage.setItem('Izi_active_mission', JSON.stringify(m));
                                         }}
-                                        className="w-full p-5 rounded-[28px] bg-zinc-900 text-left flex items-start gap-4 transition-all active:bg-zinc-800"
+                                        className="w-full p-5 rounded-[28px] bg-white border border-zinc-100 text-left flex items-start gap-4 transition-all active:bg-zinc-50"
                                     >
                                         {/* Ícone de status */}
                                         <div className={`size-14 rounded-2xl ${st.bg} flex items-center justify-center shrink-0`}>
@@ -6495,20 +6465,20 @@ function App() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className={`text-[9px] font-black uppercase tracking-widest ${st.color}`}>{st.label}</span>
-                                                <span className="text-[9px] text-white/20">•</span>
-                                                <span className="text-[9px] text-white/30 font-bold">#{(m.realId || m.id || '').slice(0,6)}</span>
+                                                <span className="text-[9px] text-zinc-200">•</span>
+                                                <span className="text-[9px] text-zinc-400 font-bold">#{(m.realId || m.id || '').slice(0,6)}</span>
                                             </div>
-                                            <p className="text-sm font-black text-white truncate">{storeName}</p>
-                                            <p className="text-[11px] text-white/40 truncate mt-0.5">{destAddr || 'Destino'}</p>
+                                            <p className="text-sm font-black text-zinc-900 truncate">{storeName}</p>
+                                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">{destAddr || 'Destino'}</p>
                                             <div className="flex items-center gap-3 mt-2">
-                                                <span className="text-sm font-black text-yellow-400">R$ {Number((m as any).price || (m as any).total_price || 0).toFixed(2)}</span>
-                                                <span className="text-[9px] text-white/20 uppercase font-bold">{(m as any).service_type || (m as any).type || 'delivery'}</span>
+                                                <span className="text-sm font-black text-yellow-600">R$ {Number((m as any).price || (m as any).total_price || 0).toFixed(2)}</span>
+                                                <span className="text-[9px] text-zinc-300 uppercase font-bold">{(m as any).service_type || (m as any).type || 'delivery'}</span>
                                             </div>
                                         </div>
 
                                         {/* Seta */}
                                         <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center shrink-0 self-center">
-                                            <Icon name="arrow_forward" size={20} className="text-black" />
+                                            <Icon name="arrow_forward" size={20} className="text-zinc-950" />
                                         </div>
                                     </motion.button>
                                 );
@@ -6518,9 +6488,9 @@ function App() {
                         <button 
                             onClick={() => { syncMissionWithDB(); toastSuccess("Sincronizando..."); }}
                             disabled={isSyncingMission}
-                            className="mt-6 h-14 bg-zinc-900 text-white/50 font-black text-[10px] uppercase tracking-[0.2em] rounded-[24px] w-full active:scale-95 transition-all flex items-center justify-center gap-3"
+                            className="mt-6 h-14 bg-white border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em] rounded-[24px] w-full active:scale-95 transition-all flex items-center justify-center gap-3"
                         >
-                            {isSyncingMission ? <Icon name="sync" className="animate-spin text-yellow-400" size={18} /> : <Icon name="cloud_sync" size={18} />}
+                            {isSyncingMission ? <Icon name="sync" className="animate-spin text-yellow-600" size={18} /> : <Icon name="cloud_sync" size={18} />}
                             {isSyncingMission ? 'Sincronizando...' : 'Atualizar Lista'}
                         </button>
                     </motion.div>
@@ -6529,17 +6499,17 @@ function App() {
 
             // Sem missões — tela vazia
             return (
-                <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
-                    <div className="size-28 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center mb-8 shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02)]">
-                        <Icon name="route" size={48} className="text-white/20" />
+                <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
+                    <div className="size-28 rounded-[45px] bg-white border border-zinc-100 flex items-center justify-center mb-8 shadow-[0_20px_40px_rgba(0,0,0,0.03)]">
+                        <Icon name="route" size={48} className="text-zinc-300" />
                     </div>
-                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase mb-2">Sem Missões Ativas</h2>
-                    <p className="text-sm text-white/40 leading-relaxed mb-10 max-w-xs font-medium">Você não possui nenhuma corrida em andamento. Vá ao Dashboard para aceitar novos desafios e lucrar.</p>
+                    <h2 className="text-2xl font-black text-zinc-900 tracking-tighter uppercase mb-2">Sem Missões Ativas</h2>
+                    <p className="text-sm text-zinc-500 leading-relaxed mb-10 max-w-xs font-medium">Você não possui nenhuma corrida em andamento. Vá ao Dashboard para aceitar novos desafios e lucrar.</p>
                     
                     <div className="flex flex-col gap-4 w-full max-w-xs">
                         <button 
                             onClick={() => setActiveTab('dashboard')}
-                            className="h-18 bg-yellow-400 text-black font-black text-[11px] uppercase tracking-[0.25em] rounded-[30px] w-full active:scale-95 transition-all shadow-[0_20px_40px_rgba(250,204,21,0.25),inset_6px_6px_12px_rgba(255,255,255,0.4),inset_-6px_-6px_12px_rgba(0,0,0,0.1)] border border-yellow-300/30 flex items-center justify-center gap-3 py-5"
+                            className="h-18 bg-yellow-400 text-zinc-950 font-black text-[11px] uppercase tracking-[0.25em] rounded-[30px] w-full active:scale-95 transition-all shadow-[0_20px_40px_rgba(250,204,21,0.2)] flex items-center justify-center gap-3 py-5"
                         >
                             <Icon name="grid_view" size={18} />
                             Ir para Dashboard
@@ -6547,9 +6517,9 @@ function App() {
                         <button 
                             onClick={() => { syncMissionWithDB(); toastSuccess("Sincronizando com o servidor..."); }}
                             disabled={isSyncingMission}
-                            className="h-16 bg-zinc-900 border border-white/5 text-white/60 font-black text-[10px] uppercase tracking-[0.2em] rounded-[28px] w-full active:scale-95 transition-all flex items-center justify-center gap-3 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02)]"
+                            className="h-16 bg-white border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em] rounded-[28px] w-full active:scale-95 transition-all flex items-center justify-center gap-3"
                         >
-                            {isSyncingMission ? <Icon name="sync" className="animate-spin text-yellow-400" /> : <Icon name="cloud_sync" />}
+                            {isSyncingMission ? <Icon name="sync" className="animate-spin text-yellow-600" /> : <Icon name="cloud_sync" />}
                             {isSyncingMission ? 'Sincronizando...' : 'Verificar Servidor'}
                         </button>
                     </div>
@@ -6570,17 +6540,17 @@ function App() {
         const getStatusDisplay = () => {
             switch(activeMission.status) {
                 case 'saiu_para_coleta':
-                case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-400/15', icon: 'navigation', glow: 'shadow-[0_0_20px_rgba(96,165,250,0.3)]' };
+                case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: 'navigation', glow: 'shadow-[0_0_20px_rgba(59,130,246,0.1)]' };
                 case 'no_local_coleta':
-                case 'chegou_coleta': return { label: 'No local de coleta', color: 'text-amber-400', bg: 'bg-amber-400/15', icon: 'location_on', glow: 'shadow-[0_0_20px_rgba(251,191,36,0.3)]' };
+                case 'chegou_coleta': return { label: 'No local de coleta', color: 'text-amber-500', bg: 'bg-amber-500/10', icon: 'location_on', glow: 'shadow-[0_0_20px_rgba(245,158,11,0.1)]' };
                 case 'preparando':
-                case 'no_preparo': return { label: 'Em preparação', color: 'text-purple-400', bg: 'bg-purple-400/15', icon: 'soup_kitchen', glow: 'shadow-[0_0_20px_rgba(168,85,247,0.3)]' };
-                case 'pronto': return { label: 'Pronto para retirada', color: 'text-emerald-400', bg: 'bg-emerald-400/15', icon: 'check_circle', glow: 'shadow-[0_0_20px_rgba(52,211,153,0.3)]' };
-                case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-400', bg: 'bg-emerald-400/15', icon: 'package_2', glow: 'shadow-[0_0_20px_rgba(52,211,153,0.3)]' };
+                case 'no_preparo': return { label: 'Em preparação', color: 'text-purple-500', bg: 'bg-purple-500/10', icon: 'soup_kitchen', glow: 'shadow-[0_0_20px_rgba(168,85,247,0.1)]' };
+                case 'pronto': return { label: 'Pronto para retirada', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: 'check_circle', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.1)]' };
+                case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: 'package_2', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.1)]' };
                 case 'a_caminho': 
-                case 'em_rota': return { label: 'Em rota de entrega', color: 'text-yellow-400', bg: 'bg-yellow-400/15', icon: 'moped', glow: 'shadow-[0_0_20px_rgba(250,204,21,0.3)]' };
-                case 'no_local': return { label: 'No destino final', color: 'text-blue-400', bg: 'bg-blue-400/15', icon: 'person_pin_circle', glow: 'shadow-[0_0_20px_rgba(96,165,250,0.3)]' };
-                default: return { label: 'Em andamento', color: 'text-white/50', bg: 'bg-white/5', icon: 'radar', glow: '' };
+                case 'em_rota': return { label: 'Em rota de entrega', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: 'moped', glow: 'shadow-[0_0_20px_rgba(234,179,8,0.1)]' };
+                case 'no_local': return { label: 'No destino final', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: 'person_pin_circle', glow: 'shadow-[0_0_20px_rgba(59,130,246,0.1)]' };
+                default: return { label: 'Em andamento', color: 'text-zinc-400', bg: 'bg-zinc-100', icon: 'radar', glow: '' };
             }
         };
 
@@ -6633,23 +6603,12 @@ function App() {
         const btn = getMainBtnData();
         const driverEarnings = getNetEarnings(activeMission);
 
-        const sClayDark: React.CSSProperties = {
-            background: 'linear-gradient(145deg, #1c1c1e, #121214)',
-            boxShadow: '15px 15px 35px rgba(0,0,0,0.6), inset 5px 5px 12px rgba(255,255,255,0.02), inset -5px -5px 12px rgba(0,0,0,0.8)',
-            borderRadius: '32px'
-        };
-        const sClayYellow: React.CSSProperties = {
-            background: 'linear-gradient(145deg, #facc15, #eab308)',
-            boxShadow: '0 20px 45px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.5), inset -8px -8px 16px rgba(0,0,0,0.15)',
-            borderRadius: '32px'
-        };
-
         return (
             <motion.div 
                 key="active-mission-populated"
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
-                className="fixed inset-0 z-[100] bg-[#0c0f10] flex flex-col overflow-hidden text-[#f5f6f7] font-['Plus_Jakarta_Sans']"
+                className="fixed inset-0 z-[100] bg-zinc-50 flex flex-col overflow-hidden text-zinc-900 font-['Plus_Jakarta_Sans']"
             >
                 
                 {/* 1. MAP SECTION (Full Height) */}
@@ -6679,14 +6638,14 @@ function App() {
                             // Volta para a lista de missões (não para o dashboard)
                             setActiveMission(null);
                         }} 
-                        className="pointer-events-auto size-12 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-lg"
+                        className="pointer-events-auto size-12 bg-white/60 backdrop-blur-xl border border-white/50 rounded-2xl flex items-center justify-center shadow-lg"
                     >
-                        <Icon name="arrow_back" className="text-yellow-400" size={20} />
+                        <Icon name="arrow_back" className="text-yellow-600" size={20} />
                     </motion.button>
                     
-                    <div className="pointer-events-auto px-5 py-2 bg-black/60 backdrop-blur-xl rounded-full border border-white/10 shadow-lg flex items-center gap-2">
+                    <div className="pointer-events-auto px-5 py-2 bg-white/60 backdrop-blur-xl rounded-full border border-white/50 shadow-lg flex items-center gap-2">
                         <div className={`size-2 rounded-full animate-pulse ${statusDisplay.color.replace('text-', 'bg-')}`} />
-                        <span className="text-white font-black tracking-widest text-[9px] uppercase leading-none">{statusDisplay.label}</span>
+                        <span className="text-zinc-900 font-black tracking-widest text-[9px] uppercase leading-none">{statusDisplay.label}</span>
                     </div>
 
                     <motion.button 
@@ -6707,9 +6666,9 @@ function App() {
                             const destination = hasValidCoords ? `${lat},${lng}` : encodeURIComponent(String(addr || "Destino").split("| ITENS:")[0].trim());
                             window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                         }}
-                        className="pointer-events-auto size-12 bg-white rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden"
+                        className="pointer-events-auto size-12 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden"
                     >
-                        <Icon name="map" className="text-blue-600" size={22} />
+                        <Icon name="map" className="text-yellow-400" size={22} />
                     </motion.button>
                 </header>
 
@@ -6718,49 +6677,49 @@ function App() {
                     <div className="px-6 space-y-6 pt-2 pb-8">
                         
                         {/* Status Imersivo - Clay Card */}
-                        <section className="bg-zinc-900 border border-white/5 rounded-3xl p-6 flex flex-col gap-6">
+                        <section className="bg-white border border-zinc-100 rounded-3xl p-6 flex flex-col gap-6 shadow-[0_10px_30px_rgba(0,0,0,0.03)]">
                             <div className="flex flex-col items-center gap-4 w-full text-center">
-                                <div className="size-16 rounded-[24px] overflow-hidden border border-white/10 bg-zinc-800 flex items-center justify-center relative">
+                                <div className="size-16 rounded-[24px] overflow-hidden border border-zinc-100 bg-zinc-50 flex items-center justify-center relative">
                                     {driverAvatar ? (
                                         <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
                                     ) : (
-                                        <Icon name="person" size={32} className="text-white/20" />
+                                        <Icon name="person" size={32} className="text-zinc-200" />
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-100/60 via-transparent to-transparent" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-xl font-black text-white truncate tracking-tighter leading-tight">{driverName.split(' ')[0]}</h2>
+                                    <h2 className="text-xl font-black text-zinc-900 truncate tracking-tighter leading-tight">{driverName.split(' ')[0]}</h2>
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
-                                            <div className="size-1.5 rounded-full bg-emerald-400" />
-                                            <span className="text-emerald-400 font-black text-[8px] uppercase tracking-widest">{stats.level >= 10 ? 'Elite' : `Piloto`}</span>
+                                            <div className="size-1.5 rounded-full bg-emerald-500" />
+                                            <span className="text-emerald-600 font-black text-[8px] uppercase tracking-widest">{stats.level >= 10 ? 'Elite' : `Piloto`}</span>
                                         </div>
                                         <div className="bg-yellow-400/10 px-2 py-0.5 rounded-md border border-yellow-400/20 flex items-center gap-1">
-                                            <Icon name="route" size={10} className="text-yellow-400" />
-                                            <span className="text-yellow-400 font-black text-[8px] uppercase tracking-widest">
+                                            <Icon name="route" size={10} className="text-yellow-600" />
+                                            <span className="text-yellow-600 font-black text-[8px] uppercase tracking-widest">
                                                 {realTimeRoute ? realTimeRoute.distanceText : `${(parseFloat(activeMission.distance_km || '0')).toFixed(1)} KM`}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-zinc-600 text-[8px] uppercase tracking-[0.3em] font-black mb-1">XP HOJE</p>
-                                    <p className="text-xl font-black text-yellow-400 tracking-tighter">+{Math.floor(driverEarnings)} pts</p>
+                                    <p className="text-zinc-400 text-[8px] uppercase tracking-[0.3em] font-black mb-1">XP HOJE</p>
+                                    <p className="text-xl font-black text-yellow-600 tracking-tighter">+{Math.floor(driverEarnings)} pts</p>
                                 </div>
                             </div>
                             
-                            <div className="h-px bg-white/5 w-full" />
+                            <div className="h-px bg-zinc-100 w-full" />
                             
-                            <div className="flex justify-between items-center bg-black/40 p-5 rounded-2xl border border-white/5">
+                            <div className="flex justify-between items-center bg-zinc-50 p-5 rounded-2xl border border-zinc-100">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl bg-white/5 ${statusDisplay.color} ${statusDisplay.glow}`}>
+                                    <div className={`p-2 rounded-xl bg-white ${statusDisplay.color} ${statusDisplay.glow}`}>
                                         <Icon name={statusDisplay.icon} size={20} />
                                     </div>
-                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{statusDisplay.label}</span>
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">{statusDisplay.label}</span>
                                 </div>
                                 <div className="flex flex-col items-end">
-                                    <span className="text-yellow-400 font-black text-xs">{realTimeRoute?.durationText || '-- min'}</span>
-                                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Estimado</span>
+                                    <span className="text-yellow-600 font-black text-xs">{realTimeRoute?.durationText || '-- min'}</span>
+                                    <span className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest">Estimado</span>
                                 </div>
                             </div>
                         </section>
@@ -6768,8 +6727,8 @@ function App() {
                         {/* Detalhes da Carga/Passageiro */}
                         <section className="space-y-4">
                             <div className="flex justify-between items-end px-2">
-                                <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em]">Detalhes da Missão</h2>
-                                <span className={isMobility ? "text-cyan-400 font-black text-[9px] uppercase tracking-widest" : "text-yellow-400 font-black text-[9px] uppercase tracking-widest"}>
+                                <h2 className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.4em]">Detalhes da Missão</h2>
+                                <span className={isMobility ? "text-cyan-600 font-black text-[9px] uppercase tracking-widest" : "text-yellow-600 font-black text-[9px] uppercase tracking-widest"}>
                                     {isMobility ? 'Mobilidade' : 'Logística'}
                                 </span>
                             </div>
@@ -6782,28 +6741,28 @@ function App() {
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: idx * 0.1 }}
-                                            className="bg-zinc-900 rounded-2xl p-5 flex items-center gap-5 border border-white/5"
+                                            className="bg-white rounded-2xl p-5 flex items-center gap-5 border border-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)]"
                                         >
-                                            <div className="size-14 bg-black rounded-[20px] flex items-center justify-center border border-white/5 shrink-0 relative">
-                                                <Icon name={isMobility ? 'person' : 'package_2'} className="text-yellow-400/40" size={28} />
+                                            <div className="size-14 bg-zinc-50 rounded-[20px] flex items-center justify-center border border-zinc-100 shrink-0 relative">
+                                                <Icon name={isMobility ? 'person' : 'package_2'} className="text-yellow-600/40" size={28} />
                                                 <div className="absolute -top-1 -right-1 size-6 bg-yellow-400 rounded-lg flex items-center justify-center">
-                                                    <span className="text-black font-black text-[10px]">{item.quantity || 1}x</span>
+                                                    <span className="text-zinc-950 font-black text-[10px]">{item.quantity || 1}x</span>
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="text-white font-black text-xs uppercase tracking-tight truncate">{item.name}</h3>
-                                                {item.options && <p className="text-zinc-500 text-[10px] font-bold truncate mt-1">{item.options}</p>}
+                                                <h3 className="text-zinc-900 font-black text-xs uppercase tracking-tight truncate">{item.name}</h3>
+                                                {item.options && <p className="text-zinc-400 text-[10px] font-bold truncate mt-1">{item.options}</p>}
                                                 <div className="flex items-center gap-2 mt-2">
                                                      <div className="size-1.5 rounded-full bg-yellow-400/30" />
-                                                     <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Verificado no sistema</span>
+                                                     <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest">Verificado no sistema</span>
                                                 </div>
                                             </div>
                                         </motion.div>
                                     ))
                                 ) : (
-                                    <div className="bg-zinc-900 rounded-[28px] p-6 flex flex-col items-center justify-center gap-3 border border-white/5 border-dashed opacity-50">
-                                        <Icon name="info" className="text-white/20" size={24} />
-                                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Sem notas adicionais</p>
+                                    <div className="bg-white rounded-[28px] p-6 flex flex-col items-center justify-center gap-3 border border-zinc-100 border-dashed opacity-50">
+                                        <Icon name="info" className="text-zinc-300" size={24} />
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Sem notas adicionais</p>
                                     </div>
                                 )}
                             </div>
@@ -6811,54 +6770,54 @@ function App() {
 
                         {/* Izi Pay Premium Section */}
                         <section className="space-y-4 pb-4">
-                             <h2 className="text-zinc-600 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
-                             <div className="bg-zinc-900 border border-white/5 p-6 rounded-3xl relative overflow-hidden">
+                             <h2 className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
+                             <div className="bg-white border border-zinc-100 p-6 rounded-3xl relative overflow-hidden shadow-sm">
                                  
                                  <div className="flex justify-between items-center relative z-10">
                                      <div className="flex items-center gap-4">
                                          <div className="size-14 rounded-[20px] bg-yellow-400 flex items-center justify-center">
-                                             <Icon name="payments" size={28} className="text-black" />
+                                             <Icon name="payments" size={28} className="text-zinc-950" />
                                          </div>
                                          <div>
-                                             <span className="text-white font-black text-[11px] uppercase tracking-widest block leading-none">Lucro Real</span>
-                                             <span className="text-yellow-400/40 text-[9px] font-black uppercase tracking-[0.2em] mt-1 block">Líquido Creditado</span>
+                                             <span className="text-zinc-900 font-black text-[11px] uppercase tracking-widest block leading-none">Lucro Real</span>
+                                             <span className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] mt-1 block">Líquido Creditado</span>
                                          </div>
                                      </div>
                                      <div className="text-right">
-                                         <span className="text-yellow-400 text-3xl font-black tracking-tighter">
+                                         <span className="text-yellow-600 text-3xl font-black tracking-tighter">
                                              R$ {driverEarnings.toFixed(2).replace('.', ',')}
                                          </span>
                                      </div>
                                  </div>
                                  
-                                 <div className="h-px bg-white/5 w-full my-6" />
+                                 <div className="h-px bg-zinc-100 w-full my-6" />
 
                                  <div className="space-y-5">
-                                     <div className="flex justify-between items-center bg-black/30 p-4 rounded-2xl border border-white/5">
+                                     <div className="flex justify-between items-center bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
                                          <div className="flex flex-col">
-                                            <span className="text-zinc-500 font-black text-[8px] uppercase tracking-widest mb-1">Método</span>
-                                            <span className="text-white font-black text-[10px] uppercase">{activeMission.payment_method === 'online' ? 'Liquidado Online' : 'Pagar no Destino'}</span>
+                                            <span className="text-zinc-400 font-black text-[8px] uppercase tracking-widest mb-1">Método</span>
+                                            <span className="text-zinc-900 font-black text-[10px] uppercase">{activeMission.payment_method === 'online' ? 'Liquidado Online' : 'Pagar no Destino'}</span>
                                          </div>
                                          <div className="bg-yellow-400/10 px-4 py-2 rounded-xl border border-yellow-400/20 flex items-center gap-2">
-                                             <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'monetization_on'} size={14} className="text-yellow-400" />
-                                             <span className="text-yellow-400 font-black text-[10px] uppercase">{getPaymentLabel(activeMission)}</span>
+                                             <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'monetization_on'} size={14} className="text-yellow-600" />
+                                             <span className="text-yellow-600 font-black text-[10px] uppercase">{getPaymentLabel(activeMission)}</span>
                                          </div>
                                      </div>
 
                                      {!(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && activeMission.payment_method !== 'online' ? (
-                                         <div className="bg-zinc-800/50 p-6 rounded-[28px] border border-white/5 flex flex-col gap-3 shadow-inner">
-                                             <div className="flex justify-between items-center text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                                         <div className="bg-zinc-100/50 p-6 rounded-[28px] border border-zinc-200 flex flex-col gap-3 shadow-inner">
+                                             <div className="flex justify-between items-center text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">
                                                  <span>Subtotal Carga</span>
-                                                 <span className="text-white/60">R$ {(Number(activeMission.total_price || 0) - Number(activeMission.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
+                                                 <span className="text-zinc-900">R$ {(Number(activeMission.total_price || 0) - Number(activeMission.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
                                              </div>
-                                             <div className="flex justify-between items-end pt-2 border-t border-white/5">
-                                                 <span className="text-white font-black text-xs uppercase tracking-widest">Coleta em Dinheiro</span>
-                                                 <span className="text-yellow-400 text-2xl font-black tracking-tighter drop-shadow-lg">R$ {Number(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                             <div className="flex justify-between items-end pt-2 border-t border-zinc-200">
+                                                 <span className="text-zinc-900 font-black text-xs uppercase tracking-widest">Coleta em Dinheiro</span>
+                                                 <span className="text-yellow-600 text-2xl font-black tracking-tighter drop-shadow-lg">R$ {Number(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                              </div>
                                              {activeMission.change_for > 0 && (
                                                  <div className="mt-2 bg-yellow-400 p-2 rounded-lg flex items-center justify-between shadow-lg">
-                                                     <span className="text-black font-black text-[9px] uppercase tracking-tighter">Troco Para</span>
-                                                     <span className="text-black font-black text-sm">R$ {Number(activeMission.change_for || 0).toFixed(2).replace('.', ',')}</span>
+                                                     <span className="text-zinc-950 font-black text-[9px] uppercase tracking-tighter">Troco Para</span>
+                                                     <span className="text-zinc-950 font-black text-sm">R$ {Number(activeMission.change_for || 0).toFixed(2).replace('.', ',')}</span>
                                                  </div>
                                              )}
                                          </div>
@@ -6869,19 +6828,19 @@ function App() {
                                             className="bg-emerald-500/5 p-5 rounded-[22px] border border-emerald-500/10 flex items-center gap-4"
                                          >
                                              <div className="size-10 rounded-full bg-emerald-500 flex items-center justify-center">
-                                                 <Icon name="check" className="text-black" size={20} />
+                                                 <Icon name="check" className="text-white" size={20} />
                                              </div>
                                              <div>
-                                                 <p className="text-emerald-400 font-black text-[10px] uppercase tracking-widest">Pagamento Confirmado</p>
-                                                 <p className="text-emerald-400/40 text-[8px] font-bold uppercase mt-0.5">Liberado para entrega imediata</p>
+                                                 <p className="text-emerald-600 font-black text-[10px] uppercase tracking-widest">Pagamento Confirmado</p>
+                                                 <p className="text-emerald-500/40 text-[8px] font-bold uppercase mt-0.5">Liberado para entrega imediata</p>
                                              </div>
                                          </motion.div>
                                      )}
 
                                      {activeMission.observations && (
                                          <div className="bg-orange-500/5 p-4 rounded-xl border border-orange-500/10 flex items-start gap-3">
-                                             <Icon name="warning" className="text-orange-400 mt-0.5" size={16} />
-                                             <p className="text-orange-400/70 text-[9px] leading-relaxed font-black uppercase tracking-tight line-clamp-3">
+                                             <Icon name="warning" className="text-orange-500 mt-0.5" size={16} />
+                                             <p className="text-orange-600/70 text-[9px] leading-relaxed font-black uppercase tracking-tight line-clamp-3">
                                                  "{activeMission.observations}"
                                              </p>
                                          </div>
@@ -6893,7 +6852,7 @@ function App() {
                 </IziBottomSheet>
 
                 {/* PREMIUM ACTION DOCK (Fixed at Bottom) */}
-                <div className="fixed bottom-0 left-0 w-full p-6 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent z-[200] flex flex-col gap-4">
+                <div className="fixed bottom-0 left-0 w-full p-6 pb-8 bg-gradient-to-t from-zinc-50 via-zinc-50/95 to-transparent z-[200] flex flex-col gap-4">
                     {(() => {
                         // Para status terminal (concluído/cancelado), o botão nunca deve ser bloqueado por isAccepting
                         const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
@@ -6905,16 +6864,16 @@ function App() {
                                 whileTap={{ scale: 0.96 }}
                                 onClick={btn.action}
                                 disabled={isDisabled}
-                                className="w-full h-16 bg-yellow-400 rounded-2xl flex items-center justify-center disabled:opacity-50 relative overflow-hidden group" 
+                                className="w-full h-16 bg-yellow-400 rounded-2xl flex items-center justify-center disabled:opacity-50 relative overflow-hidden group shadow-[0_10px_20px_rgba(250,204,21,0.2)]" 
                             >
                                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                                 <div className="flex items-center gap-3">
                                     {(isAccepting && !isTerminal) ? (
-                                        <div className="size-6 border-[3px] border-black/20 border-t-black rounded-full animate-spin" />
+                                        <div className="size-6 border-[3px] border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" />
                                     ) : (
-                                        <Icon name={btn.icon} size={24} className="text-black group-hover:scale-110 transition-transform" />
+                                        <Icon name={btn.icon} size={24} className="text-zinc-950 group-hover:scale-110 transition-transform" />
                                     )}
-                                    <span className="text-black font-black text-lg uppercase tracking-tighter">
+                                    <span className="text-zinc-950 font-black text-lg uppercase tracking-tighter">
                                         {(isAccepting && !isTerminal) ? 'Sincronizando...' : btn.label}
                                     </span>
                                 </div>
@@ -6925,7 +6884,7 @@ function App() {
                     {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
                         <button 
                             onClick={async () => { if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) handleUpdateStatus('cancelado'); }}
-                            className="w-full py-4 text-red-500/50 text-[10px] font-black uppercase tracking-[0.4em] hover:text-red-500 transition-all hover:scale-105 active:scale-95"
+                            className="w-full py-4 text-rose-500/50 text-[10px] font-black uppercase tracking-[0.4em] hover:text-rose-500 transition-all hover:scale-105 active:scale-95"
                         >
                             Cancelar Missão
                         </button>
@@ -6936,46 +6895,46 @@ function App() {
     };
 
     const renderSOS = () => (
-        <motion.div key="sos-modal" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-8 text-center">
-            <div className="size-28 clay-fab-sos rounded-full flex items-center justify-center mb-8 animate-pulse"><Icon name="emergency_share" className="text-6xl text-red-400" /></div>
-            <h1 className="text-4xl font-black text-white uppercase tracking-tight mb-3">SOS Ativado</h1>
-            <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
+        <motion.div key="sos-modal" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-rose-50 flex flex-col items-center justify-center p-8 text-center">
+            <div className="size-28 clay-fab-sos rounded-full flex items-center justify-center mb-8 animate-pulse bg-rose-500"><Icon name="emergency_share" className="text-6xl text-white" /></div>
+            <h1 className="text-4xl font-black text-zinc-900 uppercase tracking-tight mb-3">SOS Ativado</h1>
+            <p className="text-zinc-500 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
             <div className="w-full max-w-sm space-y-4">
-                <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-white text-red-600 rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-2xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
-                <button onClick={() => { toastSuccess('Apoio mecânico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio Mecânico</button>
-                <button onClick={() => setIsSOSActive(false)} className="text-white/30 font-black uppercase tracking-widest text-sm mt-4">Cancelar</button>
+                <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-rose-500 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
+                <button onClick={() => { toastSuccess('Apoio mecânico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white border border-zinc-100 text-zinc-900 rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio Mecânico</button>
+                <button onClick={() => setIsSOSActive(false)} className="text-zinc-400 font-black uppercase tracking-widest text-sm mt-4">Cancelar</button>
             </div>
         </motion.div>
     );
 
     const renderLoginView = () => {
         if (authInitLoading) return (
-            <div className="h-screen flex items-center justify-center bg-[#020617]">
+            <div className="h-screen flex items-center justify-center bg-zinc-50">
                 <div className="flex flex-col items-center gap-4"><div className="size-16 bg-primary/10 rounded-full flex items-center justify-center animate-pulse"><Icon name="bolt" className="text-primary text-3xl" /></div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Inicializando...</p></div>
             </div>
         );
         return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-screen w-full flex flex-col items-center justify-center px-7 relative overflow-hidden bg-black">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,217,0,0.04)_0%,transparent_60%)]" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-screen w-full flex flex-col items-center justify-center px-7 relative overflow-hidden bg-white">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(250,204,21,0.05)_0%,transparent_60%)]" />
                 <div className="w-full max-w-md space-y-8 relative z-10">
                     <div className="text-center space-y-3">
                         <div className="inline-flex items-center justify-center size-16 bg-primary/10 border border-primary/20 rounded-[24px] mb-2"><Icon name="two_wheeler" className="text-primary text-3xl" /></div>
-                        <h1 className="text-4xl font-black text-white tracking-tight uppercase">Terminal <span className="text-primary">Izi</span></h1>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">{authMode === 'login' ? 'Autenticação do Entregador' : 'Cadastro de Novo Piloto'}</p>
+                        <h1 className="text-4xl font-black text-zinc-900 tracking-tight uppercase">Terminal <span className="text-primary">Izi</span></h1>
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.5em]">{authMode === 'login' ? 'Autenticação do Entregador' : 'Cadastro de Novo Piloto'}</p>
                     </div>
-                    {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-3 text-red-400 text-xs font-bold text-center">{authError}</motion.div>}
+                    {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-rose-50 border border-rose-100 rounded-2xl px-5 py-3 text-rose-500 text-xs font-bold text-center">{authError}</motion.div>}
                     <div className="space-y-4">
                         {authMode === 'register' && (
                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-white/20"><Icon name="badge" className="text-xl" /></div><input type="text" value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Nome completo" className="w-full h-14 pl-14 pr-5 bg-white/[0.03] border border-white/8 rounded-[20px] text-white font-bold placeholder:text-white/15 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
-                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-white/20"><Icon name="phone" className="text-xl" /></div><input type="tel" value={authPhone} onChange={e => setAuthPhone(e.target.value)} placeholder="Telefone (WhatsApp)" className="w-full h-14 pl-14 pr-5 bg-white/[0.03] border border-white/8 rounded-[20px] text-white font-bold placeholder:text-white/15 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
+                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-300"><Icon name="badge" className="text-xl" /></div><input type="text" value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Nome completo" className="w-full h-14 pl-14 pr-5 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
+                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-300"><Icon name="phone" className="text-xl" /></div><input type="tel" value={authPhone} onChange={e => setAuthPhone(e.target.value)} placeholder="Telefone (WhatsApp)" className="w-full h-14 pl-14 pr-5 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
                                 <div className="flex gap-2">
                                     {(['mototaxi', 'carro', 'bicicleta'] as const).map(v => (
                                         <button 
                                             key={v} 
                                             type="button" 
                                             onClick={() => setAuthVehicle(v)} 
-                                            className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 border transition-all text-[9px] font-black uppercase tracking-widest ${authVehicle === v ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white/[0.03] border-white/5 text-white/20'}`}
+                                            className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 border transition-all text-[9px] font-black uppercase tracking-widest ${authVehicle === v ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-zinc-50 border-zinc-100 text-zinc-300'}`}
                                         >
                                             <Icon name={v === 'mototaxi' ? 'two_wheeler' : v === 'carro' ? 'directions_car' : 'pedal_bike'} size={18} />
                                             <span>{v}</span>
@@ -6984,17 +6943,17 @@ function App() {
                                 </div>
                             </motion.div>
                         )}
-                        <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-white/20"><Icon name="alternate_email" className="text-xl" /></div><input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="E-mail" className="w-full h-14 pl-14 pr-5 bg-white/[0.03] border border-white/8 rounded-[20px] text-white font-bold placeholder:text-white/15 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
-                        <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-white/20"><Icon name="lock" className="text-xl" /></div><input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Senha"  className="w-full h-14 pl-14 pr-5 bg-white/[0.03] border border-white/8 rounded-[20px] text-white font-bold placeholder:text-white/15 focus:outline-none focus:border-primary/30 transition-all text-sm" onKeyDown={e => e.key === 'Enter' && authMode === 'login' && handleAuthLogin()} /></div>
+                        <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-300"><Icon name="alternate_email" className="text-xl" /></div><input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="E-mail" className="w-full h-14 pl-14 pr-5 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
+                        <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-300"><Icon name="lock" className="text-xl" /></div><input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Senha"  className="w-full h-14 pl-14 pr-5 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" onKeyDown={e => e.key === 'Enter' && authMode === 'login' && handleAuthLogin()} /></div>
                     </div>
                     <div className="space-y-3">
-                        <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-primary text-slate-900 font-black text-sm uppercase tracking-widest rounded-[20px] shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
-                            {authLoading ? <div className="size-5 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
+                        <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-primary text-zinc-950 font-black text-sm uppercase tracking-widest rounded-[20px] shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+                            {authLoading ? <div className="size-5 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
                         </button>
-                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
+                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-zinc-50 border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-zinc-600 transition-all">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
                     </div>
                 </div>
-                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
+                <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
             </motion.div>
         );
     };
@@ -7012,9 +6971,10 @@ function App() {
         const needsChange = !isPaid && selectedOrder.change_for > 0;
 
         // Estilos Claymorphic via classes Tailwind inline para garantir consistência
-        const clayCard = "shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)]";
-        const clayCardDark = "shadow-[inset_4px_4px_12px_rgba(255,255,255,0.1),inset_-4px_-4px_12px_rgba(0,0,0,0.4)]";
-        const clayYellow = "shadow-[inset_4px_4px_10px_rgba(255,255,255,0.4),inset_-4px_-4px_10px_rgba(0,0,0,0.1)]";
+        // Estilos Claymorphic Premium para o Tema Claro
+        const clayCard = "shadow-[0_8px_30px_rgba(0,0,0,0.04),inset_2px_2px_8px_rgba(255,255,255,0.8),inset_-2px_-2px_8px_rgba(0,0,0,0.02)]";
+        const clayCardDark = "shadow-[0_4px_20px_rgba(0,0,0,0.03),inset_4px_4px_12px_rgba(255,255,255,0.8),inset_-4px_-4px_12px_rgba(0,0,0,0.05)]";
+        const clayYellow = "shadow-[0_15px_35px_rgba(250,204,21,0.25),inset_4px_4px_10px_rgba(255,255,255,0.5)]";
 
         return (
             <motion.div 
@@ -7022,47 +6982,47 @@ function App() {
                 initial={{ opacity: 0, y: 100 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: 100 }}
-                className="fixed inset-0 z-[300] bg-[#0c0f10] flex flex-col overflow-y-auto no-scrollbar pb-40"
+                className="fixed inset-0 z-[300] bg-white flex flex-col overflow-y-auto no-scrollbar pb-40"
             >
                 {/* TopAppBar */}
-                <header className="bg-neutral-950/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4">
+                <header className="bg-white/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4">
                     <button 
                         onClick={() => setShowOrderModal(false)}
-                        className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center"
+                        className="active:scale-95 transition-transform duration-200 hover:bg-zinc-100 p-2 rounded-full flex items-center justify-center"
                     >
-                        <Icon name="arrow_back" className="text-yellow-400" />
+                        <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
-                    <h1 className="text-yellow-400 font-bold tracking-tight text-xl">Detalhes do Pedido</h1>
-                    <button className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
-                        <Icon name="more_vert" className="text-yellow-400" />
+                    <h1 className="text-zinc-900 font-bold tracking-tight text-xl">Detalhes do Pedido</h1>
+                    <button className="active:scale-95 transition-transform duration-200 hover:bg-zinc-100 p-2 rounded-full flex items-center justify-center">
+                        <Icon name="more_vert" className="text-zinc-900" />
                     </button>
                 </header>
 
                 <main className="pt-24 px-4 space-y-6">
                     {/* Status & Identity */}
-                    <section className={`bg-neutral-900 ${clayCard} rounded-xl p-6 flex items-center gap-4 border border-neutral-800/50`}>
+                    <section className={`bg-white ${clayCard} rounded-xl p-6 flex items-center gap-4 border border-zinc-100`}>
                         <div className="relative">
                             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]">
                                 {driverAvatar ? (
                                     <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-stone-900/5">
-                                        <Icon name="person" size={40} className="text-stone-950/30" />
+                                    <div className="w-full h-full flex items-center justify-center bg-zinc-50">
+                                        <Icon name="person" size={40} className="text-zinc-300" />
                                     </div>
                                 )}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase">VIP</div>
+                            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-zinc-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">VIP</div>
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight truncate max-w-[120px]">{driverName.split(' ')[0] || 'Piloto'}</h2>
-                            <p className="text-yellow-400/80 font-semibold text-sm flex items-center gap-1">
+                            <h2 className="text-xl font-bold text-zinc-900 tracking-tight truncate max-w-[120px]">{driverName.split(' ')[0] || 'Piloto'}</h2>
+                            <p className="text-yellow-600 font-semibold text-sm flex items-center gap-1">
                                 <Icon name="star" className="text-sm" fill />
                                 Nível {stats.level}
                             </p>
                         </div>
                         <div className="ml-auto text-right">
-                            <p className="text-neutral-500 text-xs uppercase tracking-widest font-bold">Ganhos</p>
-                            <p className="text-2xl font-black text-yellow-400">R$ {netEarnings.toFixed(2).replace('.', ',')}</p>
+                            <p className="text-zinc-400 text-xs uppercase tracking-widest font-bold">Ganhos</p>
+                            <p className="text-2xl font-black text-zinc-900">R$ {netEarnings.toFixed(2).replace('.', ',')}</p>
                         </div>
                     </section>
 
@@ -7070,8 +7030,8 @@ function App() {
                     {/* Itens do Pedido */}
                     <section className="space-y-3">
                         <div className="flex justify-between items-end px-2">
-                            <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest">Itens do Pedido</h2>
-                            <span className="text-yellow-400 text-xs font-bold uppercase">
+                            <h2 className="text-zinc-400 font-bold text-sm uppercase tracking-widest">Itens do Pedido</h2>
+                            <span className="text-yellow-600 text-xs font-bold uppercase">
                                 {(() => {
                                     const items = Array.isArray(selectedOrder.items) ? selectedOrder.items : 
                                                  (typeof selectedOrder.items === 'string' ? JSON.parse(selectedOrder.items || '[]') : []);
@@ -7089,37 +7049,37 @@ function App() {
 
                                 if (items.length === 0) {
                                     return (
-                                        <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-5 flex items-center gap-4 border border-neutral-800/50`}>
+                                        <div className={`bg-white ${clayCardDark} rounded-xl p-5 flex items-center gap-4 border border-zinc-100`}>
                                             <div className="w-14 h-14 rounded-full bg-yellow-400/10 flex items-center justify-center">
-                                                <Icon name="package" className="text-yellow-400" />
+                                                <Icon name="package" className="text-yellow-600" />
                                             </div>
                                             <div>
-                                                <span className="text-white font-bold text-sm block">{presentation.title}</span>
-                                                <span className="text-neutral-500 text-xs">Verificar detalhes na coleta</span>
+                                                <span className="text-zinc-900 font-bold text-sm block">{presentation.title}</span>
+                                                <span className="text-zinc-400 text-xs">Verificar detalhes na coleta</span>
                                             </div>
                                         </div>
                                     );
                                 }
 
                                 return items.map((item: any, idx: number) => (
-                                    <div key={idx} className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex items-center gap-4 border border-neutral-800/50`}>
+                                    <div key={idx} className={`bg-white ${clayCardDark} rounded-xl p-4 flex items-center gap-4 border border-zinc-100`}>
                                         <div className="w-14 h-14 relative flex-shrink-0">
                                             <img 
                                                 src={item.image || item.photo_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuAuk8p52HQWwpR_wuk3TNwin3lv0PgotwugDnu2096J4W2od0SpPmzQR04uYsHnHyefMPAbu_LxocDYNFSBypC7KBNA68zy6PJZmKdz5Lbo3kL_9DQHae86xPcDGo9FVpI3NoQWjiQW_Cu30pemF5m_2jZMYH2BsJx1XCnixxIHyADJ4XuLpFblXF_Hb0GSi2pX2NRBVwcXb25TelTJBsy7IJzwkxpYvbzqs9rzQPXF_N2K2rqKtlFsXMFMbj8D1KlMTpW9UuiCvm8"} 
-                                                className="w-full h-full object-cover rounded-full shadow-2xl" 
+                                                className="w-full h-full object-cover rounded-full shadow-lg" 
                                                 alt={item.name} 
                                             />
-                                            <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
+                                            <span className="absolute -top-1 -right-1 bg-yellow-400 text-zinc-950 text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
                                                 {item.quantity}x
                                             </span>
                                         </div>
                                         <div className="flex-1">
-                                            <span className="text-white font-bold text-sm block">{item.name || item.product_name}</span>
-                                            {item.observation && <span className="text-neutral-500 text-xs line-clamp-1">{item.observation}</span>}
+                                            <span className="text-zinc-900 font-bold text-sm block">{item.name || item.product_name}</span>
+                                            {item.observation && <span className="text-zinc-400 text-xs line-clamp-1">{item.observation}</span>}
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-yellow-400/60 text-[10px] font-bold block uppercase">Preço</span>
-                                            <span className="text-white font-black text-xs">R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',')}</span>
+                                            <span className="text-zinc-400/60 text-[10px] font-bold block uppercase">Preço</span>
+                                            <span className="text-zinc-900 font-black text-xs">R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',')}</span>
                                         </div>
                                     </div>
                                 ));
@@ -7130,20 +7090,20 @@ function App() {
                     {/* Resumo Financeiro e Operação Consolidados */}
                     <section className="space-y-4">
                         <div className="flex justify-between items-center px-2">
-                            <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest">Resumo da Missão</h2>
-                            <span className="text-yellow-400 font-black text-[10px] uppercase tracking-widest bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20">
+                            <h2 className="text-zinc-400 font-bold text-sm uppercase tracking-widest">Resumo da Missão</h2>
+                            <span className="text-yellow-600 font-black text-[10px] uppercase tracking-widest bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20">
                                 {paymentLabel}
                             </span>
                         </div>
                         
-                        <div className={`bg-neutral-900 ${clayCardDark} rounded-[32px] p-6 border border-white/5 space-y-6 shadow-2xl relative overflow-hidden`}>
+                        <div className={`bg-white ${clayCardDark} rounded-[32px] p-6 border border-zinc-100 space-y-6 shadow-xl relative overflow-hidden`}>
                             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full" />
                             
                             {/* Saldo da Missão Principal */}
-                            <div className="flex justify-between items-center relative z-10 bg-black/20 p-4 rounded-2xl border border-white/5">
+                            <div className="flex justify-between items-center relative z-10 bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
                                 <div className="flex flex-col">
-                                    <span className="text-white font-black text-xs uppercase tracking-tight">Saldo da Missão</span>
-                                    <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Impacto Final na Carteira</p>
+                                    <span className="text-zinc-900 font-black text-xs uppercase tracking-tight">Saldo da Missão</span>
+                                    <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Impacto Final na Carteira</p>
                                 </div>
                                 <div className="text-right">
                                     {(() => {
@@ -7151,7 +7111,7 @@ function App() {
                                         const cashVal = isCash ? Number(selectedOrder.total_price || 0) : 0;
                                         const mBalance = netEarnings - cashVal;
                                         return (
-                                            <span className={`text-2xl font-black tracking-tighter ${mBalance < 0 ? 'text-rose-400 drop-shadow-[0_2px_10px_rgba(251,113,133,0.3)]' : 'text-emerald-400 drop-shadow-[0_2px_10px_rgba(52,211,153,0.3)]'}`}>
+                                            <span className={`text-2xl font-black tracking-tighter ${mBalance < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                                                 {mBalance < 0 ? '-' : '+'} R$ {Math.abs(mBalance).toFixed(2).replace('.', ',')}
                                             </span>
                                         );
@@ -7162,15 +7122,15 @@ function App() {
                             {/* Detalhes Financeiros Detalhados */}
                             <div className="space-y-4 relative z-10 px-2 py-2">
                                 <div className="flex justify-between items-center text-[10px] font-black">
-                                    <span className="text-zinc-500 uppercase tracking-[0.2em]">Valor Total Pedido</span>
-                                    <span className="text-white">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                    <span className="text-zinc-400 uppercase tracking-[0.2em]">Valor Total Pedido</span>
+                                    <span className="text-zinc-900">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] font-black">
-                                    <span className="text-zinc-500 uppercase tracking-[0.2em]">Seu Ganho Bruto</span>
-                                    <span className="text-emerald-400">R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                                    <span className="text-zinc-400 uppercase tracking-[0.2em]">Seu Ganho Bruto</span>
+                                    <span className="text-emerald-500">R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] font-black">
-                                    <span className="text-zinc-500 uppercase tracking-[0.2em]">Taxa Izi (Desconto)</span>
+                                    <span className="text-zinc-400 uppercase tracking-[0.2em]">Taxa Izi (Desconto)</span>
                                     <span className="text-rose-400">- R$ {(grossEarnings - netEarnings).toFixed(2).replace('.', ',')}</span>
                                 </div>
                                 
@@ -7178,12 +7138,12 @@ function App() {
                                     const isCash = selectedOrder.payment_method === 'dinheiro' || selectedOrder.payment_method === 'cash';
                                     if (!isCash) return null;
                                     return (
-                                        <div className="flex justify-between items-center text-[10px] font-black pt-3 border-t border-white/5">
+                                        <div className="flex justify-between items-center text-[10px] font-black pt-3 border-t border-zinc-100">
                                             <div className="flex items-center gap-2">
                                                 <div className="size-2 rounded-full bg-amber-400 animate-pulse" />
-                                                <span className="text-amber-400 uppercase tracking-[0.2em]">Recebido em Dinheiro</span>
+                                                <span className="text-amber-500 uppercase tracking-[0.2em]">Recebido em Dinheiro</span>
                                             </div>
-                                            <span className="text-amber-400">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                            <span className="text-amber-500">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                         </div>
                                     );
                                 })()}
@@ -7192,16 +7152,16 @@ function App() {
                             {/* Alertas Operacionais */}
                             <div className="relative z-10">
                                 {isPaid || selectedOrder.payment_method === 'online' ? (
-                                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
-                                        <Icon name="verified" className="text-emerald-400" />
-                                        <p className="text-emerald-400 text-[10px] font-black uppercase tracking-tight">Pedido Pago via App. Não cobrar nada.</p>
+                                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4 flex items-center gap-3">
+                                        <Icon name="verified" className="text-emerald-500" />
+                                        <p className="text-emerald-600 text-[10px] font-black uppercase tracking-tight">Pedido Pago via App. Não cobrar nada.</p>
                                     </div>
                                 ) : (
-                                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center gap-3 shadow-lg">
-                                        <Icon name="payments" className="text-rose-400" />
+                                    <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+                                        <Icon name="payments" className="text-rose-500" />
                                         <div>
-                                            <p className="text-rose-400 text-[10px] font-black uppercase tracking-tight leading-none">Receber do Cliente</p>
-                                            <p className="text-white font-black text-sm mt-1">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-rose-500 text-[10px] font-black uppercase tracking-tight leading-none">Receber do Cliente</p>
+                                            <p className="text-zinc-900 font-black text-sm mt-1">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     </div>
                                 )}
@@ -7213,29 +7173,29 @@ function App() {
                     {/* Logística e Rota */}
                     <section className="space-y-4">
                         <div className="flex justify-between items-center px-2">
-                            <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest">Rota do Pedido</h2>
+                            <h2 className="text-zinc-400 font-bold text-sm uppercase tracking-widest">Rota do Pedido</h2>
                         </div>
-                        <div className={`bg-neutral-900 ${clayCardDark} rounded-[32px] p-6 border border-white/5 space-y-6 shadow-2xl`}>
+                        <div className={`bg-white ${clayCardDark} rounded-[32px] p-6 border border-zinc-100 space-y-6 shadow-sm`}>
                             <div className="flex gap-4">
                                 <div className="flex flex-col items-center gap-1">
                                     <div className="size-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                        <Icon name="store" className="text-blue-400" size={16} />
+                                        <Icon name="store" className="text-blue-500" size={16} />
                                     </div>
                                     <div className="w-0.5 h-10 bg-gradient-to-b from-blue-500/50 to-emerald-500/50" />
                                     <div className="size-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                                        <Icon name="location_on" className="text-emerald-400" size={16} />
+                                        <Icon name="location_on" className="text-emerald-500" size={16} />
                                     </div>
                                 </div>
                                 <div className="flex-1 space-y-8">
                                     <div>
-                                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Coleta em</p>
-                                        <p className="text-white font-bold text-sm mt-1">{selectedOrder.merchant_name || 'Parceiro Izi'}</p>
-                                        <p className="text-zinc-400 text-xs mt-0.5 line-clamp-1">{selectedOrder.merchant_address || 'Endereço de coleta disponível na missão'}</p>
+                                        <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Coleta em</p>
+                                        <p className="text-zinc-900 font-bold text-sm mt-1">{selectedOrder.merchant_name || 'Parceiro Izi'}</p>
+                                        <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">{selectedOrder.merchant_address || 'Endereço de coleta disponível na missão'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Entregar para</p>
-                                        <p className="text-white font-bold text-sm mt-1">{selectedOrder.customer_name || 'Cliente Izi'}</p>
-                                        <p className="text-zinc-400 text-xs mt-0.5 line-clamp-1">{selectedOrder.address || selectedOrder.customer_address || 'Endereço de entrega'}</p>
+                                        <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Entregar para</p>
+                                        <p className="text-zinc-900 font-bold text-sm mt-1">{selectedOrder.customer_name || 'Cliente Izi'}</p>
+                                        <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">{selectedOrder.address || selectedOrder.customer_address || 'Endereço de entrega'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -7243,33 +7203,33 @@ function App() {
                     </section>
 
                     {/* Observações e Ações Group */}
-                    <section className={`bg-neutral-900 ${clayCard} rounded-[28px] border border-neutral-800/50 overflow-hidden`}>
+                    <section className={`bg-white ${clayCard} rounded-[28px] border border-zinc-100 overflow-hidden`}>
                         <div className="p-6 space-y-5">
-                            <h3 className="text-neutral-500 text-[9px] font-black uppercase tracking-[0.3em] mb-2 px-1">Notas da Missão</h3>
+                            <h3 className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 px-1">Notas da Missão</h3>
                             
                             {/* Observations */}
-                            <div className="flex items-start gap-4 p-5 bg-neutral-950/50 rounded-2xl border border-neutral-800/30">
+                            <div className="flex items-start gap-4 p-5 bg-zinc-50 rounded-2xl border border-zinc-100">
                                 <div className="bg-yellow-400/10 p-2.5 rounded-xl">
-                                    <Icon name="description" className="text-yellow-400" />
+                                    <Icon name="description" className="text-yellow-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <span className="text-white font-black text-[11px] uppercase tracking-widest opacity-60">Instruções</span>
-                                    <p className="text-neutral-300 text-sm mt-1 leading-relaxed">"{selectedOrder.notes || 'Sem observações especiais dos produtos.'}"</p>
+                                    <span className="text-zinc-900 font-black text-[11px] uppercase tracking-widest opacity-60">Instruções</span>
+                                    <p className="text-zinc-600 text-sm mt-1 leading-relaxed">"{selectedOrder.notes || 'Sem observações especiais dos produtos.'}"</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="grid grid-cols-2 border-t border-neutral-800/50">
-                            <button className="py-5 text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-neutral-800/50 active:scale-95 transition-all">
-                                <Icon name="chat" className="text-yellow-400" />
+                        <div className="grid grid-cols-2 border-t border-zinc-100">
+                            <button className="py-5 text-zinc-900 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-zinc-50 active:scale-95 transition-all">
+                                <Icon name="chat" className="text-yellow-600" />
                                 Chat
                             </button>
                             <button 
                                 onClick={() => window.open(`tel:${selectedOrder.customer_phone || selectedOrder.phone || ''}`)}
-                                className="py-5 text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 border-l border-neutral-800/50 hover:bg-neutral-800/50 active:scale-95 transition-all"
+                                className="py-5 text-zinc-900 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 border-l border-zinc-100 hover:bg-zinc-50 active:scale-95 transition-all"
                             >
-                                <Icon name="call" className="text-yellow-400" />
+                                <Icon name="call" className="text-yellow-600" />
                                 Central
                             </button>
                         </div>
@@ -7278,19 +7238,19 @@ function App() {
 
                 {/* Bottom Fixed Action Button Container */}
                 {activeTab !== 'history' && !['entregue', 'completed', 'finalizado', 'concluido', 'concluído', 'delivered', 'cancelado', 'cancelled'].includes(selectedOrder.status?.toLowerCase()) && (
-                    <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50">
+                    <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-white via-white/95 to-transparent z-50">
                         <button 
                             onClick={() => {
                                 setShowOrderModal(false);
                                 handleAccept(selectedOrder);
                             }}
                             disabled={isAccepting}
-                            className={`w-full bg-yellow-400 ${clayYellow} py-6 rounded-full flex items-center justify-center gap-3 active:scale-[0.97] transition-transform shadow-[0_10px_40px_rgba(250,204,21,0.25)] disabled:opacity-50`}
+                            className={`w-full bg-yellow-400 ${clayYellow} py-6 rounded-full flex items-center justify-center gap-3 active:scale-[0.97] transition-transform disabled:opacity-50`}
                         >
-                            <span className="text-black font-black text-lg tracking-tighter uppercase">
+                            <span className="text-zinc-950 font-black text-lg tracking-tighter uppercase">
                                 {isAccepting ? 'Confirmando...' : 'Ir Para a Coleta'}
                             </span>
-                            <Icon name="arrow_forward" className="text-black font-bold" />
+                            <Icon name="arrow_forward" className="text-zinc-950 font-bold" />
                         </button>
                     </div>
                 )}
@@ -7306,26 +7266,26 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-zinc-900/40 backdrop-blur-md"
           >
              <motion.div 
                initial={{ scale: 0.9, y: 20 }}
                animate={{ scale: 1, y: 0 }}
-               className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[40px] overflow-hidden shadow-2xl border-4 border-white/50 dark:border-slate-800/50"
+               className="w-full max-w-sm bg-white rounded-[40px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-zinc-100"
              >
                 {activeBroadcast.image_url && (
                   <div className="w-full h-48 relative overflow-hidden">
                      <img src={activeBroadcast.image_url} alt="Broadcast" className="w-full h-full object-cover" />
-                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </div>
                 )}
                 
                 <div className="p-8 space-y-6">
                    <div className="space-y-2">
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                      <h3 className="text-2xl font-black text-zinc-900 leading-tight">
                         {activeBroadcast.title}
                       </h3>
-                      <p className="text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+                      <p className="text-zinc-500 font-bold leading-relaxed">
                         {activeBroadcast.message}
                       </p>
                    </div>
@@ -7336,7 +7296,7 @@ function App() {
                         localStorage.setItem('last_izi_broadcast_driver', activeBroadcast.id);
                         setActiveBroadcast(null);
                      }}
-                     className="w-full bg-primary text-black font-black py-5 rounded-[22px] shadow-xl shadow-primary/10 uppercase tracking-widest text-[10px]"
+                     className="w-full bg-primary text-zinc-950 font-black py-5 rounded-[22px] shadow-xl uppercase tracking-widest text-[10px]"
                    >
                      Aproveitar
                    </motion.button>
@@ -7347,26 +7307,26 @@ function App() {
     };
 
     return (
-        <div className="w-full h-[100dvh] bg-black font-sans overflow-hidden relative">
+        <div className="w-full h-[100dvh] bg-zinc-50 font-sans overflow-hidden relative">
             {/* Banner de Ativação de Áudio */}
             {audioBlocked && (
                 <motion.div 
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     onClick={enableAudioManually}
-                    className="fixed top-20 left-4 right-4 z-[9999] bg-amber-500/95 backdrop-blur-xl p-4 rounded-2xl border border-white/30 shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform"
+                    className="fixed top-20 left-4 right-4 z-[9999] bg-amber-400/95 backdrop-blur-xl p-4 rounded-2xl border border-white shadow-[0_20px_40px_rgba(0,0,0,0.1)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="size-10 rounded-full bg-white/20 flex items-center justify-center">
-                            <Icon name="volume_up" size={24} className="text-white animate-pulse" />
+                        <div className="size-10 rounded-full bg-white/40 flex items-center justify-center">
+                            <Icon name="volume_up" size={24} className="text-zinc-950 animate-pulse" />
                         </div>
                         <div>
-                            <p className="text-white text-sm font-black leading-tight">ATIVAR ALERTAS SONOROS</p>
-                            <p className="text-white/80 text-[10px] uppercase font-bold tracking-widest mt-0.5">Clique aqui para não perder novas vagas!</p>
+                            <p className="text-zinc-950 text-sm font-black leading-tight">ATIVAR ALERTAS SONOROS</p>
+                            <p className="text-zinc-900/80 text-[10px] uppercase font-bold tracking-widest mt-0.5">Clique aqui para não perder novas vagas!</p>
                         </div>
                     </div>
-                    <div className="size-8 rounded-full bg-black/20 flex items-center justify-center">
-                        <Icon name="chevron_right" size={20} className="text-white" />
+                    <div className="size-8 rounded-full bg-zinc-950/10 flex items-center justify-center">
+                        <Icon name="chevron_right" size={20} className="text-zinc-950" />
                     </div>
                 </motion.div>
             )}
@@ -7376,25 +7336,25 @@ function App() {
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     onClick={openOverlaySettings}
-                    className="fixed top-0 left-0 right-0 z-[9999] bg-orange-500/95 backdrop-blur-xl px-4 py-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+                    className="fixed top-0 left-0 right-0 z-[9999] bg-orange-400/95 backdrop-blur-xl px-4 py-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform shadow-[0_8px_30px_rgba(0,0,0,0.1)]"
                     style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                            <Icon name="visibility" size={18} className="text-white" />
+                        <div className="size-9 rounded-full bg-white/40 flex items-center justify-center shrink-0">
+                            <Icon name="visibility" size={18} className="text-zinc-950" />
                         </div>
                         <div>
-                            <p className="text-white text-[11px] font-black leading-tight uppercase tracking-wide">âš ï¸ Ative: Sobrepor a outros apps</p>
-                            <p className="text-white/80 text-[9px] font-bold mt-0.5">Toque aqui â†’ ative o toggle â†’ volte ao app</p>
+                            <p className="text-zinc-950 text-[11px] font-black leading-tight uppercase tracking-wide">⚠️ Ative: Sobrepor a outros apps</p>
+                            <p className="text-zinc-900/80 text-[9px] font-bold mt-0.5">Toque aqui → ative o toggle → volte ao app</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-white text-[9px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded-full">Ativar</span>
+                        <span className="text-zinc-950 text-[9px] font-black uppercase tracking-widest bg-white/40 px-2 py-1 rounded-full">Ativar</span>
                         <button 
                             onClick={(e) => { e.stopPropagation(); setOverlayBannerDismissed(true); }}
-                            className="size-6 rounded-full bg-white/10 flex items-center justify-center"
+                            className="size-6 rounded-full bg-zinc-950/10 flex items-center justify-center"
                         >
-                            <Icon name="close" size={12} className="text-white/60" />
+                            <Icon name="close" size={12} className="text-zinc-950/60" />
                         </button>
                     </div>
                 </motion.div>
@@ -7406,7 +7366,7 @@ function App() {
                     </div>
                 )}
                 {isAuthenticated && (
-                    <div key="app" className="flex flex-col h-full overflow-hidden bg-black">
+                    <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
                         <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
                         <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
@@ -7419,7 +7379,7 @@ function App() {
                                 initial={{ opacity: 0 }} 
                                 animate={{ opacity: 1 }} 
                                 exit={{ opacity: 0 }}
-                                className="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center p-8 text-center"
+                                className="fixed inset-0 z-[300] bg-white flex flex-col items-center justify-center p-8 text-center"
                             >
                                 <motion.div 
                                     initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
@@ -7438,12 +7398,12 @@ function App() {
                                     />
                                 </motion.div>
                                 
-                                <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none mb-4 text-center">
+                                <h2 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase leading-none mb-4 text-center">
                                     Candidatura <br />
-                                    <span className="text-yellow-400">Enviada com Sucesso!</span>
+                                    <span className="text-yellow-600">Enviada com Sucesso!</span>
                                 </h2>
                                 
-                                <p className="text-white/40 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase leading-relaxed">
+                                <p className="text-zinc-400 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase leading-relaxed">
                                     Seu perfil premium foi enviado para análise. Fique atento às suas notificações!
                                 </p>
 
@@ -7452,16 +7412,13 @@ function App() {
                                         setShowSlotAppliedSuccess(false);
                                         setSelectedSlot(null);
                                     }}
-                                    className="w-full max-w-xs h-18 rounded-[2.5rem] bg-white text-zinc-950 font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.15)] border-t border-zinc-200"
-                                    style={{
-                                        boxShadow: '0 15px 35px rgba(255,255,255,0.1), inset 6px 6px 12px rgba(255,255,255,1), inset -6px -6px 12px rgba(0,0,0,0.1)'
-                                    }}
+                                    className="w-full max-w-xs h-18 rounded-[2.5rem] bg-zinc-900 text-white font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all"
                                 >
                                     Voltar para Vagas
                                 </button>
                                 
                                 <div className="absolute bottom-12 left-0 right-0 flex justify-center opacity-10">
-                                    <div className="w-16 h-1.5 bg-white/20 rounded-full" />
+                                    <div className="w-16 h-1.5 bg-zinc-900 rounded-full" />
                                 </div>
                             </motion.div>
                         )}
@@ -7487,17 +7444,17 @@ function App() {
                                             animate={{ y: 0, opacity: 1 }} 
                                             exit={{ y: 80, opacity: 0 }} 
                                             onClick={() => setActiveTab('active_mission')} 
-                                            className="fixed bottom-28 left-5 right-5 z-[60] clay-profile-inner bg-yellow-400 text-slate-900 rounded-[2.5rem] h-20 flex items-center justify-between px-8 shadow-[0_25px_50px_rgba(250,204,21,0.4)] border-t border-white/60"
+                                            className="fixed bottom-28 left-5 right-5 z-[60] bg-yellow-400 text-zinc-950 rounded-[2.5rem] h-20 flex items-center justify-between px-8 shadow-[0_25px_50px_rgba(250,204,21,0.3)]"
                                         >
                                             <div className="flex items-center gap-4">
-                                                <div className="size-4 bg-slate-950 rounded-full animate-ping" />
+                                                <div className="size-4 bg-zinc-950 rounded-full animate-ping" />
                                                 <div className="flex flex-col items-start">
-                                                    <span className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-950/60 leading-none mb-1">Missão Ativa</span>
-                                                    <span className="font-black text-xs uppercase tracking-[0.1em] text-slate-950">Continuar Entrega</span>
+                                                    <span className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-950/60 leading-none mb-1">Missão Ativa</span>
+                                                    <span className="font-black text-xs uppercase tracking-[0.1em] text-zinc-950">Continuar Entrega</span>
                                                 </div>
                                             </div>
-                                            <div className="size-12 bg-slate-950/10 rounded-2xl flex items-center justify-center shadow-inner">
-                                                <Icon name="arrow_forward" className="text-slate-950 text-2xl font-black" />
+                                            <div className="size-12 bg-zinc-950/10 rounded-2xl flex items-center justify-center shadow-inner">
+                                                <Icon name="arrow_forward" className="text-zinc-950 text-2xl font-black" />
                                             </div>
                                         </motion.button>
                                     )}
@@ -7510,7 +7467,7 @@ function App() {
                                         whileTap={{ scale: 0.9 }} 
                                         onClick={handleToggleOnline} 
                                         className={`fixed bottom-40 right-6 z-[90] size-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
-                                            isOnline ? 'clay-fab-online' : 'clay-fab-offline'
+                                            isOnline ? 'bg-emerald-500' : 'bg-zinc-900'
                                         }`}
                                     >
                                         <Icon 
@@ -7533,7 +7490,7 @@ function App() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md flex items-end justify-center"
+                        className="fixed inset-0 z-[150] bg-zinc-900/20 backdrop-blur-md flex items-end justify-center"
                         onClick={() => setShowWithdrawModal(false)}
                     >
                         <motion.div
@@ -7548,73 +7505,68 @@ function App() {
                             exit={{ y: "100%", opacity: 0 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                             onClick={e => e.stopPropagation()}
-                            className="w-full max-w-lg clay-card-exclusive rounded-t-[50px] p-8 pb-36 space-y-6 relative border-t border-white/10"
-                            style={{ 
-                                background: 'linear-gradient(180deg, #111111 0%, #000000 100%)',
-                                boxShadow: '0 -20px 60px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1)'
-                            }}
+                            className="w-full max-w-lg bg-white rounded-t-[50px] p-8 pb-36 space-y-6 relative border-t border-zinc-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]"
                         >
                             {/* Drag Handle Improvements */}
                             <div className="flex flex-col items-center gap-1.5 mb-2">
-                                <div className="w-12 h-1.5 bg-white/20 rounded-full shadow-inner" />
-                                <div className="w-8 h-1 bg-white/10 rounded-full" />
+                                <div className="w-12 h-1.5 bg-zinc-200 rounded-full shadow-inner" />
+                                <div className="w-8 h-1 bg-zinc-100 rounded-full" />
                             </div>
 
                             <div className="text-center space-y-1 py-2">
-                                <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] mb-2 opacity-70">Resgate de Saldo</p>
+                                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.5em] mb-2 opacity-70">Resgate de Saldo</p>
                                 <div className="flex items-center justify-center gap-2">
-                                    <span className="text-2xl font-black text-white/10">R$</span>
-                                    <span className="text-6xl font-black text-white tracking-tighter leading-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+                                    <span className="text-2xl font-black text-zinc-300">R$</span>
+                                    <span className="text-6xl font-black text-zinc-900 tracking-tighter leading-none">
                                         {stats.balance.toFixed(2).replace('.', ',')}
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="clay-card-dark border border-white/5 rounded-[40px] p-6 space-y-5 shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
+                            <div className="bg-zinc-50 border border-zinc-100 rounded-[40px] p-6 space-y-5 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
                                 
-                                <div className="flex justify-between items-center clay-profile-inner p-5 rounded-[24px] border border-white/5 shadow-inner">
+                                <div className="flex justify-between items-center bg-white p-5 rounded-[24px] border border-zinc-100 shadow-sm">
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Chave PIX Ativa</span>
-                                        <span className="text-xs font-black text-white truncate max-w-[180px] tracking-tight">{pixKey}</span>
+                                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Chave PIX Ativa</span>
+                                        <span className="text-xs font-black text-zinc-900 truncate max-w-[180px] tracking-tight">{pixKey}</span>
                                     </div>
-                                    <div className="size-12 rounded-2xl bg-black/20 flex items-center justify-center border border-white/5 shadow-lg">
-                                        <Icon name="qr_code_2" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
+                                    <div className="size-12 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100 shadow-sm">
+                                        <Icon name="qr_code_2" size={24} className="text-yellow-600" />
                                     </div>
                                 </div>
 
                                 <div className="space-y-4 px-2">
                                     {Number(appSettings?.withdrawal_fee_percent ?? 0) > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2">
+                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                                                 Taxa Admin
-                                                <span className="px-2 py-0.5 rounded-full bg-white/5 text-[8px] text-white/30 capitalize">{appSettings?.withdrawal_fee_percent}%</span>
+                                                <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-[8px] text-zinc-500 capitalize">{appSettings?.withdrawal_fee_percent}%</span>
                                             </span>
                                             <span className="text-xs font-black text-rose-500">- R$ {(stats.balance * (Number(appSettings?.withdrawal_fee_percent) / 100)).toFixed(2).replace('.', ',')}</span>
                                         </div>
                                     )}
                                     
-                                    <div className="h-px bg-white/5 mx-2" />
+                                    <div className="h-px bg-zinc-100 mx-2" />
 
                                     <div className="flex justify-between items-center py-2">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">Valor Líquido</span>
-                                            <span className="text-[8px] font-medium text-white/20 uppercase tracking-wider">Depósito imediato via PIX</span>
+                                            <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">Valor Líquido</span>
+                                            <span className="text-[8px] font-medium text-zinc-400 uppercase tracking-wider">Depósito imediato via PIX</span>
                                         </div>
-                                        <span className="text-3xl font-black text-primary drop-shadow-[0_0_20px_rgba(255,217,0,0.4)]">
+                                        <span className="text-3xl font-black text-zinc-900">
                                             R$ {(stats.balance * (1 - (Number(appSettings?.withdrawal_fee_percent ?? 0) / 100))).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-4 clay-profile-inner p-5 rounded-[28px] border border-primary/10 overflow-hidden relative shadow-inner">
-                                <div className="absolute inset-0 bg-primary/5 opacity-50 blur-2xl"></div>
-                                <div className="size-10 rounded-xl bg-black/20 flex items-center justify-center border border-white/5 shrink-0 shadow-lg">
-                                    <Icon name="bolt" className="text-primary" size={20} />
+                            <div className="flex items-center gap-4 p-5 rounded-[28px] border border-primary/10 overflow-hidden relative bg-primary/5">
+                                <div className="size-10 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg">
+                                    <Icon name="bolt" className="text-white" size={20} />
                                 </div>
-                                <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest leading-relaxed relative z-10">
-                                    Pagamentos processados em até <span className="text-white">{appSettings?.withdrawal_period_h ?? 24}h</span> úteis.
+                                <p className="text-[9px] text-zinc-900/60 font-bold uppercase tracking-widest leading-relaxed relative z-10">
+                                    Pagamentos processados em até <span className="text-zinc-900">{appSettings?.withdrawal_period_h ?? 24}h</span> úteis.
                                 </p>
                             </div>
 
@@ -7623,7 +7575,7 @@ function App() {
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setShowWithdrawModal(false)}
                                     disabled={isWithdrawLoading}
-                                    className="flex-1 h-18 rounded-[30px] bg-white/[0.03] border border-white/10 text-white/40 font-black text-[10px] uppercase tracking-[0.2em] active:bg-white/[0.05] shadow-xl transition-all disabled:opacity-30"
+                                    className="flex-1 h-18 rounded-[30px] bg-zinc-50 border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em] active:bg-zinc-100 shadow-sm transition-all disabled:opacity-30"
                                 >
                                     Voltar
                                 </motion.button>
@@ -7631,11 +7583,11 @@ function App() {
                                     whileTap={{ scale: 0.95 }}
                                     onClick={confirmWithdraw}
                                     disabled={isWithdrawLoading}
-                                    className="flex-[1.8] h-18 rounded-[30px] bg-primary text-black font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,217,0,0.2)] active:shadow-none transition-all disabled:opacity-50 flex items-center justify-center gap-3 border-t border-white/40"
+                                    className="flex-[1.8] h-18 rounded-[30px] bg-yellow-400 text-zinc-950 font-black text-[10px] uppercase tracking-[0.2em] shadow-lg active:shadow-none transition-all disabled:opacity-50 flex items-center justify-center gap-3"
                                 >
                                     {isWithdrawLoading ? (
                                         <>
-                                            <div className="size-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                            <div className="size-5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
                                             <span>Processando</span>
                                         </>
                                     ) : (
@@ -7657,18 +7609,18 @@ function App() {
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center"
+                        className="fixed inset-0 z-[200] bg-white/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center"
                     >
                         <motion.div 
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: "spring", damping: 12 }}
-                            className="size-32 rounded-[48px] bg-emerald-500 shadow-[0_20px_60px_rgba(16,185,129,0.4)] flex items-center justify-center mb-10"
+                            className="size-32 rounded-[48px] bg-emerald-500 shadow-xl flex items-center justify-center mb-10"
                         >
                             <motion.span 
                                 initial={{ pathLength: 0 }}
                                 animate={{ pathLength: 1 }}
-                                className="material-symbols-outlined text-black text-6xl font-black"
+                                className="material-symbols-outlined text-white text-6xl font-black"
                             >
                                 check
                             </motion.span>
@@ -7678,7 +7630,7 @@ function App() {
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.2 }}
-                            className="text-3xl font-black text-white uppercase tracking-tighter"
+                            className="text-3xl font-black text-zinc-900 uppercase tracking-tighter"
                         >
                             Saque Solicitado!
                         </motion.h2>
@@ -7687,7 +7639,7 @@ function App() {
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.3 }}
-                            className="text-slate-400 font-bold text-sm mt-4 max-w-xs leading-relaxed"
+                            className="text-zinc-500 font-bold text-sm mt-4 max-w-xs leading-relaxed"
                         >
                             Sua solicitação de PIX foi enviada e já aparece no painel administrativo para aprovação.
                         </motion.p>
@@ -7696,9 +7648,9 @@ function App() {
                             initial={{ width: 0 }}
                             animate={{ width: "100%" }}
                             transition={{ duration: 3, ease: "linear" }}
-                            className="h-1 bg-primary/20 rounded-full mt-12 max-w-[200px] overflow-hidden"
+                            className="h-1 bg-yellow-400/20 rounded-full mt-12 max-w-[200px] overflow-hidden"
                         >
-                            <div className="h-full bg-primary" />
+                            <div className="h-full bg-yellow-400" />
                         </motion.div>
                     </motion.div>
                 )}
@@ -7710,28 +7662,25 @@ function App() {
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6"
+                        className="fixed inset-0 z-[300] bg-zinc-900/20 backdrop-blur-xl flex items-center justify-center p-6"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="w-full max-w-sm bg-[#121212] border border-white/5 rounded-[48px] p-10 relative overflow-hidden"
-                            style={{
-                                boxShadow: '0 40px 100px rgba(0,0,0,0.8), inset 4px 4px 12px rgba(255,255,255,0.03), inset -4px -4px 12px rgba(0,0,0,0.5)'
-                            }}
+                            className="w-full max-w-sm bg-white border border-zinc-100 rounded-[48px] p-10 relative overflow-hidden shadow-2xl"
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
 
-                            <div className="size-20 rounded-[32px] bg-amber-500/10 flex items-center justify-center mb-8 border border-white/5 shadow-inner">
-                                <span className="material-symbols-outlined text-primary text-4xl animate-pulse">payments</span>
+                            <div className="size-20 rounded-[32px] bg-yellow-50 flex items-center justify-center mb-8 border border-zinc-100">
+                                <span className="material-symbols-outlined text-yellow-600 text-4xl animate-pulse">payments</span>
                             </div>
 
-                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-3">Atenção Piloto!</h3>
-                            <p className="text-neutral-400 font-bold text-sm leading-relaxed mb-10">
+                            <h3 className="text-2xl font-black text-zinc-900 uppercase tracking-tighter mb-3">Atenção Piloto!</h3>
+                            <p className="text-zinc-500 font-bold text-sm leading-relaxed mb-10">
                                 Este pedido ainda <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-4">não foi pago</span> via App. 
                                 <br />Confirme o recebimento de:
-                                <span className="block text-white text-3xl font-black mt-2 tracking-tighter">
+                                <span className="block text-zinc-900 text-3xl font-black mt-2 tracking-tighter">
                                     R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}
                                 </span>
                             </p>
@@ -7741,21 +7690,20 @@ function App() {
                                     <motion.div 
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="bg-[#1a1414] border border-rose-500/20 p-6 rounded-3xl"
-                                        style={{ boxShadow: 'inset 0 4px 20px rgba(244,63,94,0.1)' }}
+                                        className="bg-rose-50 border border-rose-100 p-6 rounded-3xl"
                                     >
                                         <div className="flex items-start gap-4 mb-6">
                                             <div className="p-2 bg-rose-500/10 rounded-full border border-rose-500/20 shrink-0">
                                                 <span className="material-symbols-outlined text-rose-500">warning</span>
                                             </div>
-                                            <p className="text-rose-200 text-xs leading-relaxed font-medium">
-                                                Ao confirmar o recebimento em <strong className="text-rose-400 uppercase">Dinheiro</strong>, esse valor será <strong className="text-white">descontado do seu saldo</strong> de repasses. Deseja confirmar?
+                                            <p className="text-rose-500 text-xs leading-relaxed font-bold">
+                                                Ao confirmar o recebimento em <strong className="uppercase">Dinheiro</strong>, esse valor será descontado do seu saldo. Deseja confirmar?
                                             </p>
                                         </div>
                                         <div className="flex gap-3">
                                             <button 
                                                 onClick={() => setConfirmPaymentState(prev => prev ? { ...prev, isCashWarning: false } : prev)}
-                                                className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                                                className="flex-1 py-4 rounded-2xl bg-white border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
                                             >
                                                 Voltar
                                             </button>
@@ -7764,7 +7712,7 @@ function App() {
                                                     confirmPaymentState.resolve('dinheiro');
                                                     setConfirmPaymentState(null);
                                                 }}
-                                                className="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black text-[10px] uppercase tracking-widest shadow-[0_5px_20px_rgba(244,63,94,0.3),inset_2px_2px_8px_rgba(255,255,255,0.4)] active:scale-95 transition-all"
+                                                className="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
                                             >
                                                 Confirmar
                                             </button>
@@ -7774,7 +7722,7 @@ function App() {
                                     <>
                                         <button 
                                             onClick={() => setConfirmPaymentState(prev => prev ? { ...prev, isCashWarning: true } : prev)}
-                                            className="w-full py-5 rounded-[24px] bg-primary text-slate-950 font-black text-sm uppercase tracking-widest shadow-[0_10px_30px_rgba(250,204,21,0.2),inset_4px_4px_10px_rgba(255,255,255,0.4)] active:scale-95 transition-all"
+                                            className="w-full py-5 rounded-[24px] bg-yellow-400 text-zinc-950 font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
                                         >
                                             Recebi em Dinheiro
                                         </button>
@@ -7783,7 +7731,7 @@ function App() {
                                                 confirmPaymentState.resolve('pix_cartao');
                                                 setConfirmPaymentState(null);
                                             }}
-                                            className="w-full py-5 rounded-[24px] bg-white/[0.05] border border-white/5 text-white font-black text-sm uppercase tracking-widest hover:bg-white/[0.08] transition-all active:scale-95 shadow-inner"
+                                            className="w-full py-5 rounded-[24px] bg-zinc-50 border border-zinc-100 text-zinc-900 font-black text-sm uppercase tracking-widest hover:bg-zinc-100 transition-all active:scale-95 shadow-sm"
                                         >
                                             Recebi via Pix / Cartão
                                         </button>
@@ -7810,11 +7758,11 @@ function App() {
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center overflow-hidden"
+                        className="fixed inset-0 z-[250] bg-white flex flex-col items-center justify-center p-8 text-center overflow-hidden"
                     >
                         <div className="absolute inset-0 pointer-events-none opacity-20">
-                           <div className="absolute top-1/4 left-1/4 size-64 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
-                           <div className="absolute bottom-1/4 right-1/4 size-64 bg-emerald-500/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                           <div className="absolute top-1/4 left-1/4 size-64 bg-yellow-400/10 blur-[120px] rounded-full animate-pulse" />
+                           <div className="absolute bottom-1/4 right-1/4 size-64 bg-emerald-500/5 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
                         </div>
 
                         <motion.div 
@@ -7827,7 +7775,6 @@ function App() {
                               boxShadow: '0 20px 80px rgba(74,222,128,0.4), inset 6px 6px 16px rgba(255,255,255,0.3), inset -6px -6px 16px rgba(0,0,0,0.2)'
                             }}
                         >
-                            {/* Check SVG claymorphism */}
                             <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                               <path 
                                 d="M12 32L26 46L52 18" 
@@ -7841,7 +7788,7 @@ function App() {
                             <motion.div 
                                 animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
                                 transition={{ duration: 2, repeat: Infinity }}
-                                className="absolute inset-0 border-4 border-primary rounded-[54px]"
+                                className="absolute inset-0 border-4 border-emerald-500 rounded-[54px]"
                             />
                         </motion.div>
                         
@@ -7851,61 +7798,54 @@ function App() {
                             transition={{ delay: 0.2 }}
                             className="space-y-4"
                         >
-                            <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none text-center">
+                            <h2 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase leading-none text-center">
                                 Parabéns! <br />
-                                <span className="text-primary">Missão Concluída</span>
+                                <span className="text-yellow-600">Missão Concluída</span>
                             </h2>
-                            <p className="text-slate-400 font-bold text-sm tracking-wide uppercase opacity-60">Você acaba de faturar:</p>
+                            <p className="text-zinc-400 font-bold text-sm tracking-wide uppercase opacity-60">Você acaba de faturar:</p>
                         </motion.div>
 
                         <motion.div 
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.4, type: "spring" }}
-                            className="my-6 w-full max-w-sm px-6 py-8 bg-[#120F0F] border border-white/5 rounded-[48px] shadow-[0_30px_60px_rgba(0,0,0,0.9),inset_4px_4px_12px_rgba(255,255,255,0.03),inset_-4px_-4px_12px_rgba(0,0,0,0.8)] relative overflow-hidden"
+                            transition={{ delay: 0.4 }}
+                            className="my-6 w-full max-w-sm px-6 py-8 bg-zinc-50 border border-zinc-100 rounded-[48px] shadow-sm relative overflow-hidden"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-16 -mt-16 rounded-full" />
-
-                            <div className="relative z-10 flex flex-col gap-6">
-                                <div>
-                                    <span className="block text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2 text-center">Ganho Líquido (Frete)</span>
+                             <span className="block text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em] mb-2 text-center">Ganho Líquido (Frete)</span>
                                     <div className="flex items-center justify-center gap-1">
-                                        <span className="text-2xl font-black text-white opacity-40 mt-3">R$</span>
-                                        <span className="text-7xl font-black text-white tracking-tighter leading-none" style={{ textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                                        <span className="text-2xl font-black text-zinc-300 mt-3">R$</span>
+                                        <span className="text-7xl font-black text-zinc-900 tracking-tighter leading-none">
                                             {(finishedMissionData.amount || 0).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3 pt-6 border-t border-white/5">
-                                    <div className="bg-[#1A1616] p-3 rounded-[24px] border border-white/5 flex flex-col items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
-                                        <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total do Pedido</span>
-                                        <span className="text-lg font-black text-slate-300">
+                                    <div className="grid grid-cols-2 gap-3 pt-6 border-t border-zinc-200">
+                                    <div className="bg-white p-3 rounded-[24px] border border-zinc-100 flex flex-col items-center justify-center shadow-sm">
+                                        <span className="block text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total do Pedido</span>
+                                        <span className="text-lg font-black text-zinc-700">
                                             R$ {(finishedMissionData.grossAmount || 0).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
-                                    <div className="bg-[#1A1616] p-3 rounded-[24px] border border-white/5 flex flex-col items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
-                                        <span className="block text-[8px] font-black text-primary uppercase tracking-widest mb-1">XP Ganhos</span>
+                                    <div className="bg-white p-3 rounded-[24px] border border-zinc-100 flex flex-col items-center justify-center shadow-sm">
+                                        <span className="block text-[8px] font-black text-yellow-600 uppercase tracking-widest mb-1">XP Ganhos</span>
                                         <div className="flex items-center gap-1">
-                                            <span className="text-lg font-black text-primary">+{finishedMissionData.xpGained || 15}</span>
-                                            <span className="text-[10px] font-black text-primary/50">XP</span>
+                                            <span className="text-lg font-black text-yellow-600">+{finishedMissionData.xpGained || 15}</span>
+                                            <span className="text-[10px] font-black text-yellow-600/50">XP</span>
                                         </div>
                                     </div>
                                 </div>
                                 {finishedMissionData.cashDiscount && finishedMissionData.cashDiscount > 0 && (
-                                    <div className="mt-3 bg-rose-500/10 border border-rose-500/20 p-4 rounded-[24px] flex items-center justify-center gap-3">
-                                        <div className="size-8 rounded-full bg-rose-500/20 flex items-center justify-center">
+                                    <div className="mt-3 bg-rose-50 border border-rose-100 p-4 rounded-[24px] flex items-center justify-center gap-3">
+                                        <div className="size-8 rounded-full bg-rose-500/10 flex items-center justify-center">
                                             <span className="material-symbols-outlined text-rose-500 text-sm font-black">payments</span>
                                         </div>
                                         <div className="text-left flex-1">
-                                            <span className="block text-[9px] font-black text-rose-400 uppercase tracking-widest mb-0.5">Dinheiro Retido</span>
-                                            <span className="text-sm font-black text-rose-300">
+                                            <span className="block text-[9px] font-black text-rose-600 uppercase tracking-widest mb-0.5">Dinheiro Retido</span>
+                                            <span className="text-sm font-black text-rose-500">
                                                 - R$ {finishedMissionData.cashDiscount.toFixed(2).replace('.', ',')}
                                             </span>
                                         </div>
                                     </div>
                                 )}
-                            </div>
                         </motion.div>
 
                         <motion.div 
@@ -7942,7 +7882,7 @@ function App() {
                             initial={{ opacity: 0 }} 
                             animate={{ opacity: 1 }} 
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                            className="absolute inset-0 bg-zinc-900/20 backdrop-blur-xl"
                             onClick={() => {
                                 setShowApprovedSlotModal(false);
                                 stopIziSounds();
@@ -7952,31 +7892,31 @@ function App() {
                             initial={{ scale: 0.8, y: 50, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.8, y: 50, opacity: 0 }}
-                            className="relative w-full max-w-sm clay-card-exclusive bg-black/95 p-8 flex flex-col items-center gap-8 overflow-hidden border border-white/10"
+                            className="relative w-full max-w-sm bg-white p-8 flex flex-col items-center gap-8 overflow-hidden border border-zinc-100 rounded-[48px] shadow-[0_30px_60px_rgba(0,0,0,0.12)]"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl -mr-16 -mt-16 rounded-full" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl -mr-16 -mt-16 rounded-full" />
                             
-                            <div className="size-24 rounded-[32px] bg-primary flex items-center justify-center shadow-[0_20px_40px_rgba(250,204,21,0.3)]">
-                                <Icon name="verified" size={48} className="text-black" />
+                            <div className="size-24 rounded-[32px] bg-yellow-400 flex items-center justify-center shadow-[0_20px_40px_rgba(250,204,21,0.3)]">
+                                <Icon name="verified" size={48} className="text-zinc-950" />
                             </div>
 
                             <div className="text-center space-y-3">
-                                <h2 className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Parabéns!</h2>
-                                <h3 className="text-3xl font-black text-white tracking-tighter leading-none">VAGA CONFIRMADA</h3>
-                                <p className="text-xs text-white/40 leading-relaxed font-bold px-4">
-                                    Você foi selecionado para a vaga de <span className="text-white">{approvedSlotData.title}</span> em <span className="text-white">{approvedSlotData.admin_users?.store_name || 'um novo parceiro'}</span>.
+                                <h2 className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em]">Parabéns!</h2>
+                                <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">VAGA CONFIRMADA</h3>
+                                <p className="text-xs text-zinc-400 leading-relaxed font-bold px-4">
+                                    Você foi selecionado para a vaga de <span className="text-zinc-900">{approvedSlotData.title}</span> em <span className="text-zinc-900">{approvedSlotData.admin_users?.store_name || 'um novo parceiro'}</span>.
                                 </p>
                             </div>
 
-                            <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                            <div className="w-full h-px bg-gradient-to-r from-transparent via-zinc-100 to-transparent" />
 
                             <div className="w-full flex flex-col gap-4">
-                                <div className="flex justify-between items-center px-4 py-3 bg-white/5 rounded-[24px]">
+                                <div className="flex justify-between items-center px-4 py-3 bg-zinc-50 rounded-[24px] border border-zinc-100">
                                     <div className="flex flex-col">
-                                        <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Garantido</p>
-                                        <p className="text-xl font-black text-primary leading-none">R$ {parseFloat(approvedSlotData.fee_per_day || 0).toFixed(0)} <span className="text-[10px] not-italic text-white/20">/ dia</span></p>
+                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Garantido</p>
+                                        <p className="text-xl font-black text-yellow-600 leading-none">R$ {parseFloat(approvedSlotData.fee_per_day || 0).toFixed(0)} <span className="text-[10px] not-italic text-zinc-300">/ dia</span></p>
                                     </div>
-                                    <Icon name="payments" className="text-white/10" size={32} />
+                                    <Icon name="payments" className="text-zinc-100" size={32} />
                                 </div>
                             </div>
 
@@ -7987,7 +7927,7 @@ function App() {
                                     setActiveTab('dedicated');
                                     setSelectedSlot(approvedSlotData);
                                 }}
-                                className="w-full h-20 bg-primary text-black rounded-[32px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(250,204,21,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-t border-white/40"
+                                className="w-full h-20 bg-yellow-400 text-zinc-950 rounded-[32px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(250,204,21,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-t border-white/40"
                             >
                                 VER DETALHES <Icon name="chevron_right" />
                             </button>

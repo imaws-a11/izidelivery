@@ -33,8 +33,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     <div className="fixed inset-0 bg-white z-[500] flex flex-col overflow-y-auto no-scrollbar">
       {/* Header */}
       <header className="sticky top-0 bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between z-50">
-        <button onClick={onBack} className="size-10 flex items-center justify-center active:scale-90 transition-all">
-          <span className="material-symbols-rounded text-rose-500 text-2xl">chevron_left</span>
+        <button onClick={() => window.history.back()} className="size-10 flex items-center justify-center active:scale-90 transition-all">
+          <span className="material-symbols-rounded text-zinc-900 text-2xl">arrow_back</span>
         </button>
         <h1 className="text-[11px] font-black text-zinc-900 uppercase tracking-widest">Detalhes do Pedido</h1>
         <button onClick={onSupport} className="text-sm font-bold text-zinc-600">Ajuda</button>
@@ -83,8 +83,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       className="size-full object-contain p-2" 
                       alt={item.name || item.product_name} 
                     />
-                    <div className="absolute -bottom-1 -right-1 size-6 bg-rose-500 rounded-lg flex items-center justify-center border-2 border-white shadow-sm">
-                       <span className="text-[11px] font-black text-white">{item.quantity}</span>
+                    <div className="absolute -bottom-1 -right-1 size-6 bg-yellow-400 rounded-lg flex items-center justify-center border-2 border-white shadow-sm">
+                       <span className="text-[11px] font-black text-black">{item.quantity}</span>
                     </div>
                  </div>
                  <div className="flex-1 min-w-0">
@@ -109,10 +109,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                  <span>R$ {Number(subtotal).toFixed(2).replace(".", ",")}</span>
               </div>
               {(order.discount || 0) > 0 && (
-                <div className="flex justify-between items-center text-sm font-medium text-rose-500">
-                   <span>Descontos</span>
-                   <span>- R$ {Number(order.discount).toFixed(2).replace(".", ",")}</span>
-                </div>
+                 <div className="flex justify-between items-center text-sm font-medium text-yellow-600">
+                    <span>Descontos</span>
+                    <span>- R$ {Number(order.discount).toFixed(2).replace(".", ",")}</span>
+                 </div>
               )}
               <div className="flex justify-between items-center text-sm font-medium text-zinc-600">
                  <span>Taxa de entrega</span>

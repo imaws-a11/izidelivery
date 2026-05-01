@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { GoogleMap, Marker } from "@react-google-maps/api";
 import { useApp } from "../../../contexts/AppContext";
+import { supabase } from "../../../lib/supabase";
 import { useGoogleMapsLoader } from "../../../hooks/useGoogleMapsLoader";
 
 // Estilos de Mapa Silver Otimizados
@@ -42,6 +43,7 @@ export const ExploreEnviosUberView: React.FC = () => {
   const [destQuery, setDestQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<"origin" | "dest" | null>(null);
+  const [dynamicVehicles, setDynamicVehicles] = useState<any[]>([]);
 
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const distanceMatrixService = useRef<google.maps.DistanceMatrixService | null>(null);
@@ -50,6 +52,42 @@ export const ExploreEnviosUberView: React.FC = () => {
     lat: userLocation.lat || -20.1438,
     lng: userLocation.lng || -44.1989
   }), [userLocation.lat, userLocation.lng]);
+
+  useEffect(() => {
+    const fetchDynamicRates = async () => {
+      try {
+        const { data: iconData } = await supabase.from('izi_service_categories').select('category_key, icon_url');
+        const iconMap = (iconData || []).reduce((acc: any, item: any) => {
+          acc[item.category_key] = item.icon_url;
+          return acc;
+        }, {});
+
+        const { data } = await supabase
+          .from('dynamic_rates_delivery')
+          .select('metadata')
+          .eq('type', 'base_values')
+          .maybeSingle();
+        
+        if (data?.metadata) {
+          const meta = data.metadata;
+          const vehicles = [
+            { id: 'fiorino', title: 'Fiorino', icon: '🚐', img: iconMap['fiorino'] || 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', price: meta.fiorino_min || 40, capacity: 'Até 500kg' },
+            { id: 'caminhonete', title: 'Caminhonete', icon: '🛻', img: iconMap['caminhonete'] || 'https://cdn-icons-png.flaticon.com/512/3204/3204064.png', price: meta.caminhonete_min || 50, capacity: 'Até 1200kg' },
+            { id: 'van', title: 'Van Carga', icon: '🚐', img: iconMap['van'] || 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', price: meta.van_min || 50, capacity: 'Até 1500kg' },
+            { id: 'bau_p', title: 'Baú Pequeno', icon: '🚚', img: iconMap['bau_p'] || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png', price: meta.bau_p_min || 70, capacity: 'Até 2500kg' },
+            { id: 'bau_m', title: 'Baú Médio', icon: '🚚', img: iconMap['bau_m'] || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png', price: meta.bau_m_min || 80, capacity: 'Até 3500kg' },
+            { id: 'bau_g', title: 'Baú Grande', icon: '🚚', img: iconMap['bau_g'] || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png', price: meta.bau_g_min || 100, capacity: 'Até 5000kg' },
+            { id: 'utilitario', title: 'Utilitário', icon: '🚐', img: iconMap['utilitario'] || 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', price: meta.utilitario_min || 12, capacity: 'Até 300kg' },
+            { id: 'aberto', title: 'Caminhão Aberto', icon: '🚚', img: iconMap['aberto'] || 'https://cdn-icons-png.flaticon.com/512/3204/3204064.png', price: meta.aberto_min || 80, capacity: 'Médio porte' }
+          ];
+          setDynamicVehicles(vehicles.filter(v => meta[`${v.id}_min`]));
+        }
+      } catch (e) {
+        console.error("Erro ao buscar taxas dinâmicas:", e);
+      }
+    };
+    fetchDynamicRates();
+  }, []);
 
   useEffect(() => {
     if (isLoaded && window.google) {
@@ -213,9 +251,25 @@ export const ExploreEnviosUberView: React.FC = () => {
                 <AnimatePresence>
                   {selectedType === "frete" && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="pl-4 space-y-2 overflow-hidden border-l-2 border-[#FFC107] ml-2">
-                       <VehicleOption id="fiorino" title="Fiorino (Pequeno porte)" icon="🚐" img="https://cdn-icons-png.flaticon.com/512/2830/2830305.png" time="Até 500kg" price="R$ 80,00" selected={selectedFreteType === "fiorino"} onClick={() => setSelectedFreteType("fiorino")} isSubOption />
-                       <VehicleOption id="caminhonete" title="Caminhonete (Médio porte)" icon="🛻" img="https://cdn-icons-png.flaticon.com/512/3204/3204064.png" time="Até 1200kg" price="R$ 150,00" selected={selectedFreteType === "caminhonete"} onClick={() => setSelectedFreteType("caminhonete")} isSubOption />
-                       <VehicleOption id="bau" title="Caminhão Baú (Grande porte)" icon="🚚" img="https://cdn-icons-png.flaticon.com/512/2766/2766258.png" time="Até 4000kg" price="R$ 250,00" selected={selectedFreteType === "bau"} onClick={() => setSelectedFreteType("bau")} isSubOption />
+                       {dynamicVehicles.length > 0 ? dynamicVehicles.map(v => (
+                         <VehicleOption 
+                           key={v.id}
+                           id={v.id} 
+                           title={`${v.title} (${v.capacity})`} 
+                           icon={v.icon} 
+                           img={v.img} 
+                           time={v.capacity} 
+                           price={`R$ ${v.price.toFixed(2).replace('.', ',')}`} 
+                           selected={selectedFreteType === v.id} 
+                           onClick={() => setSelectedFreteType(v.id as any)} 
+                           isSubOption 
+                         />
+                       )) : (
+                         <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-center gap-3">
+                           <div className="size-2 rounded-full bg-zinc-200 animate-pulse" />
+                           <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Carregando frotas...</span>
+                         </div>
+                       )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -225,8 +279,20 @@ export const ExploreEnviosUberView: React.FC = () => {
                   <div className="flex items-center gap-3"><div className="w-8 h-6 bg-[#FFC107] rounded-sm flex items-center justify-center"><span className="material-symbols-rounded text-black text-lg">payments</span></div><span className="font-bold text-[15px]">Izi Pay</span></div>
                   <div className="flex items-center gap-1 text-zinc-400"><span className="text-[10px] font-black uppercase tracking-widest text-[#FFC107]">R$ 482,90</span><span className="material-symbols-rounded">chevron_right</span></div>
                 </div>
-                <motion.button whileTap={{ scale: 0.98 }} onClick={() => setSubView("checkout" as any)} className="w-full bg-black text-white h-[64px] rounded-2xl font-bold text-lg shadow-2xl">
-                  Escolher {selectedType === 'moto' ? 'Moto-táxi' : selectedType === 'carro' ? 'Motorista Particular' : selectedType === 'frete' ? (selectedFreteType === 'fiorino' ? 'Fiorino' : selectedFreteType === 'caminhonete' ? 'Caminhonete' : 'Caminhão Baú') : ''}
+                <motion.button 
+                  whileTap={{ scale: 0.98 }} 
+                  onClick={() => {
+                    if (selectedType === 'frete') {
+                      setTransitData((prev: any) => ({ ...prev, type: 'freight', vehicleCategory: selectedFreteType }));
+                      setSubView("freight_wizard" as any);
+                    } else {
+                      setTransitData((prev: any) => ({ ...prev, type: selectedType === 'moto' ? 'mototaxi' : 'taxi' }));
+                      setSubView("taxi_wizard" as any);
+                    }
+                  }} 
+                  className="w-full bg-black text-white h-[64px] rounded-2xl font-bold text-lg shadow-2xl"
+                >
+                  Escolher {selectedType === 'moto' ? 'Moto-táxi' : selectedType === 'carro' ? 'Motorista Particular' : selectedType === 'frete' ? (dynamicVehicles.find(v => v.id === selectedFreteType)?.title || 'Frete') : ''}
                 </motion.button>
               </div>
             </div>
@@ -244,7 +310,7 @@ export const ExploreEnviosUberView: React.FC = () => {
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
           className="fixed inset-0 bg-white z-[200] font-sans text-black pb-32 overflow-y-auto select-none"
         >
-          <header className="px-5 pt-12 pb-4 flex items-center gap-6 sticky top-0 bg-white z-50"><motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("home" as any)} className="material-symbols-rounded font-bold text-2xl">arrow_back</motion.button><h1 className="text-[20px] font-bold">Planeje sua viagem</h1></header>
+          <header className="px-5 pt-12 pb-4 flex items-center gap-6 sticky top-0 bg-white z-50"><motion.button whileTap={{ scale: 0.9 }} onClick={() => window.history.back()} className="material-symbols-rounded font-bold text-2xl">arrow_back</motion.button><h1 className="text-[20px] font-bold">Planeje sua viagem</h1></header>
           <main className="px-5 space-y-6">
             <section className="flex items-center gap-3"><div className="flex-1 border-[2.5px] border-black rounded-xl p-3 flex flex-col gap-4 relative bg-white"><div className="flex items-center gap-4"><div className="w-2.5 h-2.5 rounded-full border-[2.5px] border-black shrink-0" /><input type="text" value={originQuery} onChange={(e) => { setOriginQuery(e.target.value); setIsSearching("origin"); }} onFocus={() => setIsSearching("origin")} className="w-full bg-transparent outline-none text-zinc-900 font-medium text-[15px]" /></div><div className="h-[1px] bg-neutral-100 ml-6" /><div className="flex items-center gap-4"><div className="w-2.5 h-2.5 bg-black shrink-0" /><input autoFocus placeholder="Para onde?" value={destQuery} onChange={(e) => { setDestQuery(e.target.value); setIsSearching("dest"); }} onFocus={() => setIsSearching("dest")} className="w-full bg-transparent outline-none text-zinc-900 font-medium text-[15px] placeholder:text-zinc-400" /></div><div className="absolute left-[16px] top-[25px] bottom-[25px] w-[2px] bg-black" /></div></section>
             <section className="space-y-6 pt-2 pb-20"><AnimatePresence mode="popLayout">{suggestions.map((loc, i) => (<motion.div key={loc.placeId || i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ delay: i * 0.02 }}><DestinationItem {...loc} onClick={() => handleSelectLocation(loc)} /></motion.div>))}</AnimatePresence></section>
@@ -255,7 +321,7 @@ export const ExploreEnviosUberView: React.FC = () => {
 
     return (
       <div className="min-h-screen bg-white font-sans text-black pb-32 overflow-y-auto select-none overflow-x-hidden">
-        <header className="px-5 pt-12 pb-6 bg-white sticky top-0 z-50 flex items-center gap-6"><motion.button whileTap={{ scale: 0.8 }} onClick={() => setSubView("home" as any)} className="material-symbols-rounded font-bold text-[28px]">arrow_back</motion.button><h1 className="text-[36px] font-bold tracking-tight leading-none">Izi</h1></header>
+        <header className="px-5 pt-12 pb-6 bg-white sticky top-0 z-50 flex items-center gap-6"><motion.button whileTap={{ scale: 0.8 }} onClick={() => window.history.back()} className="material-symbols-rounded font-bold text-[28px]">arrow_back</motion.button><h1 className="text-[36px] font-bold tracking-tight leading-none">Izi</h1></header>
         <main className="px-5 space-y-7">
           <section onClick={() => setView("plan_trip")} className="flex items-center bg-[#EEEEEE] rounded-full h-[54px] px-4 gap-2 cursor-pointer active:scale-[0.98] transition-transform"><div className="flex flex-1 items-center gap-3"><span className="material-symbols-rounded font-bold text-[24px]">search</span><span className="text-black font-semibold text-lg opacity-90">Para onde?</span></div><div className="h-[38px] bg-white rounded-full flex items-center px-4 gap-2 shadow-sm"><span className="material-symbols-rounded font-bold text-[18px]">calendar_month</span><span className="text-black font-bold text-[13px]">Mais tarde</span></div></section>
           <section className="flex items-center gap-4 py-1"><div className="w-9 h-9 rounded-lg bg-[#EEEEEE] flex items-center justify-center shrink-0"><span className="material-symbols-rounded text-xl opacity-80">schedule</span></div><div className="flex-1 min-w-0 border-b border-neutral-100/50 pb-4"><p className="font-semibold text-[16px] leading-tight truncate">Rua Presidente Vargas, 367</p><p className="text-zinc-500 text-[14px] font-medium truncate">Brumadinho - MG</p></div></section>

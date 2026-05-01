@@ -19,10 +19,10 @@ export const FruitExploreView: React.FC<FruitExploreViewProps> = (props) => {
     <GenericCategoryExplorer
       {...props}
       title="Hortifrutti"
-      placeholder="Buscar Frutas e Legumes"
+      placeholder="Frescor direto para sua mesa"
       activeService="Hortifrutti"
       categories={categories}
-      listTitle="Melhores Opções"
+      listTitle="Melhores do Hortifrutti"
       serviceType="fruit"
     />
   );
