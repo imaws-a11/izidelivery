@@ -38,7 +38,7 @@ export const ExploreEnviosView: React.FC<ExploreEnviosViewProps> = ({ transitDat
       icon: "bolt", 
       iconColor: "text-amber-500",
       priorityId: "turbo", 
-      action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "turbo", scheduled: false }); navigateSubView("shipping_details"); } 
+      action: () => setSubView("explore_turbo_flash") 
     },
     { 
       id: "light", 
@@ -48,7 +48,7 @@ export const ExploreEnviosView: React.FC<ExploreEnviosViewProps> = ({ transitDat
       icon: "electric_bolt", 
       iconColor: "text-yellow-500",
       priorityId: "light", 
-      action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "light", scheduled: false }); navigateSubView("shipping_details"); } 
+      action: () => setSubView("explore_light_flash") 
     },
     { 
       id: "normal", 
@@ -58,7 +58,7 @@ export const ExploreEnviosView: React.FC<ExploreEnviosViewProps> = ({ transitDat
       icon: "moped", 
       iconColor: "text-zinc-400",
       priorityId: "normal", 
-      action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "normal", scheduled: false }); navigateSubView("shipping_details"); } 
+      action: () => setSubView("explore_express") 
     },
     { 
       id: "scheduled", 
@@ -68,7 +68,7 @@ export const ExploreEnviosView: React.FC<ExploreEnviosViewProps> = ({ transitDat
       icon: "event", 
       iconColor: "text-blue-500",
       priorityId: "scheduled", 
-      action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "scheduled", scheduled: true }); navigateSubView("shipping_details"); } 
+      action: () => setSubView("explore_scheduled") 
     },
     { 
       id: "coleta",  
@@ -78,7 +78,7 @@ export const ExploreEnviosView: React.FC<ExploreEnviosViewProps> = ({ transitDat
       icon: "inventory_2", 
       iconColor: "text-emerald-500",
       isPriority: false, 
-      action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } 
+      action: () => setSubView("explore_click_collect") 
     }
   ];
 
@@ -139,7 +139,7 @@ export const ExploreEnviosView: React.FC<ExploreEnviosViewProps> = ({ transitDat
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-zinc-400 font-bold line-clamp-1">{svc.desc}</p>
+                <p className="text-[11px] text-zinc-400 font-black line-clamp-1 uppercase tracking-tight">{svc.desc}</p>
                 <div className="flex items-center gap-1.5 mt-2">
                    <span className="material-symbols-rounded text-[14px] text-zinc-400">schedule</span>
                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{svc.time}</span>

@@ -1,0 +1,97 @@
+import React from 'react';
+import { motion } from "framer-motion";
+import { useApp } from "../../../../hooks/useApp";
+
+interface ExploreServiceProps {
+  transitData: any;
+  setTransitData: (data: any) => void;
+  onBack: () => void;
+}
+
+export const ExploreClickCollectView: React.FC<ExploreServiceProps> = ({ transitData, setTransitData, onBack }) => {
+  const { setSubView } = useApp();
+
+  const handleContinue = () => {
+    // Para Click e Retire, geralmente o fluxo é diferente, mas aqui vamos simular a navegação para a busca de estabelecimentos que permitem retirada
+    setSubView("explore_restaurants"); // Ou uma categoria específica
+  };
+
+  return (
+    <div className="fixed inset-0 z-[160] bg-white flex flex-col">
+      <header className="p-6 flex items-center justify-between relative z-10">
+        <button onClick={onBack} className="size-12 rounded-full bg-zinc-50 flex items-center justify-center border border-zinc-100 active:scale-90 transition-all">
+          <span className="material-symbols-rounded text-zinc-900 font-black">arrow_back</span>
+        </button>
+        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Serviço de Retirada</span>
+        <div className="size-12" />
+      </header>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar p-8 space-y-10">
+        <section className="flex flex-col items-center text-center space-y-6">
+          <div className="relative">
+            <motion.div 
+              animate={{ x: [0, 5, -5, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="size-48 bg-emerald-500 rounded-[60px] flex items-center justify-center shadow-2xl shadow-emerald-500/20 relative z-10"
+            >
+              <span className="material-symbols-rounded text-white text-8xl font-black">shopping_bag</span>
+            </motion.div>
+            <div className="absolute inset-0 bg-emerald-500/20 blur-[60px] rounded-full -z-10" />
+          </div>
+
+          <div className="space-y-3">
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter leading-none">Click e Retire</h1>
+            <p className="text-zinc-400 font-black text-sm uppercase tracking-widest">Sem filas, sem espera, sem frete</p>
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <div className="bg-zinc-50 rounded-[40px] p-8 border border-zinc-100 space-y-6">
+            <div className="flex items-start gap-5">
+              <div className="size-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-zinc-100 shrink-0">
+                <span className="material-symbols-rounded text-emerald-500 font-black text-2xl">no_transfer</span>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-zinc-900">Zero Taxa de Entrega</h3>
+                <p className="text-xs font-black text-zinc-400 leading-relaxed">Economize 100% no valor do frete retirando seu pedido no local.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-5">
+              <div className="size-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-zinc-100 shrink-0">
+                <span className="material-symbols-rounded text-emerald-500 font-black text-2xl">timer</span>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-zinc-900">Pronto em Minutos</h3>
+                <p className="text-xs font-black text-zinc-400 leading-relaxed">Faça o pedido pelo app e passe na loja apenas para retirar.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-5">
+              <div className="size-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-zinc-100 shrink-0">
+                <span className="material-symbols-rounded text-emerald-500 font-black text-2xl">shopping_basket</span>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-zinc-900">Praticidade Total</h3>
+                <p className="text-xs font-black text-zinc-400 leading-relaxed">Ideal para quem já está na rua ou quer flexibilidade de horário.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="p-2 text-center">
+           <p className="text-xs font-black text-zinc-300 uppercase tracking-widest">Disponível em estabelecimentos parceiros</p>
+        </section>
+      </div>
+
+      <footer className="p-8 bg-white border-t border-zinc-50">
+        <button 
+          onClick={handleContinue}
+          className="w-full h-20 bg-emerald-600 text-white rounded-[24px] font-black text-[12px] uppercase tracking-[0.25em] shadow-2xl shadow-emerald-600/20 active:scale-95 transition-all"
+        >
+          Explorar Lojas Próximas
+        </button>
+      </footer>
+    </div>
+  );
+};
