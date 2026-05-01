@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800;900&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#fbf9f8",
+                        "surface-variant": "#e4e2e2",
+                        "tertiary-fixed-dim": "#c7c6c6",
+                        "surface-container": "#efeded",
+                        "inverse-surface": "#303031",
+                        "surface-container-low": "#f5f3f3",
+                        "outline": "#7e7576",
+                        "surface-container-highest": "#e4e2e2",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#1a1c1c",
+                        "secondary": "#5d5f5f",
+                        "primary-fixed": "#e2e2e2",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-error-container": "#93000a",
+                        "primary": "#000000",
+                        "on-background": "#1b1c1c",
+                        "surface": "#fbf9f8",
+                        "surface-tint": "#5e5e5e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "on-secondary-container": "#5f6161",
+                        "surface-container-high": "#e9e8e7",
+                        "secondary-container": "#dcdddd",
+                        "tertiary-fixed": "#e3e2e2",
+                        "on-primary-container": "#848484",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#cfc4c5",
+                        "on-surface-variant": "#4c4546",
+                        "secondary-fixed": "#e2e2e2",
+                        "background": "#fbf9f8",
+                        "inverse-on-surface": "#f2f0f0",
+                        "surface-dim": "#dbdad9",
+                        "tertiary": "#000000",
+                        "inverse-primary": "#c6c6c6",
+                        "on-primary-fixed": "#1b1b1b",
+                        "on-surface": "#1b1c1c",
+                        "on-tertiary-container": "#838484",
+                        "on-tertiary-fixed-variant": "#464747",
+                        "error-container": "#ffdad6",
+                        "primary-container": "#1b1b1b",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#454747"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "gutter": "16px",
+                        "container-margin": "20px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "unit": "4px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Epilogue"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "h3": ["Epilogue"],
+                        "button": ["Inter"],
+                        "h2": ["Epilogue"]
+                    },
+                    "fontSize": {
+                        "h1": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "label-sm": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                        "h3": ["20px", {"lineHeight": "1.4", "letterSpacing": "0", "fontWeight": "600"}],
+                        "button": ["16px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "h2": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-epilogue { font-family: 'Epilogue', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-white dark:bg-black text-black dark:text-white sticky top-0 z-50 flex justify-between items-center w-full px-5 py-3 h-16 border-b border-neutral-100 dark:border-neutral-900 transition-opacity duration-200">
+<h1 class="font-['Epilogue'] font-black text-2xl tracking-tighter text-black dark:text-white">Izi</h1>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-black dark:text-white active:opacity-70 transition-opacity">menu</button>
+<div class="w-8 h-8 rounded-full bg-neutral-200 overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4sWpArHnKo4UUWpJBHLAxwWc2G6SGB2d--angZWVIgNbIrjZ5EuU3D78JlGS8-cb5Ckk-FuBXRUxPOzwep4VqvciL6-ZsuYUJRdaaqAqdaptKnX5u6cOMN_BuRyfkgKabtGYkYUPIaoNtxSuCK-yK_MC86xDANtS92AvWlcpxLle8CxIexmaIUxIBVOWkqS8JBu6O46bdG5L9r_czysGOS_7weOUErhyPGJJ5jFFPzJDZsr778rciIBC4DSZyV1xmT7Anvp8PRaNU"/>
+</div>
+</div>
+</header>
+<main class="px-container-margin py-md space-y-xl">
+<!-- Search Section -->
+<section class="space-y-md">
+<div class="flex items-center gap-3">
+<div class="flex-1 flex items-center bg-secondary-container rounded-full px-4 py-3 gap-3 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-black">search</span>
+<span class="text-on-surface font-medium text-lg">Para onde?</span>
+</div>
+<div class="flex items-center bg-secondary-container rounded-full px-4 py-3 gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-black">calendar_today</span>
+<span class="text-on-surface font-medium whitespace-nowrap">Mais tarde</span>
+</div>
+</div>
+<!-- Recent Location Card -->
+<div class="flex items-center gap-4 py-2">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-black">schedule</span>
+</div>
+<div class="border-b border-surface-container w-full pb-4">
+<p class="font-bold text-black text-md">Rua Presidente Vargas, 367 - Brumadinho</p>
+<p class="text-secondary text-sm">Brumadinho - MG, 35466-000</p>
+</div>
+</div>
+</section>
+<!-- Para Você Grid Section -->
+<section>
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-h2 text-h2 text-black">Para você</h2>
+<button class="text-sm font-semibold text-black">Ver tudo</button>
+</div>
+<div class="grid grid-cols-4 gap-sm">
+<!-- Row 1 -->
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2 relative">
+<span class="material-symbols-outlined text-4xl text-black">directions_car</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">Viagem</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-4xl text-black">school</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">Teens</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2 relative">
+<span class="absolute top-0 right-0 bg-error text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">Novo</span>
+<span class="material-symbols-outlined text-4xl text-error">shopping_bag</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">iFood</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-4xl text-black">two_wheeler</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">Moto</span>
+</div>
+<!-- Row 2 -->
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-4xl text-black">calendar_month</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">Reserve</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-4xl text-black">package_2</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">Envios</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-4xl text-black">airport_shuttle</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">Shuttle</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-surface-container rounded-xl aspect-square w-full flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-4xl text-black">elderly</span>
+</div>
+<span class="text-[12px] font-semibold text-center leading-tight">Seniors</span>
+</div>
+</div>
+</section>
+<!-- Promotion Banners -->
+<section class="space-y-md">
+<!-- Map Banner -->
+<div class="bg-white rounded-2xl overflow-hidden border border-neutral-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+<div class="h-32 bg-surface-container-low overflow-hidden relative">
+<img class="w-full h-full object-cover opacity-60" data-alt="A clean, minimalist vector-style map of a city street layout with soft pastel gray and white tones. A stylized white vehicle is shown moving along a planned route, creating a professional and functional navigation aesthetic that aligns with a high-end logistics interface. The lighting is bright and even, evoking a clear morning atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKq6YVt1q-kBvHN_ZQce6vqQyRbkofKYPe6rW4-yazyOyy7R2PrW7sUBNLSgsPlq3uaMqcnj7dlvxGz0SMDjq6p5vfMaVg7KE4mObaWcpg8Q7TKVzL6TzmTeojFa1ilfS7WXU8hzqg1auYZB5y-0NzYfC1v_hb3YlWBmZ5WgBjnnGRtAxDHlB_MCKn3Pk5t0RM1sXB1zoKB2ybHuSma-tkxaX-88TEH2R7mr3ETPpzmZ6ZkF3sntq1IKcOwuEAN4CzIoms_xU5lpxg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
+<div class="absolute bottom-4 right-4 bg-white p-2 rounded-lg shadow-sm">
+<span class="material-symbols-outlined text-black text-3xl">directions_car</span>
+</div>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-black text-lg">Adicione até 5 paradas</h3>
+<p class="text-secondary text-sm">Aproveite para retirar algo no caminho</p>
+</div>
+</div>
+<!-- Coastal Road Banner -->
+<div class="bg-white rounded-2xl overflow-hidden border border-neutral-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+<div class="h-40 bg-surface-container-low overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="A cinematic photography shot of a sleek white modern car driving along a winding coastal road at sunset. The lighting is warm and golden, casting long shadows and highlighting the elegant curves of the vehicle. The landscape features deep blue ocean water on one side and rugged cliffs on the other, creating a sense of freedom and premium travel experience. The overall mood is aspirational and serene." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbPU584eAwOJeEKzDp2r9rztz7KqyTasgegjWHIzzsPcBH73Hr0t1SNcvvyqIBGVeED1ShGz1XK-qRLZQKyB8X4LdiYETDpDtFev3sOJTBLHzXdrBHWUcQizR06GBEeaDkXTxRh9LPJTNQY-XRhtEhrEfPwfndPseEW2vEz_tIF_5dkvXZuL2SF7P9IL2IZVvGUdkpBsRk6cKy-EslEyBZuTbpmxO8GXzZS7naEZwpSOm1NONFe_QZDNu6ivOY-I7pj3wmLaibg7vh"/>
+<div class="absolute bottom-4 left-4">
+<div class="bg-black text-white px-3 py-1 rounded-full text-xs font-bold w-fit mb-2">UberX</div>
+</div>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-black text-lg">Viagens com o UberX</h3>
+<p class="text-secondary text-sm">Sua opção favorita de todos os dias</p>
+</div>
+</div>
+</section>
+<!-- Footer Text -->
+<section class="pt-4">
+<h3 class="font-bold text-black text-lg">Mais formas de usar o app</h3>
+<div class="mt-4 p-4 bg-surface-container rounded-2xl flex items-center justify-between">
+<div>
+<h4 class="font-bold text-black">Economize com Izi Moto</h4>
+<p class="text-sm text-secondary">Viagens mais rápidas e baratas</p>
+</div>
+<span class="material-symbols-outlined text-black">arrow_forward</span>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pt-3 pb-6 bg-white dark:bg-black border-t border-neutral-100 dark:border-neutral-900 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] z-50">
+<!-- Active: Home -->
+<div class="flex flex-col items-center justify-center text-black dark:text-white font-bold transition-transform duration-150 active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-['Epilogue'] text-[11px] font-medium mt-1">Home</span>
+</div>
+<!-- Inactive: Search -->
+<div class="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 hover:text-black dark:hover:text-white transition-transform duration-150 active:scale-95">
+<span class="material-symbols-outlined">search</span>
+<span class="font-['Epilogue'] text-[11px] font-medium mt-1">Search</span>
+</div>
+<!-- Inactive: Activity -->
+<div class="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 hover:text-black dark:hover:text-white transition-transform duration-150 active:scale-95">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-['Epilogue'] text-[11px] font-medium mt-1">Activity</span>
+</div>
+<!-- Inactive: Account -->
+<div class="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 hover:text-black dark:hover:text-white transition-transform duration-150 active:scale-95">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Epilogue'] text-[11px] font-medium mt-1">Account</span>
+</div>
+</nav>
+</body></html>

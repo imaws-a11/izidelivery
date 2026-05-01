@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-error": "#ffffff",
+                "secondary": "#5e5e5e",
+                "on-primary-fixed-variant": "#544600",
+                "tertiary-fixed": "#e2e2e2",
+                "on-tertiary-container": "#5e5f60",
+                "tertiary-container": "#d9dada",
+                "surface-container-highest": "#e5e2e1",
+                "primary-container": "#ffd700",
+                "surface-tint": "#705d00",
+                "outline-variant": "#d0c6ab",
+                "surface": "#fcf9f8",
+                "inverse-on-surface": "#f3f0ef",
+                "on-surface-variant": "#4d4732",
+                "surface-dim": "#dcd9d9",
+                "secondary-fixed-dim": "#c6c6c6",
+                "error-container": "#ffdad6",
+                "surface-container-high": "#eae7e7",
+                "on-surface": "#1c1b1b",
+                "error": "#ba1a1a",
+                "primary-fixed-dim": "#e9c400",
+                "primary": "#705d00",
+                "on-tertiary": "#ffffff",
+                "tertiary": "#5d5f5f",
+                "surface-container": "#f0eded",
+                "on-tertiary-fixed": "#1a1c1c",
+                "tertiary-fixed-dim": "#c6c6c7",
+                "on-tertiary-fixed-variant": "#454747",
+                "inverse-surface": "#313030",
+                "background": "#fcf9f8",
+                "on-secondary": "#ffffff",
+                "secondary-container": "#e2e2e2",
+                "outline": "#7e775f",
+                "primary-fixed": "#ffe16d",
+                "on-secondary-fixed-variant": "#474747",
+                "on-primary-fixed": "#221b00",
+                "surface-container-low": "#f6f3f2",
+                "on-primary": "#ffffff",
+                "on-secondary-container": "#646464",
+                "on-background": "#1c1b1b",
+                "surface-variant": "#e5e2e1",
+                "inverse-primary": "#e9c400",
+                "surface-bright": "#fcf9f8",
+                "secondary-fixed": "#e2e2e2",
+                "on-primary-container": "#705e00",
+                "surface-container-lowest": "#ffffff",
+                "on-error-container": "#93000a",
+                "on-secondary-fixed": "#1b1b1b"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "card-gap": "12px",
+                "section-margin": "40px",
+                "stack-gap": "16px",
+                "container-padding": "24px",
+                "unit": "4px"
+            },
+            "fontFamily": {
+                "display": ["Space Grotesk"],
+                "headline-lg": ["Space Grotesk"],
+                "body-lg": ["Inter"],
+                "body-md": ["Inter"],
+                "headline-md": ["Space Grotesk"],
+                "label-bold": ["Space Grotesk"],
+                "label-sm": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fcf9f8;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-white dark:bg-black docked full-width top-0 pt-16 border-b-2 border-black dark:border-white flat no shadows flex justify-between items-center w-full px-6 py-4 h-24 sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-black dark:text-white transition-all duration-200 active:scale-95 cursor-pointer" data-icon="menu">menu</span>
+<h1 class="text-3xl font-black text-black dark:text-white font-['Space_Grotesk'] font-bold uppercase tracking-tighter">Izi</h1>
+</div>
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-black dark:border-white">
+<img alt="User avatar profile" class="w-full h-full object-cover" data-alt="A professional close-up portrait of a modern user for a premium app profile. The subject has a confident expression, set against a minimalist architectural background with soft natural lighting. The visual style is high-contrast, clean, and sophisticated, matching a luxury service brand's aesthetic of deep blacks and crisp whites." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCL8VjSyTpzQElL9UK7QZuGXfECYBoxmO3SUPmcdSqKUE2vhz0p188bTb2-XyN8ULArFh2J0IG6BaDyrpipS7y607MFP9HofkUEztvPOa6tw4HvCcAxrs9ggPTW5j4SaqRn56ukwslvxE9RvsDgtwtbH1ld7DH-wCQNuBp3ICgFqB4exVUU0OUSF0LwBl7KFfxv3arhcd7y-BVqmSlTuct3YI_JTH4jkHvchTOZUoohml09Z-r26v-G-Yv8CiAIKlZKofTkVXt7syS9"/>
+</div>
+</header>
+<main class="px-6 py-8">
+<!-- Hero Search Section -->
+<div class="mb-10">
+<div class="relative w-full">
+<input class="w-full h-14 pl-14 pr-6 rounded-full border-2 border-black bg-white font-label-bold text-headline-md focus:ring-0 focus:border-primary-container outline-none placeholder-secondary" placeholder="Para onde vamos hoje?" type="text"/>
+<span class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-black text-2xl" data-icon="search">search</span>
+</div>
+</div>
+<!-- Section Title -->
+<section class="mb-6">
+<h2 class="font-headline-lg text-headline-lg text-on-background mb-6">Serviços</h2>
+<!-- Bento-style Grid for Services -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Card 1: Izi Express -->
+<div class="bg-white border-2 border-black rounded-xl p-5 flex flex-col justify-between h-44 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200 active:scale-95 active:shadow-none">
+<div class="w-12 h-12 bg-primary-container flex items-center justify-center rounded-lg border-2 border-black">
+<span class="material-symbols-outlined text-black text-3xl" data-icon="local_shipping">local_shipping</span>
+</div>
+<p class="font-['Space_Grotesk'] font-bold text-xl uppercase leading-tight">Izi Express</p>
+</div>
+<!-- Card 2: Izi Reserve -->
+<div class="bg-white border-2 border-black rounded-xl p-5 flex flex-col justify-between h-44 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200 active:scale-95 active:shadow-none">
+<div class="w-12 h-12 bg-white flex items-center justify-center rounded-lg border-2 border-black">
+<span class="material-symbols-outlined text-black text-3xl" data-icon="schedule">schedule</span>
+</div>
+<p class="font-['Space_Grotesk'] font-bold text-xl uppercase leading-tight">Izi Reserve</p>
+</div>
+<!-- Card 3: Izi Turbo Flash (Featured Wide Card) -->
+<div class="col-span-2 bg-black text-white rounded-xl p-6 flex items-center justify-between h-32 shadow-[4px_4px_0px_0px_rgba(255,215,0,1)] transition-all duration-200 active:scale-[0.98]">
+<div class="flex flex-col">
+<span class="bg-primary-container text-black font-label-bold text-[10px] uppercase px-2 py-0.5 rounded w-fit mb-2">Popular</span>
+<p class="font-['Space_Grotesk'] font-black text-2xl uppercase tracking-tighter">Izi Turbo Flash</p>
+</div>
+<div class="w-14 h-14 bg-primary-container flex items-center justify-center rounded-full border-2 border-white">
+<span class="material-symbols-outlined text-black text-3xl" data-icon="bolt" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+</div>
+<!-- Card 4: Viagem -->
+<div class="bg-white border-2 border-black rounded-xl p-5 flex flex-col justify-between h-40 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200 active:scale-95 active:shadow-none">
+<div class="w-10 h-10 border-2 border-black flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-black text-2xl" data-icon="directions_car">directions_car</span>
+</div>
+<p class="font-['Space_Grotesk'] font-bold text-lg uppercase">Viagem</p>
+</div>
+<!-- Card 5: Moto -->
+<div class="bg-white border-2 border-black rounded-xl p-5 flex flex-col justify-between h-40 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200 active:scale-95 active:shadow-none">
+<div class="w-10 h-10 border-2 border-black flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-black text-2xl" data-icon="motorcycle">motorcycle</span>
+</div>
+<p class="font-['Space_Grotesk'] font-bold text-lg uppercase">Moto</p>
+</div>
+<!-- Card 6: Click e Retire -->
+<div class="col-span-2 bg-white border-2 border-black rounded-xl p-5 flex items-center gap-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200 active:scale-95 active:shadow-none">
+<div class="w-12 h-12 bg-zinc-100 flex items-center justify-center rounded-lg border-2 border-black">
+<span class="material-symbols-outlined text-black text-3xl" data-icon="package_2">package_2</span>
+</div>
+<div>
+<p class="font-['Space_Grotesk'] font-bold text-xl uppercase leading-tight">Click e Retire</p>
+<p class="text-secondary font-label-sm">Pontos de coleta próximos</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Promotion Banner -->
+<div class="mt-8 rounded-2xl overflow-hidden border-2 border-black relative h-48 bg-zinc-900 shadow-[6px_6px_0px_0px_rgba(255,215,0,1)]">
+<div class="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent z-10 p-6 flex flex-col justify-center">
+<p class="text-primary-container font-black text-sm uppercase tracking-widest mb-1">Oferta Premium</p>
+<h3 class="text-white font-['Space_Grotesk'] font-bold text-2xl uppercase leading-tight max-w-[200px]">20% OFF na primeira viagem Turbo</h3>
+<button class="mt-4 bg-primary-container text-black font-label-bold py-2 px-4 rounded w-fit uppercase text-xs">Resgatar</button>
+</div>
+<img alt="Premium service promotion" class="absolute inset-0 w-full h-full object-cover grayscale brightness-50" data-alt="A cinematic, high-speed night shot of a sleek black luxury sedan driving through a neon-lit urban metropolitan street. Long exposure light trails in vibrant yellow and white stretch across the frame, creating a sense of velocity and prestige. The style is moody, high-contrast, and ultra-modern, emphasizing a premium transportation service environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQ6nNYHxc-XwnE5li_e5cFiYsMHsi1F_PWBmqEi2_EsDV5K4YDeEXdJGStdQweWXKZlQk5HAU2d4iymVmYGvaX5CLq3roEfyhyWwATLEvZxvgerYiw-qlF9R0lHDX7_KzO1qEv3WOTtAMQDiwmwETGlwplAjHexXEKFw4iUANvyX1KFGB9UAHnp9c6GoYCfVf7RwT1SuoizdD46czRbrWZsSDrdbmYeHpFKG7GRLLMHbbyzVrEVgxXOZR-qnMqIAe9RbboUz0osQzn"/>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-white dark:bg-black border-t-2 border-black dark:border-white shadow-[0_-4px_0px_0px_rgba(0,0,0,0.05)]">
+<!-- Home (Inactive) -->
+<div class="flex flex-col items-center justify-center text-black dark:text-white p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 active:translate-y-0.5 transition-transform cursor-pointer">
+<span class="material-symbols-outlined text-2xl" data-icon="home">home</span>
+<span class="font-['Space_Grotesk'] font-medium text-[10px]">home</span>
+</div>
+<!-- Search (Active - as this is the Exploration screen) -->
+<div class="flex flex-col items-center justify-center bg-yellow-400 text-black rounded-lg p-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 transition-transform cursor-pointer">
+<span class="material-symbols-outlined text-2xl" data-icon="search">search</span>
+<span class="font-['Space_Grotesk'] font-medium text-[10px]">search</span>
+</div>
+<!-- Receipt (Inactive) -->
+<div class="flex flex-col items-center justify-center text-black dark:text-white p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 active:translate-y-0.5 transition-transform cursor-pointer">
+<span class="material-symbols-outlined text-2xl" data-icon="receipt_long">receipt_long</span>
+<span class="font-['Space_Grotesk'] font-medium text-[10px]">receipt_long</span>
+</div>
+<!-- Person (Inactive) -->
+<div class="flex flex-col items-center justify-center text-black dark:text-white p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 active:translate-y-0.5 transition-transform cursor-pointer">
+<span class="material-symbols-outlined text-2xl" data-icon="person">person</span>
+<span class="font-['Space_Grotesk'] font-medium text-[10px]">person</span>
+</div>
+</nav>
+</body></html>

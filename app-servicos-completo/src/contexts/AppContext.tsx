@@ -65,6 +65,10 @@ interface AppContextData {
   handleShopClick: (shop: any) => Promise<void>;
   establishmentTypes: any[];
   setEstablishmentTypes: React.Dispatch<React.SetStateAction<any[]>>;
+
+  // Trânsito e Envios
+  transitData: any;
+  setTransitData: React.Dispatch<React.SetStateAction<any>>;
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -98,6 +102,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Localização
   const [userLocation, setUserLocation] = useState({ lat: null as number | null, lng: null as number | null, loading: false, error: null as string | null, address: undefined as string | undefined });
+
+  // Trânsito e Envios
+  const [transitData, setTransitData] = useState<any>({
+    origin: "",
+    destination: "",
+    originCoords: null,
+    destinationCoords: null,
+    distance: 0,
+    duration: 0,
+    price: 0,
+    subService: "",
+    priority: "normal"
+  });
 
   // Carrinho e Checkout
   const [cart, setCart] = useState<any[]>(() => {
@@ -315,11 +332,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setESTABLISHMENTS,
       handleShopClick,
       establishmentTypes,
-      setEstablishmentTypes
+      setEstablishmentTypes,
+      transitData,
+      setTransitData
     }}>
       {children}
     </AppContext.Provider>
   );
 };
+
 
 export const useApp = () => useContext(AppContext);

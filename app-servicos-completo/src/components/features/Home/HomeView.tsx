@@ -39,10 +39,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
      { id: 'petshop', label: 'Petshop', img: 'https://cdn-icons-png.flaticon.com/512/620/620851.png', action: () => navigateSubView("explore_petshop") },
      { id: 'gas', label: 'Gás & Água', img: 'https://cdn-icons-png.flaticon.com/512/2933/2933866.png', action: () => navigateSubView("explore_gas") },
      { id: 'bakery', label: 'Padaria', img: 'https://cdn-icons-png.flaticon.com/512/3014/3014535.png', action: () => navigateSubView("explore_bakery") },
-     { id: 'fruit', label: 'Hortifrutti', img: 'https://cdn-icons-png.flaticon.com/512/3194/3194766.png', action: () => navigateSubView("explore_fruit") },
-     { id: 'izi_envios', label: 'Izi Envios', img: 'https://cdn-icons-png.flaticon.com/512/2331/2331827.png', action: () => navigateSubView("explore_envios") },
-     { id: 'ver_mais', label: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) },
-   ];
+      { id: 'fruit', label: 'Hortifrutti', img: 'https://cdn-icons-png.flaticon.com/512/3194/3194766.png', action: () => navigateSubView("explore_fruit") },
+      { id: 'izi_envios', label: 'Viagem', img: 'https://cdn-icons-png.flaticon.com/512/2331/2331827.png', action: () => navigateSubView("explore_envios") },
+      { id: 'ver_mais', label: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) },
+    ];
 
    return (
      <div className="relative h-screen bg-yellow-400 overflow-hidden">
