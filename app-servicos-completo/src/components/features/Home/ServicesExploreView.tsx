@@ -5,17 +5,70 @@ interface ServicesExploreViewProps {
   isOpen: boolean;
   onClose: () => void;
   navigateSubView: (view: string) => void;
+  establishmentTypes?: any[];
+  setExploreCategoryState?: (state: any) => void;
 }
 
 export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
   isOpen,
   onClose,
-  navigateSubView
+  navigateSubView,
+  establishmentTypes = [],
+  setExploreCategoryState,
 }) => {
-  const categories = [
-    { id: 'restaurants', label: 'Restaurantes', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132693.png', route: 'explore_restaurants' },
-    { id: 'markets', label: 'Mercados', img: 'https://cdn-icons-png.flaticon.com/512/3081/3081986.png', route: 'explore_market' },
+  const handleCategoryClick = (cat: any) => {
+    const slug = cat.value || cat.id;
+    
+    // Viagem é uma rota nativa específica
+    if (slug === 'izi_envios' || slug === 'viagem' || slug === 'mobilidade') {
+      navigateSubView("explore_envios");
+      return;
+    }
+
+    const customViews = ['restaurants', 'market', 'pharmacy', 'beverages', 'petshop', 'gas', 'bakery', 'fruit'];
+    if (customViews.includes(slug)) {
+      navigateSubView(`explore_${slug}`);
+    } else {
+      if (setExploreCategoryState) {
+        setExploreCategoryState({
+          id: slug,
+          title: cat.name,
+          tagline: cat.description || `Tudo de ${cat.name} para você`,
+          icon: cat.icon || 'storefront',
+          primaryColor: 'bg-yellow-400'
+        });
+        navigateSubView('explore_category');
+      }
+    }
+  };
+
+  const priorityOrder = [
+    ['restaurants', 'food', 'restaurante', 'restaurantes'],
+    ['markets', 'mercado', 'mercados', 'market'],
+    ['pharmacy', 'farmacia', 'farmacias'],
+    ['beverages', 'bebidas', 'bebida'],
+    ['gas', 'gas_agua', 'agua'],
+    ['petshop', 'pets', 'pet_shop'],
+    ['fruit', 'hortifrutti', 'frutas', 'verduras'],
+    ['butcher', 'acougue', 'carnes'],
+    ['viagem', 'izi_envios', 'mobilidade', 'corridas']
   ];
+
+  const getPriority = (slug: string) => {
+    const s = (slug || '').toLowerCase();
+    for (let i = 0; i < priorityOrder.length; i++) {
+      if (priorityOrder[i].includes(s)) return i;
+    }
+    return 999;
+  };
+
+  const dynamicCategories = establishmentTypes
+    .filter((t: any) => t.is_active !== false)
+    .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
+    .map((t: any) => ({
+      ...t,
+      action: () => handleCategoryClick(t)
+    }));
 
   const highlights = [
     { id: 'taxi', label: 'Corridas', icon: 'local_taxi', color: 'bg-zinc-900', textColor: 'text-white', route: 'taxi_wizard' },
@@ -71,27 +124,29 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
                {/* Categorias Principais */}
                <div>
                   <h3 className="text-base font-black text-zinc-900 mb-6">Categorias</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                     {categories.map(cat => (
+                   <div className="grid grid-cols-2 gap-3">
+                     {dynamicCategories.map((cat: any) => (
                         <motion.div 
                           key={cat.id}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => {
-                            if(cat.route) navigateSubView(cat.route);
+                            if (cat.action) cat.action();
                             onClose();
                           }}
                           className="bg-zinc-50 rounded-3xl p-4 flex items-center gap-3 border border-zinc-100/50 hover:bg-zinc-100 transition-colors cursor-pointer"
                         >
-                           <img src={cat.img} className="size-10 object-contain" alt={cat.label} />
-                           <span className="text-xs font-black text-zinc-900">{cat.label}</span>
+                           {cat.icon && cat.icon.startsWith('http') ? (
+                             <img src={cat.icon} className="size-10 object-contain" alt={cat.name} />
+                           ) : cat.img ? (
+                             <img src={cat.img} className="size-10 object-contain" alt={cat.name} />
+                           ) : (
+                             <div className="size-10 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+                               <span className="material-symbols-rounded text-zinc-900">{cat.icon || 'storefront'}</span>
+                             </div>
+                           )}
+                           <span className="text-xs font-black text-zinc-900 line-clamp-2 leading-tight">{cat.name || cat.label}</span>
                         </motion.div>
                      ))}
-                     <div className="bg-zinc-50 rounded-3xl p-4 flex items-center gap-3 border border-zinc-100/50">
-                        <div className="size-10 rounded-2xl bg-white flex items-center justify-center shadow-sm">
-                           <span className="material-symbols-rounded text-zinc-900">medical_services</span>
-                        </div>
-                        <span className="text-xs font-black text-zinc-900">Farmácias</span>
-                     </div>
                   </div>
                </div>
 
