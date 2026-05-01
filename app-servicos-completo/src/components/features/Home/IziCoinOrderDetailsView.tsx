@@ -1,24 +1,22 @@
 import React from 'react';
 import { motion } from "framer-motion";
-import iziCoinImgAsset from "../../../assets/images/izi-coin-premium.png";
 
-interface IziCoinTrackingViewProps {
+interface IziCoinOrderDetailsViewProps {
   order: any;
-  onClose: () => void;
+  onBack: () => void;
   onGoToWallet: () => void;
-  onCancel: (orderId: string) => void;
+  onCancel: () => void;
   onSupport: () => void;
 }
 
-export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
+export const IziCoinOrderDetailsView: React.FC<IziCoinOrderDetailsViewProps> = ({
   order,
-  onClose,
+  onBack,
   onGoToWallet,
   onCancel,
   onSupport
 }) => {
-  if (!order) return null;
-  const iziCoinImg = iziCoinImgAsset;
+  const iziCoinImg = "https://fayregrfscfubdyreunm.supabase.co/storage/v1/object/public/public_assets/izicoin_yellow.png";
   
   const statusLabels: Record<string, { label: string; color: string; desc: string }> = {
     'pendente_pagamento': { 
@@ -44,7 +42,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
     <div className="fixed inset-0 bg-white z-[500] flex flex-col">
        {/* Header */}
        <header className="p-6 flex items-center justify-between">
-          <button onClick={onClose} className="size-12 rounded-full bg-zinc-50 flex items-center justify-center border border-zinc-100 active:scale-90 transition-all">
+          <button onClick={onBack} className="size-12 rounded-full bg-zinc-50 flex items-center justify-center border border-zinc-100 active:scale-90 transition-all">
              <span className="material-symbols-rounded text-zinc-900">arrow_back</span>
           </button>
           <div className="flex flex-col items-center">
@@ -143,6 +141,10 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Método</span>
                 <span className="text-xs font-black text-zinc-900 uppercase tracking-widest">{order.payment_method?.replace("_", " ")}</span>
              </div>
+             <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Cotação Izi</span>
+                <span className="text-xs font-black text-zinc-900 uppercase tracking-widest">1 IZI = R$ 1,00</span>
+             </div>
           </section>
        </div>
 
@@ -151,13 +153,13 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
           {order.status === 'pendente_pagamento' ? (
              <div className="grid grid-cols-1 gap-3">
                 <button 
-                  onClick={onClose}
+                  onClick={() => {/* Lógica para abrir tela de pagamento novamente se necessário */}}
                   className="w-full bg-yellow-400 text-black font-black h-16 rounded-2xl shadow-xl shadow-yellow-400/10 uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"
                 >
-                   Entendi
+                   Ir para Pagamento
                 </button>
                 <button 
-                  onClick={() => onCancel(order.id)}
+                  onClick={onCancel}
                   className="w-full bg-zinc-50 text-rose-500 font-black h-16 rounded-2xl border border-rose-100 uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"
                 >
                    Cancelar Recarga
@@ -171,6 +173,10 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
                 Ver Carteira
              </button>
           )}
+          
+          <p className="text-center text-[9px] font-bold text-zinc-400 uppercase tracking-widest pt-2">
+             Em caso de problemas, acione o suporte 24h
+          </p>
        </footer>
     </div>
   );

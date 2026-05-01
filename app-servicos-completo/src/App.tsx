@@ -114,7 +114,6 @@ function App() {
   const [showMasterPerks, setShowMasterPerks] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [aiMessage, setAiMessage] = useState("Olá! Como posso ajudar você hoje?");
-  const [showCoinTrackingModal, setShowCoinTrackingModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
   const [savedCards, setSavedCards] = useState<any[]>([]);
@@ -4261,168 +4260,7 @@ const navigateSubView = (target: string) => {
     </div>
   );
 
-  const renderOrderDetail = () => {
-    if (!selectedItem) return null;
 
-
-
-    const presentation = getServicePresentation(selectedItem);
-    const items = getOrderItems(selectedItem);
-    const statusLabel = getOrderStatusLabel(selectedItem.status);
-    const statusTone = getOrderStatusTone(selectedItem.status);
-    const address = getOrderAddress(selectedItem);
-    const orderDate = selectedItem.created_at
-      ? new Date(selectedItem.created_at).toLocaleString("pt-BR")
-      : "Agora";
-    const isTrackable = isOrderTrackable(selectedItem.status);
-    const isCompleted = selectedItem.status === "concluido";
-
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-2xl border-b border-zinc-900 px-5 py-4 flex items-center gap-4">
-          <button
-            onClick={() => window.history.back()}
-            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
-          >
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">{presentation.label}</p>
-            <h1 className="text-base font-extrabold text-white truncate">
-              {presentation.name}
-            </h1>
-          </div>
-          <div className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${statusTone}`}>
-            {statusLabel}
-          </div>
-        </header>
-
-        <main className="px-5 py-8 space-y-6">
-          <section className="bg-zinc-900/40 border border-zinc-800 rounded-[32px] p-6 flex items-start gap-4">
-            <div className={`size-14 rounded-3xl ${presentation.bg} border border-white/5 flex items-center justify-center shrink-0`}>
-              <span className={`material-symbols-outlined text-3xl ${presentation.color}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                {presentation.icon}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Pedido #{String(selectedItem.id).slice(-8).toUpperCase()}</p>
-              <h2 className="text-xl font-black text-white tracking-tight mt-1">
-                {presentation.name}
-              </h2>
-              <p className="text-zinc-500 text-xs mt-2">{orderDate}</p>
-              <p className="text-zinc-400 text-sm mt-4 leading-relaxed">
-                {address}
-              </p>
-            </div>
-          </section>
-
-          <section className="bg-zinc-900/30 border border-zinc-800 rounded-[32px] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Itens</h3>
-              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
-                {items.length} {items.length === 1 ? "item" : "itens"}
-              </span>
-            </div>
-
-            {items.length > 0 ? (
-              <div className="space-y-3">
-                {items.map((item: any, index: number) => (
-                  <div key={item.id || `${item.name}-${index}`} className="flex items-start justify-between gap-4 border-b border-zinc-800/80 pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="size-8 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-[10px] font-black text-yellow-400 shrink-0">
-                        {item.quantity || 1}x
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-black text-white truncate">{item.name || item.product_name || "Produto"}</p>
-                        {item.options && item.options.length > 0 && (
-                          <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
-                            {item.options.map((option: any) => option.name).join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      {typeof item.price === "number" ? (
-                        <p className="text-sm font-black text-white">
-                          R$ {Number((item.price || 0) * (item.quantity || 1)).toFixed(2).replace(".", ",")}
-                        </p>
-                      ) : (
-                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Incluído</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 flex flex-col items-center gap-3">
-                <span className="material-symbols-outlined text-4xl text-zinc-800">receipt_long</span>
-                <p className="text-zinc-600 text-xs font-black uppercase tracking-widest">Itens não disponíveis neste pedido</p>
-              </div>
-            )}
-          </section>
-
-          <section className="bg-zinc-900/30 border border-zinc-800 rounded-[32px] p-6 space-y-4">
-            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Resumo Financeiro</h3>
-            <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-zinc-500">
-              <span>Subtotal</span>
-              <span className="text-zinc-300">
-                R$ {Number((selectedItem.total_price || 0) - (selectedItem.delivery_fee || 0) + (selectedItem.discount || 0)).toFixed(2).replace(".", ",")}
-              </span>
-            </div>
-            {(selectedItem.delivery_fee || 0) > 0 && (
-              <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-zinc-500">
-                <span>Entrega</span>
-                <span className="text-yellow-400">+ R$ {Number(selectedItem.delivery_fee || 0).toFixed(2).replace(".", ",")}</span>
-              </div>
-            )}
-            {(selectedItem.discount || 0) > 0 && (
-              <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-zinc-500">
-                <span>Desconto</span>
-                <span className="text-rose-400">- R$ {Number(selectedItem.discount || 0).toFixed(2).replace(".", ",")}</span>
-              </div>
-            )}
-            <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Total</span>
-              <span className="text-2xl font-black text-white tracking-tight">
-                R$ {Number(selectedItem.total_price || 0).toFixed(2).replace(".", ",")}
-              </span>
-            </div>
-            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-              Pago via {String(selectedItem.payment_method || "pix").toUpperCase()}
-            </p>
-          </section>
-
-          <section className="grid grid-cols-1 gap-3">
-            {isTrackable && (
-              <button
-                onClick={() => {
-                  const isMobility = ['mototaxi', 'carro', 'van', 'utilitario', 'frete', 'logistica'].includes(selectedItem.service_type);
-                  setSubView(isMobility ? "logistics_tracking" : "active_order");
-                }}
-                className="w-full py-4 rounded-2xl bg-yellow-400 text-black font-black text-[11px] uppercase tracking-widest shadow-[0_0_24px_rgba(255,215,9,0.2)] active:scale-95 transition-all"
-              >
-                Acompanhar Pedido
-              </button>
-            )}
-            {isCompleted && (
-              <button
-                onClick={() => setSubView("order_feedback")}
-                className="w-full py-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
-              >
-                Avaliar Experiência
-              </button>
-            )}
-            <button
-              onClick={() => setSubView("order_support")}
-              className="w-full py-4 rounded-2xl border border-zinc-800 text-zinc-300 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
-            >
-              Preciso de Ajuda
-            </button>
-          </section>
-        </main>
-      </div>
-    );
-  };
 
 
 
@@ -4748,43 +4586,7 @@ const navigateSubView = (target: string) => {
     );
   };
 
-  const renderCoinTrackingModal = () => {
-    if (!selectedItem || selectedItem.service_type !== 'coin_purchase') return null;
 
-    return (
-      <AnimatePresence>
-        {showCoinTrackingModal && (
-          <motion.div 
-            key="coin-tracking-modal"
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[1100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
-          >
-            <div className="w-full max-w-lg relative">
-              <IziCoinTrackingView 
-                order={selectedItem}
-                onClose={() => setShowCoinTrackingModal(false)}
-                onGoToWallet={() => {
-                  setShowCoinTrackingModal(false);
-                  setTab("wallet");
-                }}
-                onSupport={() => {
-                  setShowCoinTrackingModal(false);
-                  setSubView("order_support");
-                }}
-                onReturnToPayment={() => {
-                  setShowCoinTrackingModal(false);
-                  setShowDepositModal(true);
-                }}
-                onCancel={handleCancelCoinOrder}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    );
-  };
 
 
 
@@ -5006,7 +4808,7 @@ const navigateSubView = (target: string) => {
                       }}
                       onOpenCoinTracking={(order) => {
                         setSelectedItem(order);
-                        setShowCoinTrackingModal(true);
+                        setSubView("izi_coin_tracking");
                       }}
                       availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} 
                       banners={availableCoupons.filter((c: any) => !c.coupon_code)} 
@@ -5029,19 +4831,19 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "orders" && (
                   <motion.div key="orders-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <OrderListView 
-                       myOrders={orders} 
-                       userId={userId} 
-                       setSubView={setSubView} 
-                       setSelectedItem={setSelectedItem} 
-                       navigateSubView={navigateSubView} 
-                       fetchMyOrders={fetchOrders} 
-                       tab={tab} 
-                       onOpenCoinTracking={(order) => {
-                         setSelectedItem(order);
-                         setShowCoinTrackingModal(true);
-                       }}
-                     />
+                      <OrderListView 
+                        myOrders={orders} 
+                        userId={userId} 
+                        setSubView={setSubView} 
+                        setSelectedItem={setSelectedItem} 
+                        navigateSubView={navigateSubView} 
+                        fetchMyOrders={fetchOrders} 
+                        tab={tab} 
+                        onOpenCoinTracking={(order) => {
+                          setSelectedItem(order);
+                          setSubView("izi_coin_tracking");
+                        }}
+                      />
                   </motion.div>
                 )}
                 {tab === "wallet" && (
@@ -5182,7 +4984,7 @@ const navigateSubView = (target: string) => {
 
                 {subView === "explore_envios" && (
                   <motion.div key="exp_envios" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                    <ExploreEnviosView />
+                    <ExploreEnviosView transitData={transitData} setTransitData={setTransitData} />
                   </motion.div>
                 )}
 
@@ -5194,7 +4996,19 @@ const navigateSubView = (target: string) => {
 
                 {subView === "order_detail" && (
                   <motion.div key="odetail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                     <OrderDetailView order={selectedItem} onBack={() => setSubView("none")} />
+                     <OrderDetailView order={selectedItem} onBack={() => setSubView("none")} onSupport={() => setSubView("order_support")} />
+                  </motion.div>
+                )}
+
+                {subView === "izi_coin_tracking" && (
+                  <motion.div key="izicointrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                     <IziCoinTrackingView 
+                        order={selectedItem} 
+                        onClose={() => setSubView("none")} 
+                        onGoToWallet={() => { setSubView("none"); setTab("wallet"); }} 
+                        onCancel={handleCancelCoinOrder} 
+                        onSupport={() => setSubView("order_support")} 
+                      />
                   </motion.div>
                 )}
 
@@ -5326,8 +5140,6 @@ const navigateSubView = (target: string) => {
           ))}
         </AnimatePresence>
 
-        {renderDepositModal()}
-        {renderCoinTrackingModal()}
         {renderBroadcastPopup()}
 
         <AnimatePresence>
