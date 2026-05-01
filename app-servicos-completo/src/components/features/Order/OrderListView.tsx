@@ -40,9 +40,10 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
 }) => {
   const [filterTab, setFilterTab] = useState("ativos");
 
-  const activeOrders = myOrders.filter((o) => o && !["concluido", "cancelado"].includes(o.status));
-  const scheduledOrders = myOrders.filter((o) => o && o.scheduled_at && !["concluido", "cancelado"].includes(o.status));
-  const pastOrders = myOrders.filter((o) => o && ["concluido", "cancelado"].includes(o.status));
+  const safeOrders = myOrders || [];
+  const activeOrders = safeOrders.filter((o) => o && !["concluido", "cancelado"].includes(o.status));
+  const scheduledOrders = safeOrders.filter((o) => o && o.scheduled_at && !["concluido", "cancelado"].includes(o.status));
+  const pastOrders = safeOrders.filter((o) => o && ["concluido", "cancelado"].includes(o.status));
 
   const statusLabel: Record<string, string> = {
     pending: "Aguardando",

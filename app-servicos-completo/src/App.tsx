@@ -4942,6 +4942,25 @@ const navigateSubView = (target: string) => {
 
   const isMobilityActive = ["taxi_wizard", "freight_wizard", "van_wizard", "logistics_tracking", "active_order"].includes(subView);
   
+  const mobilityProps = {
+    transitData,
+    setTransitData,
+    mobilityStep,
+    setMobilityStep,
+    routePolyline,
+    routeDistance,
+    driverLocation,
+    distancePrices,
+    distanceValueKm,
+    marketConditions,
+    isCalculatingPrice,
+    calculateVanPrice,
+    handleConfirmMobility,
+    calculateDynamicPrice,
+    updateLocation,
+    userLocation
+  };
+
   return (
     <>
       <div className={`${isMobilityActive ? "h-screen overflow-hidden" : "min-h-screen"} bg-black selection:bg-yellow-400/30`}>
@@ -5013,7 +5032,7 @@ const navigateSubView = (target: string) => {
                 {tab === "orders" && (
                   <motion.div key="orders-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
                      <OrderListView 
-                       orders={orders} 
+                       myOrders={orders} 
                        userId={userId} 
                        setSubView={setSubView} 
                        setSelectedItem={setSelectedItem} 
@@ -5092,9 +5111,21 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {/* Views de Lista e Categorias */}
-                {["explore_restaurants", "daily_menus", "market_list", "beverages_list", "pharmacy_list", "generic_list"].includes(subView) && (
+                {["explore_restaurants", "daily_menus", "market_list", "beverages_list", "pharmacy_list", "generic_list", "pets_list", "explore_hotels", "explore_bars"].includes(subView) && (
                   <motion.div key="category-list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                    <CategoryListView />
+                    <CategoryListView onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_category" && (
+                  <motion.div key="explore-cat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderExploreCategory()}
+                  </motion.div>
+                )}
+
+                {subView === "restaurant_menu" && (
+                  <motion.div key="rest-menu" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    {renderRestaurantMenu()}
                   </motion.div>
                 )}
 
@@ -5161,7 +5192,7 @@ const navigateSubView = (target: string) => {
                 {/* Mobilidade */}
                 {["taxi_wizard", "freight_wizard", "van_wizard", "mobility_payment", "excursion_wizard", "excursion_detail"].includes(subView) && (
                   <motion.div key="mobility-wizard" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[115]">
-                    <MobilityWizardView updateLocation={updateLocation} userLocation={userLocation} />
+                    <MobilityWizardView {...mobilityProps} />
                   </motion.div>
                 )}
                 {subView === "logistics_tracking" && (
