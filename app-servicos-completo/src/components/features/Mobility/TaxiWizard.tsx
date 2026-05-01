@@ -50,8 +50,14 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
   const safeTransitData = transitData || {};
 
   const totalValue = React.useMemo(() => {
-    return distancePrices[safeTransitData.type] || 0;
-  }, [distancePrices, safeTransitData.type]);
+    if (!distancePrices || typeof distancePrices !== 'object' || !safeTransitData?.type) return 0;
+    try {
+      return distancePrices[safeTransitData.type] || 0;
+    } catch (e) {
+      console.warn("Erro ao acessar distancePrices:", e);
+      return 0;
+    }
+  }, [distancePrices, safeTransitData?.type]);
 
   React.useEffect(() => {
     updateLocation();

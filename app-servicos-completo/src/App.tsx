@@ -43,6 +43,16 @@ import { IziBlackView } from "./components/features/Membership/IziBlackView";
 import { ExploreEnviosView } from "./components/features/Shipping/ExploreEnviosView";
 import { ProductDetailView } from "./components/features/Product/ProductDetailView";
 import { CategoryListView } from "./components/features/Explore/CategoryListView";
+import { FoodCategoryExplorer } from "./components/features/Explore/FoodCategoryExplorer";
+import { PharmacyExploreView } from "./components/features/Explore/PharmacyExploreView";
+import { BeverageExploreView } from "./components/features/Explore/BeverageExploreView";
+import { MarketExploreView as NewMarketExploreView } from "./components/features/Explore/MarketExploreView";
+import { PetshopExploreView } from "./components/features/Explore/PetshopExploreView";
+import { GasWaterExploreView } from "./components/features/Explore/GasWaterExploreView";
+import { BakeryExploreView } from "./components/features/Explore/BakeryExploreView";
+import { FruitExploreView } from "./components/features/Explore/FruitExploreView";
+import { EnviosExploreView } from "./components/features/Home/EnviosExploreView";
+import { SearchView } from "./components/features/Explore/SearchView";
 import { AIConciergeView } from "./components/features/AI/AIConciergeView";
 import { PaymentFlowView } from "./components/features/Checkout/PaymentFlowView";
 import { OrderStatusView } from "./components/features/Order/OrderStatusView";
@@ -4868,71 +4878,59 @@ const navigateSubView = (target: string) => {
 
   const BottomNav = () => {
     const navItems = [
-      { id: "home", icon: "explore", label: "Inicio" },
-      { id: "wallet", icon: "account_balance_wallet", label: "IZI Pay" },
-      { id: "cart", icon: "shopping_cart", label: cart.length > 0 ? `R$ ${getCartSubtotal().toFixed(2).replace(".", ",")}` : "Carrinho", isCart: true },
+      { id: "home", icon: "home", label: "Início" },
+      { id: "busca", icon: "search", label: "Busca" },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
-      { id: "quests", icon: "military_tech", label: "Quests" },
+      { id: "profile", icon: "person", label: "Perfil" },
     ];
 
     return (
       <nav
-        className="fixed bottom-0 left-0 z-[1000] flex w-full items-center justify-around bg-black/95 px-2 pb-6 pt-3 backdrop-blur-3xl border-t border-white/5"
+        className="fixed bottom-0 left-0 z-[1000] flex w-full items-center justify-around bg-white/90 px-2 pt-3 backdrop-blur-xl border-t border-zinc-100"
         style={{
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 20px)",
-          height: "105px",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+          height: "auto",
         }}
       >
         {navItems.map((item, i) => {
-          const isActive = item.isCart ? subView === 'cart' : (tab === item.id && subView === 'none');
+          const isActive = (tab === item.id && subView === 'none');
 
           return (
             <button
               key={item.id || `nav-${i}`}
               onClick={() => {
-                if (item.isCart) {
-                  navigateSubView("cart");
-                } else if (item.id === "quests") {
-                  setSubView("quest_center");
-                } else {
-                  setTab(item.id as any);
-                  setSubView("none");
-                  window.history.replaceState(
-                    { view: "app", tab: item.id, subView: "none" },
-                    "",
-                  );
-                }
+                setTab(item.id as any);
+                setSubView("none");
+                window.history.replaceState(
+                  { view: "app", tab: item.id, subView: "none" },
+                  "",
+                );
               }}
-              className="relative flex flex-col items-center justify-center flex-1 transition-all active:scale-95"
+              className="relative flex flex-col items-center justify-center flex-1 transition-all active:scale-90 py-1"
             >
-              <div 
-                className={`relative flex size-12 items-center justify-center rounded-[20px] transition-all duration-500 ${
-                  isActive 
-                    ? "bg-yellow-400 shadow-[6px_6px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] scale-110" 
-                    : "bg-zinc-900 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_1px_1px_2px_rgba(255,255,255,0.02)]"
-                }`}
-              >
+              <div className="relative flex flex-col items-center">
                 <span
-                  className={`material-symbols-outlined text-[24px] transition-all ${isActive ? 'text-black font-black' : 'text-zinc-600'}`}
+                  className={`material-symbols-rounded text-[26px] transition-all duration-300 ${isActive ? 'text-zinc-900' : 'text-zinc-400'}`}
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >
                   {item.icon}
                 </span>
+                
+                <span
+                  className={`mt-1 text-[10px] font-bold transition-all duration-300 ${
+                    isActive ? "text-zinc-900" : "text-zinc-400"
+                  }`}
+                >
+                  {item.label}
+                </span>
 
-                {item.isCart && cart.length > 0 && (
-                  <span className={`absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-black transition-colors ${isActive ? 'bg-black text-yellow-400' : 'bg-red-500 text-white shadow-lg'}`}>
-                    {cart.length > 99 ? "99+" : cart.length}
-                  </span>
+                {isActive && (
+                  <motion.div 
+                    layoutId="nav-indicator"
+                    className="absolute -bottom-1 size-1 bg-yellow-400 rounded-full"
+                  />
                 )}
               </div>
-
-              <span
-                className={`mt-2 text-[8px] font-black uppercase tracking-[0.05em] transition-all text-center ${
-                  isActive ? "text-yellow-400" : "text-zinc-600"
-                }`}
-              >
-                {item.label}
-              </span>
             </button>
           );
         })}
@@ -5052,8 +5050,13 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
                 {tab === "profile" && (
-                  <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-black">
+                  <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
                      <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
+                  </motion.div>
+                )}
+                {tab === "busca" && (
+                  <motion.div key="busca-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                     <SearchView onCategoryClick={(cat) => navigateSubView(cat + "_list")} onSearch={(q) => setSearchQuery(q)} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -5111,9 +5114,57 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {/* Views de Lista e Categorias */}
-                {["explore_restaurants", "daily_menus", "market_list", "beverages_list", "pharmacy_list", "generic_list", "pets_list", "explore_hotels", "explore_bars"].includes(subView) && (
+                {["daily_menus", "market_list", "beverages_list", "pharmacy_list", "generic_list", "pets_list", "explore_hotels", "explore_bars"].includes(subView) && (
                   <motion.div key="category-list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
                     <CategoryListView onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_restaurants" && (
+                  <motion.div key="explore-restaurants" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <FoodCategoryExplorer onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_pharmacy" && (
+                  <motion.div key="explore-pharmacy" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <PharmacyExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_beverages" && (
+                  <motion.div key="explore-beverages" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <BeverageExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_market" && (
+                  <motion.div key="explore-market" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <NewMarketExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_petshop" && (
+                  <motion.div key="explore-petshop" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <PetshopExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_gas" && (
+                  <motion.div key="explore-gas" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <GasWaterExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_bakery" && (
+                  <motion.div key="explore-bakery" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <BakeryExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_fruit" && (
+                  <motion.div key="explore-fruit" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <FruitExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
                   </motion.div>
                 )}
 
@@ -5124,7 +5175,7 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {subView === "restaurant_menu" && (
-                  <motion.div key="rest-menu" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  <motion.div key="rest-menu" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[150]">
                     {renderRestaurantMenu()}
                   </motion.div>
                 )}

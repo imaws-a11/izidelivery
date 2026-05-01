@@ -147,14 +147,14 @@ export const ExploreRestaurantsView = ({
   return (
     <div 
       ref={scrollContainerRef}
-      className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
+      className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
     >
       {/* HEADER PREMIUM - ILHA FLUTUANTE */}
-      <header className="fixed top-4 inset-x-4 z-[110] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[36px] shadow-[20px_20px_50px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] overflow-hidden">
+      <header className="fixed top-4 inset-x-4 z-[150] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[36px] shadow-[20px_20px_50px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-5">
             <button 
-              onClick={() => setSubView("none")} 
+              onClick={() => window.history.back()} 
               className="size-12 rounded-[22px] bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all hover:bg-zinc-800 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.03)]"
             >
               <span className="material-symbols-outlined text-white text-[24px]">chevron_left</span>

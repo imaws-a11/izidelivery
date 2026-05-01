@@ -45,23 +45,29 @@ export const EstablishmentListView = ({
     window.scrollTo(0, 0);
 
     const fetchExploreImage = async () => {
-       let queryTitle = title;
-       if (title === "Farmácias" || title === "Todas as Farmácias") queryTitle = "Farmácia";
-       else if (title.includes("Pet Shop")) queryTitle = "Pet Shop";
-       else if (title.includes("Gás") || title.includes("Agua") || title.includes("Água")) queryTitle = "Gás e Água";
-       else if (title === "Corte Prime" || title.includes("Açougue")) queryTitle = "Carnes";
-       else if (title.includes("Padaria")) queryTitle = "Padaria";
-       else if (title.includes("Hortifruti")) queryTitle = "Hortifruti";
+       try {
+         let queryTitle = title || "";
+         if (title === "Farmácias" || title === "Todas as Farmácias") queryTitle = "Farmácia";
+         else if (title.includes("Pet Shop")) queryTitle = "Pet Shop";
+         else if (title.includes("Gás") || title.includes("Agua") || title.includes("Água")) queryTitle = "Gás e Água";
+         else if (title === "Corte Prime" || title.includes("Açougue")) queryTitle = "Carnes";
+         else if (title.includes("Padaria")) queryTitle = "Padaria";
+         else if (title.includes("Hortifruti")) queryTitle = "Hortifruti";
 
-       const { data, error } = await supabase
-          .from('promotions_delivery')
-          .select('image_url')
-          .eq('type', 'explore')
-          .ilike('title', `%${queryTitle}%`)
-          .limit(1);
-          
-       if (data && data.length > 0 && data[0].image_url) {
-          setBgImage(data[0].image_url);
+         if (!queryTitle) return;
+
+         const { data, error } = await supabase
+            .from('promotions_delivery')
+            .select('image_url')
+            .eq('type', 'explore')
+            .ilike('title', `%${queryTitle}%`)
+            .limit(1);
+            
+         if (!error && data && data.length > 0 && data[0].image_url) {
+            setBgImage(data[0].image_url);
+         }
+       } catch (err) {
+         console.error("Erro ao buscar imagem de exploração:", err);
        }
     };
     fetchExploreImage();
@@ -70,13 +76,13 @@ export const EstablishmentListView = ({
   return (
     <div 
       ref={scrollContainerRef}
-      className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
+      className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
     >
-      <header className="fixed top-4 inset-x-4 z-50 flex flex-col bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] overflow-hidden">
+      <header className="fixed top-4 inset-x-4 z-[150] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setSubView(backView)} 
+              onClick={() => window.history.back()} 
               className="size-11 rounded-[20px] bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-95 transition-all shadow-[6px_6px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.03)]"
             >
               <span className="material-symbols-outlined text-white text-xl">chevron_left</span>

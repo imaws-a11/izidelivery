@@ -62,14 +62,14 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
   return (
     <div 
       ref={scrollContainerRef}
-      className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
+      className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
     >
       {/* HEADER FIXO - ILHA FLUTUANTE */}
-      <header className="fixed top-4 inset-x-4 z-[110] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
+      <header className="fixed top-4 inset-x-4 z-[150] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setSubView("none")} 
+              onClick={() => window.history.back()} 
               className="size-11 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all hover:bg-zinc-800"
             >
               <span className="material-symbols-outlined text-white text-[22px]">arrow_back</span>
