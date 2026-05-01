@@ -4973,6 +4973,7 @@ const navigateSubView = (target: string) => {
                       setCopiedCoupon={setCopiedCoupon}
                       initialCategory={restaurantInitialCategory}
                       isIziBlackMembership={isIziBlackMembership}
+                      flashOffers={flashOffers}
                     />
                   </motion.div>
                 )}

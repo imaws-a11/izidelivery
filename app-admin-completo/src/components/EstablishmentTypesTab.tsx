@@ -94,7 +94,7 @@ export default function EstablishmentTypesTab() {
           </div>
 
           <button 
-            onClick={() => setEditingType({ name: '', value: '', icon: 'storefront', description: '', is_active: true })}
+            onClick={() => setEditingType({ name: '', value: '', icon: '', description: '', is_active: true })}
             className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
           >
             Nova Categoria
@@ -123,7 +123,7 @@ export default function EstablishmentTypesTab() {
                     {t.icon?.startsWith('http') ? (
                       <img src={t.icon} alt={t.name} className="w-full h-full object-contain p-2 drop-shadow-md" />
                     ) : (
-                      <span className="material-symbols-outlined text-3xl font-black">{t.icon || 'category'}</span>
+                      <span className="material-symbols-outlined text-3xl font-black">category</span>
                     )}
                   </div>
                   <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${t.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
@@ -187,9 +187,9 @@ export default function EstablishmentTypesTab() {
                 </div>
 
                 <form onSubmit={handleSave} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Amigável</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome da Especialidade</label>
                       <input
                         type="text"
                         required
@@ -199,53 +199,53 @@ export default function EstablishmentTypesTab() {
                           setEditingType({ 
                             ...editingType, 
                             name: newName,
-                            value: generateSlug(newName) // Autopreenchimento do Slug!
+                            value: generateSlug(newName)
                           });
                         }}
-                        placeholder="Ex: Pet Shop"
-                        className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-4 focus:ring-primary/20 dark:text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Valor ID (Slug)</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingType.value}
-                        onChange={e => setEditingType({ ...editingType, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
-                        placeholder="ex: pet_shop"
+                        placeholder="Ex: Pizzaria Artesanal"
                         className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-4 focus:ring-primary/20 dark:text-white"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Ícone 3D da Categoria</label>
-                      <div className="relative flex items-center gap-4">
-                        <div className="size-16 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-white/10 overflow-hidden shrink-0">
-                          {editingType.icon?.startsWith('http') ? (
-                            <img src={editingType.icon} alt="Preview" className="w-full h-full object-contain p-2" />
-                          ) : (
-                            <span className="material-symbols-outlined text-slate-400">{editingType.icon || 'image'}</span>
-                          )}
-                        </div>
-                        <label className="flex-1 cursor-pointer bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 font-bold text-sm hover:bg-slate-100 dark:hover:bg-white/10 transition-all text-center flex items-center justify-center gap-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Ícone Representativo (Upload PNG/SVG)</label>
+                    <div className="relative flex items-center gap-6 p-6 rounded-3xl bg-slate-50 dark:bg-white/5 border-2 border-dashed border-slate-200 dark:border-white/10 group hover:border-primary/50 transition-all">
+                      <div className="size-20 rounded-[28px] bg-white dark:bg-slate-800 flex items-center justify-center shadow-lg overflow-hidden shrink-0">
+                        {editingType.icon?.startsWith('http') ? (
+                          <img src={editingType.icon} alt="Preview" className="w-full h-full object-contain p-2" />
+                        ) : (
+                          <span className="material-symbols-outlined text-slate-300 text-4xl">add_photo_alternate</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Upload de Ícone 3D</p>
+                        <label className="cursor-pointer bg-primary text-slate-900 px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all inline-flex items-center gap-2">
                           {isUploading ? (
-                            <div className="size-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                            <div className="size-3 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" />
                           ) : (
-                            <>
-                              <span className="material-symbols-outlined text-xl text-primary">upload</span>
-                              <span className="text-slate-600 dark:text-slate-300">Escolher Ícone...</span>
-                            </>
+                            <span className="material-symbols-outlined text-sm">upload</span>
                           )}
+                          Escolher Arquivo
                           <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploading} />
                         </label>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Slug (Sistema)</label>
+                       <input
+                         type="text"
+                         readOnly
+                         value={editingType.value}
+                         className="w-full bg-slate-100 dark:bg-white/10 border-none rounded-2xl px-6 py-4 font-bold text-sm text-slate-400 cursor-not-allowed"
+                       />
+                    </div>
                     <div className="flex items-center justify-center pt-6">
                        <label className="flex items-center gap-4 cursor-pointer">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ativo no Ecossistema</span>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ativo</span>
                           <div 
                             onClick={() => setEditingType({ ...editingType, is_active: !editingType.is_active })}
                             className={`w-14 h-8 rounded-full p-1 transition-all ${editingType.is_active ? 'bg-primary' : 'bg-slate-200 dark:bg-white/10'}`}
@@ -262,7 +262,7 @@ export default function EstablishmentTypesTab() {
                       rows={3}
                       value={editingType.description || ''}
                       onChange={e => setEditingType({ ...editingType, description: e.target.value })}
-                      placeholder="Descreva brevemente o propósito desta categoria..."
+                      placeholder="Descreva brevemente o propósito desta especialidade..."
                       className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-4 focus:ring-primary/20 dark:text-white resize-none"
                     />
                   </div>
@@ -270,14 +270,14 @@ export default function EstablishmentTypesTab() {
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="w-full py-6 bg-primary text-slate-900 rounded-[24px] font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-3"
+                    className="w-full py-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[28px] font-black text-[11px] uppercase tracking-widest shadow-2xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-3"
                   >
                     {isSaving ? (
-                      <div className="size-5 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" />
+                      <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        <span className="material-symbols-outlined font-black">save</span>
-                        Salvar Alterações Globais
+                        <span className="material-symbols-outlined font-black text-xl">check_circle</span>
+                        Salvar Nova Especialidade
                       </>
                     )}
                   </button>
