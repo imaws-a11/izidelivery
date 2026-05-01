@@ -139,18 +139,27 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
   };
 
   const handlePromoBannerImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     try {
       setIsSaving(true);
-      const url = await uploadToSupabase(file, 'banners');
-      if (url) {
-        const config = { ...appSettings.promo_banner_config, image_url: url };
-        setAppSettings({ ...appSettings, promo_banner_config: config });
-        toastSuccess('Imagem do Banner carregada!');
+      const urls = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadToSupabase(files[i], 'banners');
+        if (url) urls.push(url);
       }
+      
+      const currentUrls = appSettings.promo_banner_config?.image_urls || [];
+      const config = { 
+        ...appSettings.promo_banner_config, 
+        image_urls: [...currentUrls, ...urls],
+        // Manter compatibilidade com versão anterior
+        image_url: urls[0] || appSettings.promo_banner_config?.image_url 
+      };
+      setAppSettings({ ...appSettings, promo_banner_config: config });
+      toastSuccess(`${urls.length} imagem(ns) carregada(s)!`);
     } catch (err) {
-      toastError('Erro no upload da imagem');
+      toastError('Erro no upload das imagens');
     } finally {
       setIsSaving(false);
     }
@@ -480,31 +489,42 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                             </label>
                         </div>
 
-                        <div className="space-y-3 md:col-span-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem de Fundo do Banner</label>
-                            <div className="aspect-[3/1] rounded-[40px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-yellow-400/50 transition-colors cursor-pointer">
-                                {appSettings.promo_banner_config?.image_url ? (
-                                    <>
-                                        <img src={appSettings.promo_banner_config.image_url} className="w-full h-full object-cover" alt="Banner" />
-                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                                            <span className="material-symbols-outlined text-yellow-400 text-5xl">edit</span>
+                        <div className="space-y-4 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Galeria do Banner Hero (Carrossel Home)</label>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {(appSettings.promo_banner_config?.image_urls || []).map((url: string, idx: number) => (
+                                    <div key={idx} className="aspect-square rounded-3xl bg-white/5 border border-white/10 relative overflow-hidden group">
+                                        <img src={url} className="w-full h-full object-cover" alt={`Banner ${idx}`} />
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <button
                                                 type="button"
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); const config = { ...appSettings.promo_banner_config, image_url: null }; setAppSettings({ ...appSettings, promo_banner_config: config }); }}
-                                                className="size-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center hover:scale-110 transition-all"
+                                                onClick={() => {
+                                                    const newUrls = appSettings.promo_banner_config.image_urls.filter((_: any, i: number) => i !== idx);
+                                                    const config = { ...appSettings.promo_banner_config, image_urls: newUrls, image_url: newUrls[0] || null };
+                                                    setAppSettings({ ...appSettings, promo_banner_config: config });
+                                                }}
+                                                className="size-10 rounded-xl bg-rose-500 text-white flex items-center justify-center hover:scale-110 transition-all"
                                             >
-                                                <span className="material-symbols-outlined">delete</span>
+                                                <span className="material-symbols-outlined text-xl">delete</span>
                                             </button>
                                         </div>
-                                    </>
-                                ) : (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 group-hover:text-yellow-400 transition-colors">
-                                        <span className="material-symbols-outlined text-6xl">add_photo_alternate</span>
-                                        <span className="text-xs font-black uppercase tracking-widest text-center px-10">Upload Banner — Proporção 3:1 (ex: 1200x400px)</span>
                                     </div>
-                                )}
-                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handlePromoBannerImageUpload} />
+                                ))}
+                                
+                                <label className="aspect-square rounded-3xl bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-slate-500 hover:border-yellow-400/50 hover:text-yellow-400 transition-all cursor-pointer">
+                                    <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
+                                    <span className="text-[8px] font-black uppercase tracking-widest">Adicionar</span>
+                                    <input type="file" className="hidden" accept="image/*" multiple onChange={handlePromoBannerImageUpload} />
+                                </label>
                             </div>
+
+                            {(!appSettings.promo_banner_config?.image_urls || appSettings.promo_banner_config.image_urls.length === 0) && (
+                                <div className="p-8 rounded-[32px] bg-yellow-400/5 border border-yellow-400/10 flex items-center gap-4">
+                                    <span className="material-symbols-outlined text-yellow-400 text-3xl">info</span>
+                                    <p className="text-xs font-bold text-slate-400">Nenhuma imagem carregada. O App usará uma imagem padrão de backup até que você adicione fotos para o carrossel.</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3 md:col-span-2">

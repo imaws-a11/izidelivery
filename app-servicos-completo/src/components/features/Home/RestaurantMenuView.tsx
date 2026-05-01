@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-
+import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Icon } from "../../common/Icon";
 
 interface RestaurantMenuViewProps {
   selectedShop: any;
@@ -28,6 +29,9 @@ export const RestaurantMenuView = ({
   iziBlackRate = 0,
   isIziBlack = false,
 }: RestaurantMenuViewProps) => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const shop = selectedShop || {
     name: "Gourmet Lab",
     rating: "4.9",
@@ -39,6 +43,10 @@ export const RestaurantMenuView = ({
     categories: []
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setIsScrolled(e.currentTarget.scrollTop > 180);
+  };
+
   const allCategoryNames = ["Destaques", ...(shop.categories || []).map((c: any) => c.name)];
 
   const displayCategories = activeCategory === "Destaques"
@@ -46,249 +54,253 @@ export const RestaurantMenuView = ({
     : (shop.categories || []).filter((c: any) => c.name === activeCategory);
 
   return (
-    <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
+    <div className="absolute inset-0 z-[150] bg-[#F8F9FA] flex flex-col overflow-hidden font-sans select-none">
+      
+      {/* ── HEADER FLUTUANTE ── */}
+      <header className={`fixed top-0 left-0 right-0 z-[160] px-6 pt-12 pb-4 transition-all duration-500 ${isScrolled ? 'bg-white/90 backdrop-blur-2xl shadow-xl shadow-zinc-200/50' : 'bg-transparent'}`}>
+        <div className="flex items-center justify-between">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setSubView("none")}
+            className={`size-12 rounded-2xl flex items-center justify-center transition-all ${isScrolled ? 'bg-zinc-100 text-zinc-900' : 'bg-black/20 backdrop-blur-md text-white shadow-sm border border-white/20'}`}
+          >
+            <Icon name="arrow_back" size={24} />
+          </motion.button>
+          
+          <AnimatePresence>
+            {isScrolled && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center"
+              >
+                <h1 className="text-lg font-black text-zinc-900 tracking-tighter uppercase italic leading-none">{shop.name}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-1 text-yellow-500 text-[10px] font-black">
+                    <Icon name="star" size={10} className="fill-1" />
+                    {shop.rating}
+                  </div>
+                  <span className="text-zinc-300">•</span>
+                  <span className="text-zinc-400 text-[10px] font-bold uppercase">{shop.time}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* FLOATING NAV */}
-      <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-5 py-4 pointer-events-none">
-        <button
-          onClick={() => window.history.back()}
-          className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <div className="flex gap-3 pointer-events-auto">
-          <button className="flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all">
-            <span className="material-symbols-outlined">share</span>
-          </button>
-          <button className="flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all">
-            <span className="material-symbols-outlined">favorite_border</span>
-          </button>
+          <div className="flex gap-2">
+            <motion.button 
+              whileTap={{ scale: 0.9 }}
+              className={`size-12 rounded-2xl flex items-center justify-center transition-all ${isScrolled ? 'bg-zinc-100 text-zinc-900' : 'bg-black/20 backdrop-blur-md text-white shadow-sm border border-white/20'}`}
+            >
+              <Icon name="favorite" size={20} />
+            </motion.button>
+          </div>
         </div>
-      </nav>
-
-      {/* HERO */}
-      <header className="relative w-full h-80 overflow-hidden shrink-0">
-        <img src={shop.banner || shop.img} alt={shop.name} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent" />
       </header>
 
-      {/* METADATA */}
-      <section className="px-5 -mt-10 relative z-10 mb-2">
-        <h1
-          className="font-extrabold text-3xl tracking-tighter text-white mb-2 uppercase leading-tight"
-          style={{ textShadow: "0 0 10px rgba(255,215,9,0.5), 0 0 20px rgba(255,215,9,0.3)" }}
-        >
-          {shop.name}
-        </h1>
-        <div className="flex items-center gap-5 text-sm font-medium">
-          <div className="flex items-center gap-1.5 text-yellow-400">
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            <span className="font-black">{shop.rating}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-zinc-400">
-            <span className="material-symbols-outlined text-[16px]">schedule</span>
-            <span>{shop.time}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[16px] text-zinc-400">delivery_dining</span>
-            <span className={shop.freeDelivery ? "text-yellow-400 font-bold" : "text-zinc-400"}>
-              {shop.freeDelivery ? "Grátis" : shop.fee}
-            </span>
-          </div>
-        </div>
+      {/* ── CORPO PRINCIPAL SCROLLABLE ── */}
+      <div 
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto no-scrollbar"
+      >
+        {/* HERO SECTION */}
+        <section className="relative w-full h-[320px] overflow-hidden">
+           <img src={shop.banner || shop.img} className="size-full object-cover" alt={shop.name} />
+           <div className="absolute inset-0 bg-gradient-to-t from-[#F8F9FA] via-[#F8F9FA]/20 to-transparent" />
+        </section>
 
-        {/* AVISO DE LOJA FECHADA */}
-        {!shop.isOpen && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-4"
-          >
-             <div className="size-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
-               <span className="material-symbols-outlined text-red-500">error</span>
-             </div>
-             <div>
-               <p className="text-red-500 font-black text-[11px] uppercase tracking-widest leading-none mb-1">Loja Fechada no Momento</p>
-               <p className="text-zinc-500 text-[9px] font-bold uppercase tracking-tighter">Este estabelecimento não está aceitando pedidos agora.</p>
-             </div>
-          </motion.div>
-        )}
-      </section>
-
-      {/* CATEGORY TABS */}
-      <nav className="sticky top-0 z-40 mt-8 px-5 py-3 bg-black/90 backdrop-blur-xl border-b border-zinc-900">
-        <div className="flex gap-3 overflow-x-auto no-scrollbar">
-          {allCategoryNames.map((cat, i) => (
-            <button
-              key={cat || `cat-${i}`}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2.5 rounded-full font-black text-[11px] uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${
-                activeCategory === cat
-                  ? "bg-yellow-400 text-black shadow-[0_0_15px_rgba(255,215,9,0.3)]"
-                  : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-white"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      {/* MENU */}
-      <main className="px-5 pt-8 space-y-12">
-        {displayCategories.map((category: any, idx: number) => (
-          <section key={category.id || category.name || `section-${idx}`}>
-            <h2 className="font-black text-lg uppercase tracking-widest text-zinc-500 mb-8 border-l-4 border-yellow-400 pl-4">
-              {category.name}
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              {(category.items || []).map((item: any, idx: number) => (
-                <motion.div
-                  key={item.id || idx}
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e as any); }}
-                  className="bg-zinc-800 rounded-[28px] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_12px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex flex-col gap-4 group relative active:scale-95 transition-all overflow-hidden cursor-pointer"
-                >
-                   <div className="relative aspect-square rounded-[22px] overflow-hidden shrink-0 shadow-[4px_4px_10px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
-                      {item.oldPrice && (
-                         <div className="absolute top-2 left-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-lg uppercase tracking-tighter z-10 border border-red-500/30">
-                           OFF
-                         </div>
-                       )}
-                       <img 
-                        src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} 
-                        alt={item.name} 
-                        className={"size-full object-cover group-hover:scale-110 transition-transform duration-700 " + (!shop.isOpen ? "grayscale" : "")} 
-                      />
-                      {/* Carrinho Clay Button */}
-                      {(() => {
-                        const itemQty = cart.filter(c => c.id === item.id).length;
-                        
-                        if (!shop.isOpen) {
-                          return (
-                            <div className="absolute bottom-2 right-2 size-11 rounded-[18px] bg-zinc-700 text-zinc-500 opacity-50 flex items-center justify-center shadow-[4px_4px_8px_rgba(0,0,0,0.4)] cursor-not-allowed">
-                              <span className="material-symbols-outlined text-[20px] font-black">block</span>
-                            </div>
-                          );
-                        }
-
-                        if (itemQty > 0) {
-                          return (
-                            <motion.div 
-                              layoutId={`qty-selector-${item.id}`}
-                              className="absolute bottom-2 right-2 h-11 bg-yellow-400 rounded-[18px] flex items-center gap-1 p-1 shadow-[4px_4px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4)] overflow-hidden"
-                            >
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleRemoveOneFromCart(item.id); }}
-                                className="size-9 rounded-[14px] bg-black/10 flex items-center justify-center active:scale-90 transition-all"
-                              >
-                                <span className="material-symbols-outlined text-[18px] font-black text-black">remove</span>
-                              </button>
-                              
-                              <div className="min-w-[20px] flex items-center justify-center">
-                                <span className="text-black font-black text-[13px] italic">{itemQty}</span>
-                              </div>
-
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e); }}
-                                className="size-9 rounded-[14px] bg-black/20 flex items-center justify-center active:scale-90 transition-all"
-                              >
-                                <span className="material-symbols-outlined text-[18px] font-black text-black">add</span>
-                              </button>
-                            </motion.div>
-                          );
-                        }
-
-                        return (
-                          <motion.button 
-                            layoutId={`qty-selector-${item.id}`}
-                            whileTap={{ scale: 0.8 }}
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              handleAddToCart(item, e); 
-                            }}
-                            className="absolute bottom-2 right-2 size-11 rounded-[18px] bg-yellow-400 text-black flex items-center justify-center transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] group/btn overflow-hidden"
-                          >
-                            <span className="material-symbols-outlined text-[20px] z-10 font-black">shopping_cart</span>
-                          </motion.button>
-                        );
-                      })()}
-                   </div>
-                   <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div>
-                        <h3 className="text-[12px] font-black text-white leading-tight mb-1 truncate group-hover:text-yellow-400 transition-colors uppercase tracking-tight">{item.name}</h3>
-                        <p className="text-[9px] text-zinc-500 font-bold line-clamp-1 mb-2 uppercase tracking-tighter">{item.desc}</p>
-                      </div>
-                      <div className="flex items-center justify-between mt-auto">
-                         <div className="bg-zinc-900/50 px-3 py-1.5 rounded-xl shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_2px_rgba(0,0,0,0.3)]">
-                            {item.has_options ? (
-                              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver complementos</span>
-                            ) : (
-                              <div className="flex flex-col">
-                                {item.oldPrice && (
-                                  <span className="text-[9px] text-zinc-500 line-through font-bold leading-none mb-0.5">R$ {Number(item.oldPrice).toFixed(2).replace('.', ',')}</span>
-                                )}
-                                <span className="text-[13px] font-black text-yellow-400 tracking-tighter">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
-                              </div>
-                            )}
-                         </div>
-                      </div>
-                   </div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </main>
-
-      {/* FLOATING CART BAR */}
-      {cart.length > 0 && (() => {
-        const subtotal = cart.reduce((sum, item) => {
-          const basePrice = Number(item.price) || 0;
-          const addonsPrice = Array.isArray(item.addonDetails) 
-            ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
-            : 0;
-          return sum + basePrice + addonsPrice;
-        }, 0);
-
-        const cashbackRate = isIziBlack ? iziBlackRate : iziCoinRate;
-        const estimatedCashback = (subtotal * (cashbackRate / 100));
-
-        return (
-          <div className="fixed bottom-24 left-0 w-full px-5 z-50 pointer-events-none">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-md mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/5 rounded-3xl px-5 py-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto"
-            >
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">Sua Sacola</span>
-                <span className="text-white font-black text-sm">
-                  {cart.length} {cart.length === 1 ? "item" : "itens"} • R$ {subtotal.toFixed(2).replace(".", ",")}
-                </span>
-                {(cashbackRate > 0) && (
-                  <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="izi-coin-symbol size-3.5 bg-yellow-500 text-black rounded-full flex items-center justify-center text-[9px] not-italic shadow-[0_0_10px_rgba(250,204,21,0.4)]">Z</span>
-                    +{estimatedCashback.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} IZI COINS
-                  </span>
-                )}
+        {/* SHOP INFO CARD */}
+        <section className="px-6 -mt-20 relative z-10 mb-10">
+           <div className="bg-white rounded-[44px] p-8 shadow-2xl shadow-zinc-200/50 border border-white">
+              <div className="flex items-center justify-between mb-4">
+                 <h1 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase italic leading-none">{shop.name}</h1>
+                 {shop.isOpen ? (
+                   <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Aberto</div>
+                 ) : (
+                   <div className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Fechado</div>
+                 )}
               </div>
-              <button
+              
+              <div className="flex items-center gap-6">
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Avaliação</span>
+                    <div className="flex items-center gap-1.5 text-zinc-900 font-black">
+                       <Icon name="star" size={16} className="text-yellow-400 fill-1" />
+                       {shop.rating}
+                    </div>
+                 </div>
+                 <div className="w-px h-8 bg-zinc-100" />
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Tempo</span>
+                    <div className="flex items-center gap-1.5 text-zinc-900 font-black">
+                       <Icon name="schedule" size={16} className="text-zinc-400" />
+                       {shop.time}
+                    </div>
+                 </div>
+                 <div className="w-px h-8 bg-zinc-100" />
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Entrega</span>
+                    <div className="flex items-center gap-1.5 text-zinc-900 font-black">
+                       <Icon name="delivery_dining" size={16} className="text-zinc-400" />
+                       {shop.freeDelivery ? "Grátis" : shop.fee || "Consultar"}
+                    </div>
+                 </div>
+              </div>
+
+              {!shop.isOpen && (
+                <div className="mt-6 p-4 rounded-3xl bg-red-50 flex items-center gap-4 border border-red-100">
+                   <div className="size-10 rounded-2xl bg-red-100 flex items-center justify-center text-red-500">
+                      <Icon name="error" size={20} />
+                   </div>
+                   <p className="text-[11px] font-black text-red-900 uppercase tracking-tighter">O lojista não está aceitando pedidos no momento.</p>
+                </div>
+              )}
+           </div>
+        </section>
+
+        {/* CATEGORY TABS STICKY */}
+        <nav className="sticky top-28 z-[155] px-6 py-4 bg-[#F8F9FA]/80 backdrop-blur-xl mb-4">
+           <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {allCategoryNames.map((cat, i) => (
+                <motion.button
+                  key={cat || `cat-${i}`}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all whitespace-nowrap
+                    ${activeCategory === cat 
+                      ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200" 
+                      : "bg-white text-zinc-400 border border-zinc-100 shadow-sm"}`}
+                >
+                  {cat}
+                </motion.button>
+              ))}
+           </div>
+        </nav>
+
+        {/* PRODUCT LIST */}
+        <main className="px-6 pb-40 space-y-12">
+           {displayCategories.map((category: any, idx: number) => (
+             <section key={category.id || category.name || `section-${idx}`}>
+                <div className="flex items-center gap-3 mb-8">
+                   <div className="w-1.5 h-6 bg-yellow-400 rounded-full" />
+                   <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">{category.name}</h2>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                   {(category.items || []).map((item: any, i: number) => {
+                     const itemQty = cart.filter(c => c.id === item.id).length;
+                     return (
+                       <motion.div
+                         key={item.id || i}
+                         initial={{ opacity: 0, y: 20 }}
+                         whileInView={{ opacity: 1, y: 0 }}
+                         viewport={{ once: true }}
+                         transition={{ delay: i * 0.05 }}
+                         onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e as any); }}
+                         className="bg-white rounded-[32px] p-4 flex gap-6 shadow-xl shadow-zinc-200/50 border border-white hover:border-zinc-100 transition-all cursor-pointer relative overflow-hidden group"
+                       >
+                          <div className="size-32 rounded-[24px] overflow-hidden shrink-0 bg-zinc-100">
+                             <img src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" alt={item.name} />
+                          </div>
+
+                          <div className="flex-1 flex flex-col justify-center min-w-0">
+                             <h3 className="text-lg font-black text-zinc-900 uppercase italic tracking-tighter leading-tight mb-1 truncate">{item.name}</h3>
+                             <p className="text-[11px] text-zinc-400 font-bold uppercase tracking-tighter line-clamp-2 mb-4 leading-tight">{item.desc || "Experimente nosso prato especial feito com ingredientes selecionados."}</p>
+                             
+                             <div className="flex items-center justify-between mt-auto">
+                                <div className="flex flex-col">
+                                   {item.oldPrice && (
+                                     <span className="text-[10px] text-zinc-300 line-through font-black italic">R$ {Number(item.oldPrice).toFixed(2).replace('.', ',')}</span>
+                                   )}
+                                   <span className="text-xl font-black text-zinc-900 tracking-tighter">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
+                                </div>
+
+                                {shop.isOpen && (
+                                  <div className="flex items-center gap-3">
+                                     {itemQty > 0 ? (
+                                       <div className="flex items-center gap-3 bg-zinc-900 text-white p-1.5 rounded-2xl shadow-lg">
+                                          <motion.button 
+                                            whileTap={{ scale: 0.8 }}
+                                            onClick={(e) => { e.stopPropagation(); handleRemoveOneFromCart(item.id); }}
+                                            className="size-10 rounded-xl bg-white/10 flex items-center justify-center"
+                                          >
+                                            <Icon name="remove" size={18} />
+                                          </motion.button>
+                                          <span className="font-black italic text-lg px-2">{itemQty}</span>
+                                          <motion.button 
+                                            whileTap={{ scale: 0.8 }}
+                                            onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e); }}
+                                            className="size-10 rounded-xl bg-yellow-400 text-black flex items-center justify-center"
+                                          >
+                                            <Icon name="add" size={18} />
+                                          </motion.button>
+                                       </div>
+                                     ) : (
+                                       <motion.button
+                                         whileTap={{ scale: 0.9 }}
+                                         onClick={(e) => { e.stopPropagation(); handleAddToCart(item, e); }}
+                                         className="size-14 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shadow-lg active:bg-yellow-400 active:text-black transition-colors"
+                                       >
+                                          <Icon name="add" size={24} />
+                                       </motion.button>
+                                     )}
+                                  </div>
+                                )}
+                             </div>
+                          </div>
+                       </motion.div>
+                     );
+                   })}
+                </div>
+             </section>
+           ))}
+        </main>
+      </div>
+
+      {/* ── BOTÃO DE CARRINHO PREMIUM ── */}
+      <AnimatePresence>
+        {cart.length > 0 && (() => {
+          const subtotal = cart.reduce((sum, item) => {
+            const basePrice = Number(item.price) || 0;
+            const addonsPrice = Array.isArray(item.addonDetails) 
+              ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
+              : 0;
+            return sum + basePrice + addonsPrice;
+          }, 0);
+
+          return (
+            <motion.div 
+              initial={{ y: 150 }}
+              animate={{ y: 0 }}
+              exit={{ y: 150 }}
+              className="fixed bottom-8 inset-x-6 z-[170]"
+            >
+              <button 
                 onClick={() => navigateSubView("cart")}
-                className="flex items-center gap-3 bg-yellow-400 text-black px-5 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-[0_0_20px_rgba(255,215,9,0.2)] active:scale-95 transition-all shrink-0"
+                className="w-full h-24 bg-zinc-900 rounded-[40px] flex items-center justify-between px-10 shadow-[0_30px_60px_rgba(0,0,0,0.4)] active:scale-[0.98] transition-all relative overflow-hidden group"
               >
-                <span>Ver Sacola</span>
-                <span style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
-                  R$ {subtotal.toFixed(2).replace(".", ",")}
-                </span>
+                <div className="absolute inset-0 bg-yellow-400 translate-y-full group-hover:translate-y-[85%] transition-transform opacity-10" />
+                
+                <div className="flex items-center gap-6 relative z-10">
+                   <div className="size-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-black font-black text-xl shadow-lg shadow-yellow-400/20">
+                     {cart.length}
+                   </div>
+                   <div className="text-left">
+                      <p className="text-white font-black text-lg uppercase tracking-tighter leading-none italic">Ver Sacola</p>
+                      <p className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Total: R$ {subtotal.toFixed(2).replace(".", ",")}</p>
+                   </div>
+                </div>
+                
+                <div className="relative z-10 flex items-center gap-4">
+                   <span className="text-white/30 text-xs font-bold uppercase tracking-widest">Izi Flash</span>
+                   <Icon name="arrow_forward_ios" size={18} className="text-white" />
+                </div>
               </button>
             </motion.div>
-          </div>
-        );
-      })()}
+          );
+        })()}
+      </AnimatePresence>
 
     </div>
   );

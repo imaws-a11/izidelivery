@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion } from "framer-motion";
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from "framer-motion";
 import { MerchantCard } from "../Establishment/MerchantCard";
 import { FeaturedMerchantCard } from "./FeaturedMerchantCard";
 import { ServicesExploreView } from "./ServicesExploreView";
@@ -120,106 +120,90 @@ export const HomeView: React.FC<HomeViewProps> = ({
      .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
      .slice(0, 9);
 
-   const displayServices = [
-     ...dynamicServices,
-     { id: 'ver_mais', name: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) }
-   ];
+    const displayServices = [
+      ...dynamicServices,
+      { id: 'ver_mais', name: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) }
+    ];
+
+    // Lógica do Carrossel Hero
+    const heroImages = appSettings?.promo_banner_config?.image_urls?.length > 0 
+      ? appSettings.promo_banner_config.image_urls 
+      : [appSettings?.home_hero_image || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1200&auto=format&fit=crop"];
+
+    const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+
+    useEffect(() => {
+      if (heroImages.length <= 1) return;
+      const timer = setInterval(() => {
+        setCurrentHeroIndex(prev => (prev + 1) % heroImages.length);
+      }, 6000); // 6 segundos de exibição por banner
+      return () => clearInterval(timer);
+    }, [heroImages.length]);
 
    return (
-     <div className="relative h-screen bg-yellow-400 overflow-hidden">
+     <div className="relative h-screen bg-zinc-950 overflow-hidden">
        
-       {/* 1. SEMANA DE CUPONS (HEADER FIXO NO FUNDO) */}
-       {(appSettings?.promo_banner_config?.active !== false) && (
-       <section 
-         className={`px-5 pt-10 pb-20 relative overflow-hidden transition-all duration-700 ${appSettings?.promo_banner_config?.image_url ? 'bg-zinc-900' : 'bg-yellow-400'}`}
-         style={appSettings?.promo_banner_config?.image_url ? {
-           backgroundImage: `url(${appSettings.promo_banner_config.image_url})`,
-           backgroundSize: 'cover',
-           backgroundPosition: 'center'
-         } : {}}
-       >
-          {appSettings?.promo_banner_config?.image_url && (
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60 z-0" />
+       {/* 1. HERO CARROSSEL IMERSIVO */}
+       <header className="absolute top-0 inset-x-0 h-[480px] overflow-hidden z-0 bg-zinc-900">
+          <AnimatePresence mode="wait">
+            <motion.img 
+              key={currentHeroIndex}
+              src={heroImages[currentHeroIndex]} 
+              initial={{ opacity: 0, scale: 1.1 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              className="size-full object-cover" 
+              alt="Izi Delivery Hero" 
+            />
+          </AnimatePresence>
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-950" />
+          
+          {/* Indicadores do Carrossel */}
+          {heroImages.length > 1 && (
+            <div className="absolute bottom-24 left-8 flex gap-2 z-10">
+              {heroImages.map((_: any, i: number) => (
+                <div 
+                  key={i} 
+                  className={`h-1 rounded-full transition-all duration-500 ${currentHeroIndex === i ? 'w-8 bg-yellow-400' : 'w-2 bg-white/30'}`}
+                />
+              ))}
+            </div>
           )}
-
-          <div className="absolute top-4 left-4 opacity-20 z-0">
-             <span className={`material-symbols-rounded text-6xl ${appSettings?.promo_banner_config?.image_url ? 'text-white/40' : 'text-white'}`}>shopping_bag</span>
-          </div>
-          <div className="absolute top-10 right-10 opacity-20 z-0">
-             <span className={`material-symbols-rounded text-4xl ${appSettings?.promo_banner_config?.image_url ? 'text-white/40' : 'text-white'}`}>star</span>
-          </div>
- 
-          <div className="flex flex-col items-center relative z-10">
-             <div className={`px-6 py-2 rounded-full mb-4 border ${appSettings?.promo_banner_config?.image_url ? 'bg-black/60 border-white/20 backdrop-blur-md' : 'bg-yellow-500/30 border-white/20'}`}>
-                <h2 className={`${appSettings?.promo_banner_config?.image_url ? 'text-yellow-400' : 'text-black'} font-black text-xl uppercase tracking-tighter italic`}>
-                  {appSettings?.promo_banner_config?.title || 'semana de'}{' '}
-                  {!appSettings?.promo_banner_config?.title && <span className="text-2xl block -mt-1">CUPONS</span>}
-                </h2>
-             </div>
- 
-             <div className={`w-full rounded-3xl p-4 mb-6 backdrop-blur-md ${appSettings?.promo_banner_config?.image_url ? 'bg-black/40 border border-white/10' : 'bg-black/10'}`}>
-                <div className="grid grid-cols-7 gap-1">
-                   {(appSettings?.promo_banner_config?.days || [1,2,3,4,5,6,7].map((d: number) => ({day: d, active: true, redeemed: d < 7}))).map((dayObj: any, i: number) => (
-                     <div key={i} className={`flex flex-col items-center gap-1 ${!dayObj.active ? 'opacity-30' : dayObj.redeemed ? 'opacity-50' : ''}`}>
-                        <span className={`text-[7px] font-bold uppercase ${appSettings?.promo_banner_config?.image_url ? 'text-white/60' : 'text-black/60'}`}>Dia {dayObj.day}</span>
-                        {dayObj.redeemed ? (
-                          <div className="size-8 bg-emerald-600 rounded-lg flex flex-col items-center justify-center border border-emerald-700/30">
-                             <span className="text-[6px] font-bold text-white uppercase leading-none">resgatado</span>
-                             <span className="material-symbols-rounded text-white text-xs">check</span>
-                          </div>
-                        ) : (
-                          <div className={`${i === (appSettings?.promo_banner_config?.days?.length || 7) - 1 ? 'w-14 h-16 rotate-3 -mt-2' : 'size-8'} bg-emerald-600 rounded-lg flex flex-col items-center justify-center border-2 border-white shadow-xl`}>
-                             <span className="text-[14px] font-black text-white leading-tight">40%</span>
-                             <span className="text-[8px] font-black text-white uppercase leading-tight">OFF</span>
-                             <span className="text-[6px] font-bold text-white/70 uppercase mt-1">resgatar</span>
-                          </div>
-                        )}
-                     </div>
-                   ))}
-                </div>
-             </div>
- 
-             <motion.button 
-               whileTap={{ scale: 0.95 }}
-               className={`text-black font-black text-lg px-12 py-3 rounded-2xl shadow-xl border-b-4 transition-all ${appSettings?.promo_banner_config?.image_url ? 'bg-yellow-400 shadow-yellow-400/20 border-yellow-600' : 'bg-white shadow-yellow-600/30 border-zinc-200'}`}
-             >
-               Pegar agora!
-             </motion.button>
-          </div>
-       </section>
-       )}
+       </header>
 
        {/* BOTTOM SHEET DESLIZANTE */}
        <motion.div 
          initial={{ y: 0 }}
          drag="y"
-         dragConstraints={{ top: -300, bottom: 0 }}
-         className="absolute top-[350px] inset-x-0 bottom-0 bg-white rounded-t-[48px] shadow-[0_-20px_50px_rgba(0,0,0,0.15)] z-20 flex flex-col h-[calc(100%-100px)]"
+         dragConstraints={{ top: -350, bottom: 0 }}
+         className="absolute top-[400px] inset-x-0 bottom-0 bg-white rounded-t-[48px] shadow-[0_-20px_50px_rgba(0,0,0,0.4)] z-20 flex flex-col h-[calc(100%-100px)]"
        >
-          <div className="w-full flex justify-center py-4 shrink-0">
+          <div className="w-full flex justify-center py-5 shrink-0">
              <div className="w-12 h-1.5 bg-zinc-200 rounded-full" />
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
-             <section className="px-5 mt-2">
-                <div className="grid grid-cols-5 gap-y-6 gap-x-2">
+             <section className="px-6 mt-2">
+                <div className="grid grid-cols-5 gap-y-8 gap-x-4">
                    {displayServices.map((s: any) => (
                      <motion.div 
                        key={s.id}
                        whileTap={{ scale: 0.95 }}
                        onClick={s.action}
-                       className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                       className="flex flex-col items-center gap-2 cursor-pointer group"
                      >
-                        <div className="size-14 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100 shadow-sm group-hover:bg-yellow-50 transition-colors relative">
+                        <div className="size-16 rounded-3xl bg-zinc-50 flex items-center justify-center border border-zinc-100 shadow-sm group-hover:bg-yellow-50 transition-all relative overflow-hidden active:scale-90">
                            {s.icon && s.icon.startsWith('http') ? (
-                             <img src={s.icon} className="size-9 object-contain" alt={s.name} />
+                             <img src={s.icon} className="size-10 object-contain" alt={s.name} />
                            ) : s.img ? (
-                             <img src={s.img} className="size-9 object-contain" alt={s.name} />
+                             <img src={s.img} className="size-10 object-contain" alt={s.name} />
                            ) : (
-                             <span className="material-symbols-rounded text-zinc-400 text-[24px]">{s.icon || 'storefront'}</span>
+                             <span className="material-symbols-rounded text-zinc-400 text-[28px]">{s.icon || 'storefront'}</span>
                            )}
+                           <div className="absolute inset-0 bg-yellow-400 opacity-0 group-active:opacity-10 transition-opacity" />
                         </div>
-                        <span className="text-[10px] font-bold text-zinc-500 text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                        <span className="text-[10px] font-black text-zinc-900 text-center leading-tight uppercase tracking-tighter truncate w-full">
                           {s.name || s.label}
                         </span>
                      </motion.div>
@@ -227,40 +211,46 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
              </section>
 
-             <section className="px-5 mt-6 space-y-4">
-                <div className="bg-zinc-50 border border-zinc-100 h-14 rounded-2xl flex items-center px-5 gap-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-                   <span className="material-symbols-rounded text-zinc-400 group-hover:text-yellow-600 transition-colors">search</span>
-                   <span className="text-zinc-400 font-bold text-sm">O que você quer comer hoje?</span>
-                </div>
-
-                <div className="bg-yellow-400 rounded-3xl p-5 flex items-center justify-between relative overflow-hidden shadow-lg shadow-yellow-100 border-2 border-white">
-                   <div className="relative z-10">
-                      <h4 className="text-sm font-black text-black uppercase tracking-tighter">Ofertas Izi Flash</h4>
-                      <p className="text-[10px] font-bold text-black/60">Os melhores descontos do dia</p>
-                   </div>
-                   <span className="material-symbols-rounded text-5xl text-black/10 absolute -right-2 -bottom-2 rotate-12">bolt</span>
+             <section className="px-6 mt-10 space-y-4">
+                <div 
+                  onClick={() => setTab("busca")}
+                  className="bg-zinc-50 border border-zinc-100 h-20 rounded-[32px] flex items-center px-8 gap-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer group active:scale-[0.98]"
+                >
+                   <span className="material-symbols-rounded text-zinc-400 group-hover:text-yellow-600 transition-colors text-3xl">search</span>
+                   <span className="text-zinc-400 font-black text-lg uppercase tracking-tighter italic">O que você quer comer hoje?</span>
                 </div>
              </section>
 
-             <section className="mt-10">
-                <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 px-5">
+             {/* OFERTAS IZI FLASH */}
+             <section className="mt-12">
+                <div className="px-6 flex items-center justify-between mb-6">
+                   <div className="flex items-center gap-3">
+                      <div className="size-2 bg-yellow-400 rounded-full animate-pulse" />
+                      <h3 className="text-xl font-black text-zinc-900 uppercase italic tracking-tighter">Ofertas Izi Flash</h3>
+                   </div>
+                   <span className="material-symbols-rounded text-yellow-500 animate-bounce">bolt</span>
+                </div>
+                <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 px-6">
                    {banners.map((b, i) => (
-                      <div key={i} className="snap-center shrink-0 w-[85vw] h-48 rounded-[32px] overflow-hidden shadow-lg border border-zinc-100 relative group">
-                         <img src={b.image_url} className="size-full object-cover group-hover:scale-105 transition-transform duration-[5s]" alt="Promo" />
-                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      <div key={i} className="snap-center shrink-0 w-[85vw] h-56 rounded-[44px] overflow-hidden shadow-2xl border border-zinc-100 relative group active:scale-95 transition-all">
+                         <img src={b.image_url} className="size-full object-cover group-hover:scale-110 transition-transform duration-[5s]" alt="Promo" />
+                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-8 flex flex-col justify-end">
+                            <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-tight">{b.title || "Oferta Especial"}</h4>
+                            <p className="text-yellow-400 text-xs font-bold uppercase tracking-widest mt-1">Aproveite agora</p>
+                         </div>
                       </div>
                    ))}
                 </div>
              </section>
 
-             <section className="mt-10">
-                <div className="px-5 flex items-center justify-between mb-1">
-                   <h3 className="text-xl font-black text-zinc-900 tracking-tight">Famosos da cidade</h3>
-                   <button className="text-zinc-900 font-bold text-sm">Ver mais</button>
+             <section className="mt-14">
+                <div className="px-6 flex items-center justify-between mb-2">
+                   <h3 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">Famosos da cidade</h3>
+                   <button className="text-yellow-600 font-black text-[10px] uppercase tracking-widest">Ver ranking</button>
                 </div>
-                <p className="px-5 text-xs font-bold text-zinc-400 mb-6">Os mais conhecidos da cidade com frete grátis</p>
+                <p className="px-6 text-[10px] font-bold text-zinc-400 mb-8 uppercase tracking-widest">Os restaurantes mais pedidos da sua região</p>
 
-                <div className="flex overflow-x-auto no-scrollbar gap-4 px-5 pb-4">
+                <div className="flex overflow-x-auto no-scrollbar gap-6 px-6 pb-6">
                    {ESTABLISHMENTS.slice(0, 6).map((shop, i) => (
                      <FeaturedMerchantCard 
                        key={i}
@@ -271,8 +261,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
              </section>
 
-             <section className="mt-6 px-5">
-                <div className="flex gap-6 overflow-x-auto no-scrollbar py-2">
+             <section className="mt-12 px-6">
+                <div className="flex gap-8 overflow-x-auto no-scrollbar py-4">
                    {[
                      { label: "Marmita", img: "https://cdn-icons-png.flaticon.com/512/3132/3132693.png" },
                      { label: "Salgados", img: "https://cdn-icons-png.flaticon.com/512/3132/3132715.png" },
@@ -280,45 +270,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
                      { label: "Saudável", img: "https://cdn-icons-png.flaticon.com/512/3194/3194766.png" },
                      { label: "Doces", img: "https://cdn-icons-png.flaticon.com/512/3132/3132709.png" },
                    ].map((c, i) => (
-                     <div key={i} className="flex flex-col items-center gap-2 min-w-[60px] cursor-pointer">
-                        <div className="size-14 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100 shadow-sm hover:bg-zinc-100 transition-colors">
-                           <img src={c.img} className="size-9 object-contain" alt={c.label} />
+                     <div key={i} className="flex flex-col items-center gap-3 min-w-[70px] cursor-pointer group active:scale-90 transition-all">
+                        <div className="size-20 rounded-[32px] bg-white flex items-center justify-center border border-zinc-100 shadow-xl shadow-zinc-100 group-hover:bg-yellow-50 transition-colors">
+                           <img src={c.img} className="size-12 object-contain" alt={c.label} />
                         </div>
-                        <span className="text-[10px] font-bold text-zinc-600">{c.label}</span>
+                        <span className="text-[10px] font-black text-zinc-900 uppercase tracking-tighter">{c.label}</span>
                      </div>
                    ))}
                 </div>
              </section>
 
-             <section className="mt-8 px-5 flex gap-4">
-                <div className="flex-1 h-32 rounded-[32px] bg-zinc-900 p-5 relative overflow-hidden shadow-lg shadow-zinc-200">
-                   <span className="text-white font-black text-sm leading-tight uppercase relative z-10">entrega <br /> grátis aqui</span>
-                   <img src="https://cdn-icons-png.flaticon.com/512/3132/3132693.png" className="absolute -bottom-4 -right-4 size-24 opacity-20 rotate-12" alt="Burger" />
-                </div>
-                <div className="flex-1 h-32 rounded-[32px] bg-yellow-400 p-5 relative overflow-hidden shadow-lg shadow-yellow-100">
-                   <span className="text-black font-black text-sm leading-tight uppercase relative z-10">cupom <br /> até <span className="text-2xl block -mt-1">R$ 30</span></span>
-                   <span className="absolute -bottom-4 -right-4 material-symbols-rounded text-6xl text-black opacity-20 rotate-12">confirmation_number</span>
-                </div>
-             </section>
-
-             <section className="mt-10">
-                <div className="px-5 flex gap-2 overflow-x-auto no-scrollbar mb-6">
-                   {["Ordenar", "Entrega grátis", "Vale-refeição", "Distância"].map(f => (
-                     <button key={f} className="px-5 py-2 rounded-full border border-zinc-200 text-[11px] font-bold text-zinc-600 whitespace-nowrap flex items-center gap-1 bg-white hover:bg-zinc-50 transition-colors">
-                        {f}
-                        <span className="material-symbols-rounded text-[16px]">expand_more</span>
-                     </button>
-                   ))}
-                </div>
-
-                <div className="flex flex-col px-2 pb-20">
+             <section className="mt-14">
+                <div className="px-6 flex flex-col gap-8 pb-32">
                    {ESTABLISHMENTS.slice(6, 16).map((shop, i) => (
-                     <MerchantCard 
+                     <motion.div
                        key={shop.id || i}
-                       shop={shop}
-                       onClick={() => handleShopClick(shop)}
-                       index={i}
-                     />
+                       initial={{ opacity: 0, y: 20 }}
+                       whileInView={{ opacity: 1, y: 0 }}
+                       viewport={{ once: true }}
+                     >
+                       <MerchantCard 
+                         shop={shop}
+                         onClick={() => handleShopClick(shop)}
+                         index={i}
+                       />
+                     </motion.div>
                    ))}
                 </div>
              </section>
