@@ -15,8 +15,8 @@ interface AppContextData {
   // Orquestração de View
   view: "login" | "app" | "loading";
   setView: (view: "login" | "app" | "loading") => void;
-  tab: "home" | "orders" | "wallet" | "profile";
-  setTab: (tab: "home" | "orders" | "wallet" | "profile") => void;
+  tab: "home" | "orders" | "wallet" | "profile" | "busca";
+  setTab: (tab: "home" | "orders" | "wallet" | "profile" | "busca") => void;
   subView: string;
   setSubView: (subView: string) => void;
   navigateSubView: (view: string) => void;
@@ -81,7 +81,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Estados de Orquestração (Movidos do App.tsx)
   const [view, setView] = useState<"login" | "app" | "loading">("loading");
-  const [tab, setTab] = useState<"home" | "orders" | "wallet" | "profile">("home");
+  const [tab, setTab] = useState<"home" | "orders" | "wallet" | "profile" | "busca">("home");
   const [subView, setSubView] = useState<string>("none");
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [selectedShop, setSelectedShop] = useState<any | null>(null);

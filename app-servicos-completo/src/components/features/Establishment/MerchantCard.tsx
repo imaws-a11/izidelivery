@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { Establishment } from "../../../types";
+import { useState } from "react";
 
 interface MerchantCardProps {
   shop: Establishment;
@@ -8,69 +9,69 @@ interface MerchantCardProps {
 }
 
 export const MerchantCard = ({ shop, onClick, index }: MerchantCardProps) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ delay: index * 0.03 }}
       onClick={() => onClick(shop)}
-      className="relative group bg-zinc-900 border border-white/5 rounded-[32px] p-4 flex gap-4 active:scale-95 transition-all shadow-[12px_12px_24px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] overflow-hidden"
+      className="w-full bg-white px-5 py-4 flex items-center gap-4 active:bg-zinc-50 transition-all cursor-pointer group border-b border-zinc-50"
     >
-      {/* Background Glow */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-      {/* Image Container */}
-      <div className="relative size-24 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white/5">
+      {/* Merchant Logo */}
+      <div className="relative size-16 rounded-2xl overflow-hidden shrink-0 border border-zinc-100 shadow-sm">
         <img 
           src={shop.img || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop"} 
           alt={shop.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         {!shop.isOpen && (
-           <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
-              <span className="text-[8px] font-black text-white uppercase tracking-widest text-center px-2">Fechado</span>
-           </div>
-        )}
-        {(shop as any).hasPromotions && (
-           <div className="absolute top-1 right-1 bg-yellow-400 text-black text-[7px] font-black px-1.5 py-0.5 rounded-lg shadow-lg uppercase tracking-tighter z-20">
-              Ofertas
+           <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center">
+              <span className="text-[9px] font-black text-white uppercase tracking-tighter">Fechado</span>
            </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col justify-between py-1">
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-white uppercase italic tracking-tight group-hover:text-primary transition-colors">{shop.name}</h3>
-            <div className="flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded-lg border border-white/5">
-               <span className="material-symbols-outlined text-[10px] text-yellow-400 fill-1">star</span>
-               <span className="text-[10px] font-black text-white">{shop.rating || "Novo"}</span>
-            </div>
+      {/* Info Content */}
+      <div className="flex-1 flex flex-col justify-center min-w-0">
+        <h3 className="text-[15px] font-black text-zinc-900 truncate tracking-tight">{shop.name}</h3>
+        
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {/* Rating */}
+          <div className="flex items-center gap-0.5">
+             <span className="material-symbols-rounded text-[14px] text-yellow-500 fill-1">star</span>
+             <span className="text-[13px] font-black text-yellow-500">{shop.rating || "4.8"}</span>
           </div>
-          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest line-clamp-1">{shop.store_type || "Restaurante"}</p>
+          
+          <span className="text-zinc-300 text-[10px]">•</span>
+          
+          {/* Time */}
+          <span className="text-[13px] font-bold text-zinc-500 truncate">
+             {shop.estimated_time || "45-55 min"}
+          </span>
+          
+          <span className="text-zinc-300 text-[10px]">•</span>
+          
+          {/* Fee */}
+          <span className="text-[13px] font-bold text-zinc-500">
+             {shop.service_fee === 0 ? "Grátis" : `R$ ${shop.service_fee?.toFixed(2).replace('.', ',')}`}
+          </span>
         </div>
+      </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-xs text-primary">timer</span>
-            <span className="text-[9px] font-black text-zinc-300 uppercase tracking-tight">{shop.estimated_time || "30-40 min"}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-xs text-primary">delivery_dining</span>
-            <span className="text-[9px] font-black text-zinc-300 uppercase tracking-tight">
-               {shop.service_fee === 0 ? "Grátis" : `R$ ${shop.service_fee?.toFixed(2)}`}
-            </span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Selection Indicator */}
-      <div className="absolute top-4 right-4 translate-x-12 group-hover:translate-x-0 transition-transform duration-300">
-         <div className="size-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
-            <span className="material-symbols-outlined text-slate-900 text-sm font-black">arrow_forward</span>
-         </div>
-      </div>
+      {/* Favorite Heart (Yellow per user request) */}
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsFavorite(!isFavorite);
+        }}
+        className="size-10 flex items-center justify-center text-zinc-300 hover:text-yellow-400 transition-colors"
+      >
+        <span className={`material-symbols-rounded text-[22px] ${isFavorite ? 'text-yellow-400 fill-1' : ''}`}>
+          favorite
+        </span>
+      </button>
     </motion.div>
   );
 };
