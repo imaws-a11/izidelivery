@@ -41,6 +41,11 @@ import { NotificationsCenterView } from "./components/features/Notifications/Not
 import { QuestCenterView } from "./components/features/Gamification/QuestCenterView";
 import { IziBlackView } from "./components/features/Membership/IziBlackView";
 import { ExploreEnviosView } from "./components/features/Shipping/ExploreEnviosView";
+import { ExploreTurboFlashView } from "./components/features/Shipping/Explores/ExploreTurboFlashView";
+import { ExploreLightFlashView } from "./components/features/Shipping/Explores/ExploreLightFlashView";
+import { ExploreExpressView } from "./components/features/Shipping/Explores/ExploreExpressView";
+import { ExploreScheduledView } from "./components/features/Shipping/Explores/ExploreScheduledView";
+import { ExploreClickCollectView } from "./components/features/Shipping/Explores/ExploreClickCollectView";
 import { ProductDetailView } from "./components/features/Product/ProductDetailView";
 import { CategoryListView } from "./components/features/Explore/CategoryListView";
 import { FoodCategoryExplorer } from "./components/features/Explore/FoodCategoryExplorer";
@@ -4985,6 +4990,36 @@ const navigateSubView = (target: string) => {
                 {subView === "explore_envios" && (
                   <motion.div key="exp_envios" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
                     <ExploreEnviosView transitData={transitData} setTransitData={setTransitData} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_turbo_flash" && (
+                  <motion.div key="exp_turbo" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                    <ExploreTurboFlashView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_light_flash" && (
+                  <motion.div key="exp_light" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                    <ExploreLightFlashView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_express" && (
+                  <motion.div key="exp_express" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                    <ExploreExpressView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_scheduled" && (
+                  <motion.div key="exp_sched" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                    <ExploreScheduledView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_click_collect" && (
+                  <motion.div key="exp_click" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                    <ExploreClickCollectView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
                   </motion.div>
                 )}
 
