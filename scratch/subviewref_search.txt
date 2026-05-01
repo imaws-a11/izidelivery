@@ -1,0 +1,22 @@
+﻿
+LineNumber Line                                                                                                        
+---------- ----                                                                                                        
+       238              if (subViewRef.current === "waiting_payment" || subViewRef.current === "pix_payment" || subV...
+       321       if (subViewRef.current !== "none") {                                                                  
+       322         console.log("[BACK] Fechando subView:", subViewRef.current);                                        
+       814             const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing", "card_pay...
+       846           if ((subViewRef.current === "waiting_merchant" || subViewRef.current === "lightning_payment" ||...
+       853           if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {               
+       858           if (subViewRef.current === "waiting_driver" && ["a_caminho", "em_rota", "no_local", "picked_up"...
+       863           if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {                 
+      1719   const subViewRef = useRef(subView);                                                                       
+      1723   const previousSubViewRef = useRef(subView);                                                               
+      1726   useEffect(() => { subViewRef.current = subView; }, [subView]);                                            
+      1892   useEffect(() => { subViewRef.current = subView; }, [subView]);                                            
+      1919   useEffect(() => { subViewRef.current = subView; }, [subView]);                                            
+      1956       console.log("[BACK] Botão voltar físico pressionado. subView atual:", subViewRef.current);            
+      1958       if (subViewRef.current !== 'none') {                                                                  
+      3718     const previousSubView = previousSubViewRef.current;                                                     
+      3729     previousSubViewRef.current = subView;                                                                   
+
+

@@ -174,25 +174,25 @@ export const ProductDetailView = () => {
   const totalProductPrice = selectedItem.price + addonsPrice;
 
   return (
-    <div className="absolute inset-0 z-[70] bg-zinc-950 flex flex-col hide-scrollbar overflow-y-auto">
+    <div className="absolute inset-0 z-[70] bg-[#F8F9FA] flex flex-col hide-scrollbar overflow-y-auto">
       <div className="relative w-full h-[40vh] bg-cover bg-center shrink-0" style={{ backgroundImage: "url('" + itemImage + "')" }}>
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-black/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#F8F9FA] via-transparent to-black/20"></div>
         <header className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
-          <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-black/40 backdrop-blur-xl rounded-2xl text-white border border-white/10 shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.1)] active:scale-90 transition-all">
+          <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl text-zinc-900 border border-white/40 shadow-sm active:scale-90 transition-all">
             <Icon name="arrow_back" />
           </button>
         </header>
       </div>
 
-      <div className="relative z-10 -mt-12 bg-zinc-950 rounded-t-[48px] px-8 pt-12 pb-40 space-y-10 flex-1 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/5">
+      <div className="relative z-10 -mt-12 bg-white rounded-t-[48px] px-8 pt-12 pb-40 space-y-10 flex-1 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] border-t border-white">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">{selectedItem.name}</h2>
+            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase leading-none italic">{selectedItem.name}</h2>
           </div>
           {selectedShop && (
-             <div className="bg-zinc-900 p-3 rounded-[24px] border border-white/5 flex flex-col items-center min-w-[72px] shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Loja</span>
-                <div className="size-10 rounded-xl bg-cover bg-center border border-white/10 shadow-lg" style={{ backgroundImage: "url('" + selectedShop.img + "')" }}></div>
+             <div className="bg-zinc-50 p-3 rounded-[24px] border border-zinc-100 flex flex-col items-center min-w-[72px] shadow-sm">
+                <span className="text-[8px] font-black text-zinc-300 uppercase tracking-[0.2em] mb-2">Loja</span>
+                <div className="size-10 rounded-xl bg-cover bg-center border border-zinc-100 shadow-sm" style={{ backgroundImage: "url('" + selectedShop.img + "')" }}></div>
              </div>
           )}
         </div>
@@ -207,12 +207,12 @@ export const ProductDetailView = () => {
             {addonsLoading ? (
               <div className="flex flex-col items-center py-10 gap-3">
                 <div className="size-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Carregando opcionais...</p>
+                <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest">Carregando opcionais...</p>
               </div>
             ) : productAddonGroups.map((group, gIdx) => (
               <section key={group.id || `group-${gIdx}`} className="space-y-4">
-                <h3 className="text-lg font-black text-white tracking-tight">{group.name}</h3>
-                <div className="space-y-3">
+                <h3 className="text-xl font-black text-zinc-900 tracking-tight italic uppercase">{group.name}</h3>
+                <div className="space-y-4">
                   {group.items.map((item: any, iIdx: number) => {
                     const qty = getOptionQuantity(group.id, item.id);
                     const isSelected = qty > 0;
@@ -221,21 +221,21 @@ export const ProductDetailView = () => {
                         key={item.id || `addon-${iIdx}`} 
                         whileTap={{ scale: 0.98 }}
                         onClick={() => qty === 0 && updateOptionQuantity(group, item, 1)}
-                        className={"p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer relative overflow-hidden " + 
+                        className={"p-6 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer relative overflow-hidden " + 
                           (isSelected 
-                            ? 'bg-yellow-400 border-yellow-400 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.1)]' 
-                            : 'bg-zinc-900 border-white/5 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]')
+                            ? 'bg-yellow-400 border-yellow-400 shadow-xl shadow-yellow-100' 
+                            : 'bg-zinc-50 border-zinc-100 shadow-sm')
                         }
                       >
                         <div className="flex items-center gap-4 relative z-10">
-                          <div className={"size-6 rounded-lg flex items-center justify-center transition-all " + (isSelected ? 'bg-black text-yellow-400 shadow-inner' : 'bg-white/5')}>
+                          <div className={"size-8 rounded-2xl flex items-center justify-center transition-all " + (isSelected ? 'bg-zinc-900 text-yellow-400' : 'bg-white border border-zinc-100 text-zinc-400')}>
                             {isSelected ? (
-                              <span className="text-[12px] font-black">{qty}</span>
+                              <span className="text-[14px] font-black">{qty}</span>
                             ) : (
-                              <span className="material-symbols-outlined text-[14px] font-black">add</span>
+                              <span className="material-symbols-outlined text-[18px] font-black">add</span>
                             )}
                           </div>
-                          <span className={"font-black text-[13px] uppercase tracking-tight " + (isSelected ? 'text-black' : 'text-white')}>{item.name}</span>
+                          <span className={"font-black text-[14px] uppercase tracking-tighter italic " + (isSelected ? 'text-zinc-900' : 'text-zinc-900')}>{item.name}</span>
                         </div>
                         
                         <div className="flex items-center gap-3 relative z-10">
