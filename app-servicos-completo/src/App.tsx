@@ -83,6 +83,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 
 import { useApp } from "./hooks/useApp";
+import { useNotification } from "./contexts/NotificationContext";
 import type { SavedAddress, Order, Quest } from "./types";
 
 // Componentes agora em arquivos separados
@@ -119,6 +120,8 @@ function App() {
     // Libs
     toastSuccess, toastError, showConfirm
   } = useApp();
+
+  const { unreadCount } = useNotification();
 
   const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
   const userLevel = useMemo(() => Math.floor((userXP || 0) / 100) + 1, [userXP]);
@@ -4869,7 +4872,7 @@ const navigateSubView = (target: string) => {
                     onAddressClick={() => setIsAddressDrawerOpen(true)}
                     onCartClick={() => setSubView("cart")}
                     onNotificationsClick={() => setSubView("notifications_center")}
-                    hasUnreadNotifications={false}
+                    hasUnreadNotifications={unreadCount > 0}
                   />
                 )}
               </AnimatePresence>
@@ -5219,7 +5222,7 @@ const navigateSubView = (target: string) => {
 
                 {subView === "notifications_center" && (
                   <motion.div key="notifcenter" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                    <NotificationsCenterView />
+                    <NotificationsCenterView onBack={() => setSubView("none")} />
                   </motion.div>
                 )}
 
