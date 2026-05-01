@@ -1148,6 +1148,7 @@ function App() {
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [showOrderModal, setShowOrderModal] = useState(false);
+    const [establishmentTypes, setEstablishmentTypes] = useState<any[]>([]);
     const [calculatedDistance, setCalculatedDistance] = useState<string | null>(null);
     const [modalRoutePolyline, setModalRoutePolyline] = useState<string | null>(null);
     const [modalRouteInfo, setModalRouteInfo] = useState<{start: any, end: any} | null>(null);
@@ -2972,18 +2973,20 @@ function App() {
                 });
 
             // 1. Coleta de dados em paralelo para maior performance
-            const [txsRes, drvRes, ordsRes, setsRes] = await Promise.all([
+            const [txsRes, drvRes, ordsRes, setsRes, estRes] = await Promise.all([
                 apiRequest(`wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`),
                 apiRequest(`drivers_delivery?id=eq.${driverId}&select=bank_info,name`),
                 apiRequest(`orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado,delivered)&order=updated_at.desc`),
-                apiRequest(`app_settings_delivery?limit=1`)
-            ]).catch(() => [null, null, null, null]);
+                apiRequest(`app_settings_delivery?limit=1`),
+                apiRequest(`establishment_types?is_active=eq.true`)
+            ]).catch(() => [null, null, null, null, null]);
 
-            const [txs, drvData, orders, sets] = await Promise.all([
+            const [txs, drvData, orders, sets, estTypes] = await Promise.all([
                 txsRes?.ok ? txsRes.json() : null,
                 drvRes?.ok ? drvRes.json() : null,
                 ordsRes?.ok ? ordsRes.json() : null,
-                setsRes?.ok ? setsRes.json() : null
+                setsRes?.ok ? setsRes.json() : null,
+                estRes?.ok ? estRes.json() : null
             ]);
 
             if (drvData?.[0]) {
@@ -2993,6 +2996,7 @@ function App() {
             }
             if (sets?.[0]) setAppSettings(sets[0]);
             if (orders) setHistory(orders);
+            if (estTypes) setEstablishmentTypes(estTypes);
 
             // 2. Processamento financeiro unificado
             let balance = 0, todaySum = 0, weeklySum = 0, totalGanhos = 0;
@@ -4992,8 +4996,15 @@ function App() {
     const renderHistoryView = () => {
         const serviceTypeLabel = (type: string) => {
             const t = (type || 'entrega').toLowerCase();
-            if (['restaurant', 'restaurante', 'food'].includes(t)) return 'Restaurante';
-            if (['market', 'mercado'].includes(t)) return 'Mercado';
+            
+            // Tenta achar o tipo dinâmico do ecossistema do Admin
+            const dynamicType = establishmentTypes.find((et: any) => et.value === t || et.id === t);
+            if (dynamicType && dynamicType.name) {
+                return dynamicType.name;
+            }
+
+            if (['restaurant', 'restaurante', 'food', 'bakery'].includes(t)) return 'Restaurante';
+            if (['market', 'mercado', 'fruit'].includes(t)) return 'Mercado';
             if (['pharmacy', 'farmacia'].includes(t)) return 'Farmácia';
             if (['mototaxi', 'moto_taxi'].includes(t)) return 'Mototaxi';
             if (['car_ride'].includes(t)) return 'Corrida Carro';
@@ -5002,6 +5013,7 @@ function App() {
             if (['utilitario'].includes(t)) return 'Utilitário';
             if (['frete', 'carreto', 'logistica'].includes(t)) return 'Frete';
             if (['beverages', 'bebidas'].includes(t)) return 'Bebidas';
+            if (['petshop', 'pets'].includes(t)) return 'Petshop';
             return 'Entrega';
         };
 

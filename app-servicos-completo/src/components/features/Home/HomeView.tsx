@@ -18,6 +18,8 @@ interface HomeViewProps {
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   onOpenDepositModal?: () => void;
+  establishmentTypes?: any[];
+  setExploreCategoryState?: (state: any) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -28,21 +30,72 @@ export const HomeView: React.FC<HomeViewProps> = ({
   ESTABLISHMENTS,
   handleShopClick,
   banners,
+  establishmentTypes = [],
+  setExploreCategoryState,
 }) => {
    const [isExploreOpen, setIsExploreOpen] = useState(false);
 
-   const services = [
-     { id: 'restaurants', label: 'Restaurantes', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132693.png', action: () => navigateSubView("explore_restaurants") },
-     { id: 'markets', label: 'Mercados', img: 'https://cdn-icons-png.flaticon.com/512/3081/3081986.png', action: () => navigateSubView("explore_market") },
-     { id: 'pharmacy', label: 'Farmácias', img: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png', action: () => navigateSubView("explore_pharmacy") },
-     { id: 'beverages', label: 'Bebidas', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132727.png', action: () => navigateSubView("explore_beverages") },
-     { id: 'petshop', label: 'Petshop', img: 'https://cdn-icons-png.flaticon.com/512/620/620851.png', action: () => navigateSubView("explore_petshop") },
-     { id: 'gas', label: 'Gás & Água', img: 'https://cdn-icons-png.flaticon.com/512/2933/2933866.png', action: () => navigateSubView("explore_gas") },
-     { id: 'bakery', label: 'Padaria', img: 'https://cdn-icons-png.flaticon.com/512/3014/3014535.png', action: () => navigateSubView("explore_bakery") },
-      { id: 'fruit', label: 'Hortifrutti', img: 'https://cdn-icons-png.flaticon.com/512/3194/3194766.png', action: () => navigateSubView("explore_fruit") },
-      { id: 'izi_envios', label: 'Viagem', img: 'https://cdn-icons-png.flaticon.com/512/2331/2331827.png', action: () => navigateSubView("explore_envios") },
-      { id: 'ver_mais', label: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) },
-    ];
+   const handleCategoryClick = (cat: any) => {
+     const slug = cat.value || cat.id;
+     
+     // Viagem é uma rota nativa específica
+     if (slug === 'izi_envios' || slug === 'viagem' || slug === 'mobilidade') {
+       navigateSubView("explore_envios");
+       return;
+     }
+
+     const customViews = ['restaurants', 'market', 'pharmacy', 'beverages', 'petshop', 'gas', 'bakery', 'fruit'];
+     if (customViews.includes(slug)) {
+       navigateSubView(`explore_${slug}`);
+     } else {
+       if (setExploreCategoryState) {
+         setExploreCategoryState({
+           id: slug,
+           title: cat.name,
+           tagline: cat.description || `Tudo de ${cat.name} para você`,
+           icon: cat.icon || 'storefront',
+           primaryColor: 'bg-yellow-400'
+         });
+         navigateSubView('explore_category');
+       }
+     }
+   };
+
+   const priorityOrder = [
+     ['restaurants', 'food', 'restaurante', 'restaurantes'],
+     ['markets', 'mercado', 'mercados', 'market'],
+     ['pharmacy', 'farmacia', 'farmacias'],
+     ['beverages', 'bebidas', 'bebida'],
+     ['gas', 'gas_agua', 'agua'],
+     ['petshop', 'pets', 'pet_shop'],
+     ['fruit', 'hortifrutti', 'frutas', 'verduras'],
+     ['butcher', 'acougue', 'carnes'],
+     ['viagem', 'izi_envios', 'mobilidade', 'corridas']
+   ];
+
+   const getPriority = (slug: string) => {
+     const s = (slug || '').toLowerCase();
+     for (let i = 0; i < priorityOrder.length; i++) {
+       if (priorityOrder[i].includes(s)) return i;
+     }
+     return 999; // Fallback para categorias que não estão no destaque
+   };
+
+   // Filtra os ativos, ordena pela prioridade do usuário e pega os 9 primeiros
+   const dynamicServices = establishmentTypes
+     .filter((t: any) => t.is_active !== false)
+     .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
+     .slice(0, 9)
+     .map((t: any) => ({
+       ...t,
+       action: () => handleCategoryClick(t)
+     }));
+
+   // Adiciona o botão "Ver Mais" para fechar 10 itens na grade
+   const displayServices = [
+     ...dynamicServices,
+     { id: 'ver_mais', name: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) }
+   ];
 
    return (
      <div className="relative h-screen bg-yellow-400 overflow-hidden">
@@ -109,7 +162,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
              {/* 2. SERVICES GRID (DUAS LINHAS) */}
              <section className="px-5 mt-2">
                 <div className="grid grid-cols-5 gap-y-6 gap-x-2">
-                   {services.map((s) => (
+                   {displayServices.map((s: any) => (
                      <motion.div 
                        key={s.id}
                        whileTap={{ scale: 0.95 }}
@@ -117,14 +170,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                        className="flex flex-col items-center gap-1.5 cursor-pointer group"
                      >
                         <div className="size-14 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100 shadow-sm group-hover:bg-yellow-50 transition-colors relative">
-                           {s.img ? (
-                             <img src={s.img} className="size-9 object-contain" alt={s.label} />
+                           {s.icon && s.icon.startsWith('http') ? (
+                             <img src={s.icon} className="size-9 object-contain" alt={s.name} />
+                           ) : s.img ? (
+                             <img src={s.img} className="size-9 object-contain" alt={s.name} />
                            ) : (
-                             <span className="material-symbols-rounded text-zinc-400 text-[24px]">{s.icon}</span>
+                             <span className="material-symbols-rounded text-zinc-400 text-[24px]">{s.icon || 'storefront'}</span>
                            )}
                         </div>
                         <span className="text-[10px] font-bold text-zinc-500 text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">
-                          {s.label}
+                          {s.name || s.label}
                         </span>
                      </motion.div>
                    ))}
@@ -260,6 +315,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
          isOpen={isExploreOpen} 
          onClose={() => setIsExploreOpen(false)} 
          navigateSubView={navigateSubView}
+         establishmentTypes={establishmentTypes}
+         setExploreCategoryState={setExploreCategoryState}
        />
      </div>
    );
