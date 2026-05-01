@@ -15,7 +15,8 @@ export default function CategoriesTab() {
     isSaving,
     fetchMerchants,
     fetchEstablishmentTypes,
-    setActiveTab
+    setActiveTab,
+    handleFileUpload
   } = useAdmin();
 
   const [filter, setFilter] = useState('');
@@ -530,18 +531,47 @@ export default function CategoriesTab() {
 
                    <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Ícone Representativo</label>
-                      <div className="flex items-center gap-5 bg-slate-50 dark:bg-slate-800 p-4 rounded-[32px] border border-slate-100 dark:border-slate-700">
-                         <div className="size-20 rounded-[24px] bg-white dark:bg-slate-700 flex items-center justify-center text-primary shadow-sm border border-slate-100 dark:border-slate-600">
-                            <span className="material-symbols-outlined text-4xl">{editingType.icon || 'question_mark'}</span>
-                         </div>
-                         <div className="flex-1 space-y-2">
-                            <input 
-                              className="w-full bg-transparent border-none rounded-xl px-2 py-1 font-black text-xs focus:ring-0 dark:text-white"
-                              value={editingType.icon}
-                              onChange={e => setEditingType({...editingType, icon: e.target.value})}
-                              placeholder="Google Icon Name"
-                            />
-                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest ml-2 italic underline cursor-help">Ver biblioteca de ícones</p>
+                      <div className="flex flex-col gap-4 bg-slate-50 dark:bg-slate-800 p-6 rounded-[32px] border border-slate-100 dark:border-slate-700">
+                         <div className="flex items-center gap-5">
+                            <div className="size-24 rounded-[28px] bg-white dark:bg-slate-700 flex items-center justify-center text-primary shadow-lg border border-slate-100 dark:border-slate-600 overflow-hidden relative group">
+                               {editingType.icon && (editingType.icon.startsWith('http') || editingType.icon.startsWith('/')) ? (
+                                 <img src={editingType.icon} className="size-full object-contain p-2" alt="Ícone" />
+                               ) : (
+                                 <span className="material-symbols-outlined text-5xl">{editingType.icon || 'question_mark'}</span>
+                               )}
+                               <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                                  <span className="material-symbols-outlined text-white text-2xl">upload</span>
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*" 
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      try {
+                                        const url = await handleFileUpload(file, 'taxonomy');
+                                        if (url) setEditingType({...editingType, icon: url});
+                                      } catch (err) {
+                                        toastError('Erro no upload');
+                                      }
+                                    }}
+                                  />
+                               </label>
+                            </div>
+                            <div className="flex-1 space-y-4">
+                               <div>
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Google Icon (Nome)</p>
+                                  <input 
+                                    className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-5 py-3 font-black text-[11px] focus:ring-2 focus:ring-primary dark:text-white"
+                                    value={editingType.icon && !editingType.icon.startsWith('http') ? editingType.icon : ''}
+                                    onChange={e => setEditingType({...editingType, icon: e.target.value})}
+                                    placeholder="Ex: local_pizza"
+                                  />
+                               </div>
+                               <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+                                  <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Ou faça upload de uma imagem clicando no quadro ao lado.</p>
+                               </div>
+                            </div>
                          </div>
                       </div>
                    </div>

@@ -67,6 +67,9 @@ import { PaymentFlowView } from "./components/features/Checkout/PaymentFlowView"
 import { OrderStatusView } from "./components/features/Order/OrderStatusView";
 import { OrderSupportView } from "./components/features/Order/OrderSupportView";
 import { OrderFeedbackView } from "./components/features/Order/OrderFeedbackView";
+import { FloatingHeader } from "./components/common/FloatingHeader";
+import { AddressDrawer } from "./components/features/Address/AddressDrawer";
+import { OrderWaitingView } from "./components/features/Order/OrderWaitingView";
 
 // Mobilidade e Envios
 import { MobilityWizardView } from "./components/features/Mobility/MobilityWizardView";
@@ -100,13 +103,13 @@ function App() {
     activeBroadcast, closeBroadcast,
     pixCpf, setPixCpf, pixConfirmed, setPixConfirmed, lightningData, setLightningData,
 
-    // Orquestração de View
+    // OrquestraÃ§Ã£o de View
     view, setView, tab, setTab, subView, setSubView, navigateSubView: _ignoredNavigate,
     selectedItem, setSelectedItem, selectedShop, setSelectedShop, activeService, setActiveService, paymentsOrigin, setPaymentsOrigin,
-    userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versões locais legadas
+    userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versÃµes locais legadas
 
     // Outros Contextos
-    walletBalance, iziCoins, userXP, iziCashbackEarned, isIziBlackMembership, walletTransactions, fetchWalletData,
+    walletBalance, iziCoins, setIziCoins, userXP, setUserXP, iziCashbackEarned, isIziBlackMembership, walletTransactions, fetchWalletData,
     orders, activeOrder, fetchOrders, setActiveOrder,
     savedAddresses, saveAddress, deleteAddress, setActiveAddress,
 
@@ -122,7 +125,7 @@ function App() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
-  const [aiMessage, setAiMessage] = useState("Olá! Como posso ajudar você hoje?");
+  const [aiMessage, setAiMessage] = useState("OlÃ¡! Como posso ajudar vocÃª hoje?");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
   const [savedCards, setSavedCards] = useState<any[]>([]);
@@ -143,6 +146,7 @@ function App() {
 
   const [showSplash, setShowSplash] = useState(true);
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
+  const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!isInitializing) {
@@ -176,7 +180,7 @@ function App() {
 
 
 
-  // As funções de endereço e cartões foram migradas para AddressContext e WalletContext
+  // As funÃ§Ãµes de endereÃ§o e cartÃµes foram migradas para AddressContext e WalletContext
 
   useEffect(() => {
     fetchMarketData();
@@ -192,6 +196,57 @@ function App() {
       supabase.removeChannel(flashChannel);
     };
   }, [userId]);
+
+  // SincronizaÃ§Ã£o em Tempo Real de Pedidos (Webhooks/Status)
+  useEffect(() => {
+    if (!userId) return;
+
+    const ordersChannel = supabase.channel('orders_realtime_sync')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'orders_delivery',
+        filter: `user_id=eq.${userId}`
+      }, (payload) => {
+        console.log("[REALTIME] AtualizaÃ§Ã£o de Pedido:", payload);
+        fetchOrders(); // Atualiza lista global
+        
+        const newOrder = payload.new as any;
+        const oldOrder = payload.old as any;
+
+        if (selectedItem && newOrder && newOrder.id === selectedItem.id) {
+          setSelectedItem(newOrder);
+          
+          // TransiÃ§Ãµes AutomÃ¡ticas de Tela baseadas no Status
+          if (newOrder.status !== oldOrder?.status) {
+             if (newOrder.status === "confirmado") {
+                toastSuccess("Pedido aceito! A loja jÃ¡ estÃ¡ preparando.");
+                setSubView("active_order");
+             } else if (newOrder.status === "em_rota") {
+                toastSuccess("Pedido em rota! Prepare-se para receber.");
+                setSubView("active_order");
+             } else if (newOrder.status === "cancelado") {
+                toastError("O pedido foi cancelado pela loja.");
+                setSubView("none");
+             }
+          }
+
+          // ConfirmaÃ§Ã£o de Pagamento Digital (Webhooks do MP/BTCPay)
+          if (newOrder.payment_status === "paid" && oldOrder?.payment_status !== "paid") {
+             toastSuccess("Pagamento confirmado com sucesso!");
+             // Se estava na tela de aguardando pagamento, move para aguardando lojista
+             if (navigationSubViewRef.current === "waiting_payment" || navigationSubViewRef.current === "pix_payment" || navigationSubViewRef.current === "lightning_payment") {
+                setSubView("waiting_merchant");
+             }
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+    };
+  }, [userId, selectedItem]);
 
   // Registro de Notificacoes Push Nativas (Capacitor)
   useEffect(() => {
@@ -215,12 +270,12 @@ function App() {
           return;
         }
 
-        // Cria canal dedicado no Android 8+ para garantir som e vibração
+        // Cria canal dedicado no Android 8+ para garantir som e vibraÃ§Ã£o
         if (Capacitor.getPlatform() === 'android') {
           await PushNotifications.createChannel({
             id: 'order_updates',
-            name: 'Atualizações de Pedidos',
-            description: 'Notificações sobre status de pedidos e entregas',
+            name: 'AtualizaÃ§Ãµes de Pedidos',
+            description: 'NotificaÃ§Ãµes sobre status de pedidos e entregas',
             sound: 'notification',
             importance: 5,
             visibility: 1,
@@ -248,7 +303,7 @@ function App() {
         });
 
         PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-          console.log('[PUSH] Ação do usuário:', notification);
+          console.log('[PUSH] AÃ§Ã£o do usuÃ¡rio:', notification);
         });
 
       } catch (err) {
@@ -258,13 +313,13 @@ function App() {
 
     setupPush();
 
-    // Listener para o botão de voltar do Android (Capacitor)
+    // Listener para o botÃ£o de voltar do Android (Capacitor)
     const backButtonHandler = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      console.log("[BACK] Botão físico detectado. canGoBack:", canGoBack);
+      console.log("[BACK] BotÃ£o fÃ­sico detectado. canGoBack:", canGoBack);
       
       // Se houver uma subview aberta, voltamos para 'none'
-      if (subViewRef.current !== "none") {
-        console.log("[BACK] Fechando subView:", subViewRef.current);
+      if (navigationSubViewRef.current !== "none") {
+        console.log("[BACK] Fechando subView:", navigationSubViewRef.current);
         window.history.back();
         return;
       }
@@ -276,7 +331,7 @@ function App() {
         return;
       }
 
-      // Se não houver histórico para voltar no navegador, podemos deixar o Capacitor fechar o app
+      // Se nÃ£o houver histÃ³rico para voltar no navegador, podemos deixar o Capacitor fechar o app
       // ou apenas registrar. Se canGoBack for false, o app geralmente fecha.
       if (!canGoBack) {
         CapacitorApp.exitApp();
@@ -285,9 +340,9 @@ function App() {
       }
     });
 
-    // Listener para mudanças no histórico (popstate) do navegador
+    // Listener para mudanÃ§as no histÃ³rico (popstate) do navegador
     const handlePopState = (event: PopStateEvent) => {
-      console.log("[POPSTATE] Mudança detetada:", event.state);
+      console.log("[POPSTATE] MudanÃ§a detetada:", event.state);
       if (event.state) {
         if (event.state.subView) setSubView(event.state.subView);
         if (event.state.tab) setTab(event.state.tab);
@@ -332,7 +387,7 @@ function App() {
         if (userData) {
           setTransferTarget(userData);
         } else {
-          showToast("Usuário não encontrado.", "error");
+          showToast("UsuÃ¡rio nÃ£o encontrado.", "error");
         }
       }
     } catch (err) {
@@ -372,9 +427,9 @@ function App() {
       });
 
       if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process'))) {
-         const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
+         const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartÃ£o foi recusado pela operadora.";
          console.error("[PAYMENT ERROR]", { fnErr, fnData });
-         toastError(`Pagamento não aprovado: ${mpMsg}`);
+         toastError(`Pagamento nÃ£o aprovado: ${mpMsg}`);
          if (origin === "izi_black") setSubView("izi_black_purchase");
          else if (origin === "profile") {
            setShowDepositModal(true);
@@ -433,34 +488,34 @@ function App() {
   const isLoaded = true; // Loaded via index.html
 
   const updateLocation = (force = false, onSuccess?: (address: string, lat: number, lng: number) => void) => {
-    // Se o endereço foi definido manualmente e não for um "force", ignoramos a atualização automática
-    // Isso evita que o GPS do dispositivo sobrescreva um endereço salvo ou selecionado.
+    // Se o endereÃ§o foi definido manualmente e nÃ£o for um "force", ignoramos a atualizaÃ§Ã£o automÃ¡tica
+    // Isso evita que o GPS do dispositivo sobrescreva um endereÃ§o salvo ou selecionado.
     const processCoords = async (latitude: number, longitude: number, accuracy?: number) => {
-      // Se for forçado ou estivermos em tela de mobilidade, removemos o bloqueio manual
+      // Se for forÃ§ado ou estivermos em tela de mobilidade, removemos o bloqueio manual
       const mobilityViews = ["taxi_wizard", "freight_wizard", "logistics_tracking", "excursion_wizard", "van_wizard"];
       const isMobility = mobilityViews.includes(subView);
       
       if (force || isMobility) {
         setUserLocation(prev => ({ ...prev, isManual: false }));
       } else if (userLocation.isManual && !force) {
-        console.log("[GPS] Ignorando atualização automática pois o endereço é manual.");
+        console.log("[GPS] Ignorando atualizaÃ§Ã£o automÃ¡tica pois o endereÃ§o Ã© manual.");
         return;
       }
 
       try {
-        // PROTEÇÃO: Nunca sobrescrever coordenadas boas com piores
-        // Se já temos coords com boa precisão, rejeita atualizações com precisão muito pior
+        // PROTEÃ‡ÃƒO: Nunca sobrescrever coordenadas boas com piores
+        // Se jÃ¡ temos coords com boa precisÃ£o, rejeita atualizaÃ§Ãµes com precisÃ£o muito pior
         setUserLocation(prev => {
           const prevAccuracy = prev.accuracy as number | undefined;
           if (prevAccuracy && accuracy && prevAccuracy < 200 && accuracy > prevAccuracy * 3) {
-            console.log(`[GPS] Ignorando coords ruins (${accuracy.toFixed(0)}m) — já temos ${prevAccuracy.toFixed(0)}m`);
-            return prev; // Mantém as coords atuais, melhores
+            console.log(`[GPS] Ignorando coords ruins (${accuracy.toFixed(0)}m) â€” jÃ¡ temos ${prevAccuracy.toFixed(0)}m`);
+            return prev; // MantÃ©m as coords atuais, melhores
           }
           return { ...prev, lat: latitude, lng: longitude, accuracy, loading: false };
         });
         
         setTransitData(prev => {
-          // Se for mobilidade e ainda não tiver origem, ou se for forçado, atualiza a origem
+          // Se for mobilidade e ainda nÃ£o tiver origem, ou se for forÃ§ado, atualiza a origem
           const shouldUpdateOrigin = isMobility || force || !prev.origin?.lat;
           if (!shouldUpdateOrigin) return prev;
           
@@ -471,7 +526,7 @@ function App() {
             ...prev,
             origin: isObj 
               ? { ...currentOrigin, lat: latitude, lng: longitude }
-              : { address: currentOrigin || "Minha localização", lat: latitude, lng: longitude }
+              : { address: currentOrigin || "Minha localizaÃ§Ã£o", lat: latitude, lng: longitude }
           };
         });
 
@@ -479,7 +534,7 @@ function App() {
         let snappedLat = latitude;
         let snappedLng = longitude;
 
-        // 2. BUSCA ENDEREÇO EM SEGUNDO PLANO
+        // 2. BUSCA ENDEREÃ‡O EM SEGUNDO PLANO
         // Tenta reverse geocode via Google Maps Geocoder (browser)
         if ((window as any).google?.maps) {
           try {
@@ -521,7 +576,7 @@ function App() {
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
             );
             const nomData = await nomRes.json();
-            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "LocalizaÃ§Ã£o atual";
             if (nomData.lat && nomData.lon) {
               snappedLat = parseFloat(nomData.lat);
               snappedLng = parseFloat(nomData.lon);
@@ -529,10 +584,10 @@ function App() {
           } catch { /* silent */ }
         }
 
-        if (!address) address = "Localização atual";
+        if (!address) address = "LocalizaÃ§Ã£o atual";
 
-        // 3. ATUALIZA APENAS O ENDEREÇO QUANDO CHEGAR
-        // Verificação dupla: se no meio do caminho o endereço virou manual (ex: carregou endereço salvo), abortamos.
+        // 3. ATUALIZA APENAS O ENDEREÃ‡O QUANDO CHEGAR
+        // VerificaÃ§Ã£o dupla: se no meio do caminho o endereÃ§o virou manual (ex: carregou endereÃ§o salvo), abortamos.
         setUserLocation(prev => {
           if (prev.isManual && !force) return prev;
           return { ...prev, address, loading: false };
@@ -567,10 +622,10 @@ function App() {
             });
             await processCoords(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
           } else {
-            setUserLocation({ address: "Permissão de localização negada", loading: false });
+            setUserLocation({ address: "PermissÃ£o de localizaÃ§Ã£o negada", loading: false });
           }
         } catch {
-          setUserLocation({ address: "Erro ao obter localização", loading: false });
+          setUserLocation({ address: "Erro ao obter localizaÃ§Ã£o", loading: false });
         }
       })();
       return;
@@ -578,7 +633,7 @@ function App() {
 
     // --- Caminho Web (Browser via navigator.geolocation) ---
     if (!("geolocation" in navigator)) {
-      setUserLocation({ address: "Geolocalização não disponível", loading: false });
+      setUserLocation({ address: "GeolocalizaÃ§Ã£o nÃ£o disponÃ­vel", loading: false });
       return;
     }
 
@@ -591,7 +646,7 @@ function App() {
         );
         const data = await res.json();
         if (data.location) {
-          console.log(`[GPS] Google Geolocation API: ${data.location.lat}, ${data.location.lng} (precisão: ${data.accuracy}m)`);
+          console.log(`[GPS] Google Geolocation API: ${data.location.lat}, ${data.location.lng} (precisÃ£o: ${data.accuracy}m)`);
           await processCoords(data.location.lat, data.location.lng, data.accuracy);
           return true;
         }
@@ -604,21 +659,21 @@ function App() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude, accuracy } = position.coords;
-        console.log(`[GPS] Browser geolocation: ${latitude}, ${longitude} (precisão: ${accuracy?.toFixed(0)}m)`);
+        console.log(`[GPS] Browser geolocation: ${latitude}, ${longitude} (precisÃ£o: ${accuracy?.toFixed(0)}m)`);
         await processCoords(latitude, longitude, accuracy);
       },
       async (error) => {
         console.warn("[GPS] Browser geolocation falhou:", error.message);
-        // Só usa Google Geolocation API se NÃO temos coordenadas prévias
+        // SÃ³ usa Google Geolocation API se NÃƒO temos coordenadas prÃ©vias
         const hasExistingCoords = userLocation.lat && userLocation.lng;
         if (!hasExistingCoords) {
-          console.log("[GPS] Sem coords prévias. Tentando Google Geolocation API...");
+          console.log("[GPS] Sem coords prÃ©vias. Tentando Google Geolocation API...");
           const ok = await tryGoogleGeolocationAPI();
           if (!ok) {
-            setUserLocation(prev => ({ ...prev, address: "Não foi possível obter localização", loading: false }));
+            setUserLocation(prev => ({ ...prev, address: "NÃ£o foi possÃ­vel obter localizaÃ§Ã£o", loading: false }));
           }
         } else {
-          console.log("[GPS] Mantendo coords existentes (browser timeout mas já temos GPS).");
+          console.log("[GPS] Mantendo coords existentes (browser timeout mas jÃ¡ temos GPS).");
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -634,7 +689,7 @@ function App() {
     let watchId: any = null;
 
     if (mobilityViews.includes(subView)) {
-      console.log("[GEO] Ativando monitoramento contínuo para subView:", subView);
+      console.log("[GEO] Ativando monitoramento contÃ­nuo para subView:", subView);
       if (Capacitor.isNativePlatform()) {
         Geolocation.watchPosition({
           enableHighAccuracy: true,
@@ -673,7 +728,7 @@ function App() {
             });
           },
           (err) => {
-            // watchPosition pode dar timeout em desktop - não faz nada, mantém coords existentes
+            // watchPosition pode dar timeout em desktop - nÃ£o faz nada, mantÃ©m coords existentes
             console.log("[GEO] Watch timeout/erro (normal em desktop):", err?.message);
           },
           { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
@@ -717,33 +772,33 @@ function App() {
           
           if (!newOrder || newOrder.user_id !== userIdRef.current) return;
 
-          // Sempre atualizar a lista local para refletir no F5 ou navegações
+          // Sempre atualizar a lista local para refletir no F5 ou navegaÃ§Ãµes
           if (userIdRef.current) fetchOrders();
 
-          // Verificar transições de status para Toasts
+          // Verificar transiÃ§Ãµes de status para Toasts
           const statusChanged = oldOrder && oldOrder.status && newOrder.status !== oldOrder.status;
           
           if (statusChanged || !oldOrder) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. ⚡',
-              'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
-              'pendente': 'O lojista recebeu seu pedido! 🥳',
-              'aceito': 'O estabelecimento aceitou seu pedido! 🥳',
-              'confirmado': 'Pedido confirmado! O preparo começou. ✅',
-              'preparando': 'Seu pedido está sendo preparado com carinho! 🥗',
-              'no_preparo': 'Seu pedido já está no preparo! 🥗',
-              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. 🛵',
-              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
-              'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! 🛵',
-              'chegou_coleta': 'O motoboy chegou ao estabelecimento para retirar seu pedido! 🛵',
-              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. 🚀',
-              'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. 🛵',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
-              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. 🛵',
-              'no_local': 'O motoboy chegou ao seu endereço! 🔔',
-              'concluido': 'Pedido entregue com sucesso! Bom apetite. ✨',
-              'cancelado': 'Ah não! Seu pedido foi cancelado. ⚠️',
-              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. ⚠️'
+              'novo': 'Pagamento aprovado! O lojista jÃ¡ recebeu seu pedido. âš¡',
+              'pendente_pagamento': 'Aguardando confirmaÃ§Ã£o do pagamento... ðŸ’³',
+              'pendente': 'O lojista recebeu seu pedido! ðŸ¥³',
+              'aceito': 'O estabelecimento aceitou seu pedido! ðŸ¥³',
+              'confirmado': 'Pedido confirmado! O preparo comeÃ§ou. âœ…',
+              'preparando': 'Seu pedido estÃ¡ sendo preparado com carinho! ðŸ¥—',
+              'no_preparo': 'Seu pedido jÃ¡ estÃ¡ no preparo! ðŸ¥—',
+              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para vocÃª. ðŸ›µ',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
+              'saiu_para_coleta': 'O motoboy aceitou e estÃ¡ indo retirar seu pedido! ðŸ›µ',
+              'chegou_coleta': 'O motoboy chegou ao estabelecimento para retirar seu pedido! ðŸ›µ',
+              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para vocÃª. ðŸš€',
+              'a_caminho': 'Motoboy a caminho! Sua entrega estÃ¡ em rota. ðŸ›µ',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ›µ',
+              'no_local': 'O motoboy chegou ao seu endereÃ§o! ðŸ””',
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
+              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. âš ï¸',
+              'recusado': 'Desculpe, o estabelecimento nÃ£o pÃ´de aceitar o pedido agora. âš ï¸'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -751,12 +806,12 @@ function App() {
           }
 
           // Monitoramento de Sucesso de Pagamento (Bitcoin / Pix / Geral)
-          // NOTA: !oldOrder foi removido — sem ele, pedidos de dinheiro/maquininha (que são INSERTs novos)
-          // não disparam incorretamente o fluxo de confirmação digital.
+          // NOTA: !oldOrder foi removido â€” sem ele, pedidos de dinheiro/maquininha (que sÃ£o INSERTs novos)
+          // nÃ£o disparam incorretamente o fluxo de confirmaÃ§Ã£o digital.
           const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && oldOrder?.status === 'pendente_pagamento');
           
           if (isPaid) {
-            const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing", "card_payment"].includes(subViewRef.current);
+            const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing", "card_payment"].includes(navigationSubViewRef.current);
             if (isPaymentSubView) {
               console.log("[REALTIME] Sucesso detectado para pedido:", newOrder.id);
               if (newOrder.service_type === 'coin_purchase') {
@@ -769,7 +824,7 @@ function App() {
             }
           }
 
-          // Feedback de conclusão
+          // Feedback de conclusÃ£o
           if (newOrder.status === 'concluido' && (oldOrder?.status !== 'concluido' || !oldOrder)) {
             setSelectedItem(newOrder);
             setTimeout(() => {
@@ -780,32 +835,32 @@ function App() {
                 showToast("IZI COINS adicionados com sucesso!", "success");
                 setShowDepositModal(false);
                 setSubView("izi_coin_tracking");
-                if (userIdRef.current) fetchWalletBalance(userIdRef.current);
+                if (userIdRef.current) fetchWalletData();
               } else {
                 setSubView("order_feedback");
               }
             }, 2000);
           }
 
-          // Transições de estados de espera
-          if ((subViewRef.current === "waiting_merchant" || subViewRef.current === "lightning_payment" || subViewRef.current === "pix_payment") && 
+          // TransiÃ§Ãµes de estados de espera
+          if ((navigationSubViewRef.current === "waiting_merchant" || navigationSubViewRef.current === "lightning_payment" || navigationSubViewRef.current === "pix_payment") && 
               ["novo", "paid", "pago", "aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
-            showToast("Pagamento confirmado! 🥳", "success");
+            showToast("Pagamento confirmado! ðŸ¥³", "success");
             setSelectedItem(newOrder); 
             setTimeout(() => setSubView("active_order"), 1000);
           }
 
-          if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+          if (navigationSubViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
             showToast("Seu pedido foi recusado.", "warning");
             setSubView("none");
           }
 
-          if (subViewRef.current === "waiting_driver" && ["a_caminho", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
+          if (navigationSubViewRef.current === "waiting_driver" && ["a_caminho", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
             setSelectedItem(newOrder);
             setTimeout(() => setSubView("active_order"), 1500);
           }
 
-          if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
+          if (navigationSubViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
             setSubView("none");
           }
 
@@ -825,20 +880,20 @@ function App() {
   useEffect(() => {
     if (!userId) return;
 
-    // Sincronização em tempo real de Perfil (Saldo, XP, Coins, Izi Black, Carrinho)
+    // SincronizaÃ§Ã£o em tempo real de Perfil (Saldo, XP, Coins, Izi Black, Carrinho)
     const userSub = supabase
       .channel(`user_sync_${userId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "users_delivery", filter: `id=eq.${userId}` },
         (payload: any) => {
-          console.log("[SYNC] Perfil do usuário atualizado remotamente.");
-          fetchWalletBalance(userId);
+          console.log("[SYNC] Perfil do usuÃ¡rio atualizado remotamente.");
+          fetchWalletData();
           
-          // Sincronizar carrinho se a mudança veio de outro dispositivo
+          // Sincronizar carrinho se a mudanÃ§a veio de outro dispositivo
           const remoteCart = payload.new?.cart_data;
           if (Array.isArray(remoteCart)) {
-            // Verificar se o carrinho local é diferente para evitar loops infinitos ou 'ressurreição' indesejada
+            // Verificar se o carrinho local Ã© diferente para evitar loops infinitos ou 'ressurreiÃ§Ã£o' indesejada
             const localCartStr = JSON.stringify(cartRef.current);
             const remoteCartStr = JSON.stringify(remoteCart);
             
@@ -851,27 +906,27 @@ function App() {
       )
       .subscribe();
 
-    // Sincronização de Endereços Salvos em tempo real
+    // SincronizaÃ§Ã£o de EndereÃ§os Salvos em tempo real
     const addrSub = supabase
       .channel(`addr_sync_${userId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "saved_addresses", filter: `user_id=eq.${userId}` },
         () => {
-          console.log("[SYNC] Endereços salvos atualizados, sincronizando...");
+          console.log("[SYNC] EndereÃ§os salvos atualizados, sincronizando...");
           fetchSavedAddresses(userId);
         }
       )
       .subscribe();
 
-    // Sincronização de Pedidos em tempo real para o cliente
+    // SincronizaÃ§Ã£o de Pedidos em tempo real para o cliente
     const orderSub = supabase
       .channel(`order_sync_${userId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders_delivery", filter: `user_id=eq.${userId}` },
         (payload) => {
-          console.log("[SYNC] Pedido atualizado, atualizando lista e visualização...");
+          console.log("[SYNC] Pedido atualizado, atualizando lista e visualizaÃ§Ã£o...");
           fetchOrders();
           // Se o pedido atual for o que estamos vendo, atualiza o item selecionado
           if (selectedItemRef.current && (payload.new as any).id === selectedItemRef.current.id) {
@@ -898,7 +953,7 @@ function App() {
       if (error) throw error;
       setSavedCards(data || []);
     } catch (err) {
-      console.error("Erro ao buscar cartões:", err);
+      console.error("Erro ao buscar cartÃµes:", err);
     }
   };
   
@@ -906,7 +961,7 @@ function App() {
   const handleCancelOrder = async (orderId: string) => {
     console.log("[DEBUG] Iniciando cancelamento do pedido:", orderId);
     if (!orderId) {
-      toastError("ID do pedido não encontrado.");
+      toastError("ID do pedido nÃ£o encontrado.");
       return;
     }
 
@@ -927,7 +982,7 @@ function App() {
         throw error;
       }
 
-      console.log("[DEBUG] Pedido cancelado/excluído no banco com sucesso.");
+      console.log("[DEBUG] Pedido cancelado/excluÃ­do no banco com sucesso.");
       toastSuccess("Pedido cancelado com sucesso!");
       
       if (userId) fetchOrders();
@@ -936,13 +991,13 @@ function App() {
       setSubView("none");
     } catch (err: any) {
       console.error("Erro ao cancelar pedido:", err);
-      toastError(`Não foi possível cancelar: ${err.message || 'Erro de rede'}`);
+      toastError(`NÃ£o foi possÃ­vel cancelar: ${err.message || 'Erro de rede'}`);
     }
   };
 
   const handleCancelCoinOrder = async (orderId: string) => {
     if (!orderId) {
-      toastError("ID da recarga não encontrado.");
+      toastError("ID da recarga nÃ£o encontrado.");
       return;
     }
 
@@ -1091,23 +1146,23 @@ function App() {
 
   const validateCouponRules = async (coupon: any, subtotal: number) => {
     if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-      return "Este cupom já expirou.";
+      return "Este cupom jÃ¡ expirou.";
     }
 
     if (subtotal < (coupon.min_order_value || 0)) {
-      return `O valor mínimo para este cupom é R$ ${coupon.min_order_value.toFixed(2)}.`;
+      return `O valor mÃ­nimo para este cupom Ã© R$ ${coupon.min_order_value.toFixed(2)}.`;
     }
 
     if (coupon.usage_count >= coupon.max_usage) {
-      return "Este cupom já atingiu o limite de usos.";
+      return "Este cupom jÃ¡ atingiu o limite de usos.";
     }
 
     if (coupon.is_vip && !isIziBlackMembership) {
-      return "Este cupom é exclusivo para membros IZI Black.";
+      return "Este cupom Ã© exclusivo para membros IZI Black.";
     }
 
     if (coupon.first_order_only && !(await isUserFirstOrder())) {
-      return "Este cupom é válido apenas para sua primeira compra.";
+      return "Este cupom Ã© vÃ¡lido apenas para sua primeira compra.";
     }
 
     if (coupon.id) {
@@ -1115,12 +1170,12 @@ function App() {
       const limitPerUser = coupon.max_usage_per_user || 1; // Default to 1 if not specified but rule exists?
       // Wait, if max_usage_per_user is null/0, it's unlimited.
       if (coupon.max_usage_per_user && usageCount >= coupon.max_usage_per_user) {
-        return `Você já atingiu o limite de ${coupon.max_usage_per_user} uso(s) deste cupom por CPF.`;
+        return `VocÃª jÃ¡ atingiu o limite de ${coupon.max_usage_per_user} uso(s) deste cupom por CPF.`;
       }
       
       // Keep legacy check for coupons that don't have max_usage_per_user set but were intended for single use
       if (!coupon.max_usage_per_user && usageCount > 0) {
-        return "Este cupom já foi utilizado por este CPF/usuário.";
+        return "Este cupom jÃ¡ foi utilizado por este CPF/usuÃ¡rio.";
       }
     }
 
@@ -1132,16 +1187,16 @@ function App() {
     if (!item?.is_flash_offer || !sourceId) return null;
 
     if (item.first_order_only && !(await isUserFirstOrder())) {
-      return "Esta oferta é válida apenas para sua primeira compra.";
+      return "Esta oferta Ã© vÃ¡lida apenas para sua primeira compra.";
     }
 
     const usageCount = await getBenefitUsageCount("flash_offer", sourceId);
     if (item.max_usage_per_user && usageCount >= item.max_usage_per_user) {
-      return `Você já atingiu o limite de ${item.max_usage_per_user} uso(s) desta oferta por CPF.`;
+      return `VocÃª jÃ¡ atingiu o limite de ${item.max_usage_per_user} uso(s) desta oferta por CPF.`;
     }
 
     if (!item.max_usage_per_user && usageCount > 0) {
-      return "Esta oferta já foi utilizada por este CPF/usuário.";
+      return "Esta oferta jÃ¡ foi utilizada por este CPF/usuÃ¡rio.";
     }
 
     return null;
@@ -1164,7 +1219,7 @@ function App() {
         console.warn("[BENEFIT] Erro ao registrar uso:", error.message);
       }
     } catch (e) {
-      console.warn("[BENEFIT] Falha crítica ao registrar uso:", e);
+      console.warn("[BENEFIT] Falha crÃ­tica ao registrar uso:", e);
     }
   };
 
@@ -1182,13 +1237,13 @@ function App() {
       if (couponError) return couponError;
     }
 
-    // Validação de Ofertas Flash com dados completos
+    // ValidaÃ§Ã£o de Ofertas Flash com dados completos
     const flashOfferItems = cart.filter((item: any) => item.is_flash_offer);
     for (const item of flashOfferItems) {
       const sourceId = getFlashOfferSourceId(item);
       if (!sourceId) continue;
 
-      // Buscamos os dados atuais da oferta para garantir que as regras (1ª compra, limite CPF) sejam validadas
+      // Buscamos os dados atuais da oferta para garantir que as regras (1Âª compra, limite CPF) sejam validadas
       const { data: fullOffer } = await supabase
         .from('flash_offers')
         .select('*')
@@ -1238,7 +1293,7 @@ function App() {
         .single();
 
       if (error || !data) {
-        setCouponError("Cupom inválido ou expirado.");
+        setCouponError("Cupom invÃ¡lido ou expirado.");
         setAppliedCoupon(null);
         return;
       }
@@ -1277,7 +1332,7 @@ function App() {
   const handleAddToCart = async (item: any, e?: React.MouseEvent) => {
     if (processingItemsRef.current.has(item.id)) return;
 
-    // 1. Feedback Visual Imediato (Animação)
+    // 1. Feedback Visual Imediato (AnimaÃ§Ã£o)
     if (e && triggerCartAnimation) {
       triggerCartAnimation(e, item.img || "");
     }
@@ -1285,7 +1340,7 @@ function App() {
     processingItemsRef.current.add(item.id);
 
     try {
-      // 2. Validações básicas rápidas
+      // 2. ValidaÃ§Ãµes bÃ¡sicas rÃ¡pidas
       const flashOfferError = await validateFlashOfferRules(item);
       if (flashOfferError) {
         showToast(flashOfferError, "error" as any);
@@ -1293,28 +1348,28 @@ function App() {
         return;
       }
 
-      // Verificação de Estabelecimento Aberto
+      // VerificaÃ§Ã£o de Estabelecimento Aberto
       const merchantId = item.merchant_id;
       let shop = selectedShop?.id === merchantId ? selectedShop : ESTABLISHMENTS.find(s => s.id === merchantId);
       
       if (!shop && merchantId) {
-        // Tentar buscar rápido no banco se não estiver no cache (ex: busca global ou deep link)
+        // Tentar buscar rÃ¡pido no banco se nÃ£o estiver no cache (ex: busca global ou deep link)
         const { data: m } = await supabase.from('admin_users').select('opening_hours, is_open, opening_mode, store_name').eq('id', merchantId).maybeSingle();
         if (m) {
           const isOpen = isStoreOpen(m.opening_hours, m.is_open, m.opening_mode);
           if (!isOpen) {
-            showToast(`Desculpe! ${m.store_name || "A loja"} está fechada no momento e não pode receber novos pedidos. 🕒`, "error");
+            showToast(`Desculpe! ${m.store_name || "A loja"} estÃ¡ fechada no momento e nÃ£o pode receber novos pedidos. ðŸ•’`, "error");
             processingItemsRef.current.delete(item.id);
             return;
           }
         }
       } else if (shop && !shop.isOpen) {
-        showToast(`Desculpe! ${shop.name || "A loja"} está fechada no momento e não pode receber novos pedidos. 🕒`, "error");
+        showToast(`Desculpe! ${shop.name || "A loja"} estÃ¡ fechada no momento e nÃ£o pode receber novos pedidos. ðŸ•’`, "error");
         processingItemsRef.current.delete(item.id);
         return;
       }
 
-      // 3. Verificação de Opcionais
+      // 3. VerificaÃ§Ã£o de Opcionais
       const { data: groups } = await supabase
         .from('product_options_groups_delivery')
         .select('id')
@@ -1331,7 +1386,7 @@ function App() {
       console.error("Erro no fluxo do carrinho:", err);
     }
 
-    // 4. Adição Real ao Carrinho
+    // 4. AdiÃ§Ã£o Real ao Carrinho
     setCart((prev: any[]) => [...prev, { ...item, timestamp: Date.now() }]);
     setUserXP((prev: number) => prev + 10);
     processingItemsRef.current.delete(item.id);
@@ -1350,7 +1405,7 @@ function App() {
 
   const handleShopClick = async (shop: any) => {
     if (!shop.isOpen) {
-      toastError(`Desculpe! ${shop.name} está fechado no momento. 🕒`);
+      toastError(`Desculpe! ${shop.name} estÃ¡ fechado no momento. ðŸ•’`);
       return;
     }
     
@@ -1369,7 +1424,7 @@ function App() {
         .order("created_at", { ascending: false });
 
 
-      // 2. Buscar redenções do usuário para desativar ofertas já utilizadas
+      // 2. Buscar redenÃ§Ãµes do usuÃ¡rio para desativar ofertas jÃ¡ utilizadas
       let usedSourceIds = new Set<string>();
       if (userId) {
         const trackedCpf = getBenefitTrackingCpf();
@@ -1388,7 +1443,7 @@ function App() {
 
       console.log("Produtos recebidos:", products?.length, products?.[0]);
       if (products && products.length > 0) {
-        // 3. Filtrar ofertas ativas que o usuário ainda NÃO utilizou
+        // 3. Filtrar ofertas ativas que o usuÃ¡rio ainda NÃƒO utilizou
         const activeProductOffers = (flashOffers || []).filter((offer: any) =>
           offer?.merchant_id === shop.id &&
           offer?.is_active &&
@@ -1414,7 +1469,7 @@ function App() {
 
         const grouped: Record<string, any[]> = {};
         products.forEach((p: any) => {
-          const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
+          const cat = p.category || p.subcategory || (isRestaurant ? "CardÃ¡pio" : "Produtos");
           if (!grouped[cat]) grouped[cat] = [];
           
           const linkedOffer =
@@ -1465,7 +1520,7 @@ function App() {
       .single();
 
     if (error || !data) {
-      toastError("Cupom inválido ou expirado.");
+      toastError("Cupom invÃ¡lido ou expirado.");
       return;
     }
 
@@ -1489,16 +1544,16 @@ function App() {
     
     const total = Math.max(0, subtotal - couponDiscount);
     
-    // BENEFÍCIO IZI BLACK: Multiplicadores Dinâmicos
+    // BENEFÃCIO IZI BLACK: Multiplicadores DinÃ¢micos
     const baseRate = Number(globalSettings?.izi_coin_rate || 1);
     const blackRate = Number(globalSettings?.izi_black_cashback || 5);
     const coinRate = isIziBlackMembership ? blackRate : baseRate;
     
-    // O cashback é em porcentagem (ex: 1 = 1%, 5 = 5%)
+    // O cashback Ã© em porcentagem (ex: 1 = 1%, 5 = 5%)
     const earnedCoins = Number((total * (coinRate / 100)).toFixed(8));
-    const finalCoins = isUsingCoins ? earnedCoins : (Number(iziCoins) + earnedCoins);
+    const finalCoins = useCoins ? earnedCoins : (Number(iziCoins) + earnedCoins);
     
-    // BENEFÍCIO IZI BLACK: XP Dinâmico
+    // BENEFÃCIO IZI BLACK: XP DinÃ¢mico
     const baseXP = 50;
     const xpMult = Number(globalSettings?.izi_black_xp_multiplier || 2);
     const earnedXP = isIziBlackMembership ? (baseXP * xpMult) : baseXP;
@@ -1565,7 +1620,7 @@ function App() {
 
   const fetchFlashOffers = async () => {
     try {
-      // 1. Busca todas as ofertas relâmpago ativas que ainda não expiraram
+      // 1. Busca todas as ofertas relÃ¢mpago ativas que ainda nÃ£o expiraram
       const { data, error: offersError } = await supabase
         .from('flash_offers')
         .select('*, admin_users(store_name, store_logo)')
@@ -1576,7 +1631,7 @@ function App() {
       if (offersError) throw offersError;
       if (!data) return;
 
-      // 2. Busca resgates do usuário para marcar como 'Resgatado' em vez de ocultar
+      // 2. Busca resgates do usuÃ¡rio para marcar como 'Resgatado' em vez de ocultar
       let redeemedIds = new Set<string>();
       
       const userId = user?.id || localStorage.getItem('user_id');
@@ -1598,7 +1653,7 @@ function App() {
         }
       }
 
-      // 3. Marca cada oferta como resgatada ou não
+      // 3. Marca cada oferta como resgatada ou nÃ£o
       const offersWithStatus = data.map((offer: any) => ({
         ...offer,
         is_redeemed: redeemedIds.has(offer.id)
@@ -1606,7 +1661,7 @@ function App() {
 
       setFlashOffers(offersWithStatus);
     } catch (error) {
-      console.error("Erro ao buscar ofertas relâmpago:", error);
+      console.error("Erro ao buscar ofertas relÃ¢mpago:", error);
     }
   };
 
@@ -1653,22 +1708,22 @@ function App() {
   } | null>(null);
 
   const [quests] = useState([
-    { id: 1, title: 'Explorador Urbano', desc: 'Peça em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
+    { id: 1, title: 'Explorador Urbano', desc: 'PeÃ§a em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
     { id: 2, title: 'Amigo do Peito', desc: 'Indique um amigo para a Izi', xp: 1000, progress: 0, total: 1, icon: 'group_add', color: '#10b981' },
-    { id: 3, title: 'Madrugador Izi', desc: 'Peça café da manhã antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
+    { id: 3, title: 'Madrugador Izi', desc: 'PeÃ§a cafÃ© da manhÃ£ antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
   ]);
 
       // [Comentario Limpo pelo Sistema]
   const viewRef = useRef(view);
   const tabRef = useRef(tab);
-  const subViewRef = useRef(subView);
+  const navigationSubViewRef = useRef(subView);
   const userIdRef = useRef(userId);
 
   const selectedItemRef = useRef(selectedItem);
   const previousSubViewRef = useRef(subView);
   const cartRef = useRef(cart);
 
-  useEffect(() => { subViewRef.current = subView; }, [subView]);
+  useEffect(() => { navigationSubViewRef.current = subView; }, [subView]);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   useEffect(() => { cartRef.current = cart; }, [cart]);
@@ -1682,8 +1737,8 @@ function App() {
     waiting_driver: "Buscando Entregador",
     aceito: "Confirmado",
     confirmado: "Confirmado",
-    preparando: "Em Preparação",
-    no_preparo: "Em Preparação",
+    preparando: "Em PreparaÃ§Ã£o",
+    no_preparo: "Em PreparaÃ§Ã£o",
     pronto: "Pronto para Retirada",
     a_caminho_coleta: "Entregador Vindo Coletar",
     chegou_coleta: "Entregador no Local de Retirada",
@@ -1693,7 +1748,7 @@ function App() {
     em_rota: "A Caminho da Entrega",
     saiu_para_entrega: "Pedido Saiu para Entrega",
     no_local: "Entregador no seu Local!",
-    concluido: "Concluído",
+    concluido: "ConcluÃ­do",
     cancelado: "Cancelado",
   };
 
@@ -1731,8 +1786,8 @@ function App() {
     ].includes(status || "");
 
   const getOrderAddress = (raw: any) => {
-    if (!raw) return "Endereço não informado";
-    if (typeof raw !== "string") return raw.formatted_address || raw.address || "Endereço";
+    if (!raw) return "EndereÃ§o nÃ£o informado";
+    if (typeof raw !== "string") return raw.formatted_address || raw.address || "EndereÃ§o";
     
     let clean = raw.split("| ITENS:")[0].split("| OBS:")[0].trim();
     try {
@@ -1767,7 +1822,7 @@ function App() {
       selectedItem?.merchant_name ||
       "time Izi";
 
-    return `Olá! Aqui é ${contactName}. Como posso ajudar com seu pedido?`;
+    return `OlÃ¡! Aqui Ã© ${contactName}. Como posso ajudar com seu pedido?`;
   };
 
   const openOrderChat = (topic?: string) => {
@@ -1804,17 +1859,17 @@ function App() {
 
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(`${title}\n${text}`);
-        showToast("Informações copiadas para compartilhar.", "success");
+        showToast("InformaÃ§Ãµes copiadas para compartilhar.", "success");
         return;
       }
     } catch (error: any) {
       if (error?.name !== "AbortError") {
-        showToast("Não foi possível compartilhar agora.", "warning");
+        showToast("NÃ£o foi possÃ­vel compartilhar agora.", "warning");
       }
       return;
     }
 
-    showToast("Compartilhamento não disponível neste dispositivo.", "warning");
+    showToast("Compartilhamento nÃ£o disponÃ­vel neste dispositivo.", "warning");
   };
 
   const handleFavoriteAction = (label: string) => {
@@ -1824,7 +1879,7 @@ function App() {
   const handleCallOrderContact = () => {
     const rawPhone = selectedItem?.driver_phone || selectedItem?.merchant_phone || selectedItem?.phone;
     if (!rawPhone) {
-      openOrderChat("Preciso falar com alguém sobre este pedido");
+      openOrderChat("Preciso falar com alguÃ©m sobre este pedido");
       return;
     }
 
@@ -1834,7 +1889,7 @@ function App() {
 
   useEffect(() => { viewRef.current = view; }, [view]);
   useEffect(() => { tabRef.current = tab; }, [tab]);
-  useEffect(() => { subViewRef.current = subView; }, [subView]);
+  useEffect(() => { navigationSubViewRef.current = subView; }, [subView]);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   useEffect(() => {
@@ -1861,7 +1916,7 @@ function App() {
     };
     fetchPartners();
   }, []);
-  useEffect(() => { subViewRef.current = subView; }, [subView]);
+  useEffect(() => { navigationSubViewRef.current = subView; }, [subView]);
 
       // [Comentario Limpo pelo Sistema]
   useEffect(() => {
@@ -1896,19 +1951,19 @@ function App() {
     window.addEventListener("popstate", handlePopState);
     window.history.replaceState({ view, tab, subView }, "");
 
-    // [NOVO] Handler para o botão voltar físico do dispositivo (Android)
+    // [NOVO] Handler para o botÃ£o voltar fÃ­sico do dispositivo (Android)
     const backHandler = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      console.log("[BACK] Botão voltar físico pressionado. subView atual:", subViewRef.current);
+      console.log("[BACK] BotÃ£o voltar fÃ­sico pressionado. subView atual:", navigationSubViewRef.current);
       
-      if (subViewRef.current !== 'none') {
-        // Se houver uma subView (modal/overlay) aberta, volta no histórico do navegador
+      if (navigationSubViewRef.current !== 'none') {
+        // Se houver uma subView (modal/overlay) aberta, volta no histÃ³rico do navegador
         window.history.back();
       } else if (tabRef.current !== 'home' && viewRef.current === 'app') {
         // Se estiver em outra aba, volta para a home
         setTab('home');
         window.history.replaceState({ view: viewRef.current, tab: 'home', subView: 'none' }, "");
       } else {
-        // Caso contrário, sai do app
+        // Caso contrÃ¡rio, sai do app
         CapacitorApp.exitApp();
       }
     });
@@ -1936,14 +1991,14 @@ function App() {
     const activeShop = selectedShop || (cart.length > 0 ? ESTABLISHMENTS.find(e => e.id === cart[0].merchant_id || e.id === cart[0].store_id) : null);
     if (!activeShop) return 0;
 
-    // 2. Frete Grátis do Lojista (toggle explícito no painel)
+    // 2. Frete GrÃ¡tis do Lojista (toggle explÃ­cito no painel)
     const isExplicitlyFree = activeShop.free_delivery === true || activeShop.freeDelivery === true;
     if (isExplicitlyFree) {
-      console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${activeShop.name}`);
+      console.log(`[DELIVERY] Frete GrÃ¡tis aplicado pela loja: ${activeShop.name}`);
       return 0;
     }
 
-    // 3. IZI Black (Benefício do Usuário)
+    // 3. IZI Black (BenefÃ­cio do UsuÃ¡rio)
     if (isIziBlackMembership) {
        const minOrderIziBlack = Number(appSettings?.iziBlackMinOrderFreeShipping || 0);
        const subtotal = cart.reduce((sum, item: any) => {
@@ -1953,12 +2008,12 @@ function App() {
        }, 0);
        
        if (minOrderIziBlack === 0 || subtotal >= minOrderIziBlack) {
-         console.log(`[DELIVERY] Frete Grátis via Izi Black (Subtotal: R$${subtotal.toFixed(2)} >= Mín: R$${minOrderIziBlack})`);
+         console.log(`[DELIVERY] Frete GrÃ¡tis via Izi Black (Subtotal: R$${subtotal.toFixed(2)} >= MÃ­n: R$${minOrderIziBlack})`);
          return 0;
        }
     }
 
-    // 4. Fallback legado: Frete grátis no item do carrinho
+    // 4. Fallback legado: Frete grÃ¡tis no item do carrinho
     if (cart.length > 0) {
        const first = cart[0];
        if (first.merchant_free_delivery === true || first.free_delivery === true) {
@@ -1966,7 +2021,7 @@ function App() {
        }
     }
 
-    // 5. PADRÃO: Modo Bairros
+    // 5. PADRÃƒO: Modo Bairros
     if (activeShop.coverageMode === 'neighborhoods' && activeShop.zones) {
        const userAddrLower = (userLocation.address || "").toLowerCase();
        const matchedZone = Object.entries(activeShop.zones as Record<string, {active: boolean, price: number}>)
@@ -1978,7 +2033,7 @@ function App() {
        }
     }
 
-    // 6. MODO RAIO — Cálculo proporcional por KM + metros
+    // 6. MODO RAIO â€” CÃ¡lculo proporcional por KM + metros
     const bv = marketConditions.settings.baseValues;
     const surge = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
     
@@ -1995,8 +2050,8 @@ function App() {
     const baseFare  = parseFloat(String(bv[metric.min] ?? fallbackBase));
     const distRate  = parseFloat(String(bv[metric.km] ?? 1.0));
 
-    // --- Cálculo de Distância Real em Tempo Real ---
-    // Usa lat/lng ATUAL do usuário (pode ter mudado depois do primeiro fetch dos lojistas)
+    // --- CÃ¡lculo de DistÃ¢ncia Real em Tempo Real ---
+    // Usa lat/lng ATUAL do usuÃ¡rio (pode ter mudado depois do primeiro fetch dos lojistas)
     let distKm: number;
     const userLat = userLocation.lat;
     const userLng = userLocation.lng;
@@ -2004,7 +2059,7 @@ function App() {
     const shopLng = activeShop.longitude;
 
     if (userLat && userLng && shopLat && shopLng) {
-      // Fórmula de Haversine (resultado em km)
+      // FÃ³rmula de Haversine (resultado em km)
       const R = 6371;
       const dLat = (shopLat - userLat) * (Math.PI / 180);
       const dLon = (shopLng - userLng) * (Math.PI / 180);
@@ -2012,18 +2067,18 @@ function App() {
       const straightLine = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       // Multiplicador de rota real vs linha reta (~30% a mais)
       distKm = straightLine * 1.3;
-      // console.log(`[DELIVERY] Distância calculada em tempo real: ${distKm.toFixed(3)} km (linha reta: ${straightLine.toFixed(3)} km)`);
+      // console.log(`[DELIVERY] DistÃ¢ncia calculada em tempo real: ${distKm.toFixed(3)} km (linha reta: ${straightLine.toFixed(3)} km)`);
     } else {
-      // Fallback: distância pré-computada no carregamento dos lojistas ou padrão
+      // Fallback: distÃ¢ncia prÃ©-computada no carregamento dos lojistas ou padrÃ£o
       distKm = activeShop.distKm || 1.5;
-      // console.warn(`[DELIVERY] GPS do usuário não disponível. Usando distância estimada de ${distKm.toFixed(1)} km`);
+      // console.warn(`[DELIVERY] GPS do usuÃ¡rio nÃ£o disponÃ­vel. Usando distÃ¢ncia estimada de ${distKm.toFixed(1)} km`);
     }
 
-    // Cálculo PROPORCIONAL (sem arredondamento por km)
-    // Ex: 1.3 km → baseFare + 1.3 * distRate (não cobra 2 km inteiros)
+    // CÃ¡lculo PROPORCIONAL (sem arredondamento por km)
+    // Ex: 1.3 km â†’ baseFare + 1.3 * distRate (nÃ£o cobra 2 km inteiros)
     const dynamicCalculated = parseFloat((baseFare + (distRate * distKm * surge)).toFixed(2));
 
-    // Se o lojista tem taxa fixa configurada e NÃO está em modo raio, usa a taxa fixa
+    // Se o lojista tem taxa fixa configurada e NÃƒO estÃ¡ em modo raio, usa a taxa fixa
     const fixedShopFee = activeShop.service_fee !== undefined && activeShop.service_fee !== null && Number(activeShop.service_fee) > 0
       ? Number(activeShop.service_fee)
       : null;
@@ -2040,20 +2095,20 @@ function App() {
   const handlePlaceOrder = async (useCoins = false) => {
 
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
-    if (!userId) { alert("Faça login para continuar."); return; }
-    if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+    if (!userId) { alert("FaÃ§a login para continuar."); return; }
+    if (cart.length === 0) { alert("Seu carrinho estÃ¡ vazio."); return; }
 
-    // Verificação de Estabelecimento Aberto antes de prosseguir
+    // VerificaÃ§Ã£o de Estabelecimento Aberto antes de prosseguir
     const currentShopId = selectedShop?.id || cart[0]?.merchant_id || cart.find(i => i.merchant_id)?.merchant_id || null;
     const shopName = selectedShop?.name || cart[0]?.merchant_name || cart[0]?.store || "Estabelecimento";
     const activeShop = ESTABLISHMENTS.find(e => e.id === currentShopId) || selectedShop;
 
     if (activeShop && !activeShop.isOpen) {
-      toastError(`Desculpe! ${shopName} está fechado no momento e não pode receber este pedido. 🕒`);
+      toastError(`Desculpe! ${shopName} estÃ¡ fechado no momento e nÃ£o pode receber este pedido. ðŸ•’`);
       return;
     }
     
-    setIsUsingCoins(useCoins);
+    setUseCoins(useCoins);
 
     const subtotal = cart.reduce((sum, item) => {
       const basePrice = Number(item.price) || 0;
@@ -2090,7 +2145,7 @@ function App() {
       service_fee: Number(serviceFeeAmount.toFixed(2)),
       items: cart,
       pickup_address: activeShop?.store_address || activeShop?.address || shopName,
-      delivery_address: `${userLocation?.address || "Endereço não informado"}`,
+      delivery_address: `${userLocation?.address || "EndereÃ§o nÃ£o informado"}`,
       payment_method: paymentMethod,
       service_type: activeShop?.type || "restaurant",
       notes: (paymentMethod === "dinheiro" && changeFor) ? `TROCO PARA: R$ ${changeFor}` : "",
@@ -2100,12 +2155,12 @@ function App() {
     console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, currentShopId });
 
     if (total < 0) {
-       toastError("O valor total do pedido não pode ser negativo.");
+       toastError("O valor total do pedido nÃ£o pode ser negativo.");
        setIsLoading(false);
        return;
     }
 
-    // 1. Verificação Centralizada de Regras de Benefícios (Cupons e Izi Flash)
+    // 1. VerificaÃ§Ã£o Centralizada de Regras de BenefÃ­cios (Cupons e Izi Flash)
     const benefitError = await ensureCartBenefitsAreAvailable();
     if (benefitError) {
       toastError(benefitError);
@@ -2131,7 +2186,7 @@ function App() {
           const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...restOfOrderBase, status: "pendente_pagamento", payment_status: "pending" }).select().single();
           if (insertError) throw insertError;
 
-          // Dedução de Izi Coins se houver desconto aplicado
+          // DeduÃ§Ã£o de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
             const coinValue = globalSettings?.izi_coin_value || 1.0;
             const discountApplied = (iziCoins * coinValue);
@@ -2151,7 +2206,7 @@ function App() {
 
           if (lnErr || !lnData?.payment_request) {
             console.error("LN Error Details:", lnErr, lnData);
-            throw new Error(lnData?.error || "Não foi possível gerar a fatura Bitcoin.");
+            throw new Error(lnData?.error || "NÃ£o foi possÃ­vel gerar a fatura Bitcoin.");
           }
 
           setSelectedItem({ ...order, total_price: total, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
@@ -2163,20 +2218,20 @@ function App() {
             btc_price_brl: lnData.btc_price_brl
           }).eq("id", order.id);
 
-          // O cart NÃO deve ser limpo aqui. Só após o pagamento ser confirmado via Realtime/Webhook
+          // O cart NÃƒO deve ser limpo aqui. SÃ³ apÃ³s o pagamento ser confirmado via Realtime/Webhook
           navigateSubView("lightning_payment");
           return;
         } catch (e: any) {
           console.error("LN Error:", e);
-          alert(`Erro ao iniciar pagamento Bitcoin: ${e.message || "Tente outro método."}`);
+          alert(`Erro ao iniciar pagamento Bitcoin: ${e.message || "Tente outro mÃ©todo."}`);
           return;
         }
       }
 
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
         if (!currentShopId) { 
-          console.error("[CRITICAL] Checkout abortado: merchant_id não encontrado no carrinho nem na loja.", { cart });
-          toastError("Houve um erro técnico: Loja não identificada. Por favor, tente adicionar os itens novamente.");
+          console.error("[CRITICAL] Checkout abortado: merchant_id nÃ£o encontrado no carrinho nem na loja.", { cart });
+          toastError("Houve um erro tÃ©cnico: Loja nÃ£o identificada. Por favor, tente adicionar os itens novamente.");
           setIsLoading(false);
           return; 
         }
@@ -2193,7 +2248,7 @@ function App() {
             return;
           }
 
-          // Dedução de Izi Coins se houver desconto aplicado
+          // DeduÃ§Ã£o de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
             const coinValue = globalSettings?.izi_coin_value || 1.0;
             const discountApplied = (iziCoins * coinValue);
@@ -2208,17 +2263,21 @@ function App() {
 
           setSelectedItem(order);
           
-          // Limpeza do carrinho em bloco try/catch isolado para não afetar a criação com sucesso
+          // Limpeza do carrinho em bloco try/catch isolado para nÃ£o afetar a criaÃ§Ã£o com sucesso
           try {
             if (cart.length > 0) await clearCart(order.id);
           } catch (clearErr) {
-            console.warn("Aviso: Carrinho não foi limpo, mas pedido foi criado:", clearErr);
+            console.warn("Aviso: Carrinho nÃ£o foi limpo, mas pedido foi criado:", clearErr);
           }
+
+          setIsLoading(false);
+          navigateSubView("waiting_merchant");
+          return;
 
           navigateSubView("waiting_merchant");
         } catch (dbErr) {
           console.error("DB Error:", dbErr);
-          toastError("Erro de conexão. Verifique sua rede.");
+          toastError("Erro de conexÃ£o. Verifique sua rede.");
           setIsLoading(false);
         }
         return;
@@ -2262,15 +2321,15 @@ function App() {
            }
         }
 
-        // 2. Debitar no Banco de Dados PRIMEIRO (Garantia de Cobrança)
+        // 2. Debitar no Banco de Dados PRIMEIRO (Garantia de CobranÃ§a)
         const { error: updateErr } = await supabase.from("users_delivery").update({ 
           wallet_balance: Number(tempNewWalletBalance.toFixed(2)),
           izi_coins: Number(tempNewIziCoins.toFixed(8))
         }).eq("id", userId);
 
         if (updateErr) {
-          console.error("Erro crítico ao debitar saldo:", updateErr);
-          throw new Error("Não foi possível processar o débito na sua carteira. Tente novamente.");
+          console.error("Erro crÃ­tico ao debitar saldo:", updateErr);
+          throw new Error("NÃ£o foi possÃ­vel processar o dÃ©bito na sua carteira. Tente novamente.");
         }
 
         // 3. Criar o pedido com status pago
@@ -2281,7 +2340,7 @@ function App() {
           .single();
 
         if (orderErr || !order) {
-           // ESTORNO SE FALHAR A CRIAÇÃO DO PEDIDO
+           // ESTORNO SE FALHAR A CRIAÃ‡ÃƒO DO PEDIDO
            await supabase.from("users_delivery").update({ 
              wallet_balance: walletBalance,
              izi_coins: iziCoins
@@ -2289,7 +2348,7 @@ function App() {
            throw orderErr || new Error("Erro ao criar pedido. Seu saldo foi estornado.");
         }
 
-        // 4. Registrar no histórico e atualizar estado local
+        // 4. Registrar no histÃ³rico e atualizar estado local
         await supabase.from("wallet_transactions_delivery").insert({
           user_id: userId,
           type: "pagamento",
@@ -2315,7 +2374,7 @@ function App() {
               return;
            }
 
-           // Dedução de Izi Coins se houver desconto aplicado
+           // DeduÃ§Ã£o de Izi Coins se houver desconto aplicado
            if (useCoins && iziCoins > 0) {
              const coinValue = globalSettings?.izi_coin_value || 1.0;
              const discountApplied = (iziCoins * coinValue);
@@ -2398,7 +2457,7 @@ const navigateSubView = (target: string) => {
     return () => { supabase.removeChannel(channel); };
   }, [selectedItem?.driver_id]);
   
-  // Sincronização em tempo real do status do pedido para o cliente
+  // SincronizaÃ§Ã£o em tempo real do status do pedido para o cliente
   useEffect(() => {
     if (!selectedItem?.id) return;
 
@@ -2435,7 +2494,7 @@ const navigateSubView = (target: string) => {
            setSelectedItem(payload.new);
         }
 
-        // Atualizar lista de pedidos também se o usuário estiver logado
+        // Atualizar lista de pedidos tambÃ©m se o usuÃ¡rio estiver logado
         if (userId) fetchOrders();
       })
       .subscribe();
@@ -2458,7 +2517,7 @@ const navigateSubView = (target: string) => {
     receiverName: "",
     receiverPhone: "",
     packageDesc: "",
-    weightClass: "Pequeno (até 5kg)",
+    weightClass: "Pequeno (atÃ© 5kg)",
     // Novos campos para Frete e Van
     vehicleCategory: "Fiorino",
     helpers: 0,
@@ -2520,15 +2579,15 @@ const navigateSubView = (target: string) => {
     // 1. Garantir que manualOpen seja tratado corretamente (default true se null)
     const isManualOpen = manualOpen !== false;
 
-    // 2. Prioridade Máxima: Botão de Override Manual (is_open)
+    // 2. Prioridade MÃ¡xima: BotÃ£o de Override Manual (is_open)
     // Se o lojista DESLIGOU a loja manualmente, ela fica FECHADA independente do modo.
     if (isManualOpen === false) return false;
 
-    // 3. Se o modo for 'manual' e o botão estiver ligado (true), a loja está ABERTA.
+    // 3. Se o modo for 'manual' e o botÃ£o estiver ligado (true), a loja estÃ¡ ABERTA.
     if (mode === 'manual') return isManualOpen === true;
 
-    // 4. Modo Automático: Segue o horário programado
-    // Se não houver horários configurados, assume que está aberta se isManualOpen for true.
+    // 4. Modo AutomÃ¡tico: Segue o horÃ¡rio programado
+    // Se nÃ£o houver horÃ¡rios configurados, assume que estÃ¡ aberta se isManualOpen for true.
     if (!openingHours || Object.keys(openingHours).length === 0) return isManualOpen;
 
     const now = new Date();
@@ -2550,12 +2609,12 @@ const navigateSubView = (target: string) => {
       const openInMinutes = openH * 60 + openM;
       let closeInMinutes = closeH * 60 + closeM;
 
-      // Suporte para Horário que vira a noite (Ex: 18:00 até 02:00)
+      // Suporte para HorÃ¡rio que vira a noite (Ex: 18:00 atÃ© 02:00)
       if (closeInMinutes < openInMinutes) {
         return nowInMinutes >= openInMinutes || nowInMinutes <= closeInMinutes;
       }
 
-      // Caso especial: 24h (00:00 às 00:00 ou 00:00 às 23:59)
+      // Caso especial: 24h (00:00 Ã s 00:00 ou 00:00 Ã s 23:59)
       if (openInMinutes === closeInMinutes && openInMinutes === 0) return true;
 
       return nowInMinutes >= openInMinutes && nowInMinutes <= closeInMinutes;
@@ -2594,7 +2653,7 @@ const navigateSubView = (target: string) => {
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
       };
 
-      // Blindagem: Busca de itens em promoção via Fetch Direto
+      // Blindagem: Busca de itens em promoÃ§Ã£o via Fetch Direto
       const getPromoItems = async () => {
         try {
           const sUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -2603,7 +2662,7 @@ const navigateSubView = (target: string) => {
             headers: { 'apikey': sKey, 'Authorization': `Bearer ${sKey}` }
           });
           if (res.ok) return await res.json();
-        } catch (e) { console.error("[PROMO] Erro na blindagem de promoções:", e); }
+        } catch (e) { console.error("[PROMO] Erro na blindagem de promoÃ§Ãµes:", e); }
         return [];
       };
 
@@ -2612,7 +2671,7 @@ const navigateSubView = (target: string) => {
 
       const promoMerchantIds = new Set(
         promoItems
-          ?.filter(p => (p.name || "").toLowerCase().includes("oferta especial") || (p.description || "").toLowerCase().includes("promoção"))
+          ?.filter(p => (p.name || "").toLowerCase().includes("oferta especial") || (p.description || "").toLowerCase().includes("promoÃ§Ã£o"))
           .map(p => p.merchant_id) || []
       );
       
@@ -2623,7 +2682,7 @@ const navigateSubView = (target: string) => {
           let distKm = 1.5; // fallback
           if (userLocation.lat && userLocation.lng && m.latitude && m.longitude) {
             distKm = getDistanceKm(userLocation.lat, userLocation.lng, m.latitude, m.longitude);
-            // Multiplique por 1.3 por causa de conversão (distância de ruas vs linha reta)
+            // Multiplique por 1.3 por causa de conversÃ£o (distÃ¢ncia de ruas vs linha reta)
             distKm = distKm * 1.3;
           }
           
@@ -2650,7 +2709,7 @@ const navigateSubView = (target: string) => {
             freeDelivery: !!m.free_delivery,
             free_delivery: !!m.free_delivery,
             service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : null),
-            fee: m.free_delivery ? "Grátis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
+            fee: m.free_delivery ? "GrÃ¡tis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
             latitude: m.latitude,
             longitude: m.longitude,
             coverageMode: m.delivery_coverage_mode || 'radius',
@@ -2673,11 +2732,11 @@ const navigateSubView = (target: string) => {
 
     // AI Dynamic Suggestions Cycle
     const aiTips = [
-      "Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
-      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃÆ’Â°Ãâ€¦Â¸Ãâ€šÂ Ãâ€šÂ»",
-      "Baseado no seu histórico, você costuma pedir em mercados ÃÆ’ s 19h. Deseja agendar suas compras?",
-      "O trÃÂ¢nsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
-      "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
+      "Percebi que vocÃª gosta de culinÃ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?",
+      "Hoje Ã© sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃƒÃ†â€™Ã‚Â°ÃƒÃ¢â‚¬Â¦Ã‚Â¸ÃƒÃ¢â‚¬Å¡Ã‚ ÃƒÃ¢â‚¬Å¡Ã‚Â»",
+      "Baseado no seu histÃ³rico, vocÃª costuma pedir em mercados ÃƒÃ†â€™ s 19h. Deseja agendar suas compras?",
+      "O trÃƒÃ‚Â¢nsito estÃ¡ pesado hoje. Sugiro usar o MototÃ¡xi para chegar mais rÃ¡pido ao seu destino.",
+      "VocÃª estÃ¡ a apenas 250 XP de subir para o nÃ­vel 13! Que tal um pedido extra hoje?"
     ];
     let index = 0;
     const interval = setInterval(() => {
@@ -2732,7 +2791,7 @@ const navigateSubView = (target: string) => {
     };
   }, [fetchRealEstablishments, isStoreOpen]);
 
-  // Sincronizar selectedShop com ESTABLISHMENTS para feedback instantâneo no Menu
+  // Sincronizar selectedShop com ESTABLISHMENTS para feedback instantÃ¢neo no Menu
   useEffect(() => {
     if (selectedShop && subView === "restaurant_menu") {
       const updated = ESTABLISHMENTS.find(e => e.id === selectedShop.id);
@@ -2769,7 +2828,7 @@ const navigateSubView = (target: string) => {
   
 
 
-  // Sincroniza o selectedItem com as atualizações em tempo real
+  // Sincroniza o selectedItem com as atualizaÃ§Ãµes em tempo real
   useEffect(() => {
     if (selectedItem?.id) {
       const updated = orders.find(o => o.id === selectedItem.id);
@@ -2780,7 +2839,7 @@ const navigateSubView = (target: string) => {
   }, [orders]);
 
   // Atualiza automaticamente as telas PIX/Lightning se o pagamento for confirmado em tempo real
-  // Usa selectedItem.id (não o objeto inteiro) como dependência para evitar loops de re-render
+  // Usa selectedItem.id (nÃ£o o objeto inteiro) como dependÃªncia para evitar loops de re-render
   useEffect(() => {
     if ((subView !== "pix_payment" && subView !== "lightning_payment")) return;
     if (!selectedItem?.id || selectedItem.id === "temp") return;
@@ -2800,8 +2859,8 @@ const navigateSubView = (target: string) => {
         setSubView("none");
         setTab("orders");
       }
-      toastSuccess("Pagamento Confirmado! 🎉");
-      return; // Sair imediatamente para não processar o bloco abaixo
+      toastSuccess("Pagamento Confirmado! ðŸŽ‰");
+      return; // Sair imediatamente para nÃ£o processar o bloco abaixo
     }
 
     // PRIORIDADE 2: Pedido cancelado/recusado enquanto aguardando pagamento
@@ -2830,14 +2889,14 @@ const navigateSubView = (target: string) => {
       setSelectedItem((prev: any) => ({ ...prev, ...liveOrder }));
     }
 
-    // Se pedido concluído, atualiza UI
+    // Se pedido concluÃ­do, atualiza UI
     if (liveOrder.status === "concluido") {
-      toastSuccess("Entrega concluída com sucesso! 🎉");
+      toastSuccess("Entrega concluÃ­da com sucesso! ðŸŽ‰");
     }
 
     // Se cancelado
     if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
-      toastError("Serviço cancelado.");
+      toastError("ServiÃ§o cancelado.");
     }
   }, [orders, subView, selectedItem?.id, selectedItem?.status, selectedItem?.driver_id]);
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
@@ -2869,14 +2928,14 @@ const navigateSubView = (target: string) => {
     isManual?: boolean;
   }>(() => {
     return {
-      address: "Buscando satélite...",
+      address: "Buscando satÃ©lite...",
       loading: true,
       lat: null,
       lng: null
     };
   });
 
-  // Taxa de entrega REATIVA — recalcula quando GPS, carrinho, lojista ou membership mudam.
+  // Taxa de entrega REATIVA â€” recalcula quando GPS, carrinho, lojista ou membership mudam.
 
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
   const [changeFor, setChangeFor] = useState("");
@@ -2935,7 +2994,7 @@ const navigateSubView = (target: string) => {
     }
   });
 
-  // Taxa de entrega REATIVA — recalcula quando GPS, carrinho, lojista, membership ou surge mudam.
+  // Taxa de entrega REATIVA â€” recalcula quando GPS, carrinho, lojista, membership ou surge mudam.
   const currentDeliveryFee = useMemo(
     () => calculateDeliveryFee(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2964,7 +3023,7 @@ const navigateSubView = (target: string) => {
   }, []);
 
   const dynamicFoodCategories = useMemo(() => {
-    // Categorias Master que compõem o ecossistema de "Food"
+    // Categorias Master que compÃµem o ecossistema de "Food"
     const foodMasterValues = ['restaurant', 'candy', 'comida'];
     const foodMasterParents = establishmentTypes.filter(t => foodMasterValues.includes(t.value) && !t.parent_id);
     const foodMasterIds = foodMasterParents.map(p => p.id);
@@ -2974,7 +3033,7 @@ const navigateSubView = (target: string) => {
 
     const base = [
       { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-      { id: "promocoes",  name: "Promoções",     icon: "percent",       action: () => { setRestaurantInitialCategory("Promoções"); navigateSubView("explore_restaurants"); } },
+      { id: "promocoes",  name: "PromoÃ§Ãµes",     icon: "percent",       action: () => { setRestaurantInitialCategory("PromoÃ§Ãµes"); navigateSubView("explore_restaurants"); } },
     ];
 
     const dynamic = specialties.map(s => ({
@@ -2984,14 +3043,14 @@ const navigateSubView = (target: string) => {
       action: () => { setRestaurantInitialCategory(s.value); navigateSubView("explore_restaurants"); }
     }));
 
-    // Fallback se não houver dinâmicas ainda
+    // Fallback se nÃ£o houver dinÃ¢micas ainda
     if (dynamic.length === 0) {
       return [
         ...base,
         { id: "burguer",    name: "Burguer",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("burguer"); navigateSubView("explore_restaurants"); } },
         { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("pizza"); navigateSubView("explore_restaurants"); } },
         { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("doces"); navigateSubView("explore_restaurants"); } },
-        { id: "japones",    name: "Japonês",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("japones"); navigateSubView("explore_restaurants"); } },
+        { id: "japones",    name: "JaponÃªs",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("japones"); navigateSubView("explore_restaurants"); } },
       ];
     }
 
@@ -3000,7 +3059,7 @@ const navigateSubView = (target: string) => {
 
   const lunchCategories = [
     { id: "all",     name: "Todos",           icon: "restaurant" },
-    { id: "promo",   name: "Promoção do Dia", icon: "percent" },
+    { id: "promo",   name: "PromoÃ§Ã£o do Dia", icon: "percent" },
     { id: "monte",   name: "Monte o seu",     icon: "flatware" },
     { id: "pratos",  name: "Pratos feitos",   icon: "rice_bowl" },
     { id: "marmita", name: "Marmitas",        icon: "lunch_dining" },
@@ -3038,7 +3097,7 @@ const navigateSubView = (target: string) => {
       const now = new Date();
       const hour = now.getHours();
       
-      // Sincronização Real: O clima é definido pelo Admin. Se nenhum estiver ativo, usa lógica temporal.
+      // SincronizaÃ§Ã£o Real: O clima Ã© definido pelo Admin. Se nenhum estiver ativo, usa lÃ³gica temporal.
       let currentWeather = (hour > 18 || hour < 6) ? "Nublado" : "Ensolarado";
       if (config.weather?.storm?.active) currentWeather = "Tempestade";
       else if (config.weather?.rain?.active) currentWeather = "Chuva Leve";
@@ -3051,7 +3110,7 @@ const navigateSubView = (target: string) => {
       // --- LOGICA DE SURGE (%) ---
       let surge = 1.0;
 
-      // 1. Modo Inteligente (Algoritmo de Equilíbrio)
+      // 1. Modo Inteligente (Algoritmo de EquilÃ­brio)
       const { threshold, sensitivity, maxSurge } = config.equilibrium;
       if (config.flowControl?.mode === 'auto') {
         if (ratio > threshold) {
@@ -3063,18 +3122,18 @@ const navigateSubView = (target: string) => {
       if (currentWeather === "Tempestade" && config.weather?.storm?.active) surge += (config.weather.storm.multiplier - 1);
       if (currentWeather === "Chuva Leve" && config.weather?.rain?.active) surge += (config.weather.rain.multiplier - 1);
       
-      // 3. Regras de Horário de Pico (Peak Hours do Admin)
+      // 3. Regras de HorÃ¡rio de Pico (Peak Hours do Admin)
       config.peakHours.forEach((rule: any) => {
         if (rule.active) {
             // No momento usamos apenas multiplicador global se houver, mas podemos expandir para labels
-            // Ex: "Acréscimo Noturno"
+            // Ex: "AcrÃ©scimo Noturno"
             surge += (rule.multiplier - 1);
         }
       });
 
-      // 4. Overrides do Admin (Surge Crítico)
+      // 4. Overrides do Admin (Surge CrÃ­tico)
       if (config.flowControl?.highDemandActive) {
-        surge = Math.max(surge, 1.5); // Força pelo menos 1.5x
+        surge = Math.max(surge, 1.5); // ForÃ§a pelo menos 1.5x
       }
 
       const finalSurge = Math.max(1.0, Math.min(maxSurge || 4.0, surge));
@@ -3152,14 +3211,14 @@ const navigateSubView = (target: string) => {
             const route = data.routes[0];
             const distKm = (route.distanceMeters || 0) / 1000;
             
-            // Converter duração (string "123s") para minutos
+            // Converter duraÃ§Ã£o (string "123s") para minutos
             const durationSeconds = route.duration ? parseInt(route.duration.replace('s', '')) : 0;
             const durationMin = Math.ceil(durationSeconds / 60);
             
             const distText = distKm.toFixed(1).replace('.', ',') + " km";
             const durationText = durationMin + " min";
             
-            setRouteDistance(`${distText} • ${durationText}`);
+            setRouteDistance(`${distText} â€¢ ${durationText}`);
             setDistanceValueKm(distKm);
 
             // Decodificar Polyline para exibir no mapa
@@ -3169,7 +3228,7 @@ const navigateSubView = (target: string) => {
               setRoutePolyline(points as any);
             }
 
-            // Continuar com o cálculo de preços (que usa distKm e marketConditions já no escopo pai)
+            // Continuar com o cÃ¡lculo de preÃ§os (que usa distKm e marketConditions jÃ¡ no escopo pai)
             processPrices(distKm);
           }
         } catch (err) {
@@ -3194,7 +3253,7 @@ const navigateSubView = (target: string) => {
         const van_km         = parseFloat(String(bv.van_km))         || 8.0;
         const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
             
-        // Preços base para Utilitário (Izi Envios) vindos da seção Shipping Priorities
+        // PreÃ§os base para UtilitÃ¡rio (Izi Envios) vindos da seÃ§Ã£o Shipping Priorities
         const priorities = marketConditions.settings?.shippingPriorities || {};
         const scheduledCfg = priorities.scheduled || { min_fee: 15, km_fee: 1 };
         const normalCfg    = priorities.normal    || { min_fee: 10, km_fee: 1 };
@@ -3207,7 +3266,7 @@ const navigateSubView = (target: string) => {
             const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
             const logistica_int  = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
 
-            // Logística Customizada por Veículo (Resiliência de chaves snake_case e camelCase)
+            // LogÃ­stica Customizada por VeÃ­culo (ResiliÃªncia de chaves snake_case e camelCase)
             const getVal = (k1: string, k2: string, fallback: number) => {
               const v = bv[k1] || bv[k2];
               return v ? parseFloat(String(v)) : fallback;
@@ -3230,7 +3289,7 @@ const navigateSubView = (target: string) => {
               van:        parseFloat(((van_min        + (van_km        * (distKm / van_int)))        * surge).toFixed(2)),
               utilitario: parseFloat(((utilitario_min + (utilitario_km * distKm)) * surge).toFixed(2)),
               logistica:  parseFloat(((logistica_min  + (logistica_km  * (distKm / logistica_int)))  * surge).toFixed(2)),
-              // Preços específicos de logística - Agora puramente Lineares (KM * Distância)
+              // PreÃ§os especÃ­ficos de logÃ­stica - Agora puramente Lineares (KM * DistÃ¢ncia)
               fiorino:    parseFloat(((fiorino_min + (fiorino_km * distKm)) * surge).toFixed(2)),
               bau_p:      parseFloat(((bau_p_min   + (bau_p_km   * distKm)) * surge).toFixed(2)),
               bau_m:      parseFloat(((bau_m_min   + (bau_m_km   * distKm)) * surge).toFixed(2)),
@@ -3240,7 +3299,7 @@ const navigateSubView = (target: string) => {
             };
             setDistancePrices(newPrices);
             setTransitData(prev => {
-              // 1. Wizard de Logística/Frete
+              // 1. Wizard de LogÃ­stica/Frete
               if ((prev.type === 'logistica' || prev.type === 'frete') && prev.vehicleCategory) {
                 return prev;
               }
@@ -3288,11 +3347,11 @@ const navigateSubView = (target: string) => {
       return;
     }
     if (!transitData.destination) {
-      toastError("Defina o endereço de entrega");
+      toastError("Defina o endereÃ§o de entrega");
       return;
     }
     if (!transitData.receiverName) {
-      toastError("Informe o nome do destinatário");
+      toastError("Informe o nome do destinatÃ¡rio");
       return;
     }
     if (!transitData.receiverPhone) {
@@ -3308,7 +3367,7 @@ const navigateSubView = (target: string) => {
 
   const handleConfirmMobility = async (paymentMethod: string) => {
     if (!userId) {
-      toastWarning("Faça login para continuar");
+      toastWarning("FaÃ§a login para continuar");
       setView("login");
       return;
     }
@@ -3334,10 +3393,10 @@ const navigateSubView = (target: string) => {
             "Fiorino": { min: 'fiorino_min', km: 'fiorino_km', int: 'fiorino_km_interval' },
             "Van Carga": { min: 'van_min', km: 'van_km', int: 'van_km_interval' },
             "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km', int: 'caminhonete_km_interval' },
-            "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km', int: 'bau_p_km_interval' },
-            "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km', int: 'bau_m_km_interval' },
-            "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km', int: 'bau_g_km_interval' },
-            "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km', int: 'aberto_km_interval' }
+            "CaminhÃ£o BaÃº Pequeno": { min: 'bau_p_min', km: 'bau_p_km', int: 'bau_p_km_interval' },
+            "CaminhÃ£o BaÃº MÃ©dio": { min: 'bau_m_min', km: 'bau_m_km', int: 'bau_m_km_interval' },
+            "CaminhÃ£o BaÃº Grande": { min: 'bau_g_min', km: 'bau_g_km', int: 'bau_g_km_interval' },
+            "CaminhÃ£o Aberto": { min: 'aberto_min', km: 'aberto_km', int: 'aberto_km_interval' }
           };
 
           const configKeys = vehicleConfigs[transitData.vehicleCategory];
@@ -3354,10 +3413,10 @@ const navigateSubView = (target: string) => {
                 "Fiorino": 1.0,
                 "Van Carga": 1.0,
                 "Caminhonete": 1.25,
-                "Caminhão Baú Pequeno": 1.6,
-                "Caminhão Baú Médio": 2.2,
-                "Caminhão Baú Grande": 3.5,
-                "Caminhão Aberto": 1.9,
+                "CaminhÃ£o BaÃº Pequeno": 1.6,
+                "CaminhÃ£o BaÃº MÃ©dio": 2.2,
+                "CaminhÃ£o BaÃº Grande": 3.5,
+                "CaminhÃ£o Aberto": 1.9,
               };
               const multiplier = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
               baseFare *= multiplier;
@@ -3381,28 +3440,28 @@ const navigateSubView = (target: string) => {
           distanceInKm: Math.ceil((distanceValueKm || 1) / van_int),
           distanceRate: parseFloat(String(bv.van_km || 8)) * surgeMultiplier,
           stopCount: transitData.stops?.length || 0,
-          stopRate: 15, // Mover para settings se necessário
+          stopRate: 15, // Mover para settings se necessÃ¡rio
           isDaily: transitData.tripType === 'hourly',
           hours: 4,
           hourlyRate: 45
        }).totalPrice;
     } else {
-      // Para outros tipos (mototaxi, carro, utilitario), usamos o preço já calculado no preview
-      // que agora também é aditivo por padrão.
+      // Para outros tipos (mototaxi, carro, utilitario), usamos o preÃ§o jÃ¡ calculado no preview
+      // que agora tambÃ©m Ã© aditivo por padrÃ£o.
       const rawP = distancePrices[transitData.type];
       finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6.90) : rawP;
     }
     
-    // Inserindo lógica de prioridade de envio (Turbo, Light, etc)
+    // Inserindo lÃ³gica de prioridade de envio (Turbo, Light, etc)
     const priorityId = transitData.priority;
     const priorityConfig = marketConditions.settings?.shippingPriorities?.[priorityId as keyof typeof marketConditions.settings.shippingPriorities];
     
     if (priorityConfig && priorityConfig.active) {
       if ((priorityConfig as any).km_fee > 0) {
-        // Cálculo independente por prioridade (Base + KM * Distância)
+        // CÃ¡lculo independente por prioridade (Base + KM * DistÃ¢ncia)
         finalPrice = (priorityConfig.min_fee || 0) + ((priorityConfig as any).km_fee * distanceValueKm);
       } else {
-        // Cálculo baseado em multiplicador (Legado)
+        // CÃ¡lculo baseado em multiplicador (Legado)
         finalPrice *= (priorityConfig.multiplier || 1.0);
         if (finalPrice < (priorityConfig.min_fee || 0)) {
           finalPrice = priorityConfig.min_fee;
@@ -3433,14 +3492,14 @@ const navigateSubView = (target: string) => {
         pickup_address: typeof transitData.origin === 'object' ? (transitData.origin.address || transitData.origin.formatted_address) : transitData.origin,
         delivery_address: `${typeof transitData.destination === 'object' ? (transitData.destination.formatted_address || transitData.destination.address || JSON.stringify(transitData.destination)) : transitData.destination} | OBS: ${
           transitData.type === 'van'
-            ? `EXCURSÃO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}. ${transitData.excursionData.notes || ''}`
+            ? `EXCURSÃƒO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}. ${transitData.excursionData.notes || ''}`
             : (transitData.type === 'logistica' || transitData.type === 'frete')
               ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes. ${
-                  (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'Necessário subir ESCADAS.' : 'Sem escadas.'
+                  (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'NecessÃ¡rio subir ESCADAS.' : 'Sem escadas.'
                 }`
               : isShipping
                 ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-                : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`
+                : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTÃ¡xi' : 'Particular'})`
         }`,
         payment_method: paymentMethod,
         payment_status: initialPaymentStatus,
@@ -3448,7 +3507,7 @@ const navigateSubView = (target: string) => {
         route_polyline: routePolyline
       };
 
-      // Lógica de Débito de Saldo (Ocorrerá ANTES da criação do pedido para garantir atomicidade)
+      // LÃ³gica de DÃ©bito de Saldo (OcorrerÃ¡ ANTES da criaÃ§Ã£o do pedido para garantir atomicidade)
       let finalNewIziCoins = iziCoins;
       let finalNewWalletBalance = walletBalance;
 
@@ -3480,15 +3539,15 @@ const navigateSubView = (target: string) => {
           remainingToPay = 0;
         }
 
-        // Executar o débito no banco ANTES de criar o pedido
+        // Executar o dÃ©bito no banco ANTES de criar o pedido
         const { error: updateErr } = await supabase.from("users_delivery").update({ 
           wallet_balance: Number(tempNewWalletBalance.toFixed(2)),
           izi_coins: Number(tempNewIziCoins.toFixed(8))
         }).eq("id", userId);
 
         if (updateErr) {
-          console.error("Erro crítico ao debitar saldo:", updateErr);
-          throw new Error("Não foi possível processar o débito na sua carteira. Tente novamente.");
+          console.error("Erro crÃ­tico ao debitar saldo:", updateErr);
+          throw new Error("NÃ£o foi possÃ­vel processar o dÃ©bito na sua carteira. Tente novamente.");
         }
 
         finalNewIziCoins = tempNewIziCoins;
@@ -3509,7 +3568,7 @@ const navigateSubView = (target: string) => {
         throw insertError || new Error("Falha ao criar registro do pedido");
       }
 
-      // 2. Lógica de Pós-Débito (Registrar transação e atualizar estado local)
+      // 2. LÃ³gica de PÃ³s-DÃ©bito (Registrar transaÃ§Ã£o e atualizar estado local)
       if (paymentMethod === "saldo") {
         setWalletBalance(finalNewWalletBalance);
         setIziCoins(finalNewIziCoins);
@@ -3518,7 +3577,7 @@ const navigateSubView = (target: string) => {
           user_id: userId,
           type: "pagamento",
           amount: finalPrice,
-          description: `Serviço #${order.id.slice(0, 6).toUpperCase()}: ${transitData.type}`,
+          description: `ServiÃ§o #${order.id.slice(0, 6).toUpperCase()}: ${transitData.type}`,
           balance_after: finalNewWalletBalance
         });
       }
@@ -3591,7 +3650,7 @@ const navigateSubView = (target: string) => {
       }
     } catch (err: any) {
       console.error("Erro no fluxo de mobilidade:", err);
-      toastError("Não foi possível criar seu pedido: " + err.message);
+      toastError("NÃ£o foi possÃ­vel criar seu pedido: " + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -3639,15 +3698,15 @@ const navigateSubView = (target: string) => {
     }
   }, [subView, userLocation.address]);
 
-  // Capturar localização atual obrigatoriamente ao entrar em fluxos de mobilidade/logística
+  // Capturar localizaÃ§Ã£o atual obrigatoriamente ao entrar em fluxos de mobilidade/logÃ­stica
   useEffect(() => {
     const mobilityWizardViews = ["taxi_wizard", "freight_wizard", "van_wizard", "excursion_wizard", "transit_selection"];
     if (mobilityWizardViews.includes(subView)) {
-      updateLocation(); // Garante atualização real e recente
+      updateLocation(); // Garante atualizaÃ§Ã£o real e recente
     }
   }, [subView]);
 
-  // Definir tipo de serviço correto ao entrar no FreightWizard
+  // Definir tipo de serviÃ§o correto ao entrar no FreightWizard
   useEffect(() => {
     if (subView === "freight_wizard") {
       setTransitData(prev => ({ ...prev, type: "frete" }));
@@ -3713,7 +3772,7 @@ const navigateSubView = (target: string) => {
   };
 
   const renderExploreRestaurants = () => {
-    const isLunchMode = restaurantInitialCategory === "Almoço";
+    const isLunchMode = restaurantInitialCategory === "AlmoÃ§o";
     
     return (
       <ExploreRestaurantsView 
@@ -3746,8 +3805,8 @@ const navigateSubView = (target: string) => {
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Cardápios do Dia</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">Sugestões Especiais</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">CardÃ¡pios do Dia</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">SugestÃµes Especiais</p>
               </div>
             </div>
           </div>
@@ -3756,7 +3815,7 @@ const navigateSubView = (target: string) => {
         <main className="p-6 space-y-10 pt-8">
            <div className="bg-pink-500/5 p-8 rounded-[45px] border border-pink-500/10 mb-2">
              <h2 className="text-lg font-black text-pink-600  mb-2 leading-none uppercase tracking-tighter">Ofertas de Hoje</h2>
-             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preços exclusivos para hoje.</p>
+             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preÃ§os exclusivos para hoje.</p>
            </div>
 
            <div className="grid grid-cols-2 gap-4">
@@ -3817,7 +3876,7 @@ const navigateSubView = (target: string) => {
         off: f.original_price && f.discounted_price 
           ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
           : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-        desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\nðŸ“Œ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
+        desc: (f.description || 'Oferta imperdÃ­vel por tempo limitado!') + `\n\nÃ°Å¸â€œÅ’ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
       })) : [];
     }
 
@@ -3944,15 +4003,15 @@ const navigateSubView = (target: string) => {
 
     const categoryIcons: Record<string, string> = {
       "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
-      "Farmácia": "local_pharmacy", "Mercado": "local_mall",
-      "Gás & Ã gua": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Izi Envios": "package_2"
+      "FarmÃ¡cia": "local_pharmacy", "Mercado": "local_mall",
+      "GÃ¡s & Ãƒ gua": "propane_tank", "AÃ§ougue": "kebab_dining", "Padaria": "bakery_dining", "Izi Envios": "package_2"
     };
     const icon = categoryIcons[title] || "storefront";
 
     return (
       <EstablishmentListView
         title={title}
-        subtitle="Disponível agora"
+        subtitle="DisponÃ­vel agora"
         icon={icon}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -3994,8 +4053,8 @@ const navigateSubView = (target: string) => {
 
   const renderPharmacyList = () => (
     <EstablishmentListView
-      title="Farmácias"
-      subtitle="Saúde e bem-estar"
+      title="FarmÃ¡cias"
+      subtitle="SaÃºde e bem-estar"
       icon="local_pharmacy"
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
@@ -4011,8 +4070,8 @@ const navigateSubView = (target: string) => {
 
   const renderAllPharmacies = () => (
     <EstablishmentListView
-      title="Todas as Farmácias"
-      subtitle="Unidades Próximas"
+      title="Todas as FarmÃ¡cias"
+      subtitle="Unidades PrÃ³ximas"
       icon="local_pharmacy"
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
@@ -4056,7 +4115,7 @@ const navigateSubView = (target: string) => {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Ofertas Geladas</h1>
-            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">Seleção Premium de Ofertas</p>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">SeleÃ§Ã£o Premium de Ofertas</p>
           </div>
           <button onClick={() => navigateSubView("cart")} className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
             <Icon name="shopping_bag" />
@@ -4142,7 +4201,7 @@ const navigateSubView = (target: string) => {
   };
 
   const renderFlashOffersList = () => {
-    // Re-computar activeStories similar ao HomeView para consistência
+    // Re-computar activeStories similar ao HomeView para consistÃªncia
     const activeStorieslist = (flashOffers || [])
       .filter((offer: any) => offer.title !== "Oferta Especial")
       .map((offer: any) => {
@@ -4208,7 +4267,7 @@ const navigateSubView = (target: string) => {
   const renderLightningPayment = () => {
     const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
     
-    // Normalização agressiva de cotação
+    // NormalizaÃ§Ã£o agressiva de cotaÃ§Ã£o
     const btcPrice = Number(
       selectedItem?.btcPrice || 
       selectedItem?.btc_price_brl || 
@@ -4232,7 +4291,7 @@ const navigateSubView = (target: string) => {
   };
 
   const getServicePresentation = (o: any) => {
-    if (!o) return { label: 'Serviço', icon: 'shopping_bag', color: 'text-yellow-400', glow: 'rgba(250,205,5,0.5)', name: 'Pedido', bg: 'bg-yellow-400/10' };
+    if (!o) return { label: 'ServiÃ§o', icon: 'shopping_bag', color: 'text-yellow-400', glow: 'rgba(250,205,5,0.5)', name: 'Pedido', bg: 'bg-yellow-400/10' };
     const type = o.service_type;
     if (['mototaxi', 'carro', 'van'].includes(type)) {
       return { 
@@ -4255,7 +4314,7 @@ const navigateSubView = (target: string) => {
       };
     }
     return { 
-      label: 'Alimentação',
+      label: 'AlimentaÃ§Ã£o',
       icon: 'restaurant',
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
@@ -4270,7 +4329,7 @@ const navigateSubView = (target: string) => {
     <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
       <div className="size-20 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin mb-6" />
       <h2 className="text-2xl font-black text-white uppercase tracking-tight">Processando Pagamento</h2>
-      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... ⚡</p>
+      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... âš¡</p>
     </div>
   );
 
@@ -4285,7 +4344,7 @@ const navigateSubView = (target: string) => {
       let orderData: any;
 
       if (existingOrderId) {
-        // Atualizar o método de pagamento de um pedido existente
+        // Atualizar o mÃ©todo de pagamento de um pedido existente
         const { data: updated, error: updateError } = await supabase
           .from("orders_delivery")
           .update({
@@ -4454,7 +4513,7 @@ const navigateSubView = (target: string) => {
                   <div className="flex items-center gap-2 mt-1">
                     <div className="size-1.5 rounded-full bg-yellow-400" />
                     <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">
-                      {isFinishingPayment ? "Escolha como pagar" : "Recarga Instantânea"}
+                      {isFinishingPayment ? "Escolha como pagar" : "Recarga InstantÃ¢nea"}
                     </p>
                   </div>
                 </div>
@@ -4474,7 +4533,7 @@ const navigateSubView = (target: string) => {
               <div className="flex-1 overflow-y-auto no-scrollbar px-8 pb-10 space-y-10 relative z-10">
                 {/* Visualizador de Saldo Final */}
                 <section className="relative py-12 rounded-[32px] bg-white/[0.03] border border-white/10 flex flex-col items-center justify-center overflow-hidden">
-                   <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] mb-4">Conversão Prevista</p>
+                   <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] mb-4">ConversÃ£o Prevista</p>
                       <div className="flex items-baseline justify-center">
                          <span className="text-7xl font-black text-white tracking-tighter tabular-nums">
                            {integerPart.toLocaleString('pt-BR')}
@@ -4491,7 +4550,7 @@ const navigateSubView = (target: string) => {
                    </div>
                 </section>
 
-                {/* Seleção de Valores */}
+                {/* SeleÃ§Ã£o de Valores */}
                 {!isFinishingPayment && (
                   <section className="space-y-6">
                     <div className="flex justify-between items-end px-2">
@@ -4544,12 +4603,12 @@ const navigateSubView = (target: string) => {
                   </div>
                 )}
 
-                {/* Métodos de Pagamento */}
+                {/* MÃ©todos de Pagamento */}
                 <section className="space-y-4">
                    <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] px-2">Meio de Pagamento</h3>
                    <div className="grid grid-cols-3 gap-3">
                       {[
-                        { id: 'cartao', icon: 'credit_card', label: 'Cartão' },
+                        { id: 'cartao', icon: 'credit_card', label: 'CartÃ£o' },
                         { id: 'pix', icon: 'pix', label: 'Pix' },
                         { id: 'lightning', icon: 'bolt', label: 'Lightning' }
                       ].map((method) => (
@@ -4582,7 +4641,7 @@ const navigateSubView = (target: string) => {
                     <div className="size-6 border-4 border-black/20 border-t-black rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar Depósito</span>
+                      <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar DepÃ³sito</span>
                       <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
                     </>
                   )}
@@ -4661,7 +4720,7 @@ const navigateSubView = (target: string) => {
       <motion.div key="time-picker-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md flex items-end justify-center p-4">
         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="w-full max-w-[500px] bg-zinc-900 rounded-[40px] border border-white/10 p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-black text-white">Escolha o Horário</h3>
+            <h3 className="text-xl font-black text-white">Escolha o HorÃ¡rio</h3>
             <button onClick={() => setShowTimePicker(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400">
               <span className="material-symbols-outlined">close</span>
             </button>
@@ -4694,7 +4753,7 @@ const navigateSubView = (target: string) => {
 
   const BottomNav = () => {
     const navItems = [
-      { id: "home", icon: "home", label: "Início" },
+      { id: "home", icon: "home", label: "InÃ­cio" },
       { id: "busca", icon: "search", label: "Busca" },
       { id: "wallet", icon: "payments", label: "Izi Pay" },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
@@ -4788,7 +4847,7 @@ const navigateSubView = (target: string) => {
                   <span className="text-2xl font-black text-yellow-400 tracking-tighter">IZI</span>
                 </div>
               </div>
-              <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
+              <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando ExperiÃªncia</p>
             </motion.div>
           )}
 
@@ -4800,6 +4859,26 @@ const navigateSubView = (target: string) => {
 
           {view === "app" && (
             <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen relative overflow-hidden bg-black">
+              
+              {/* Barra Superior Flutuante Minimalista */}
+              <AnimatePresence>
+                {subView === "none" && (
+                  <FloatingHeader 
+                    userAddress={userLocation?.address || ""}
+                    cartLength={cart.length}
+                    onAddressClick={() => setIsAddressDrawerOpen(true)}
+                    onCartClick={() => setSubView("cart")}
+                    onNotificationsClick={() => setSubView("notifications_center")}
+                    hasUnreadNotifications={false}
+                  />
+                )}
+              </AnimatePresence>
+
+              <AddressDrawer 
+                isOpen={isAddressDrawerOpen} 
+                onClose={() => setIsAddressDrawerOpen(false)} 
+              />
+
               <AnimatePresence mode="wait">
                 {tab === "home" && (
                   <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
@@ -5184,6 +5263,18 @@ const navigateSubView = (target: string) => {
                 {["payment_processing", "payment_error", "payment_success", "mobility_payment_success", "pix_payment", "lightning_payment", "card_payment"].includes(subView) && (
                   <motion.div key="payment-flow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
                     <PaymentFlowView />
+                  </motion.div>
+                )}
+
+                {subView === "waiting_payment" && (
+                  <motion.div key="wait_pay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200]">
+                    <OrderWaitingView type="payment" />
+                  </motion.div>
+                )}
+
+                {subView === "waiting_merchant" && (
+                  <motion.div key="wait_merch" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200]">
+                    <OrderWaitingView type="merchant" />
                   </motion.div>
                 )}
 

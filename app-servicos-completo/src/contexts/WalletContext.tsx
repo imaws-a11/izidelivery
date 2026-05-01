@@ -11,6 +11,8 @@ interface WalletContextData {
   walletTransactions: any[];
   isLoadingWallet: boolean;
   fetchWalletData: () => Promise<void>;
+  setUserXP: React.Dispatch<React.SetStateAction<number>>;
+  setIziCoins: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const WalletContext = createContext<WalletContextData>({} as WalletContextData);
@@ -134,7 +136,9 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       isIziBlackMembership,
       walletTransactions,
       isLoadingWallet,
-      fetchWalletData
+      fetchWalletData,
+      setUserXP,
+      setIziCoins
     }}>
       {children}
     </WalletContext.Provider>

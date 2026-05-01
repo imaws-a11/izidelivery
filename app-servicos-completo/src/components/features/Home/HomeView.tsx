@@ -144,20 +144,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
      <div className="relative h-screen bg-zinc-950 overflow-hidden">
        
        {/* 1. HERO CARROSSEL IMERSIVO */}
-       <header className="absolute top-0 inset-x-0 h-[480px] overflow-hidden z-0 bg-zinc-900">
-          <AnimatePresence mode="wait">
-            <motion.img 
-              key={currentHeroIndex}
-              src={heroImages[currentHeroIndex]} 
-              initial={{ opacity: 0, scale: 1.1 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              className="size-full object-cover" 
-              alt="Izi Delivery Hero" 
-            />
-          </AnimatePresence>
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-950" />
+        <header className="absolute top-0 inset-x-0 h-[480px] overflow-hidden z-0 bg-zinc-900">
+           <AnimatePresence mode="popLayout" initial={false}>
+             <motion.img 
+               key={currentHeroIndex}
+               src={heroImages[currentHeroIndex]} 
+               initial={{ x: 300, opacity: 0, scale: 1.1 }}
+               animate={{ x: 0, opacity: 1, scale: 1 }}
+               exit={{ x: -300, opacity: 0 }}
+               transition={{ 
+                 duration: 1, 
+                 ease: [0.16, 1, 0.3, 1] // Custom quint ease for premium feel
+               }}
+               className="absolute inset-0 size-full object-cover" 
+               alt="Izi Delivery Hero" 
+             />
+           </AnimatePresence>
+           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-950" />
           
           {/* Indicadores do Carrossel */}
           {heroImages.length > 1 && (
