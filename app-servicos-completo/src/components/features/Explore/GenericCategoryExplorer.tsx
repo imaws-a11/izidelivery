@@ -18,7 +18,7 @@ interface GenericCategoryExplorerProps {
   banners?: any[];
   infoCard?: { text: string; link: string };
   listTitle: string;
-  serviceType: string; // para filtrar estabelecimentos
+  serviceType: string | string[]; // para filtrar estabelecimentos
 }
 
 export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = ({
@@ -49,7 +49,18 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
   const filteredShops = safeEstablishments.filter(shop => {
     const shopName = shop?.name || "";
     const matchesSearch = shopName.toLowerCase().includes(safeSearchQuery.toLowerCase());
-    const matchesType = serviceType === "all" || shop?.type === serviceType;
+    
+    let matchesType = false;
+    if (serviceType === "all") {
+      matchesType = true;
+    } else if (Array.isArray(serviceType)) {
+      matchesType = serviceType.includes(shop?.type);
+    } else {
+      matchesType = shop?.type === serviceType;
+      // Caso especial para restaurantes que podem ser 'food' ou 'restaurant'
+      if (serviceType === "restaurant" && shop?.type === "food") matchesType = true;
+    }
+
     return matchesSearch && matchesType;
   });
 
@@ -64,15 +75,15 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
   const filters = ["Ordenar", "Cupom", "Entrega Grátis", "Entrega Rastreável"];
 
   return (
-    <div className="absolute inset-0 z-[140] bg-white text-zinc-900 flex flex-col overflow-y-auto no-scrollbar">
+    <div className="absolute inset-0 z-[140] bg-zinc-50 text-zinc-900 flex flex-col overflow-y-auto no-scrollbar">
       
       {/* 1. HEADER & SEARCH */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-4 py-4 flex items-center gap-3">
         <button 
-          onClick={onBack}
+          onClick={() => window.history.back()}
           className="size-10 rounded-full bg-zinc-100 flex items-center justify-center active:scale-95 transition-all"
         >
-          <span className="material-symbols-rounded text-zinc-900">arrow_back_ios_new</span>
+          <span className="material-symbols-rounded text-zinc-900">arrow_back</span>
         </button>
         
         <div className="flex-1 relative">
@@ -95,7 +106,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
                 key={svc.label}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all border ${
                   svc.label === activeService 
-                  ? "bg-rose-50 border-rose-100 text-rose-600 font-bold shadow-sm" 
+                  ? "bg-yellow-50 border-yellow-100 text-yellow-600 font-bold shadow-sm" 
                   : "bg-white border-zinc-100 text-zinc-500 font-medium"
                 }`}
               >
@@ -132,7 +143,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
                   <img src={b.image_url} className="size-full object-cover" alt="Banner" />
                </div>
             )) : (
-              <div className="w-full aspect-[16/7] rounded-[28px] bg-rose-600 flex items-center justify-center relative overflow-hidden shadow-xl">
+              <div className="w-full aspect-[16/7] rounded-[28px] bg-yellow-400 flex items-center justify-center relative overflow-hidden shadow-xl">
                  <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
                  <h2 className="text-white font-black text-2xl relative z-10 uppercase italic">Ofertas Exclusivas</h2>
               </div>
@@ -147,7 +158,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
               <p className="text-sm text-zinc-500 leading-relaxed">
                  {infoCard.text}
               </p>
-              <button className="text-rose-500 font-bold text-sm text-left">{infoCard.link}</button>
+              <button className="text-yellow-600 font-bold text-sm text-left">{infoCard.link}</button>
            </div>
         </section>
       )}
@@ -161,7 +172,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
                 onClick={() => setActiveFilter(f)}
                 className={`px-5 py-2 rounded-full border text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
                   activeFilter === f 
-                  ? "bg-rose-50 border-rose-200 text-rose-600" 
+                  ? "bg-yellow-50 border-yellow-200 text-yellow-600" 
                   : "bg-white border-zinc-200 text-zinc-600"
                 }`}
               >

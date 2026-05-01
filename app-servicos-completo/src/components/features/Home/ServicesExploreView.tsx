@@ -5,8 +5,8 @@ interface ServicesExploreViewProps {
   isOpen: boolean;
   onClose: () => void;
   navigateSubView: (view: string) => void;
-  establishmentTypes?: any[];
   setExploreCategoryState?: (state: any) => void;
+  setActiveService: (service: any) => void;
 }
 
 export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
@@ -15,19 +15,35 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
   navigateSubView,
   establishmentTypes = [],
   setExploreCategoryState,
+  setActiveService,
 }) => {
   const handleCategoryClick = (cat: any) => {
-    const slug = cat.value || cat.id;
+    setActiveService(cat.name || cat.label || "Explorar");
+    const slug = (cat.value || cat.id || "").toLowerCase();
     
     // Viagem é uma rota nativa específica
-    if (slug === 'izi_envios' || slug === 'viagem' || slug === 'mobilidade') {
+    if (['izi_envios', 'viagem', 'mobilidade', 'corridas', 'taxi', 'viagens'].includes(slug)) {
       navigateSubView("explore_envios");
       return;
     }
 
-    const customViews = ['restaurants', 'market', 'pharmacy', 'beverages', 'petshop', 'gas', 'bakery', 'fruit'];
-    if (customViews.includes(slug)) {
-      navigateSubView(`explore_${slug}`);
+    // Mapeamento de Slugs para Views Customizadas (Padronizadas)
+    if (['restaurants', 'food', 'restaurant', 'restaurante', 'restaurantes', 'almoço', 'jantar'].includes(slug)) {
+      navigateSubView(`explore_restaurants`);
+    } else if (['market', 'markets', 'mercado', 'mercados', 'mercearia'].includes(slug)) {
+      navigateSubView(`explore_market`);
+    } else if (['pharmacy', 'farmacia', 'farmacias', 'saude', 'drogaria'].includes(slug)) {
+      navigateSubView(`explore_pharmacy`);
+    } else if (['beverages', 'bebidas', 'bebida', 'adega', 'distribuidora'].includes(slug)) {
+      navigateSubView(`explore_beverages`);
+    } else if (['petshop', 'pets', 'pet_shop', 'pet'].includes(slug)) {
+      navigateSubView(`explore_petshop`);
+    } else if (['gas', 'gas_agua', 'agua', 'gas_e_agua'].includes(slug)) {
+      navigateSubView(`explore_gas`);
+    } else if (['bakery', 'padaria', 'confeitaria', 'pães'].includes(slug)) {
+      navigateSubView(`explore_bakery`);
+    } else if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
+      navigateSubView("explore_izi_envios");
     } else {
       if (setExploreCategoryState) {
         setExploreCategoryState({
@@ -43,15 +59,15 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
   };
 
   const priorityOrder = [
+    ['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras'],
+    ['gas', 'gas_agua', 'agua', 'viagem', 'mobilidade'],
+    ['padaria', 'bakery', 'confeitaria'],
     ['restaurants', 'food', 'restaurante', 'restaurantes'],
     ['markets', 'mercado', 'mercados', 'market'],
     ['pharmacy', 'farmacia', 'farmacias'],
     ['beverages', 'bebidas', 'bebida'],
-    ['gas', 'gas_agua', 'agua'],
     ['petshop', 'pets', 'pet_shop'],
-    ['fruit', 'hortifrutti', 'frutas', 'verduras'],
-    ['butcher', 'acougue', 'carnes'],
-    ['viagem', 'izi_envios', 'mobilidade', 'corridas']
+    ['butcher', 'acougue', 'carnes']
   ];
 
   const getPriority = (slug: string) => {
@@ -65,18 +81,23 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
   const dynamicCategories = establishmentTypes
     .filter((t: any) => t.is_active !== false)
     .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
-    .map((t: any) => ({
-      ...t,
-      action: () => handleCategoryClick(t)
-    }));
+    .map((t: any) => {
+      const slug = (t.value || t.id || "").toLowerCase();
+      if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
+        return { ...t, name: 'Izi Envios', icon: 'package_2', action: () => handleCategoryClick(t) };
+      }
+      return {
+        ...t,
+        action: () => handleCategoryClick(t)
+      };
+    });
 
   const highlights = [
-    { id: 'taxi', label: 'Corridas', icon: 'local_taxi', color: 'bg-zinc-900', textColor: 'text-white', route: 'taxi_wizard' },
-    { id: 'envios', label: 'Izi Envios', icon: 'package_2', color: 'bg-yellow-400', textColor: 'text-black', route: 'explore_envios', isNew: true },
-    { id: 'clube', label: 'Clube', icon: 'loyalty', color: 'bg-rose-500', textColor: 'text-white' },
+    { id: 'taxi', label: 'Viagens', icon: 'directions_car', color: 'bg-zinc-950', textColor: 'text-yellow-500', route: 'explore_envios' },
+    { id: 'envios', label: 'Izi Envios', icon: 'package_2', color: 'bg-zinc-100', textColor: 'text-black', route: 'explore_izi_envios', isNew: true },
+    { id: 'clube', label: 'Clube', icon: 'loyalty', color: 'bg-zinc-900', textColor: 'text-white' },
     { id: 'promos', label: 'Promoções', icon: 'percent', color: 'bg-emerald-500', textColor: 'text-white' },
-    { id: 'favoritos', label: 'Favoritos', icon: 'favorite', color: 'bg-pink-500', textColor: 'text-white' },
-    { id: 'doacoes', label: 'Doações', icon: 'volunteer_activism', color: 'bg-orange-500', textColor: 'text-white' },
+    { id: 'favoritos', label: 'Favoritos', icon: 'favorite', color: 'bg-rose-500', textColor: 'text-white' },
   ];
 
   const restaurantHighlights = [
@@ -167,7 +188,7 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
                            <div className={`size-14 rounded-2xl ${h.color} flex items-center justify-center shadow-sm relative overflow-visible group-hover:scale-105 transition-transform`}>
                               <span className={`material-symbols-rounded ${h.textColor} text-[26px]`}>{h.icon}</span>
                               {h.isNew && (
-                                <div className="absolute -top-2 -left-1 bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm uppercase tracking-tighter">
+                                <div className="absolute -top-2 -left-1 bg-yellow-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm uppercase tracking-tighter">
                                    Novo
                                 </div>
                               )}

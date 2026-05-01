@@ -139,8 +139,8 @@ export const PixPaymentView: React.FC = () => {
   const pixReady = !!(selectedItem?.pixQrCode || selectedItem?.pixQrBase64 || selectedItem?.pixCopyPaste) && pixConfirmed;
 
   return (
-    <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
-      <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+    <div className="absolute inset-0 z-40 bg-white text-zinc-900 flex flex-col overflow-y-auto no-scrollbar pb-10">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md flex items-center gap-4 px-5 py-4 border-b border-zinc-100">
         <button onClick={() => { 
             if (selectedItem?.service_type === 'coin_purchase' || paymentsOrigin === "profile") {
               setTab("home");
@@ -154,13 +154,13 @@ export const PixPaymentView: React.FC = () => {
           className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
           <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
         </button>
-        <h1 className="text-lg font-black text-white uppercase tracking-tight">Pagamento PIX</h1>
+        <h1 className="text-lg font-black text-zinc-900 uppercase tracking-tight">Pagamento PIX</h1>
       </header>
 
       <main className="px-5 pt-8 flex flex-col items-center gap-6 max-w-sm mx-auto w-full">
         <div className="text-center">
           <p className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Total a pagar</p>
-          <p className="text-4xl font-black text-white" style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}>
+          <p className="text-4xl font-black text-zinc-900">
             R$ {total.toFixed(2).replace(".", ",")}
           </p>
         </div>
@@ -174,7 +174,7 @@ export const PixPaymentView: React.FC = () => {
               value={pixCpf}
               onChange={(e) => setPixCpf(formatCpf(e.target.value))}
               placeholder="000.000.000-00"
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-4 px-5 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium tracking-widest"
+              className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl py-4 px-5 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium tracking-widest"
             />
           </div>
         )}
@@ -203,8 +203,8 @@ export const PixPaymentView: React.FC = () => {
                 <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
               )}
             </div>
-            <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-              <p className="text-zinc-400 text-xs font-mono truncate flex-1">{selectedItem?.pixCopyPaste?.slice(0, 40)}...</p>
+            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl p-4 flex items-center justify-between gap-3">
+              <p className="text-zinc-500 text-xs font-mono truncate flex-1">{selectedItem?.pixCopyPaste?.slice(0, 40)}...</p>
               <button
                 onClick={() => { navigator.clipboard.writeText(selectedItem?.pixCopyPaste || ""); toastSuccess("PIX copiado!"); }}
                 className="text-yellow-400 active:scale-90 transition-all shrink-0">
@@ -217,7 +217,7 @@ export const PixPaymentView: React.FC = () => {
             </div>
             <button
               onClick={() => { setTab("orders"); setSubView("none"); setPixConfirmed(false); setPixCpf(""); setSelectedItem(null); }}
-              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-yellow-400/30 hover:text-yellow-400 transition-all active:scale-95">
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-100 text-zinc-400 hover:border-yellow-400 transition-all active:scale-95 shadow-sm bg-white">
               Ver Meus Pedidos
             </button>
           </motion.div>
@@ -229,7 +229,7 @@ export const PixPaymentView: React.FC = () => {
                 <span className="material-symbols-outlined text-4xl text-rose-500">error</span>
              </div>
              <div>
-                <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Ops! Falha no QR Code</h3>
+                <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter mb-2">Ops! Falha no QR Code</h3>
                 <p className="text-zinc-400 text-sm font-medium leading-relaxed px-4">
                    O pedido foi enviado ao lojista, mas não conseguimos gerar o QR Code Pix agora. 
                    {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " Você pode tentar pagar através de outro método ou falar com o suporte."}
@@ -237,7 +237,7 @@ export const PixPaymentView: React.FC = () => {
              </div>
              <div className="w-full space-y-3">
                 <button onClick={() => { setTab("orders"); setSubView("none"); setSelectedItem(null); }}
-                  className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
+                  className="w-full py-4 rounded-2xl bg-zinc-900 text-white font-black text-sm uppercase tracking-widest">
                   Acompanhar Pedido
                 </button>
                 <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); }}

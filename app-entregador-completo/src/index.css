@@ -2,26 +2,26 @@
 
 @theme {
   --color-primary: #ffd900;
-  --color-background-light: #f8f8f5;
-  --color-background-dark: #23200f;
+  --color-background-light: #ffffff;
+  --color-background-dark: #f8f8f5;
   
-  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
 }
 
 @layer base {
   body {
-    @apply antialiased bg-[#000000] text-white overflow-x-hidden;
+    @apply antialiased bg-white text-zinc-900 overflow-x-hidden;
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-white/5 backdrop-blur-3xl border border-white/10;
+    @apply bg-white/80 backdrop-blur-3xl border border-zinc-100;
   }
 
   .luxury-card {
-    @apply bg-white/[0.03] border border-white/10 rounded-[32px] p-6 shadow-2xl hover:bg-white/[0.05] transition-all duration-300;
+    @apply bg-zinc-50 border border-zinc-100 rounded-[32px] p-6 shadow-xl hover:bg-white transition-all duration-300;
   }
   
   .no-scrollbar::-webkit-scrollbar {
@@ -63,24 +63,24 @@
     background: #ffd900;
     border: 3px solid white;
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   }
   .clay-card {
-    @apply bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[32px] transition-all duration-300;
+    @apply bg-white border border-zinc-100 rounded-[32px] transition-all duration-300;
     box-shadow: 
-      8px 8px 20px rgba(0, 0, 0, 0.4),
-      -4px -4px 12px rgba(255, 255, 255, 0.02),
-      inset 4px 4px 12px rgba(255, 255, 255, 0.05),
-      inset -8px -8px 20px rgba(0, 0, 0, 0.3);
+      8px 8px 20px rgba(0, 0, 0, 0.05),
+      -4px -4px 12px rgba(255, 255, 255, 0.8),
+      inset 4px 4px 12px rgba(255, 255, 255, 0.5),
+      inset -8px -8px 20px rgba(0, 0, 0, 0.02);
   }
 
   .clay-card-dark {
-    background: linear-gradient(135deg, #111111, #000000);
+    background: linear-gradient(135deg, #18181b, #09090b);
     box-shadow: 
-        inset 6px 6px 12px rgba(255, 255, 255, 0.03),
-        inset -6px -6px 12px rgba(0, 0, 0, 0.7),
-        0 20px 40px rgba(0, 0, 0, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.03);
+        inset 6px 6px 12px rgba(255, 255, 255, 0.05),
+        inset -6px -6px 12px rgba(0, 0, 0, 0.4),
+        0 20px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 2.5rem;
   }
 
@@ -88,19 +88,18 @@
     background: #facc15;
     box-shadow: 
         inset 4px 4px 8px rgba(255, 255, 255, 0.6),
-        inset -4px -4px 8px rgba(0, 0, 0, 0.2),
-        8px 8px 24px rgba(0, 0, 0, 0.5);
+        inset -4px -4px 8px rgba(0, 0, 0, 0.1),
+        8px 8px 24px rgba(0, 0, 0, 0.1);
     border-radius: 2.5rem;
   }
 
   .clay-card-exclusive {
-    background: linear-gradient(135deg, #222222, #080808);
+    background: linear-gradient(135deg, #facc15, #eab308);
     box-shadow: 
-        inset 10px 10px 20px rgba(255, 255, 255, 0.03),
-        inset -10px -10px 20px rgba(0, 0, 0, 0.8),
-        0 30px 60px rgba(0, 0, 0, 1),
-        0 10px 20px rgba(255, 217, 0, 0.05);
-    border: 1px solid rgba(255, 217, 0, 0.1);
+        inset 10px 10px 20px rgba(255, 255, 255, 0.4),
+        inset -10px -10px 20px rgba(0, 0, 0, 0.1),
+        0 30px 60px rgba(250, 204, 21, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 2.8rem;
   }
 
@@ -108,14 +107,14 @@
     background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
     box-shadow: 
         inset 12px 12px 24px rgba(255, 255, 255, 0.6),
-        inset -12px -12px 24px rgba(0, 0, 0, 0.15),
-        0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        inset -12px -12px 24px rgba(0, 0, 0, 0.1),
+        0 25px 50px -12px rgba(250, 204, 21, 0.3);
   }
 
   .clay-profile-inner {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.2);
     box-shadow: 
-        inset 4px 4px 8px rgba(255, 255, 255, 0.3),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.4),
         inset -4px -4px 8px rgba(0, 0, 0, 0.05);
     backdrop-filter: blur(8px);
   }
@@ -125,27 +124,27 @@
     box-shadow: 
         inset 8px 8px 16px rgba(255, 255, 255, 0.5),
         inset -8px -8px 16px rgba(0, 0, 0, 0.15),
-        0 15px 35px rgba(34, 197, 94, 0.4),
-        0 5px 15px rgba(0, 0, 0, 0.2);
+        0 15px 35px rgba(34, 197, 94, 0.3),
+        0 5px 15px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.3);
   }
 
   .clay-fab-offline {
-    background: linear-gradient(145deg, #374151, #1f2937);
+    @apply bg-zinc-100;
     box-shadow: 
-        inset 8px 8px 16px rgba(255, 255, 255, 0.1),
-        inset -8px -8px 16px rgba(0, 0, 0, 0.5),
-        0 15px 35px rgba(0, 0, 0, 0.5),
-        0 5px 15px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+        inset 8px 8px 16px rgba(255, 255, 255, 0.8),
+        inset -8px -8px 16px rgba(0, 0, 0, 0.05),
+        0 15px 35px rgba(0, 0, 0, 0.05),
+        0 5px 15px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   .clay-fab-sos {
     background: linear-gradient(145deg, #ef4444, #b91c1c);
     box-shadow: 
         inset 8px 8px 16px rgba(255, 255, 255, 0.4),
-        inset -8px -8px 16px rgba(0, 0, 0, 0.2),
-        0 15px 35px rgba(239, 68, 68, 0.4);
+        inset -8px -8px 16px rgba(0, 0, 0, 0.1),
+        0 15px 35px rgba(239, 68, 68, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
 }

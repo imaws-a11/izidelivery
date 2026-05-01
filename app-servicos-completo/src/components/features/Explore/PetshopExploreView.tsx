@@ -8,21 +8,21 @@ interface PetshopExploreViewProps {
 
 export const PetshopExploreView: React.FC<PetshopExploreViewProps> = (props) => {
   const categories = [
-    { label: "Cães", img: "https://cdn-icons-png.flaticon.com/512/620/620851.png" },
-    { label: "Gatos", img: "https://cdn-icons-png.flaticon.com/512/616/616430.png" },
-    { label: "Aves", img: "https://cdn-icons-png.flaticon.com/512/616/616412.png" },
-    { label: "Peixes", img: "https://cdn-icons-png.flaticon.com/512/616/616421.png" },
-    { label: "Farmácia", img: "https://cdn-icons-png.flaticon.com/512/3063/3063822.png" },
+    { label: "Ração", img: "https://cdn-icons-png.flaticon.com/512/620/620851.png" },
+    { label: "Petiscos", img: "https://cdn-icons-png.flaticon.com/512/616/616430.png" },
+    { label: "Brinquedos", img: "https://cdn-icons-png.flaticon.com/512/616/616412.png" },
+    { label: "Higiene", img: "https://cdn-icons-png.flaticon.com/512/616/616421.png" },
+    { label: "Acessórios", img: "https://cdn-icons-png.flaticon.com/512/3063/3063822.png" },
   ];
 
   return (
     <GenericCategoryExplorer
       {...props}
-      title="Petshop"
-      placeholder="Buscar em Petshop"
+      title="Pet Shop"
+      placeholder="Tudo para o seu pet"
       activeService="Petshop"
       categories={categories}
-      listTitle="Lojas Próximas"
+      listTitle="Pet Shops na Região"
       serviceType="pet"
     />
   );

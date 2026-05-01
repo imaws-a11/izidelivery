@@ -40,7 +40,7 @@ export const ShippingDetailsView = () => {
       </header>
 
       <main className="px-6 space-y-10 pb-40">
-        {transitData.subService === "express" && (
+        {(transitData.subService === "express" || transitData.subService === "agendado") && (
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
               <Icon name="location_on" />
@@ -161,7 +161,7 @@ export const ShippingDetailsView = () => {
           
           <div className="space-y-4">
             <div className="flex flex-col gap-3 mb-4">
-              {transitData.subService === "express" ? (
+              {(transitData.subService === "express" || transitData.subService === "agendado") ? (
                 <div className="grid grid-cols-2 gap-3">
                   <button 
                     onClick={() => setTransitData({...transitData, operationType: "enviar"})}
@@ -193,7 +193,7 @@ export const ShippingDetailsView = () => {
               )}
             </div>
 
-            {transitData.subService === "express" && (
+            {(transitData.subService === "express" || transitData.subService === "agendado") && (
               <>
                 <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome de quem recebe</p>

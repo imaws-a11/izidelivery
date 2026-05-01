@@ -16,7 +16,7 @@ interface PromotionStudioProps {
   isModal?: boolean;
 }
 
-type PromoType = 'banner' | 'coupon' | 'flash' | 'explore';
+type PromoType = 'banner' | 'coupon' | 'flash' | 'explore' | 'promo_header';
 
 export default function PromotionStudio({ merchantId = null, userRole, onClose, isModal = false }: PromotionStudioProps) {
   const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings, handleFileUpload: uploadToSupabase } = useAdmin();
@@ -133,6 +133,24 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       }
     } catch (err) {
       toastError('Erro no upload');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePromoBannerImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsSaving(true);
+      const url = await uploadToSupabase(file, 'banners');
+      if (url) {
+        const config = { ...appSettings.promo_banner_config, image_url: url };
+        setAppSettings({ ...appSettings, promo_banner_config: config });
+        toastSuccess('Imagem do Banner carregada!');
+      }
+    } catch (err) {
+      toastError('Erro no upload da imagem');
     } finally {
       setIsSaving(false);
     }
@@ -347,6 +365,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     { id: 'explore', label: 'Cards de Exploração', icon: 'explore', color: 'text-indigo-400' },
     { id: 'coupon', label: 'Cupons de Desconto', icon: 'confirmation_number', color: 'text-primary' },
     { id: 'flash', label: 'Izi Flash (Ofertas)', icon: 'local_fire_department', color: 'text-rose-500' },
+    { id: 'promo_header', label: 'Banner Topo (Cupons)', icon: 'ad_units', color: 'text-yellow-400' },
   ];
 
   const tabs = userRole === 'merchant' 
@@ -417,7 +436,155 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-10 scrollbar-hide bg-slate-950">
           <AnimatePresence mode="wait">
-            {showForm ? (
+            {activeTab === 'promo_header' ? (
+              <motion.div
+                key="promo_header"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="max-w-5xl mx-auto"
+              >
+                <div className="bg-white/5 border border-white/5 rounded-[40px] p-10 space-y-10 shadow-2xl">
+                    <div className="flex items-center gap-6 mb-4">
+                        <div className="size-16 rounded-[24px] bg-yellow-400 flex items-center justify-center text-black shadow-lg shadow-yellow-400/20">
+                            <span className="material-symbols-outlined text-4xl">ad_units</span>
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Banner Topo (Geral)</h3>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Gerencie a seção fixa no topo do App de serviços</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="flex items-center justify-between p-8 bg-black/40 border border-white/5 rounded-[32px] md:col-span-2">
+                            <div className="flex items-center gap-5">
+                                <div className={`size-12 rounded-2xl flex items-center justify-center transition-all ${appSettings.promo_banner_config?.active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-800 text-slate-600'}`}>
+                                    <span className="material-symbols-outlined">{appSettings.promo_banner_config?.active ? 'visibility' : 'visibility_off'}</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-white">Exibir no App</p>
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">O banner ficará visível para todos os clientes</p>
+                                </div>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only peer"
+                                    checked={appSettings.promo_banner_config?.active}
+                                    onChange={(e) => {
+                                        const config = { ...appSettings.promo_banner_config, active: e.target.checked };
+                                        setAppSettings({ ...appSettings, promo_banner_config: config });
+                                    }}
+                                />
+                                <div className="w-14 h-7 bg-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                            </label>
+                        </div>
+
+                        <div className="space-y-3 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem de Fundo do Banner</label>
+                            <div className="aspect-[3/1] rounded-[40px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-yellow-400/50 transition-colors cursor-pointer">
+                                {appSettings.promo_banner_config?.image_url ? (
+                                    <>
+                                        <img src={appSettings.promo_banner_config.image_url} className="w-full h-full object-cover" alt="Banner" />
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                            <span className="material-symbols-outlined text-yellow-400 text-5xl">edit</span>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); const config = { ...appSettings.promo_banner_config, image_url: null }; setAppSettings({ ...appSettings, promo_banner_config: config }); }}
+                                                className="size-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center hover:scale-110 transition-all"
+                                            >
+                                                <span className="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 group-hover:text-yellow-400 transition-colors">
+                                        <span className="material-symbols-outlined text-6xl">add_photo_alternate</span>
+                                        <span className="text-xs font-black uppercase tracking-widest text-center px-10">Upload Banner — Proporção 3:1 (ex: 1200x400px)</span>
+                                    </div>
+                                )}
+                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handlePromoBannerImageUpload} />
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Título do Banner</label>
+                            <input 
+                                type="text" 
+                                value={appSettings.promo_banner_config?.title || ''}
+                                onChange={(e) => {
+                                    const config = { ...appSettings.promo_banner_config, title: e.target.value.toUpperCase() };
+                                    setAppSettings({ ...appSettings, promo_banner_config: config });
+                                }}
+                                className="w-full bg-black/40 border border-white/5 rounded-3xl px-8 py-5 font-black text-xl text-yellow-400 tracking-tighter focus:ring-2 focus:ring-yellow-400 focus:bg-black/60 transition-all outline-none"
+                                placeholder="EX: SEMANA DE CUPONS"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 space-y-6">
+                            <div className="flex items-center gap-3 ml-4">
+                                <span className="material-symbols-outlined text-slate-500 text-sm">event_repeat</span>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Configuração dos Dias de Resgate</label>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                                {(appSettings.promo_banner_config?.days || []).map((dayObj: any, idx: number) => (
+                                    <div 
+                                        key={idx} 
+                                        onClick={() => {
+                                            const newDays = [...appSettings.promo_banner_config.days];
+                                            newDays[idx] = { ...dayObj, active: !dayObj.active };
+                                            const config = { ...appSettings.promo_banner_config, days: newDays };
+                                            setAppSettings({ ...appSettings, promo_banner_config: config });
+                                        }}
+                                        className={`p-4 rounded-[28px] border cursor-pointer transition-all flex flex-col items-center gap-2 group ${dayObj.active ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/10' : 'bg-white/5 border-white/5 text-slate-600'}`}
+                                    >
+                                        <span className="text-[10px] font-black uppercase">Dia</span>
+                                        <span className="text-2xl font-black italic leading-none">{dayObj.day}</span>
+                                        <div className={`size-6 rounded-full flex items-center justify-center transition-all ${dayObj.active ? 'bg-black/10' : 'bg-white/5'}`}>
+                                            <span className="material-symbols-outlined text-[14px]">{dayObj.active ? 'check_circle' : 'circle'}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-white/5">
+                        <button 
+                            type="button"
+                            onClick={async () => {
+                                setIsSaving(true);
+                                try {
+                                    const SETTINGS_ID = appSettings.id || 'c568f69e-1e96-48c3-8e7c-8e8e8e8e8e8e';
+                                    const { error } = await supabase
+                                        .from('app_settings_delivery')
+                                        .update({ promo_banner_config: appSettings.promo_banner_config })
+                                        .eq('id', SETTINGS_ID);
+                                    
+                                    if (error) throw error;
+                                    toastSuccess('Configuração Global salva!');
+                                } catch (e) {
+                                    toastError('Falha ao salvar');
+                                } finally {
+                                    setIsSaving(false);
+                                }
+                            }}
+                            disabled={isSaving}
+                            className="w-full bg-primary text-slate-950 h-20 rounded-[32px] font-black uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-4 disabled:opacity-50"
+                        >
+                            {isSaving ? (
+                                <div className="size-6 border-4 border-slate-900/30 border-t-slate-900 rounded-full animate-spin"></div>
+                            ) : (
+                                <>
+                                    <span className="material-symbols-outlined font-black">save</span>
+                                    <span>Salvar Configurações no App</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+              </motion.div>
+            ) : showForm ? (
               <motion.div
                 key="form"
                 initial={{ opacity: 0, y: 20 }}

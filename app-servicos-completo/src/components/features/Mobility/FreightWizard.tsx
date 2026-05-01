@@ -1,6 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../../common/Icon";
+import { supabase } from "../../../lib/supabase";
 import { AddressSearchInput } from "../Address/AddressSearchInput";
 import { IziTrackingMap } from "../Map/IziTrackingMap";
 import { IziBottomSheet } from "../../common/IziBottomSheet";
@@ -64,18 +65,46 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
     });
   };
 
-  React.useEffect(() => {
-    updateLocation(true);
-  }, []);
-
-  const vehicleTypes = [
+  const [vehicleTypes, setVehicleTypes] = React.useState<any[]>([
     { id: "fiorino", name: "Fiorino", icon: "local_shipping", priceKey: "fiorino" },
-    { id: "van", name: "Van Carga", icon: "airport_shuttle", priceKey: "van_carga" },
+    { id: "van", name: "Van Carga", icon: "airport_shuttle", priceKey: "van" },
     { id: "truck_p", name: "Baú Pequeno", icon: "local_shipping", priceKey: "bau_p" },
     { id: "truck_m", name: "Baú Médio", icon: "local_shipping", priceKey: "bau_m" },
     { id: "truck_g", name: "Baú Grande", icon: "rv_hookup", priceKey: "bau_g" },
     { id: "truck_bau", name: "Aberto", icon: "local_shipping", priceKey: "aberto" },
-  ];
+  ]);
+
+  React.useEffect(() => {
+    const fetchDynamicRates = async () => {
+      try {
+        const { data } = await supabase
+          .from('dynamic_rates_delivery')
+          .select('metadata')
+          .eq('type', 'base_values')
+          .maybeSingle();
+        
+        if (data?.metadata) {
+          const meta = data.metadata;
+          const allVehicles = [
+            { id: "fiorino", name: "Fiorino", icon: "local_shipping", priceKey: "fiorino" },
+            { id: "van", name: "Van Carga", icon: "airport_shuttle", priceKey: "van" },
+            { id: "caminhonete", name: "Caminhonete", icon: "local_shipping", priceKey: "caminhonete" },
+            { id: "truck_p", name: "Baú Pequeno", icon: "local_shipping", priceKey: "bau_p" },
+            { id: "truck_m", name: "Baú Médio", icon: "local_shipping", priceKey: "bau_m" },
+            { id: "truck_g", name: "Baú Grande", icon: "rv_hookup", priceKey: "bau_g" },
+            { id: "truck_bau", name: "Aberto", icon: "local_shipping", priceKey: "aberto" },
+            { id: "utilitario", name: "Utilitário", icon: "local_shipping", priceKey: "utilitario" }
+          ];
+          // Filtra apenas os que tem preço configurado
+          setVehicleTypes(allVehicles.filter(v => meta[`${v.priceKey}_min`]));
+        }
+      } catch (e) {
+        console.error("Erro ao buscar taxas dinâmicas:", e);
+      }
+    };
+    fetchDynamicRates();
+    updateLocation(true);
+  }, []);
 
   const totalValue = React.useMemo(() => {
     if (!routeDistance || !freightData.vehicleType) return 0;

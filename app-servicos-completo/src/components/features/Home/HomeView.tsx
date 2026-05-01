@@ -20,6 +20,8 @@ interface HomeViewProps {
   onOpenDepositModal?: () => void;
   establishmentTypes?: any[];
   setExploreCategoryState?: (state: any) => void;
+  appSettings?: any;
+  setActiveService: (service: any) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -27,26 +29,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
   userName,
   navigateSubView,
   setSubView,
+  setActiveService,
   ESTABLISHMENTS,
   handleShopClick,
   banners,
   establishmentTypes = [],
   setExploreCategoryState,
+  appSettings,
 }) => {
    const [isExploreOpen, setIsExploreOpen] = useState(false);
 
-   const handleCategoryClick = (cat: any) => {
-     const slug = cat.value || cat.id;
+    const handleCategoryClick = (cat: any) => {
+      const title = cat.name || cat.label || "Explorar";
+      setActiveService(title);
+      const slug = (cat.value || cat.id || "").toLowerCase();
      
-     // Viagem é uma rota nativa específica
-     if (slug === 'izi_envios' || slug === 'viagem' || slug === 'mobilidade') {
+     // Mapeamento para as views específicas do Izi Delivery
+     if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
+       navigateSubView("explore_izi_envios");
+       return;
+     }
+
+     if (['gas', 'gas_agua', 'agua', 'gas_e_agua', 'viagem', 'mobilidade', 'corridas', 'taxi'].includes(slug)) {
        navigateSubView("explore_envios");
        return;
      }
 
-     const customViews = ['restaurants', 'market', 'pharmacy', 'beverages', 'petshop', 'gas', 'bakery', 'fruit'];
-     if (customViews.includes(slug)) {
-       navigateSubView(`explore_${slug}`);
+     // Mapeamento de Slugs para Views Customizadas (Padronizadas)
+     if (['restaurants', 'food', 'restaurant', 'restaurante', 'restaurantes', 'almoço', 'jantar'].includes(slug)) {
+       navigateSubView(`explore_restaurants`);
+     } else if (['market', 'markets', 'mercado', 'mercados', 'mercearia'].includes(slug)) {
+       navigateSubView(`explore_market`);
+     } else if (['pharmacy', 'farmacia', 'farmacias', 'saude', 'drogaria'].includes(slug)) {
+       navigateSubView(`explore_pharmacy`);
+     } else if (['beverages', 'bebidas', 'bebida', 'adega', 'distribuidora'].includes(slug)) {
+       navigateSubView(`explore_beverages`);
+     } else if (['petshop', 'pets', 'pet_shop', 'pet'].includes(slug)) {
+       navigateSubView(`explore_petshop`);
+     } else if (['bakery', 'padaria', 'confeitaria', 'pães'].includes(slug)) {
+       navigateSubView(`explore_bakery`);
      } else {
        if (setExploreCategoryState) {
          setExploreCategoryState({
@@ -62,15 +83,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
    };
 
    const priorityOrder = [
+     ['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras'],
+     ['gas', 'gas_agua', 'agua', 'viagem', 'mobilidade'],
+     ['padaria', 'bakery', 'confeitaria'],
      ['restaurants', 'food', 'restaurante', 'restaurantes'],
      ['markets', 'mercado', 'mercados', 'market'],
      ['pharmacy', 'farmacia', 'farmacias'],
      ['beverages', 'bebidas', 'bebida'],
-     ['gas', 'gas_agua', 'agua'],
      ['petshop', 'pets', 'pet_shop'],
-     ['fruit', 'hortifrutti', 'frutas', 'verduras'],
-     ['butcher', 'acougue', 'carnes'],
-     ['viagem', 'izi_envios', 'mobilidade', 'corridas']
+     ['butcher', 'acougue', 'carnes']
    ];
 
    const getPriority = (slug: string) => {
@@ -78,20 +99,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
      for (let i = 0; i < priorityOrder.length; i++) {
        if (priorityOrder[i].includes(s)) return i;
      }
-     return 999; // Fallback para categorias que não estão no destaque
+     return 999;
    };
 
-   // Filtra os ativos, ordena pela prioridade do usuário e pega os 9 primeiros
    const dynamicServices = establishmentTypes
      .filter((t: any) => t.is_active !== false)
+     .map((t: any) => {
+       const slug = (t.value || t.id || "").toLowerCase();
+       if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
+         return { ...t, name: 'Izi Envios', icon: 'package_2', action: () => handleCategoryClick(t) };
+       }
+       if (['gas', 'gas_agua', 'agua', 'gas_e_agua', 'viagem', 'mobilidade', 'corridas', 'taxi'].includes(slug)) {
+         return { ...t, name: 'Viagens', icon: 'directions_car', action: () => handleCategoryClick(t) };
+       }
+       return {
+         ...t,
+         action: () => handleCategoryClick(t)
+       };
+     })
      .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
-     .slice(0, 9)
-     .map((t: any) => ({
-       ...t,
-       action: () => handleCategoryClick(t)
-     }));
+     .slice(0, 9);
 
-   // Adiciona o botão "Ver Mais" para fechar 10 itens na grade
    const displayServices = [
      ...dynamicServices,
      { id: 'ver_mais', name: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) }
@@ -101,50 +129,65 @@ export const HomeView: React.FC<HomeViewProps> = ({
      <div className="relative h-screen bg-yellow-400 overflow-hidden">
        
        {/* 1. SEMANA DE CUPONS (HEADER FIXO NO FUNDO) */}
-       <section className="bg-yellow-400 px-5 pt-10 pb-20 relative overflow-hidden">
-          <div className="absolute top-4 left-4 opacity-20">
-             <span className="material-symbols-rounded text-6xl text-white">shopping_bag</span>
+       {(appSettings?.promo_banner_config?.active !== false) && (
+       <section 
+         className={`px-5 pt-10 pb-20 relative overflow-hidden transition-all duration-700 ${appSettings?.promo_banner_config?.image_url ? 'bg-zinc-900' : 'bg-yellow-400'}`}
+         style={appSettings?.promo_banner_config?.image_url ? {
+           backgroundImage: `url(${appSettings.promo_banner_config.image_url})`,
+           backgroundSize: 'cover',
+           backgroundPosition: 'center'
+         } : {}}
+       >
+          {appSettings?.promo_banner_config?.image_url && (
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60 z-0" />
+          )}
+
+          <div className="absolute top-4 left-4 opacity-20 z-0">
+             <span className={`material-symbols-rounded text-6xl ${appSettings?.promo_banner_config?.image_url ? 'text-white/40' : 'text-white'}`}>shopping_bag</span>
           </div>
-          <div className="absolute top-10 right-10 opacity-20">
-             <span className="material-symbols-rounded text-4xl text-white">star</span>
+          <div className="absolute top-10 right-10 opacity-20 z-0">
+             <span className={`material-symbols-rounded text-4xl ${appSettings?.promo_banner_config?.image_url ? 'text-white/40' : 'text-white'}`}>star</span>
           </div>
  
           <div className="flex flex-col items-center relative z-10">
-             <div className="bg-yellow-500/30 px-6 py-2 rounded-full mb-4 border border-white/20">
-                <h2 className="text-black font-black text-xl uppercase tracking-tighter italic">semana de <span className="text-2xl block -mt-1">CUPONS</span></h2>
+             <div className={`px-6 py-2 rounded-full mb-4 border ${appSettings?.promo_banner_config?.image_url ? 'bg-black/60 border-white/20 backdrop-blur-md' : 'bg-yellow-500/30 border-white/20'}`}>
+                <h2 className={`${appSettings?.promo_banner_config?.image_url ? 'text-yellow-400' : 'text-black'} font-black text-xl uppercase tracking-tighter italic`}>
+                  {appSettings?.promo_banner_config?.title || 'semana de'}{' '}
+                  {!appSettings?.promo_banner_config?.title && <span className="text-2xl block -mt-1">CUPONS</span>}
+                </h2>
              </div>
  
-             {/* Dias de Resgate */}
-             <div className="w-full bg-black/10 backdrop-blur-md rounded-3xl p-4 mb-6">
+             <div className={`w-full rounded-3xl p-4 mb-6 backdrop-blur-md ${appSettings?.promo_banner_config?.image_url ? 'bg-black/40 border border-white/10' : 'bg-black/10'}`}>
                 <div className="grid grid-cols-7 gap-1">
-                   {[1, 2, 3, 4, 5, 6].map(i => (
-                     <div key={i} className="flex flex-col items-center gap-1 opacity-50">
-                        <span className="text-[7px] font-bold text-black/60 uppercase">Dia {i}</span>
-                        <div className="size-8 bg-emerald-600 rounded-lg flex flex-col items-center justify-center border border-emerald-700/30">
-                           <span className="text-[6px] font-bold text-white uppercase leading-none">resgatado</span>
-                           <span className="material-symbols-rounded text-white text-xs">check</span>
-                        </div>
+                   {(appSettings?.promo_banner_config?.days || [1,2,3,4,5,6,7].map((d: number) => ({day: d, active: true, redeemed: d < 7}))).map((dayObj: any, i: number) => (
+                     <div key={i} className={`flex flex-col items-center gap-1 ${!dayObj.active ? 'opacity-30' : dayObj.redeemed ? 'opacity-50' : ''}`}>
+                        <span className={`text-[7px] font-bold uppercase ${appSettings?.promo_banner_config?.image_url ? 'text-white/60' : 'text-black/60'}`}>Dia {dayObj.day}</span>
+                        {dayObj.redeemed ? (
+                          <div className="size-8 bg-emerald-600 rounded-lg flex flex-col items-center justify-center border border-emerald-700/30">
+                             <span className="text-[6px] font-bold text-white uppercase leading-none">resgatado</span>
+                             <span className="material-symbols-rounded text-white text-xs">check</span>
+                          </div>
+                        ) : (
+                          <div className={`${i === (appSettings?.promo_banner_config?.days?.length || 7) - 1 ? 'w-14 h-16 rotate-3 -mt-2' : 'size-8'} bg-emerald-600 rounded-lg flex flex-col items-center justify-center border-2 border-white shadow-xl`}>
+                             <span className="text-[14px] font-black text-white leading-tight">40%</span>
+                             <span className="text-[8px] font-black text-white uppercase leading-tight">OFF</span>
+                             <span className="text-[6px] font-bold text-white/70 uppercase mt-1">resgatar</span>
+                          </div>
+                        )}
                      </div>
                    ))}
-                   <div className="flex flex-col items-center gap-1 relative">
-                      <span className="text-[7px] font-bold text-black uppercase">Dia 7</span>
-                      <div className="w-14 h-16 bg-emerald-600 rounded-lg flex flex-col items-center justify-center border-2 border-white shadow-xl rotate-3 -mt-2">
-                         <span className="text-[14px] font-black text-white leading-tight">40%</span>
-                         <span className="text-[8px] font-black text-white uppercase leading-tight">OFF</span>
-                         <span className="text-[6px] font-bold text-white/70 uppercase mt-1">resgatar</span>
-                      </div>
-                   </div>
                 </div>
              </div>
  
              <motion.button 
                whileTap={{ scale: 0.95 }}
-               className="bg-white text-black font-black text-lg px-12 py-3 rounded-2xl shadow-xl shadow-yellow-600/30 border-b-4 border-zinc-200 active:border-b-0 transition-all"
+               className={`text-black font-black text-lg px-12 py-3 rounded-2xl shadow-xl border-b-4 transition-all ${appSettings?.promo_banner_config?.image_url ? 'bg-yellow-400 shadow-yellow-400/20 border-yellow-600' : 'bg-white shadow-yellow-600/30 border-zinc-200'}`}
              >
                Pegar agora!
              </motion.button>
           </div>
        </section>
+       )}
 
        {/* BOTTOM SHEET DESLIZANTE */}
        <motion.div 
@@ -153,13 +196,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
          dragConstraints={{ top: -300, bottom: 0 }}
          className="absolute top-[350px] inset-x-0 bottom-0 bg-white rounded-t-[48px] shadow-[0_-20px_50px_rgba(0,0,0,0.15)] z-20 flex flex-col h-[calc(100%-100px)]"
        >
-          {/* Handle Bar */}
           <div className="w-full flex justify-center py-4 shrink-0">
              <div className="w-12 h-1.5 bg-zinc-200 rounded-full" />
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
-             {/* 2. SERVICES GRID (DUAS LINHAS) */}
              <section className="px-5 mt-2">
                 <div className="grid grid-cols-5 gap-y-6 gap-x-2">
                    {displayServices.map((s: any) => (
@@ -186,15 +227,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
              </section>
 
-             {/* 3. SEARCH BAR */}
-             <section className="px-5 mt-6">
+             <section className="px-5 mt-6 space-y-4">
                 <div className="bg-zinc-50 border border-zinc-100 h-14 rounded-2xl flex items-center px-5 gap-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                    <span className="material-symbols-rounded text-zinc-400 group-hover:text-yellow-600 transition-colors">search</span>
                    <span className="text-zinc-400 font-bold text-sm">O que você quer comer hoje?</span>
                 </div>
+
+                <div className="bg-yellow-400 rounded-3xl p-5 flex items-center justify-between relative overflow-hidden shadow-lg shadow-yellow-100 border-2 border-white">
+                   <div className="relative z-10">
+                      <h4 className="text-sm font-black text-black uppercase tracking-tighter">Ofertas Izi Flash</h4>
+                      <p className="text-[10px] font-bold text-black/60">Os melhores descontos do dia</p>
+                   </div>
+                   <span className="material-symbols-rounded text-5xl text-black/10 absolute -right-2 -bottom-2 rotate-12">bolt</span>
+                </div>
              </section>
 
-             {/* 4. PROMO BANNERS */}
              <section className="mt-10">
                 <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 px-5">
                    {banners.map((b, i) => (
@@ -206,7 +253,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
              </section>
 
-             {/* 5. FAMOSOS DA CIDADE */}
              <section className="mt-10">
                 <div className="px-5 flex items-center justify-between mb-1">
                    <h3 className="text-xl font-black text-zinc-900 tracking-tight">Famosos da cidade</h3>
@@ -225,7 +271,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
              </section>
 
-             {/* 6. CATEGORIAS ADICIONAIS */}
              <section className="mt-6 px-5">
                 <div className="flex gap-6 overflow-x-auto no-scrollbar py-2">
                    {[
@@ -245,48 +290,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
              </section>
 
-             {/* 7. MINI BANNERS */}
              <section className="mt-8 px-5 flex gap-4">
-                <div className="flex-1 h-32 rounded-[32px] bg-rose-600 p-5 relative overflow-hidden shadow-lg shadow-rose-100">
+                <div className="flex-1 h-32 rounded-[32px] bg-zinc-900 p-5 relative overflow-hidden shadow-lg shadow-zinc-200">
                    <span className="text-white font-black text-sm leading-tight uppercase relative z-10">entrega <br /> grátis aqui</span>
                    <img src="https://cdn-icons-png.flaticon.com/512/3132/3132693.png" className="absolute -bottom-4 -right-4 size-24 opacity-20 rotate-12" alt="Burger" />
                 </div>
-                <div className="flex-1 h-32 rounded-[32px] bg-pink-400 p-5 relative overflow-hidden shadow-lg shadow-pink-100">
-                   <span className="text-white font-black text-sm leading-tight uppercase relative z-10">cupom <br /> até <span className="text-2xl block -mt-1">R$ 30</span></span>
-                   <span className="absolute -bottom-4 -right-4 material-symbols-rounded text-6xl text-white opacity-20 rotate-12">confirmation_number</span>
+                <div className="flex-1 h-32 rounded-[32px] bg-yellow-400 p-5 relative overflow-hidden shadow-lg shadow-yellow-100">
+                   <span className="text-black font-black text-sm leading-tight uppercase relative z-10">cupom <br /> até <span className="text-2xl block -mt-1">R$ 30</span></span>
+                   <span className="absolute -bottom-4 -right-4 material-symbols-rounded text-6xl text-black opacity-20 rotate-12">confirmation_number</span>
                 </div>
              </section>
 
-             {/* 8. FIDELIDADE CARD */}
-             <section className="mt-8 px-5">
-                <div className="bg-white rounded-[32px] p-6 border border-zinc-100 shadow-xl shadow-zinc-200/50">
-                   <div className="flex items-center justify-between mb-4">
-                      <div className="flex flex-col gap-1">
-                         <h4 className="text-sm font-black text-zinc-900 leading-tight">Ganhe descontos ao fazer pedidos</h4>
-                         <p className="text-xs font-bold text-zinc-400">Compre a partir de R$ 0,99</p>
-                      </div>
-                      <span className="material-symbols-rounded text-zinc-400">chevron_right</span>
-                   </div>
-                   <div className="flex items-center gap-2 mb-4">
-                      <span className="material-symbols-rounded text-[16px] text-zinc-400">schedule</span>
-                      <span className="text-[10px] font-bold text-zinc-400 uppercase">30 dias para resgatar</span>
-                   </div>
-                   
-                   <div className="flex items-center gap-2">
-                      <div className="size-8 rounded-full bg-yellow-100 flex items-center justify-center border-2 border-white shadow-sm">
-                         <span className="material-symbols-rounded text-yellow-600 text-[18px]">workspace_premium</span>
-                      </div>
-                      <div className="h-1.5 flex-1 bg-zinc-100 rounded-full relative">
-                         <div className="absolute inset-y-0 left-0 w-1/4 bg-yellow-400 rounded-full shadow-[0_0_12px_rgba(255,215,9,0.6)]" />
-                      </div>
-                      <div className="size-8 rounded-full bg-zinc-50 flex items-center justify-center border-2 border-white shadow-sm">
-                         <span className="material-symbols-rounded text-zinc-300 text-[18px]">lock</span>
-                      </div>
-                   </div>
-                </div>
-             </section>
-
-             {/* 9. FILTROS & LISTA FINAL */}
              <section className="mt-10">
                 <div className="px-5 flex gap-2 overflow-x-auto no-scrollbar mb-6">
                    {["Ordenar", "Entrega grátis", "Vale-refeição", "Distância"].map(f => (
@@ -311,13 +325,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
        </motion.div>
 
-       <ServicesExploreView 
-         isOpen={isExploreOpen} 
-         onClose={() => setIsExploreOpen(false)} 
-         navigateSubView={navigateSubView}
-         establishmentTypes={establishmentTypes}
-         setExploreCategoryState={setExploreCategoryState}
-       />
+        <ServicesExploreView 
+          isOpen={isExploreOpen} 
+          onClose={() => setIsExploreOpen(false)} 
+          navigateSubView={navigateSubView}
+          establishmentTypes={establishmentTypes}
+          setExploreCategoryState={setExploreCategoryState}
+          setActiveService={setActiveService}
+        />
      </div>
    );
 };

@@ -158,7 +158,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
                 </button>
                 <button 
                   onClick={() => onCancel(order.id)}
-                  className="w-full bg-zinc-50 text-rose-500 font-black h-16 rounded-2xl border border-rose-100 uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"
+                  className="w-full bg-zinc-50 text-zinc-400 font-black h-16 rounded-2xl border border-zinc-200 uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"
                 >
                    Cancelar Recarga
                 </button>

@@ -21,6 +21,7 @@ import { HomeView } from "./components/features/Home/HomeView";
 import { OrderListView } from "./components/features/Order/OrderListView";
 import { ProfileView } from "./components/features/Profile/ProfileView";
 import { WalletView } from "./components/features/Wallet/WalletView";
+import { IziPayView } from "./components/features/Wallet/IziPayView";
 import { CartView } from "./components/features/Cart/CartView";
 import { CheckoutView } from "./components/features/Checkout/CheckoutView";
 import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
@@ -46,6 +47,8 @@ import { ExploreTurboFlashView } from "./components/features/Shipping/Explores/E
 import { ExploreLightFlashView } from "./components/features/Shipping/Explores/ExploreLightFlashView";
 import { ExploreExpressView } from "./components/features/Shipping/Explores/ExploreExpressView";
 import { ExploreScheduledView } from "./components/features/Shipping/Explores/ExploreScheduledView";
+import { ScheduledCheckoutView } from "./components/features/Shipping/ScheduledCheckoutView";
+import { ExploreIziEnviosView } from "./components/features/Shipping/Explores/ExploreIziEnviosView";
 import { ExploreClickCollectView } from "./components/features/Shipping/Explores/ExploreClickCollectView";
 import { ProductDetailView } from "./components/features/Product/ProductDetailView";
 import { CategoryListView } from "./components/features/Explore/CategoryListView";
@@ -461,9 +464,14 @@ function App() {
           const shouldUpdateOrigin = isMobility || force || !prev.origin?.lat;
           if (!shouldUpdateOrigin) return prev;
           
+          const currentOrigin = prev.origin;
+          const isObj = currentOrigin && typeof currentOrigin === 'object';
+          
           return {
             ...prev,
-            origin: { ...prev.origin, lat: latitude, lng: longitude }
+            origin: isObj 
+              ? { ...currentOrigin, lat: latitude, lng: longitude }
+              : { address: currentOrigin || "Minha localização", lat: latitude, lng: longitude }
           };
         });
 
@@ -3937,7 +3945,7 @@ const navigateSubView = (target: string) => {
     const categoryIcons: Record<string, string> = {
       "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
       "Farmácia": "local_pharmacy", "Mercado": "local_mall",
-      "Gás & Ã gua": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Hortifruti": "nutrition"
+      "Gás & Ã gua": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Izi Envios": "package_2"
     };
     const icon = categoryIcons[title] || "storefront";
 
@@ -4688,6 +4696,7 @@ const navigateSubView = (target: string) => {
     const navItems = [
       { id: "home", icon: "home", label: "Início" },
       { id: "busca", icon: "search", label: "Busca" },
+      { id: "wallet", icon: "payments", label: "Izi Pay" },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
       { id: "profile", icon: "person", label: "Perfil" },
     ];
@@ -4831,7 +4840,8 @@ const navigateSubView = (target: string) => {
                       setExploreCategoryState={setExploreCategoryState} 
                       setRestaurantInitialCategory={setRestaurantInitialCategory} 
                       setTab={setTab} 
-                      establishmentTypes={establishmentTypes} 
+                      establishmentTypes={establishmentTypes}
+                      appSettings={appSettings}
                     />
                   </motion.div>
                 )}
@@ -4854,7 +4864,14 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "wallet" && (
                   <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <WalletView walletTransactions={walletTransactions} orders={orders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 0.0} isIziBlack={isIziBlackMembership} />
+                     <IziPayView 
+                       walletTransactions={walletTransactions} 
+                       iziCoins={iziCoins}
+                       userName={userName}
+                       userId={userId}
+                       walletBalance={walletBalance || 0}
+                       onBack={() => setTab("home")}
+                     />
                   </motion.div>
                 )}
                 {tab === "profile" && (
@@ -4922,37 +4939,63 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {/* Views de Lista e Categorias */}
-                {["daily_menus", "market_list", "beverages_list", "pharmacy_list", "generic_list", "pets_list", "explore_hotels", "explore_bars"].includes(subView) && (
+                {["daily_menus", "generic_list"].includes(subView) && (
                   <motion.div key="category-list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
                     <CategoryListView onShopClick={handleShopClick} />
                   </motion.div>
                 )}
 
-                {subView === "explore_restaurants" && (
-                  <motion.div key="explore-restaurants" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <FoodCategoryExplorer onBack={() => setSubView("none")} onShopClick={handleShopClick} />
+                {subView === "explore_hotels" && (
+                  <motion.div key="explore-hotels" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <ExploreHotelsView onBack={() => setSubView("none")} onReserve={(hotel) => { setSelectedShop(hotel); setSubView("hotel_details"); }} />
                   </motion.div>
                 )}
 
-                {subView === "explore_pharmacy" && (
+                {subView === "explore_bars" && (
+                  <motion.div key="explore-bars" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <ExploreBarsView onBack={() => setSubView("none")} onBarClick={handleShopClick} />
+                  </motion.div>
+                )}
+
+                {subView === "explore_restaurants" && (
+                  <motion.div key="explore-restaurants" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    <ExploreRestaurantsView 
+                      setSubView={setSubView}
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
+                      cart={cart}
+                      navigateSubView={navigateSubView}
+                      foodCategories={establishmentTypes.filter(t => t.is_food)}
+                      availableCoupons={availableCoupons}
+                      establishments={ESTABLISHMENTS}
+                      onShopClick={handleShopClick}
+                      copiedCoupon={copiedCoupon}
+                      setCopiedCoupon={setCopiedCoupon}
+                      initialCategory={restaurantInitialCategory}
+                      isIziBlackMembership={isIziBlackMembership}
+                    />
+                  </motion.div>
+                )}
+
+                {(subView === "explore_pharmacy" || subView === "pharmacy_list") && (
                   <motion.div key="explore-pharmacy" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
                     <PharmacyExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
                   </motion.div>
                 )}
 
-                {subView === "explore_beverages" && (
+                {(subView === "explore_beverages" || subView === "beverages_list") && (
                   <motion.div key="explore-beverages" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
                     <BeverageExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
                   </motion.div>
                 )}
 
-                {subView === "explore_market" && (
+                {(subView === "explore_market" || subView === "market_list") && (
                   <motion.div key="explore-market" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
                     <NewMarketExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
                   </motion.div>
                 )}
 
-                {subView === "explore_petshop" && (
+                {(subView === "explore_petshop" || subView === "pets_list") && (
                   <motion.div key="explore-petshop" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
                     <PetshopExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} />
                   </motion.div>
@@ -4994,6 +5037,16 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
 
+                {subView === "explore_izi_envios" && (
+                  <motion.div key="exp_izi_envios" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <ExploreIziEnviosView 
+                      onBack={() => setSubView("none" as any)} 
+                      navigateSubView={navigateSubView} 
+                      setTransitData={setTransitData} 
+                    />
+                  </motion.div>
+                )}
+
                 {subView === "explore_turbo_flash" && (
                   <motion.div key="exp_turbo" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
                     <ExploreTurboFlashView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
@@ -5015,6 +5068,18 @@ const navigateSubView = (target: string) => {
                 {subView === "explore_scheduled" && (
                   <motion.div key="exp_sched" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
                     <ExploreScheduledView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
+                  </motion.div>
+                )}
+
+                {subView === "scheduled_checkout" && (
+                  <motion.div key="scheduled_checkout" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }} className="absolute inset-0 z-[170]">
+                    <ScheduledCheckoutView
+                      transitData={transitData}
+                      setTransitData={setTransitData}
+                      userId={userId}
+                      showToast={showToast}
+                      onBack={() => setSubView("explore_izi_envios")}
+                    />
                   </motion.div>
                 )}
 
