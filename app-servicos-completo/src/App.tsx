@@ -109,10 +109,10 @@ function App() {
     activeBroadcast, closeBroadcast,
     pixCpf, setPixCpf, pixConfirmed, setPixConfirmed, lightningData, setLightningData,
 
-    // OrquestraÃ§Ã£o de View
+    // Orquestração de View
     view, setView, tab, setTab, subView, setSubView, navigateSubView: _ignoredNavigate,
     selectedItem, setSelectedItem, selectedShop, setSelectedShop, activeService, setActiveService, paymentsOrigin, setPaymentsOrigin,
-    userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versÃµes locais legadas
+    userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versões locais legadas
 
     // Outros Contextos
     walletBalance, iziCoins, setIziCoins, userXP, setUserXP, iziCashbackEarned, isIziBlackMembership, walletTransactions, fetchWalletData,
@@ -225,10 +225,10 @@ function App() {
         if (selectedItem && newOrder && newOrder.id === selectedItem.id) {
           setSelectedItem(newOrder);
           
-          // TransiÃ§Ãµes AutomÃ¡ticas de Tela baseadas no Status
+          // Transições Automáticas de Tela baseadas no Status
           if (newOrder.status !== oldOrder?.status) {
              if (newOrder.status === "confirmado") {
-                toastSuccess("Pedido aceito! A loja jÃ¡ estÃ¡ preparando.");
+                toastSuccess("Pedido aceito! A loja já está preparando.");
                 setSubView("active_order");
              } else if (newOrder.status === "em_rota") {
                 toastSuccess("Pedido em rota! Prepare-se para receber.");
@@ -395,7 +395,7 @@ function App() {
         if (userData) {
           setTransferTarget(userData);
         } else {
-          showToast("UsuÃ¡rio nÃ£o encontrado.", "error");
+          showToast("Usuário não encontrado.", "error");
         }
       }
     } catch (err) {
@@ -435,9 +435,9 @@ function App() {
       });
 
       if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process'))) {
-         const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartÃ£o foi recusado pela operadora.";
+         const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
          console.error("[PAYMENT ERROR]", { fnErr, fnData });
-         toastError(`Pagamento nÃ£o aprovado: ${mpMsg}`);
+         toastError(`Pagamento não aprovado: ${mpMsg}`);
          if (origin === "izi_black") setSubView("izi_black_purchase");
          else if (origin === "profile") {
            setShowDepositModal(true);
@@ -805,8 +805,8 @@ function App() {
               'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ›µ',
               'no_local': 'O motoboy chegou ao seu endereÃ§o! ðŸ””',
               'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
-              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. âš ï¸',
-              'recusado': 'Desculpe, o estabelecimento nÃ£o pÃ´de aceitar o pedido agora. âš ï¸'
+              'cancelado': 'Ah não! Seu pedido foi cancelado. ⚠️',
+              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. ⚠️'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -853,7 +853,7 @@ function App() {
           // TransiÃ§Ãµes de estados de espera
           if ((navigationSubViewRef.current === "waiting_merchant" || navigationSubViewRef.current === "lightning_payment" || navigationSubViewRef.current === "pix_payment") && 
               ["novo", "paid", "pago", "aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
-            showToast("Pagamento confirmado! ðŸ¥³", "success");
+            showToast("Pagamento confirmado! ✅", "success");
             setSelectedItem(newOrder); 
             setTimeout(() => setSubView("active_order"), 1000);
           }
@@ -4880,7 +4880,7 @@ const navigateSubView = (target: string) => {
                   <FloatingHeader 
                     userAddress={userLocation?.address || ""}
                     cartLength={cart.length}
-                    onAddressClick={() => setIsAddressDrawerOpen(true)}
+                    onAddressClick={() => setSubView("addresses")}
                     onCartClick={() => setSubView("cart")}
                     onNotificationsClick={() => setSubView("notifications_center")}
                     hasUnreadNotifications={unreadCount > 0}
