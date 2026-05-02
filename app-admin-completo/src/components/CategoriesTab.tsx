@@ -576,20 +576,39 @@ export default function CategoriesTab() {
                       </div>
                    </div>
 
-                   <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Disponibilidade</label>
-                      <button 
-                        onClick={() => setEditingType({...editingType, is_active: !editingType.is_active})}
-                        className={`w-full flex items-center justify-between p-6 rounded-[32px] border-2 transition-all ${editingType.is_active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-rose-500/10 border-rose-500/20 text-rose-600'}`}
-                      >
-                         <div className="flex items-center gap-4">
-                            <span className="material-symbols-outlined">{editingType.is_active ? 'check_circle' : 'block'}</span>
-                            <span className="font-black text-[10px] uppercase tracking-widest">Categoria {editingType.is_active ? 'Ativa' : 'Inativa'}</span>
-                         </div>
-                         <div className={`w-14 h-8 rounded-full relative transition-all ${editingType.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
-                            <div className={`absolute top-1 size-6 rounded-full bg-white shadow-lg transition-all ${editingType.is_active ? 'right-1' : 'left-1'}`} />
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Disponibilidade</label>
+                       <button 
+                         onClick={() => setEditingType({...editingType, is_active: !editingType.is_active})}
+                         className={`w-full flex items-center justify-between p-6 rounded-[32px] border-2 transition-all ${editingType.is_active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-rose-500/10 border-rose-500/20 text-rose-600'}`}
+                       >
+                          <div className="flex items-center gap-4">
+                             <span className="material-symbols-outlined">{editingType.is_active ? 'check_circle' : 'block'}</span>
+                             <span className="font-black text-[10px] uppercase tracking-widest">Categoria {editingType.is_active ? 'Ativa' : 'Inativa'}</span>
                           </div>
-                       </button>
+                          <div className={`w-14 h-8 rounded-full relative transition-all ${editingType.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                             <div className={`absolute top-1 size-6 rounded-full bg-white shadow-lg transition-all ${editingType.is_active ? 'right-1' : 'left-1'}`} />
+                           </div>
+                        </button>
+                     </div>
+
+                    {/* VÍNCULO COM CATEGORIA MASTER */}
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Categoria Pai (Vínculo Master)</label>
+                       <div className="relative">
+                         <select 
+                           className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-6 font-black text-sm focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner appearance-none cursor-pointer"
+                           value={editingType.parent_id || ''}
+                           onChange={e => setEditingType({...editingType, parent_id: e.target.value || null})}
+                         >
+                           <option value="">Nenhuma (Tornar Master)</option>
+                           {getMainCategories().map(cat => (
+                             <option key={cat.id} value={cat.id}>{cat.name}</option>
+                           ))}
+                         </select>
+                         <span className="material-symbols-outlined absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">expand_more</span>
+                       </div>
+                       <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest ml-4">As subcategorias aparecem dentro da exploração no App de Serviços.</p>
                     </div>
 
                    <div className="pt-10 flex gap-4">

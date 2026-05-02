@@ -13,6 +13,7 @@ import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
 
 // Novos Componentes Modulares
 import { Icon } from "./components/common/Icon";
+import { DigitalTimer } from "./components/common/DigitalTimer";
 import { AddressSearchInput } from "./components/features/Address/AddressSearchInput";
 import { AIConciergePanel } from "./components/features/AI/AIConciergePanel";
 import { IziTrackingMap } from "./components/features/Map/IziTrackingMap";
@@ -58,6 +59,10 @@ import { BeverageExploreView } from "./components/features/Explore/BeverageExplo
 import { MarketExploreView as NewMarketExploreView } from "./components/features/Explore/MarketExploreView";
 import { PetshopExploreView } from "./components/features/Explore/PetshopExploreView";
 import { GasWaterExploreView } from "./components/features/Explore/GasWaterExploreView";
+import { ExperienceExploreView } from './components/features/ExperienceExploreView';
+import { ExperienceDetailView } from './components/features/ExperienceDetailView';
+import { ExperienceCheckoutView } from './components/features/ExperienceCheckoutView';
+import { experiencesMockData } from './data/experiencesMock';
 import { BakeryExploreView } from "./components/features/Explore/BakeryExploreView";
 import { FruitExploreView } from "./components/features/Explore/FruitExploreView";
 import { EnviosExploreView } from "./components/features/Home/EnviosExploreView";
@@ -1623,18 +1628,25 @@ function App() {
 
   const fetchFlashOffers = async () => {
     try {
-      // 1. Busca todas as ofertas relÃ¢mpago ativas que ainda nÃ£o expiraram
+      // 1. Busca todas as ofertas relâmpago marcadas como ativas
       const { data, error: offersError } = await supabase
         .from('flash_offers')
         .select('*, admin_users(store_name, store_logo)')
         .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (offersError) throw offersError;
-      if (!data) return;
+      
+      // 2. Filtra por expiração no JS para evitar problemas de timezone/drift
+      const now = new Date();
+      const activeOffers = (data || []).filter(o => new Date(o.expires_at) > now);
 
-      // 2. Busca resgates do usuÃ¡rio para marcar como 'Resgatado' em vez de ocultar
+      if (activeOffers.length === 0) {
+        setFlashOffers([]);
+        return;
+      }
+
+      // 3. Busca resgates do usuário para marcar como 'Resgatado' em vez de ocultar
       let redeemedIds = new Set<string>();
       
       const userId = user?.id || localStorage.getItem('user_id');
@@ -1656,8 +1668,8 @@ function App() {
         }
       }
 
-      // 3. Marca cada oferta como resgatada ou nÃ£o
-      const offersWithStatus = data.map((offer: any) => ({
+      // 3. Marca cada oferta como resgatada ou não
+      const offersWithStatus = activeOffers.map((offer: any) => ({
         ...offer,
         is_redeemed: redeemedIds.has(offer.id)
       }));
@@ -1709,6 +1721,9 @@ function App() {
     icon: string;
     banner: string;
   } | null>(null);
+
+  const [selectedExperience, setSelectedExperience] = useState<any>(null);
+  const [pendingReservation, setPendingReservation] = useState<any>(null);
 
   const [quests] = useState([
     { id: 1, title: 'Explorador Urbano', desc: 'PeÃ§a em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
@@ -3879,122 +3894,89 @@ const navigateSubView = (target: string) => {
         off: f.original_price && f.discounted_price 
           ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
           : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-        desc: (f.description || 'Oferta imperdÃ­vel por tempo limitado!') + `\n\nÃ°Å¸â€œÅ’ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
+        desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\n📌 Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
       })) : [];
     }
 
-    let h = "00", m = "00", s = "00";
-    if (displayDeals.length > 0 && displayDeals[0].expires_at) {
-      const diffMs = new Date(displayDeals[0].expires_at).getTime() - nowTick;
-      if (diffMs > 0) {
-        h = Math.floor(diffMs / (1000 * 60 * 60)).toString().padStart(2, '0');
-        m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-        s = Math.floor((diffMs % (1000 * 60)) / 1000).toString().padStart(2, '0');
-      }
-    }
-
     return (
-      <div className="absolute inset-0 z-[100] bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-10">
-        {/* Luxury Background Effects */}
-        <div className="fixed inset-0 pointer-events-none z-0">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 size-[600px] bg-yellow-400/[0.02] blur-[120px] rounded-full -translate-y-1/2" />
-        </div>
-
-        <header className="relative z-10 p-8 flex flex-col items-center gap-8 pt-12">
-          <div className="w-full flex items-center justify-between">
-            <button 
-              onClick={() => {
-                setSubView("none");
-                setSelectedItem(null);
-              }} 
-              className="size-12 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center active:scale-90 transition-all group"
-            >
-              <Icon name="arrow_back" />
-            </button>
-            
-            <div className="flex flex-col items-center">
-              <div className="flex items-center gap-2 mb-1">
-                <Icon name="bolt" />
-                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">Ofertas Flash</span>
-              </div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Por tempo limitado</p>
-            </div>
-
-            <div className="size-12 rounded-full bg-yellow-400/5 border border-yellow-400/10 flex items-center justify-center">
-              <Icon name="timer" />
-            </div>
-          </div>
-
-          {/* Luxury Timer Panel */}
-          <div className="relative w-full max-w-[340px] rounded-[40px] bg-white/[0.02] border border-white/[0.05] p-8 flex flex-col items-center justify-center gap-2 overflow-hidden shadow-none">
-             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
-             <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-2">A oferta termina em:</p>
-             <div className="flex items-center gap-4">
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{h}</span>
-                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Horas</span>
-                </div>
-                <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{m}</span>
-                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Minutos</span>
-                </div>
-                <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{s}</span>
-                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Segundos</span>
-                </div>
-             </div>
-          </div>
+      <div className="absolute inset-0 z-[100] bg-white text-zinc-900 flex flex-col hide-scrollbar overflow-y-auto pb-10">
+        {/* HEADER TRANSPARENTE SEM FUNDO */}
+        <header className="absolute top-0 left-0 right-0 z-[130] p-6 flex items-center gap-6 pointer-events-none">
+           <button 
+            onClick={() => {
+              setSubView("none" as any);
+              setSelectedItem(null);
+            }} 
+            className="size-12 rounded-2xl bg-black/5 border border-black/5 flex items-center justify-center text-black active:scale-90 transition-all pointer-events-auto"
+          >
+            <Icon name="arrow_back_ios_new" className="text-xl" />
+          </button>
         </header>
 
-        <main className="relative z-10 px-6 py-4 flex flex-col items-center gap-10">
-          {displayDeals.map((deal, i) => (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.6 }}
-              key={deal.id || i}
-              onClick={() => { 
-                setSelectedItem(deal);
-                setSubView("product_detail"); 
-              }}
-              className="w-full max-w-[340px] bg-zinc-900/50 rounded-[50px] overflow-hidden border border-white/[0.05] flex flex-col items-center group cursor-pointer active:scale-[0.98] transition-all hover:bg-zinc-900"
-            >
-              <div className="w-full h-80 relative">
-                <img src={deal.img} className="size-full object-cover group-hover:scale-105 transition-transform duration-[3000ms]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
-                <div className="absolute top-6 left-6 bg-yellow-400 px-6 py-2 rounded-full shadow-lg shadow-yellow-400/20">
-                  <span className="text-[10px] text-black font-black uppercase tracking-widest">{deal.off}</span>
+        <main className="flex-1 space-y-10 pb-20">
+          {/* HERO INFO */}
+          <section className="pt-24 px-8 flex flex-col items-center text-center">
+             <span className="text-yellow-600 text-[10px] font-black uppercase tracking-[0.5em] mb-4">Oferta Izi Flash</span>
+             <h1 className="text-4xl font-black tracking-tighter uppercase leading-none mb-8">Exclusiva</h1>
+
+             {/* Timer Clean */}
+             {displayDeals.length > 0 && displayDeals[0].expires_at && (
+               <div className="bg-zinc-50 border border-zinc-100 p-8 rounded-[40px] shadow-sm mb-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4">A oferta termina em:</p>
+                  <DigitalTimer targetDate={displayDeals[0].expires_at} size="lg" variant="light" />
+               </div>
+             )}
+          </section>
+
+          {/* DEAL CARDS */}
+          <div className="px-6 flex flex-col items-center gap-12">
+            {displayDeals.map((deal, i) => (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                key={deal.id || i}
+                className="w-full max-w-[380px] bg-white rounded-[56px] overflow-hidden border border-zinc-100 shadow-2xl shadow-zinc-200 flex flex-col items-center group active:scale-[0.98] transition-all"
+              >
+                <div className="w-full h-96 relative">
+                  <img src={deal.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-[2000ms]" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  <div className="absolute top-6 left-6 bg-yellow-400 px-6 py-2 rounded-2xl shadow-xl shadow-yellow-400/20">
+                    <span className="text-[10px] text-black font-black uppercase tracking-widest">{deal.off}</span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="p-10 flex flex-col items-center text-center -mt-16 relative z-10 w-full">
-                <h3 className="text-2xl font-black text-white tracking-tighter leading-tight mb-2 drop-shadow-xl">{deal.name}</h3>
-                <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-4 opacity-80">{deal.store}</p>
-                <p className="text-[11px] text-zinc-500 font-medium mb-8 max-w-[260px] line-clamp-2">{deal.desc}</p>
                 
-                <div className="w-full flex flex-col items-center gap-6">
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-zinc-700 line-through tracking-widest mb-1">R$ {(deal.oldPrice || 0).toFixed(2).replace('.', ',')}</span>
-                    <span className="text-4xl font-black text-white tracking-tighter flex items-center gap-2">
-                      <span className="text-yellow-400 text-lg uppercase font-black">R$</span>
-                      {(deal.price || 0).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
+                <div className="p-10 flex flex-col items-center text-center -mt-20 relative z-10 w-full bg-white rounded-t-[48px]">
+                  <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-tight mb-2">{deal.name}</h3>
+                  <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em] mb-6">{deal.store}</p>
+                  <p className="text-xs text-zinc-400 font-bold mb-10 max-w-[280px] leading-relaxed uppercase tracking-wider">{deal.desc}</p>
                   
-                  <div className="w-full bg-white/[0.03] border border-white/5 py-4 rounded-full group-hover:bg-yellow-400 group-hover:border-yellow-400 transition-all flex items-center justify-center gap-3">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-black transition-colors">Adicionar ao Carrinho</span>
-                    <Icon name="add_circle" />
+                  <div className="w-full flex flex-col items-center gap-8">
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs font-black text-zinc-200 line-through tracking-widest mb-1">R$ {(deal.oldPrice || 0).toFixed(2).replace('.', ',')}</span>
+                      <div className="flex items-center gap-2">
+                         <span className="text-yellow-500 text-lg font-black tracking-tighter">R$</span>
+                         <span className="text-5xl font-black text-zinc-900 tracking-tighter">{(deal.price || 0).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => handleAddToCart(deal)}
+                      className="w-full h-20 bg-black text-yellow-400 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4"
+                    >
+                      Adicionar ao Carrinho
+                      <span className="material-symbols-rounded text-2xl">add_shopping_cart</span>
+                    </button>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
         </main>
       </div>
     );
   };
+
 
 
 
@@ -4206,14 +4188,13 @@ const navigateSubView = (target: string) => {
   const renderFlashOffersList = () => {
     // Re-computar activeStories similar ao HomeView para consistÃªncia
     const activeStorieslist = (flashOffers || [])
-      .filter((offer: any) => offer.title !== "Oferta Especial")
       .map((offer: any) => {
       const expiresAt = new Date(offer.expires_at);
       const now = new Date();
       const diffMs = expiresAt.getTime() - now.getTime();
       const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
       const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      const timeLeft = diffHrs > 0 ? diffHrs + "h" : diffMins + "min";
+      const timeLeft = diffHrs > 0 ? `${diffHrs}h` : diffMins > 0 ? `${diffMins}min` : "Expira logo";
       
       let finalPrice = Number(offer.discounted_price);
       if (!finalPrice && offer.original_price && offer.discount_percent) {
@@ -4221,16 +4202,19 @@ const navigateSubView = (target: string) => {
       }
       
       const originalPrice = Number(offer.original_price);
+      const merchantData = offer.admin_users || {};
+
       return {
         id: offer.id,
-        merchant: offer.admin_users?.store_name || offer.merchant_name || "Loja",
-        name: offer.product_name,
-        finalPrice: finalPrice ? finalPrice.toFixed(2).replace('.', ',') : "Flash",
+        merchant: merchantData.store_name || offer.merchant_name || "Izi Partner",
+        name: offer.product_name || offer.title || "Oferta Relâmpago",
+        finalPrice: finalPrice ? finalPrice.toFixed(2).replace('.', ',') : "Preço sob consulta",
         originalPrice: originalPrice ? originalPrice.toFixed(2).replace('.', ',') : "",
         timeLeft,
-        img: offer.product_image || offer.admin_users?.store_logo || "",
-        isMaster: (userLevel || 0) >= 10 && offer.is_vip,
+        img: offer.product_image || merchantData.store_logo || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&auto=format&fit=crop",
+        isMaster: !!offer.is_vip,
         isOpen: ESTABLISHMENTS.find(e => e.id === offer.merchant_id)?.isOpen ?? true,
+        isRedeemed: !!offer.is_redeemed,
         offer,
       };
     });
@@ -4293,8 +4277,35 @@ const navigateSubView = (target: string) => {
     );
   };
 
+  const renderExperienceExplore = () => {
+    let category = '';
+    let title = '';
+    
+    if (subView === 'explore_excursions') { category = 'excursions'; title = 'Excursões'; }
+    else if (subView === 'explore_daytrips') { category = 'daytrips'; title = 'Bate e Volta'; }
+    else if (subView === 'explore_hotels') { category = 'hotels'; title = 'Hospedagens'; }
+    else if (subView === 'explore_nightlife') { category = 'nightlife'; title = 'Noite (Bar)'; }
+    else if (subView === 'explore_agenda') { category = 'agenda'; title = 'Agenda Cultural'; }
+    else if (subView === 'explore_tours') { category = 'tours'; title = 'Passeios'; }
+
+    if (!category) return null;
+
+    return (
+      <ExperienceExploreView
+        title={title}
+        category={category}
+        items={experiencesMockData[category] || []}
+        onClose={() => setSubView('none')}
+        onSelectItem={(item) => {
+           setSelectedExperience(item);
+           setSubView('experience_detail');
+        }}
+      />
+    );
+  };
+
   const getServicePresentation = (o: any) => {
-    if (!o) return { label: 'ServiÃ§o', icon: 'shopping_bag', color: 'text-yellow-400', glow: 'rgba(250,205,5,0.5)', name: 'Pedido', bg: 'bg-yellow-400/10' };
+    if (!o) return { label: 'Serviço', icon: 'shopping_bag', color: 'text-yellow-400', glow: 'rgba(250,205,5,0.5)', name: 'Pedido', bg: 'bg-yellow-400/10' };
     const type = o.service_type;
     if (['mototaxi', 'carro', 'van'].includes(type)) {
       return { 
@@ -5027,9 +5038,9 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
 
-                {subView === "explore_hotels" && (
-                  <motion.div key="explore-hotels" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <ExploreHotelsView onBack={() => setSubView("none")} onReserve={(hotel) => { setSelectedShop(hotel); setSubView("hotel_details"); }} />
+                {["explore_excursions", "explore_daytrips", "explore_hotels", "explore_nightlife", "explore_agenda", "explore_tours"].includes(subView) && (
+                  <motion.div key="exp-explore" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                    {renderExperienceExplore()}
                   </motion.div>
                 )}
 
@@ -5114,6 +5125,18 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
 
+                {subView === "flash_offers" && (
+                  <motion.div key="flash_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[150]">
+                    {renderFlashOffersList()}
+                  </motion.div>
+                )}
+
+                {subView === "exclusive_offer" && (
+                  <motion.div key="exclusive_v" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[160]">
+                    {renderExclusiveOffer()}
+                  </motion.div>
+                )}
+
                 {subView === "explore_envios" && (
                   <motion.div key="exp_envios" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
                     <ExploreEnviosUberView />
@@ -5175,6 +5198,34 @@ const navigateSubView = (target: string) => {
                 {(subView === "product" || subView === "product_detail") && (
                   <motion.div key="product_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
                     <ProductDetailView />
+                  </motion.div>
+                )}
+
+                {subView === "experience_detail" && selectedExperience && (
+                  <motion.div key="exp_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[170]">
+                    <ExperienceDetailView 
+                      item={selectedExperience} 
+                      onBack={() => setSubView('explore_' + selectedExperience.category as any)} 
+                      onConfirmReservation={(res) => {
+                        setPendingReservation(res);
+                        setSubView('experience_checkout');
+                      }}
+                    />
+                  </motion.div>
+                )}
+
+                {subView === "experience_checkout" && pendingReservation && (
+                  <motion.div key="exp_checkout" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[180]">
+                    <ExperienceCheckoutView 
+                      reservation={pendingReservation}
+                      walletBalance={iziCoins}
+                      onBack={() => setSubView('experience_detail')}
+                      onPay={(method) => {
+                        showToast(`Reserva confirmada via ${method}!`, "success");
+                        setSubView('none');
+                        // Aqui entraria a lógica real de processamento e desconto de saldo
+                      }}
+                    />
                   </motion.div>
                 )}
 

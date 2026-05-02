@@ -1084,7 +1084,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const fetchMerchantFinance = useCallback(async () => {
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
-    if (!idToUse) return;
+    if (!idToUse) {
+      setMerchantBalance(0);
+      setMerchantTransactions([]);
+      return;
+    }
     
     setIsWalletLoading(true);
     try {
@@ -1103,6 +1107,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return acc + (t.type === 'saque' ? -amt : amt);
         }, 0);
         setMerchantBalance(balance);
+      } else {
+        setMerchantBalance(0);
+        setMerchantTransactions([]);
       }
     } catch (err: any) {
       console.error('Error fetching merchant finance:', err);
@@ -1530,6 +1537,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 
   const openMerchantPreview = useCallback(async (merchant: any) => {
+    // Reset financial data to avoid "leaks" from previous preview while loading
+    setMerchantBalance(0);
+    setMerchantTransactions([]);
+    
     setSelectedMerchantPreview(merchant);
     setActivePreviewTab('info');
     try {
@@ -1537,6 +1548,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setPreviewProducts(prods || []);
       const { data: cats } = await supabase.from('merchant_categories_delivery').select('*').eq('merchant_id', merchant.id);
       setPreviewCategories(cats || []);
+      
+      // Trigger finance fetch for the newly selected merchant
+      // fetchMerchantFinance uses selectedMerchantPreview which we just set
     } catch (err) {
       console.error('Erro ao carregar preview do lojista:', err);
     }
@@ -2500,14 +2514,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const dashboardData = useMemo(() => {
     let orders = [...dashboardOrders];
     
-    // Filtro de segurança absoluto: se for merchant, GARANTIR que só vê suas ordens
-    if (userRole === 'merchant' && merchantProfile?.id) {
-      orders = orders.filter(o => o.merchant_id === merchantProfile.id);
+    const targetId = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+    
+    if (targetId) {
+      orders = orders.filter(o => o.merchant_id === targetId);
     } else if (userRole === 'admin') {
-      // Admin vê tudo, mas talvez queiramos separar faturamento de sistema vs lojistas depois
+      // Admin global dashboard - no filtering
     } else {
-      // Se não tem role definida ou profile de merchant faltando enquanto deveria ter, retorna vazio por segurança
-      if (userRole === 'merchant') orders = [];
+      orders = [];
     }
 
     if (!orders || orders.length === 0) {
@@ -2613,6 +2627,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
+    const revenueToday = dailyRev[6];
+    const activeOrdersCount = orders.filter(o => !['concluido', 'delivered', 'cancelado'].includes(o.status)).length;
+
     return {
       totalRevenue,
       totalOrders,
@@ -2625,6 +2642,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       revenuePath: 'M0,120 L400,120',
       dayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
       totalOrdersToday,
+      revenueToday,
+      activeOrdersCount,
       categories,
       topProducts,
       topMerchants

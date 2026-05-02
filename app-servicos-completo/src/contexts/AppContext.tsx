@@ -187,6 +187,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     window.history.pushState({ view: "app", subView: newView }, "");
   };
 
+  const fetchEstablishmentTypes = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('establishment_types')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      if (data) setEstablishmentTypes(data);
+    } catch (e) {
+      console.error("Erro ao carregar tipos de estabelecimentos:", e);
+    }
+  }, []);
+
   const fetchSettings = useCallback(async () => {
     try {
       const { data: adminSettings } = await supabase
@@ -248,6 +263,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await Promise.all([
           fetchSettings(),
+          fetchEstablishmentTypes(),
           initBroadcasts(),
           updateLocation()
         ]);

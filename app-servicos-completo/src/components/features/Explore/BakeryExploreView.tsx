@@ -1,5 +1,6 @@
 import React from 'react';
 import { GenericCategoryExplorer } from './GenericCategoryExplorer';
+import { useApp } from '../../../contexts/AppContext';
 
 interface BakeryExploreViewProps {
   onBack: () => void;
@@ -7,12 +8,28 @@ interface BakeryExploreViewProps {
 }
 
 export const BakeryExploreView: React.FC<BakeryExploreViewProps> = (props) => {
-  const categories = [
-    { label: "Pães", img: "https://cdn-icons-png.flaticon.com/512/3014/3014535.png" },
-    { label: "Bolos", img: "https://cdn-icons-png.flaticon.com/512/3014/3014545.png" },
-    { label: "Salgados", img: "https://cdn-icons-png.flaticon.com/512/3132/3132693.png" },
-    { label: "Doces", img: "https://cdn-icons-png.flaticon.com/512/3132/3132709.png" },
-    { label: "Café", img: "https://cdn-icons-png.flaticon.com/512/3132/3132715.png" },
+  const { establishmentTypes } = useApp();
+  
+  // Encontra a categoria master de Padaria
+  const master = establishmentTypes.find(t => t.value === 'bakery' || t.value === 'padaria');
+  
+  // Filtra as subcategorias vinculadas a ela
+  const dynamicCategories = establishmentTypes
+    .filter(t => t.parent_id === master?.id)
+    .map(t => ({ 
+      label: t.name, 
+      img: t.icon && (t.icon.startsWith('http') || t.icon.startsWith('/')) 
+        ? t.icon 
+        : `https://images.unsplash.com/photo-1509440159596-0249088772ff?w=100&h=100&fit=crop` 
+    }));
+
+  // Fallback caso o admin ainda não tenha cadastrado subcategorias
+  const categories = dynamicCategories.length > 0 ? dynamicCategories : [
+    { label: "Pães", img: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=100&h=100&fit=crop" },
+    { label: "Bolos", img: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=100&h=100&fit=crop" },
+    { label: "Salgados", img: "https://images.unsplash.com/photo-1619671607534-192f155988d6?w=100&h=100&fit=crop" },
+    { label: "Doces", img: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=100&h=100&fit=crop" },
+    { label: "Café", img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=100&h=100&fit=crop" },
   ];
 
   return (

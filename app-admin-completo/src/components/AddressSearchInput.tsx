@@ -21,7 +21,7 @@ interface AddressSearchInputProps {
 export const AddressSearchInput = ({
   placeholder,
   initialValue,
-  onSelect,
+  onSelect = () => {},
   onClear,
   className,
   userCoords,
@@ -339,11 +339,13 @@ export const AddressSearchInput = ({
       coords = await fetchPlaceDetails(prediction.place_id);
     }
 
-    onSelect({
-      formatted_address: description,
-      place_id: prediction.place_id,
-      ...(coords ?? {}),
-    });
+    if (typeof onSelect === 'function') {
+      onSelect({
+        formatted_address: description,
+        place_id: prediction.place_id,
+        ...(coords ?? {}),
+      });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -352,7 +354,7 @@ export const AddressSearchInput = ({
       setOpen(false);
       if (suggestions.length > 0) {
         handleSelect(suggestions[0]);
-      } else {
+      } else if (typeof onSelect === 'function') {
         onSelect({ formatted_address: query });
       }
     }

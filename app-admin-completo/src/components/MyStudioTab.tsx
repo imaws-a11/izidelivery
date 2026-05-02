@@ -496,9 +496,9 @@ export default function MyStudioTab() {
               <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {[
-                    { label: 'Vendas Hoje', val: 'R$ 0,00', icon: 'payments', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
-                    { label: 'Pedidos Ativos', val: '0', icon: 'receipt_long', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-                    { label: 'Avaliação Média', val: '4.9', icon: 'star', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/30' },
+                    { label: 'Vendas Hoje', val: `R$ ${(dashboardData.revenueToday || 0).toFixed(2).replace('.', ',')}`, icon: 'payments', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
+                    { label: 'Pedidos Ativos', val: dashboardData.activeOrdersCount || 0, icon: 'receipt_long', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950/30' },
+                    { label: 'Avaliação Média', val: (targetItem as any).metadata?.rating || '4.9', icon: 'star', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/30' },
                   ].map(s => (
                     <div key={s.label} className={`${s.bg} p-8 rounded-[40px] border border-white/10`}>
                       <span className={`material-symbols-outlined ${s.color} text-3xl mb-4`}>{s.icon}</span>

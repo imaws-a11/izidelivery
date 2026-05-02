@@ -118,80 +118,88 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   ].filter(o => o.active);
 
   return (
-    <div className="absolute inset-0 z-40 bg-white text-zinc-900 flex flex-col overflow-y-auto no-scrollbar">
-      {/* HEADER */}
-      <header className="bg-white px-6 pt-12 pb-6 flex items-center gap-4 border-b border-zinc-100 sticky top-0 z-50">
-        <button onClick={() => setSubView("cart")} className="size-10 rounded-full bg-zinc-50 flex items-center justify-center">
-          <span className="material-symbols-rounded text-zinc-900">arrow_back</span>
+    <div className="absolute inset-0 z-40 bg-white text-zinc-900 flex flex-col overflow-y-auto no-scrollbar pb-32">
+      {/* HEADER PREMIUM - SEM FUNDO */}
+      <header className="fixed top-0 inset-x-0 z-[100] px-6 py-6 flex items-center justify-between">
+        <button 
+          onClick={() => setSubView("cart")} 
+          className="size-12 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center active:scale-90 transition-all shadow-xl"
+        >
+          <span className="material-symbols-rounded text-zinc-900 text-xl">arrow_back_ios_new</span>
         </button>
-        <h1 className="font-black text-xl tracking-tight leading-none uppercase">Checkout</h1>
+        <h1 className="font-black text-base tracking-tighter uppercase leading-none">Checkout</h1>
+        <div className="size-12" /> {/* Spacer */}
       </header>
 
-      <div className="px-5 py-6 space-y-8">
+      <div className="pt-24 px-6 py-6 space-y-10">
         {/* ENDEREÇO */}
-        <section className="space-y-3">
-           <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Endereço de entrega</h3>
-           <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-              <div className="flex items-center gap-3 min-w-0">
-                 <span className="material-symbols-rounded text-zinc-400">location_on</span>
-                 <p className="text-sm font-bold text-zinc-900 truncate">{userLocation.address || "Defina um endereço"}</p>
+        <section className="space-y-4">
+           <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Endereço de entrega</h3>
+           <div className="flex items-center justify-between p-5 bg-zinc-50 rounded-[32px] border border-zinc-100 shadow-sm">
+              <div className="flex items-center gap-4 min-w-0">
+                 <div className="size-10 rounded-2xl bg-white flex items-center justify-center shadow-inner">
+                    <span className="material-symbols-rounded text-zinc-400">location_on</span>
+                 </div>
+                 <p className="text-sm font-black text-zinc-900 uppercase tracking-tighter truncate">{userLocation.address || "Defina um endereço"}</p>
               </div>
-              <button onClick={() => setSubView("addresses")} className="text-yellow-600 text-xs font-black uppercase">Alterar</button>
+              <button onClick={() => setSubView("addresses")} className="text-yellow-600 text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-white rounded-xl border border-zinc-100 shadow-sm active:scale-95 transition-all">Alterar</button>
            </div>
         </section>
 
         {/* PAGAMENTO */}
-        <section className="space-y-3">
-           <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Forma de pagamento</h3>
-           <div className="grid grid-cols-2 gap-3">
+        <section className="space-y-4">
+           <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Forma de pagamento</h3>
+           <div className="grid grid-cols-2 gap-4">
               {paymentOptions.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => !m.disabled && setPaymentMethod(m.id)}
-                  className={`flex flex-col items-start p-4 rounded-2xl border-2 transition-all ${paymentMethod === m.id ? 'border-yellow-400 bg-yellow-50' : 'border-zinc-100 bg-white'}`}
+                  className={`flex flex-col items-start p-5 rounded-[32px] border-4 transition-all duration-300 ${paymentMethod === m.id ? 'border-yellow-400 bg-white shadow-2xl shadow-yellow-100' : 'border-zinc-50 bg-zinc-50 opacity-60'}`}
                 >
-                  <span className={`material-symbols-rounded mb-2 ${paymentMethod === m.id ? 'text-yellow-600' : m.color}`}>{m.icon}</span>
-                  <p className="text-[13px] font-black text-zinc-900 leading-tight">{m.label}</p>
-                  <p className="text-[10px] font-medium text-zinc-400 mt-0.5">{m.sub}</p>
+                  <div className={`size-10 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4`}>
+                    <span className={`material-symbols-rounded ${paymentMethod === m.id ? 'text-yellow-600' : m.color}`}>{m.icon}</span>
+                  </div>
+                  <p className="text-[12px] font-black text-zinc-900 uppercase tracking-tighter leading-tight">{m.label}</p>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">{m.sub}</p>
                 </button>
               ))}
            </div>
 
            {paymentMethod === "dinheiro" && (
-             <div className="mt-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                <p className="text-xs font-bold text-zinc-500 mb-2">Troco para quanto?</p>
+             <div className="mt-6 p-6 bg-zinc-50 rounded-[32px] border border-zinc-100 shadow-inner">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Troco para quanto?</p>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={changeFor}
                   onChange={(e) => setChangeFor(e.target.value.replace(/\D/g, ""))}
                   placeholder="Ex: 50,00"
-                  className="w-full bg-white h-12 rounded-xl border border-zinc-200 px-4 text-zinc-900 font-bold outline-none focus:border-yellow-400"
+                  className="w-full bg-white h-14 rounded-2xl border border-zinc-100 px-6 text-zinc-900 font-black uppercase tracking-tighter outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
                 />
              </div>
            )}
         </section>
 
         {/* CUPOM */}
-        <section className="space-y-3">
-           <h3 className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Cupom de desconto</h3>
-           <div className="flex gap-2">
+        <section className="space-y-4">
+           <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Cupom de desconto</h3>
+           <div className="flex gap-3">
               <input
-                className="flex-1 bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 text-sm font-bold uppercase placeholder:text-zinc-300 outline-none focus:border-yellow-400"
-                placeholder="CÓDIGO"
+                className="flex-1 bg-zinc-50 border border-zinc-100 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-tighter placeholder:text-zinc-300 outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
+                placeholder="CÓDIGO DO CUPOM"
                 value={couponInput}
                 onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
               />
               <button
                 onClick={() => handleApplyCoupon(couponInput)}
-                className="bg-zinc-900 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest"
+                className="bg-zinc-900 text-yellow-400 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
               >
                 Aplicar
               </button>
            </div>
            {appliedCoupon && (
-             <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
-                <p className="text-[11px] font-bold text-emerald-700 uppercase">{appliedCoupon.coupon_code} aplicado</p>
+             <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
+                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{appliedCoupon.coupon_code} ATIVADO</p>
                 <button onClick={() => setAppliedCoupon(null)} className="text-emerald-700 material-symbols-rounded text-sm">close</button>
              </div>
            )}
@@ -199,69 +207,73 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
         {/* IZI COINS */}
         {iziCoins >= 100 && (
-          <section className="p-4 bg-zinc-900 rounded-2xl flex items-center justify-between">
-             <div className="flex items-center gap-3">
-                <span className="material-symbols-rounded text-yellow-400">monetization_on</span>
+          <section className="p-6 bg-zinc-900 rounded-[32px] flex items-center justify-between shadow-2xl shadow-zinc-200">
+             <div className="flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                   <span className="material-symbols-rounded text-yellow-400">monetization_on</span>
+                </div>
                 <div>
-                   <p className="text-white font-black text-sm uppercase">Usar Izi Coins</p>
-                   <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Saldo: {iziCoins} coins</p>
+                   <p className="text-white font-black text-sm uppercase tracking-tighter">Usar Izi Coins</p>
+                   <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Disponível: {iziCoins} coins</p>
                 </div>
              </div>
              <button 
                onClick={() => setUseCoins(!useCoins)}
-               className={`w-12 h-6 rounded-full p-1 transition-all ${useCoins ? 'bg-yellow-400' : 'bg-zinc-700'}`}
+               className={`w-14 h-7 rounded-full p-1.5 transition-all ${useCoins ? 'bg-yellow-400' : 'bg-zinc-800'}`}
              >
-                <div className={`size-4 bg-white rounded-full transition-all ${useCoins ? 'translate-x-6' : 'translate-x-0'}`} />
+                <div className={`size-4 bg-white rounded-full shadow-sm transition-all ${useCoins ? 'translate-x-7' : 'translate-x-0'}`} />
              </button>
           </section>
         )}
 
         {/* RESUMO */}
-        <section className="space-y-3 pt-8 border-t border-zinc-100">
-           <div className="flex justify-between text-sm">
-              <span className="text-zinc-500 font-medium">Subtotal</span>
-              <span className="text-zinc-900 font-bold">R$ {subtotal.toFixed(2).replace(".", ",")}</span>
+        <section className="space-y-4 pt-10 border-t border-zinc-100">
+           <div className="flex justify-between items-center text-xs">
+              <span className="text-zinc-500 font-black uppercase tracking-widest">Subtotal</span>
+              <span className="text-zinc-900 font-black tracking-tighter">R$ {subtotal.toFixed(2).replace(".", ",")}</span>
            </div>
-           <div className="flex justify-between text-sm">
-              <span className="text-zinc-500 font-medium">Taxa de entrega</span>
-              <span className={deliveryFee === 0 ? "text-emerald-600 font-bold" : "text-zinc-900 font-bold"}>
-                 {deliveryFee === 0 ? "Grátis" : `R$ ${deliveryFee.toFixed(2).replace(".", ",")}`}
+           <div className="flex justify-between items-center text-xs">
+              <span className="text-zinc-500 font-black uppercase tracking-widest">Taxa de entrega</span>
+              <span className={deliveryFee === 0 ? "text-emerald-600 font-black tracking-widest" : "text-zinc-900 font-black tracking-tighter"}>
+                 {deliveryFee === 0 ? "GRÁTIS" : `R$ ${deliveryFee.toFixed(2).replace(".", ",")}`}
               </span>
            </div>
            {couponDiscount > 0 && (
-             <div className="flex justify-between text-sm text-emerald-600 font-bold">
+             <div className="flex justify-between items-center text-xs text-emerald-600 font-black uppercase tracking-widest">
                 <span>Cupom</span>
                 <span>- R$ {couponDiscount.toFixed(2).replace(".", ",")}</span>
              </div>
            )}
            {coinDiscount > 0 && (
-             <div className="flex justify-between text-sm text-emerald-600 font-bold">
+             <div className="flex justify-between items-center text-xs text-emerald-600 font-black uppercase tracking-widest">
                 <span>Izi Coins</span>
                 <span>- R$ {coinDiscount.toFixed(2).replace(".", ",")}</span>
              </div>
            )}
-           <div className="flex justify-between items-end pt-4 border-t border-zinc-100">
-              <span className="text-zinc-900 font-black text-xl uppercase">Total</span>
-              <span className="text-zinc-900 font-black text-2xl tracking-tight">R$ {total.toFixed(2).replace(".", ",")}</span>
+           <div className="flex justify-between items-end pt-6 border-t border-zinc-100 mt-6">
+              <span className="text-zinc-900 font-black text-2xl uppercase tracking-tighter">Total</span>
+              <span className="text-zinc-900 font-black text-3xl tracking-tighter">R$ {total.toFixed(2).replace(".", ",")}</span>
            </div>
         </section>
 
-        <p className="text-center text-[10px] font-bold text-zinc-400 pb-32">
+        <p className="text-center text-[9px] font-black text-zinc-400 uppercase tracking-widest pb-40">
            Ao finalizar você concorda com nossos termos de uso.
         </p>
       </div>
 
-      {/* FOOTER FIXO */}
-      <div className="fixed bottom-0 left-0 w-full p-5 bg-white border-t border-zinc-100 z-50">
-        <button
+      {/* FOOTER FIXO PREMIUM */}
+      <div className="fixed bottom-0 left-0 w-full p-6 bg-white/80 backdrop-blur-md border-t border-zinc-50 z-[200]">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={() => isShopOpen && handlePlaceOrder(useCoins)}
           disabled={!paymentMethod || !isShopOpen}
-          className={`w-full h-16 rounded-2xl flex items-center justify-center gap-4 shadow-xl transition-all active:scale-95 ${isShopOpen ? 'bg-yellow-400 shadow-yellow-100' : 'bg-zinc-100 text-zinc-400 shadow-none'}`}
+          className={`w-full h-18 rounded-[28px] flex items-center justify-center gap-4 shadow-2xl transition-all ${isShopOpen ? 'bg-zinc-900 text-yellow-400 shadow-zinc-200' : 'bg-zinc-100 text-zinc-400 shadow-none'}`}
         >
-           <span className="text-black font-black text-lg">
-              {isShopOpen ? 'Fazer pedido' : 'Loja fechada'}
+           <span className="font-black text-lg uppercase tracking-tighter">
+              {isShopOpen ? 'Confirmar Pedido' : 'Loja Fechada'}
            </span>
-        </button>
+           {isShopOpen && <span className="material-symbols-rounded">arrow_forward_ios</span>}
+        </motion.button>
       </div>
     </div>
   );

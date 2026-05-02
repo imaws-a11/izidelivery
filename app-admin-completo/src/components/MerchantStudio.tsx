@@ -348,14 +348,14 @@ export default function MerchantStudio() {
                     </div>
 
                     <AddressSearchInput
-                      value={editingItem.store_address || ''}
-                      onChange={(data) => {
+                      initialValue={editingItem.store_address || ''}
+                      onSelect={(data: any) => {
                         setEditingItem({
                           ...editingItem,
-                          store_address: data.address,
-                          latitude: data.latitude,
-                          longitude: data.longitude,
-                          google_place_id: data.placeId
+                          store_address: data.formatted_address,
+                          latitude: data.lat,
+                          longitude: data.lng,
+                          google_place_id: data.place_id
                         });
                       }}
                       placeholder="Pesquise o endereço completo (Rua, Número, Bairro)..."

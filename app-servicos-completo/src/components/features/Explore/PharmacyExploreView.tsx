@@ -1,5 +1,6 @@
 import React from 'react';
 import { GenericCategoryExplorer } from './GenericCategoryExplorer';
+import { useApp } from '../../../contexts/AppContext';
 
 interface PharmacyExploreViewProps {
   onBack: () => void;
@@ -7,12 +8,25 @@ interface PharmacyExploreViewProps {
 }
 
 export const PharmacyExploreView: React.FC<PharmacyExploreViewProps> = (props) => {
-  const categories = [
-    { label: "Remédios", img: "https://cdn-icons-png.flaticon.com/512/3063/3063822.png" },
-    { label: "Higiene", img: "https://cdn-icons-png.flaticon.com/512/2553/2553642.png" },
-    { label: "Beleza", img: "https://cdn-icons-png.flaticon.com/512/3132/3132715.png" },
-    { label: "Bebês", img: "https://cdn-icons-png.flaticon.com/512/3132/3132709.png" },
-    { label: "Suplementos", img: "https://cdn-icons-png.flaticon.com/512/3132/3132693.png" },
+  const { establishmentTypes } = useApp();
+  
+  const master = establishmentTypes.find(t => t.value === 'pharmacy' || t.value === 'farmacia');
+  
+  const dynamicCategories = establishmentTypes
+    .filter(t => t.parent_id === master?.id)
+    .map(t => ({ 
+      label: t.name, 
+      img: t.icon && (t.icon.startsWith('http') || t.icon.startsWith('/')) 
+        ? t.icon 
+        : `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop` 
+    }));
+
+  const categories = dynamicCategories.length > 0 ? dynamicCategories : [
+    { label: "Remédios", img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop" },
+    { label: "Higiene", img: "https://images.unsplash.com/photo-1603507864264-325290f671b5?w=100&h=100&fit=crop" },
+    { label: "Beleza", img: "https://images.unsplash.com/photo-1596462502278-27bfdc4033c8?w=100&h=100&fit=crop" },
+    { label: "Bebês", img: "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=100&h=100&fit=crop" },
+    { label: "Suplementos", img: "https://images.unsplash.com/photo-1584017945366-b97f0482aef2?w=100&h=100&fit=crop" },
   ];
 
   return (
