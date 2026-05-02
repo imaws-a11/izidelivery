@@ -3480,67 +3480,81 @@ function App() {
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
                                     { id: 'missions', label: 'Missões', icon: 'emoji_events' },
                                     { id: 'active_mission', label: 'Entrega', icon: 'route' },
+                                    { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'scheduled', label: 'Escalas', icon: 'event', badge: scheduledOrders.length },
                                     { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active && !myApplications.some(app => String(app.slot_id) === String(s.id))).length },
                                     { id: 'earnings', label: 'Ganhos', icon: 'payments' },
                                     { id: 'profile', label: 'Perfil', icon: 'person' }
-                                ].filter(item => {
-                                    if (item.id === 'scheduled' || item.id === 'active_mission') {
-                                        return isOnline || !!activeMission;
-                                    }
-                                    return true;
-                                }).map((item) => {
-                                    const isActive = activeTab === item.id;
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => {
-                                                // Limpeza de Modais ao trocar de aba para evitar fluxos errados
-                                                setShowOrderModal(false);
-                                                setShowBankDetails(false);
-                                                setShowPlateModal(false);
-                                                setShowPreferences(false);
-                                                setShowWithdrawModal(false);
-                                                setShowWithdrawHistory(false);
-                                                setShowWithdrawDetail(false);
-                                                setSelectedSlot(null);
-                                                
-                                                if (item.id === 'active_mission') {
-                                                    // Ao clicar em "Missão" na navbar, limpa a seleção para mostrar a lista
-                                                    setActiveMission(null);
-                                                    syncMissionWithDB();
-                                                }
-                                                setActiveTab(item.id as any);
-                                            }}
-                                            className={`flex flex-col items-center gap-1 py-1.5 px-0.5 rounded-[20px] transition-all relative flex-1 min-w-0 ${
-                                                isActive ? 'text-yellow-600' : 'text-zinc-400'
-                                            }`}
-                                        >
-                                            <div className={`size-10 sm:size-12 rounded-[16px] sm:rounded-[20px] flex items-center justify-center transition-all duration-300 ${
-                                                isActive 
-                                                    ? 'bg-yellow-400 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),_inset_-3px_-3px_8px_rgba(0,0,0,0.1),_0_8px_20px_rgba(250,204,21,0.2)] scale-105 border border-yellow-300' 
-                                                    : 'bg-transparent'
-                                            }`}>
-                                                <Icon 
-                                                    name={item.icon} 
-                                                    size={isActive ? 22 : 20} 
-                                                    className={isActive ? 'text-zinc-900 drop-shadow-sm' : 'text-zinc-400'} 
-                                                />
-                                                {item.badge > 0 && (
-                                                    <span className="absolute top-0 right-0 size-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
-                                                        {item.badge}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <span className={`text-[8px] font-black uppercase tracking-widest transition-all text-center pb-1 ${
-                                                isActive ? 'opacity-100 text-zinc-900' : 'opacity-0 h-0 hidden'
-                                            }`}>
-                                                {item.label}
-                                            </span>
-                                            {isActive && <div className="absolute -bottom-1 size-1.5 rounded-full bg-yellow-500" />}
-                                        </button>
-                                    );
-                                })}
+                                    ].filter(item => {
+                                        if (item.id === 'scheduled' || item.id === 'active_mission') {
+                                            return isOnline || !!activeMission;
+                                        }
+                                        return true;
+                                    }).map((item) => {
+                                        const isActive = activeTab === item.id;
+                                        const hasPendingOrders = item.id === 'active_mission' && orders.length > 0 && !activeMission;
+
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => {
+                                                    // Limpeza de Modais ao trocar de aba para evitar fluxos errados
+                                                    setShowOrderModal(false);
+                                                    setShowBankDetails(false);
+                                                    setShowPlateModal(false);
+                                                    setShowPreferences(false);
+                                                    setShowWithdrawModal(false);
+                                                    setShowWithdrawHistory(false);
+                                                    setShowWithdrawDetail(false);
+                                                    setSelectedSlot(null);
+                                                    
+                                                    if (item.id === 'active_mission') {
+                                                        // Ao clicar em "Missão" na navbar, limpa a seleção para mostrar a lista
+                                                        setActiveMission(null);
+                                                        syncMissionWithDB();
+                                                    }
+                                                    setActiveTab(item.id as any);
+                                                }}
+                                                className={`flex flex-col items-center gap-1 py-1.5 px-0.5 rounded-[20px] transition-all relative flex-1 min-w-0 ${
+                                                    isActive ? 'text-yellow-600' : 'text-zinc-400'
+                                                }`}
+                                            >
+                                                <div className={`size-10 sm:size-12 rounded-[16px] sm:rounded-[20px] flex items-center justify-center transition-all duration-300 ${
+                                                    isActive 
+                                                        ? 'bg-yellow-400 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),_inset_-3px_-3px_8px_rgba(0,0,0,0.1),_0_8px_20px_rgba(250,204,21,0.2)] scale-105 border border-yellow-300' 
+                                                        : 'bg-transparent'
+                                                }`}>
+                                                    <Icon 
+                                                        name={item.icon} 
+                                                        size={isActive ? 22 : 20} 
+                                                        className={isActive ? 'text-zinc-900 drop-shadow-sm' : 'text-zinc-400'} 
+                                                    />
+                                                    
+                                                    {/* Indicador de Pedidos Disponíveis */}
+                                                    {hasPendingOrders && (
+                                                        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-4 w-4 bg-yellow-500 border-2 border-white shadow-sm flex items-center justify-center">
+                                                                <span className="text-[7px] text-zinc-900 font-black">{orders.length}</span>
+                                                            </span>
+                                                        </span>
+                                                    )}
+
+                                                    {item.badge > 0 && (
+                                                        <span className="absolute top-0 right-0 size-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+                                                            {item.badge}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className={`text-[8px] font-black uppercase tracking-widest transition-all text-center pb-1 ${
+                                                    isActive ? 'opacity-100 text-zinc-900' : 'opacity-0 h-0 hidden'
+                                                }`}>
+                                                    {item.label}
+                                                </span>
+                                                {isActive && <div className="absolute -bottom-1 size-1.5 rounded-full bg-yellow-500" />}
+                                            </button>
+                                        );
+                                    })}
                             </motion.div>
                         ) : (
                             <motion.div 

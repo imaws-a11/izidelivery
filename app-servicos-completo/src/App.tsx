@@ -142,6 +142,22 @@ function App() {
   const [savedCards, setSavedCards] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   
+  const sendInternalNotification = async (title: string, body: string, data: any = {}) => {
+    if (!userId) return;
+    try {
+      await supabase.from('notifications_delivery').insert({
+        user_id: userId,
+        title,
+        body,
+        data,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error("[NOTIFY] Erro ao criar notificação interna:", e);
+    }
+  };
+
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -247,6 +263,21 @@ function App() {
           
           // Transições Automáticas de Tela baseadas no Status
           if (newOrder.status !== oldOrder?.status) {
+             const statusMap: any = {
+               "confirmado": { title: "Pedido Confirmado", body: `A loja ${newOrder.merchant_name} aceitou seu pedido!` },
+               "preparando": { title: "Em Preparo", body: "Seu pedido já está sendo preparado." },
+               "em_rota": { title: "Saiu para Entrega", body: "O entregador já está a caminho do seu endereço!" },
+               "coletado": { title: "Pedido Coletado", body: "O entregador acabou de retirar seu pedido." },
+               "picked_up": { title: "Pedido Coletado", body: "O entregador acabou de retirar seu pedido." },
+               "no_local": { title: "Entregador no Local", body: "O entregador chegou! Prepare-se para receber." },
+               "concluido": { title: "Pedido Entregue", body: "Obrigado por pedir com o Izi! Aproveite seu pedido." },
+               "cancelado": { title: "Pedido Cancelado", body: "Infelizmente seu pedido foi cancelado." }
+             };
+
+             if (statusMap[newOrder.status]) {
+                sendInternalNotification(statusMap[newOrder.status].title, statusMap[newOrder.status].body, { orderId: newOrder.id });
+             }
+
              if (newOrder.status === "confirmado") {
                 toastSuccess("Pedido aceito! A loja já está preparando.");
                 setSubView("active_order");
@@ -2199,7 +2230,9 @@ function App() {
       service_fee: Number(serviceFeeAmount.toFixed(2)),
       items: cart,
       pickup_address: activeShop?.store_address || activeShop?.address || shopName,
-      delivery_address: `${userLocation?.address || "EndereÃ§o nÃ£o informado"}`,
+      delivery_address: `${userLocation?.address || "Endereço não informado"}`,
+      delivery_lat: userLocation?.lat,
+      delivery_lng: userLocation?.lng,
       payment_method: paymentMethod,
       service_type: activeShop?.type || "restaurant",
       notes: (paymentMethod === "dinheiro" && changeFor) ? `TROCO PARA: R$ ${changeFor}` : "",
@@ -2335,6 +2368,7 @@ function App() {
           }
 
           setIsLoading(false);
+          sendInternalNotification("Pedido Realizado!", `Seu pedido na loja ${shopName} foi enviado com sucesso.`, { orderId: order.id });
           navigateSubView("waiting_merchant");
           return;
 
