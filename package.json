@@ -3,6 +3,9 @@
     "version": "1.0.0",
     "description": "Monorepo para o sistema de delivery completo",
     "private": true,
+    "engines": {
+        "node": "22.x"
+    },
     "workspaces": [
         "app-admin-completo",
         "app-entregador-completo",
