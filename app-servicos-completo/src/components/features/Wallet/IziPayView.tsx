@@ -82,7 +82,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       exit={{ opacity: 0 }}
       className="pb-32"
     >
-      <header className="bg-zinc-900 px-6 pt-12 pb-32 rounded-b-[60px] relative shadow-2xl overflow-hidden">
+      <header className="bg-zinc-900 px-6 pt-32 pb-32 rounded-b-[60px] relative shadow-2xl overflow-hidden">
         {/* Ambient background effects */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/20 blur-[100px] rounded-full -mr-32 -mt-32" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 blur-[80px] rounded-full -ml-24 -mb-24" />
@@ -100,14 +100,6 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-none">Izi Pay</h1>
                <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-1">Digital Wallet</p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <motion.button whileTap={{ scale: 0.9 }} className="size-12 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl flex items-center justify-center text-white">
-              <span className="material-symbols-rounded">notifications</span>
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} className="size-12 rounded-2xl bg-yellow-400 flex items-center justify-center text-black">
-              <span className="material-symbols-rounded font-black">settings</span>
-            </motion.button>
           </div>
         </div>
 
@@ -201,6 +193,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
            <span className="material-symbols-rounded text-[100px] text-white/5 absolute -right-4 -bottom-6 rotate-12">account_balance_wallet</span>
         </section>
       </main>
+      <div className="h-40" /> {/* Extra spacing for bottom navigation overlap */}
     </motion.div>
   );
 
@@ -211,7 +204,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       exit={{ x: "100%" }}
       className="fixed inset-0 bg-white z-[100] flex flex-col"
     >
-      <header className="px-6 pt-12 pb-6 flex items-center gap-6 sticky top-0 bg-white z-50">
+      <header className="px-6 pt-16 pb-6 flex items-center gap-6 sticky top-0 bg-white z-50">
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
           <span className="material-symbols-rounded text-black font-black">arrow_back</span>
         </motion.button>
@@ -328,7 +321,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       exit={{ y: "100%" }}
       className="fixed inset-0 bg-zinc-50 z-[100] overflow-y-auto"
     >
-      <header className="px-6 pt-12 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 sticky top-0 z-20">
+      <header className="px-6 pt-16 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 sticky top-0 z-20">
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
           <span className="material-symbols-rounded text-black font-black">arrow_back</span>
         </motion.button>
@@ -407,7 +400,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         {subView === "loan" && renderLoan()}
         {subView === "deposit" && (
            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 bg-white z-[120] flex flex-col">
-              <header className="px-6 pt-12 pb-6 flex items-center gap-6 border-b border-zinc-100">
+              <header className="px-6 pt-16 pb-6 flex items-center gap-6 border-b border-zinc-100">
                  <button onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-black font-black">
                     <span className="material-symbols-rounded">arrow_back</span>
                  </button>

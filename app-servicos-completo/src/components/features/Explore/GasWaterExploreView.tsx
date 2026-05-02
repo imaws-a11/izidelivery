@@ -1,5 +1,6 @@
 import React from 'react';
 import { GenericCategoryExplorer } from './GenericCategoryExplorer';
+import { useApp } from '../../../contexts/AppContext';
 
 interface GasWaterExploreViewProps {
   onBack: () => void;
@@ -7,11 +8,24 @@ interface GasWaterExploreViewProps {
 }
 
 export const GasWaterExploreView: React.FC<GasWaterExploreViewProps> = (props) => {
-  const categories = [
-    { label: "Gás 13kg", img: "https://cdn-icons-png.flaticon.com/512/2933/2933866.png" },
-    { label: "Água 20L", img: "https://cdn-icons-png.flaticon.com/512/3105/3105807.png" },
-    { label: "Água 1.5L", img: "https://cdn-icons-png.flaticon.com/512/3105/3105807.png" },
-    { label: "Acessórios", img: "https://cdn-icons-png.flaticon.com/512/911/911462.png" },
+  const { establishmentTypes } = useApp();
+  
+  const master = establishmentTypes.find(t => t.value === 'gas' || t.value === 'agua_gas');
+  
+  const dynamicCategories = establishmentTypes
+    .filter(t => t.parent_id === master?.id)
+    .map(t => ({ 
+      label: t.name, 
+      img: t.icon && (t.icon.startsWith('http') || t.icon.startsWith('/')) 
+        ? t.icon 
+        : `https://images.unsplash.com/photo-1585351239634-11933219491b?w=100&h=100&fit=crop` 
+    }));
+
+  const categories = dynamicCategories.length > 0 ? dynamicCategories : [
+    { label: "Gás 13kg", img: "https://images.unsplash.com/photo-1585351239634-11933219491b?w=100&h=100&fit=crop" },
+    { label: "Água 20L", img: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=100&h=100&fit=crop" },
+    { label: "Água 1.5L", img: "https://images.unsplash.com/photo-1560064831-299f041284a9?w=100&h=100&fit=crop" },
+    { label: "Acessórios", img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=100&h=100&fit=crop" },
   ];
 
   return (

@@ -12,6 +12,8 @@ import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 import SplashScreen from './components/common/SplashScreen';
 import { IziBottomSheet } from './components/common/IziBottomSheet';
+import { MissionsView } from './components/features/MissionsView';
+import { incrementMissionProgress } from './lib/gamification';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -124,13 +126,14 @@ function Icon({ name, className = "", size = 20 }: any) {
     'description': BespokeIcons.FileText,
     'call': BespokeIcons.Phone,
     'history_toggle_off': BespokeIcons.History,
+    'emoji_events': BespokeIcons.StarFilled,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
   return <IconComp size={size} className={className} />;
 }
 
-type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos';
+type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos' | 'missions';
 type ServiceType = 'package' | 'mototaxi' | 'car_ride' | 'frete' | 'motorista_particular' | 'motoboy' | string;
 
 interface Order {
@@ -3236,6 +3239,21 @@ function App() {
                     refreshFinanceData();
                 });
 
+                // 🎯 GAMIFICAÇÃO: Incrementar progresso de missões do entregador
+                if (driverId) {
+                    incrementMissionProgress({ driverId, missionKey: 'complete_delivery' })
+                        .then(results => {
+                            const completedMission = results.find(r => r.isCompleted);
+                            if (completedMission) {
+                                // Dispara o evento para a UI mostrar animação de missão concluída
+                                window.dispatchEvent(new CustomEvent('izi:mission_completed', {
+                                    detail: { missionId: completedMission.missionId }
+                                }));
+                            }
+                        })
+                        .catch(err => console.error('[GAMIFICATION] Erro ao atualizar missão:', err));
+                }
+
                 setFinishedMissionData({
                     show: true,
                     amount: netEarned,
@@ -3551,11 +3569,11 @@ function App() {
                             >
                                 {[
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
-                                    { id: 'active_mission', label: 'Missão', icon: 'route' },
-                                    { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
+                                    { id: 'missions', label: 'Missões', icon: 'emoji_events' },
+                                    { id: 'active_mission', label: 'Entrega', icon: 'route' },
+                                    { id: 'scheduled', label: 'Escalas', icon: 'event', badge: scheduledOrders.length },
                                     { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active && !myApplications.some(app => String(app.slot_id) === String(s.id))).length },
-                                    { id: 'earnings', label: 'Izi Pay', icon: 'payments' },
-                                    { id: 'history', label: 'Histórico', icon: 'history' },
+                                    { id: 'earnings', label: 'Ganhos', icon: 'payments' },
                                     { id: 'profile', label: 'Perfil', icon: 'person' }
                                 ].filter(item => {
                                     if (item.id === 'scheduled' || item.id === 'active_mission') {
@@ -7432,6 +7450,7 @@ function App() {
                                     {activeTab === 'history' && <div key="hist">{renderHistoryView()}</div>}
                                     {activeTab === 'earnings' && <div key="earn">{renderEarningsView()}</div>}
                                     {activeTab === 'profile' && <div key="prof">{renderProfileView()}</div>}
+                                    {activeTab === 'missions' && <div key="miss"><MissionsView driverId={driverId} /></div>}
                                     {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
                                     {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
                                 </AnimatePresence>

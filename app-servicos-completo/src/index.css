@@ -183,3 +183,20 @@ body {
   margin-top: 0 !important;
   margin-right: 0 !important;
 }
+
+/* GLOBAL ESTHETIC: NO ITALICS, ALL BOLD */
+* {
+  font-style: normal !important;
+}
+
+h1, h2, h3, h4, h5, h6, p, b, strong {
+  font-weight: 900 !important;
+}
+
+span, div, button, input, label {
+  font-weight: 700;
+}
+
+.font-black {
+  font-weight: 900 !important;
+}

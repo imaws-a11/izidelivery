@@ -1,5 +1,6 @@
 import React from 'react';
 import { GenericCategoryExplorer } from './GenericCategoryExplorer';
+import { useApp } from '../../../contexts/AppContext';
 
 interface BeverageExploreViewProps {
   onBack: () => void;
@@ -7,12 +8,25 @@ interface BeverageExploreViewProps {
 }
 
 export const BeverageExploreView: React.FC<BeverageExploreViewProps> = (props) => {
-  const categories = [
-    { label: "Cervejas", img: "https://cdn-icons-png.flaticon.com/512/931/931949.png" },
-    { label: "Vinhos", img: "https://cdn-icons-png.flaticon.com/512/920/920610.png" },
-    { label: "Destilados", img: "https://cdn-icons-png.flaticon.com/512/920/920582.png" },
-    { label: "Gelo", img: "https://cdn-icons-png.flaticon.com/512/2115/2115955.png" },
-    { label: "Refrigerantes", img: "https://cdn-icons-png.flaticon.com/512/2405/2405479.png" },
+  const { establishmentTypes } = useApp();
+  
+  const master = establishmentTypes.find(t => t.value === 'beverages' || t.value === 'bebidas');
+  
+  const dynamicCategories = establishmentTypes
+    .filter(t => t.parent_id === master?.id)
+    .map(t => ({ 
+      label: t.name, 
+      img: t.icon && (t.icon.startsWith('http') || t.icon.startsWith('/')) 
+        ? t.icon 
+        : `https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=100&h=100&fit=crop` 
+    }));
+
+  const categories = dynamicCategories.length > 0 ? dynamicCategories : [
+    { label: "Cervejas", img: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=100&h=100&fit=crop" },
+    { label: "Vinhos", img: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=100&h=100&fit=crop" },
+    { label: "Destilados", img: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=100&h=100&fit=crop" },
+    { label: "Gelo", img: "https://images.unsplash.com/photo-1551326806-2d01f5e824eb?w=100&h=100&fit=crop" },
+    { label: "Refrigerantes", img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=100&h=100&fit=crop" },
   ];
 
   return (
@@ -22,7 +36,7 @@ export const BeverageExploreView: React.FC<BeverageExploreViewProps> = (props) =
       placeholder="Buscar em Bebidas"
       activeService="Bebidas"
       categories={categories}
-      listTitle="Mais Pedidos"
+      listTitle="Distribuidoras na Região"
       serviceType="beverages"
     />
   );

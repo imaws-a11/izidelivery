@@ -418,6 +418,9 @@ export interface DashboardData {
   revenuePath: string;
   dayLabels: string[];
   totalOrdersToday: number;
+  revenueToday: number;
+  activeOrdersCount: number;
   categories: any[];
+  topProducts?: any[];
   topMerchants: any[];
 }
