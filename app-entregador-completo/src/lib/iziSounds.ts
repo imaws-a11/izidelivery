@@ -86,7 +86,7 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'success') => {
 
   // Lista de URLs prioritárias
   const soundUrls = {
-    driver: ['/sounds/notification.mp3', '/sounds/mission_call.wav', 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
+    driver: ['/sounds/mission_call.wav', 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
     success: ['https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3'],
     merchant: ['https://cdn.freesound.org/previews/263/263133_2064400-lq.mp3']
   };
@@ -100,7 +100,9 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'success') => {
     try {
       console.log(`[AUDIO] Tentando carregar: ${urls[index]}`);
       const response = await fetch(urls[index]);
-      if (!response.ok) throw new Error('Fetch failed');
+      if (!response.ok || response.headers.get('content-type')?.includes('text/html')) {
+        throw new Error(`Arquivo não encontrado ou inválido: ${urls[index]}`);
+      }
       
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);

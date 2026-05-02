@@ -158,7 +158,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </button>
               
               {authMode === 'login' && (
-                <button type="button" className="text-[12px] font-black text-yellow-600">Esqueci a senha</button>
+                <a 
+                  href="https://wa.me/5511999999999?text=Ol%C3%A1%21%20Esqueci%20minha%20senha%20no%20Izi%20Delivery%2C%20pode%20me%20ajudar%3F" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[12px] font-black text-yellow-600"
+                >
+                  Esqueci a senha
+                </a>
               )}
            </div>
 

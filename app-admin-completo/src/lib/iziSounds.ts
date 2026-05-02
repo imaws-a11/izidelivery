@@ -50,11 +50,14 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment' | 'ca
   // Lista de URLs prioritárias
   const soundUrls = ['/sounds/notification.mp3', 'https://cdn.pixabay.com/audio/2021/08/04/audio_06dce69623.mp3'];
   
-  const playFromBuffer = async (url: number): Promise<boolean> => {
-    if (url >= soundUrls.length || !ctx) return false;
+  const playFromBuffer = async (index: number): Promise<boolean> => {
+    if (index >= soundUrls.length || !ctx) return false;
     
     try {
-      const response = await fetch(soundUrls[url]);
+      console.log(`[AUDIO] Tentando carregar: ${soundUrls[index]}`);
+      const response = await fetch(soundUrls[index]);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
       
@@ -62,10 +65,11 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment' | 'ca
       source.buffer = audioBuffer;
       source.connect(ctx.destination);
       source.start(0);
+      console.log(`🔊 [AUDIO] Sucesso ao reproduzir: ${soundUrls[index]}`);
       return true;
     } catch (err) {
-      console.warn(`[AUDIO] Falha ao carregar ${soundUrls[url]}, tentando próxima...`);
-      return playFromBuffer(url + 1);
+      console.warn(`[AUDIO] Falha no índice ${index}: ${err}`);
+      return playFromBuffer(index + 1);
     }
   };
 

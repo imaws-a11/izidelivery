@@ -130,6 +130,9 @@ function App() {
 
   const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
   const userLevel = useMemo(() => Math.floor((userXP || 0) / 100) + 1, [userXP]);
+  const activeOrdersCount = useMemo(() => 
+    orders.filter(o => o.status && !["concluido", "cancelado"].includes(o.status)).length, 
+  [orders]);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -172,6 +175,23 @@ function App() {
       document.documentElement.scrollTop = 0;
     }
   }, [subView]);
+
+  // Sincroniza o endereço padrão (ativo) do usuário com o userLocation global
+  useEffect(() => {
+    if (userId && savedAddresses.length > 0) {
+      const activeAddr = savedAddresses.find(a => a.active);
+      if (activeAddr) {
+        console.log("[LOCATION] Sincronizando endereço ativo do usuário:", activeAddr.street);
+        setUserLocation({
+          address: activeAddr.street,
+          lat: activeAddr.lat,
+          lng: activeAddr.lng,
+          isManual: true, // Bloqueia sobrescrita pelo GPS
+          loading: false
+        });
+      }
+    }
+  }, [userId, savedAddresses]);
 
   const [nowTick, setNowTick] = useState<number>(Date.now());
 
@@ -1035,6 +1055,22 @@ function App() {
     } catch (err: any) {
       console.error("Erro ao cancelar recarga:", err);
       toastError("Erro ao cancelar recarga. Tente novamente.");
+    }
+  };
+
+  const handleGlobalRefresh = async () => {
+    try {
+      await Promise.all([
+        fetchOrders(),
+        fetchWalletData(),
+        fetchFlashOffers(),
+        fetchCoupons(),
+        fetchBeveragePromo(),
+        fetchMarketData()
+      ]);
+      console.log("✅ [REFRESH] App data updated successfully.");
+    } catch (error) {
+      console.error("🚨 [REFRESH] Failed to update app data:", error);
     }
   };
 
@@ -2266,6 +2302,16 @@ function App() {
             return;
           }
 
+          // Notificar Lojista via Push
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              merchant_id: currentShopId,
+              title: '🔔 Novo Pedido IZI!',
+              body: `Você recebeu um novo pedido de ${userName || 'um cliente'}. Abra o painel para aceitar!`,
+              data: { orderId: order.id, type: 'new_order' }
+            }
+          }).catch(err => console.error('Erro ao notificar lojista (offline):', err));
+
           // DeduÃ§Ã£o de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
             const coinValue = globalSettings?.izi_coin_value || 1.0;
@@ -2365,6 +2411,16 @@ function App() {
            }).eq("id", userId);
            throw orderErr || new Error("Erro ao criar pedido. Seu saldo foi estornado.");
         }
+
+        // Notificar Lojista via Push
+        supabase.functions.invoke('send-push-notification', {
+          body: {
+            merchant_id: currentShopId,
+            title: '🔔 Novo Pedido IZI!',
+            body: `Você recebeu um novo pedido de ${userName || 'um cliente'}. Abra o painel para aceitar!`,
+            data: { orderId: order.id, type: 'new_order' }
+          }
+        }).catch(err => console.error('Erro ao notificar lojista (saldo):', err));
 
         // 4. Registrar no histÃ³rico e atualizar estado local
         await supabase.from("wallet_transactions_delivery").insert({
@@ -4805,6 +4861,17 @@ const navigateSubView = (target: string) => {
                 >
                   {item.icon}
                 </span>
+
+                {/* Feedback Visual de Pedidos Ativos */}
+                {item.id === 'orders' && activeOrdersCount > 0 && (
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 size-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center shadow-sm"
+                  >
+                    <span className="text-[9px] font-black text-white leading-none">{activeOrdersCount}</span>
+                  </motion.div>
+                )}
                 
                 <span
                   className={`mt-1 text-[10px] font-bold transition-all duration-300 ${
@@ -4928,6 +4995,7 @@ const navigateSubView = (target: string) => {
                       handleShopClick={handleShopClick} 
                       flashOffers={flashOffers} 
                       setActiveService={setActiveService} 
+                      onRefresh={handleGlobalRefresh}
                       transitData={transitData} 
                       setTransitData={setTransitData} 
                       setExploreCategoryState={setExploreCategoryState} 

@@ -158,7 +158,7 @@ export default function MyStudioTab() {
         table: 'slot_applications', 
         filter: `slot_id=eq.${selectedSlotForCandidates.id}` 
       }, () => {
-        console.log('âš¡ Atualizando candidatos via Realtime...');
+        console.log('⚡ Atualizando candidatos via Realtime...');
         fetchSlotApplications(selectedSlotForCandidates.id);
       })
       .subscribe();
@@ -180,7 +180,7 @@ export default function MyStudioTab() {
         await supabase.from('dedicated_slots_delivery').update({ is_active: false }).eq('id', selectedSlotForCandidates.id);
         
         await supabase.functions.invoke('send-push-notification', {
-          body: { driver_id: app.driver_id, title: 'Vaga Confirmada! Ã°Å¸Å’Å¸', body: `Sua candidatura para "${selectedSlotForCandidates?.title}" foi aprovada!`, data: { type: 'dedicated_slot_confirmed', slot_id: selectedSlotForCandidates?.id } }
+          body: { driver_id: app.driver_id, title: 'Vaga Confirmada! 🌟', body: `Sua candidatura para "${selectedSlotForCandidates?.title}" foi aprovada!`, data: { type: 'dedicated_slot_confirmed', slot_id: selectedSlotForCandidates?.id } }
         }).catch(() => {});
       }
       
