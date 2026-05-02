@@ -1,10 +1,12 @@
 import React from "react";
+import { ExploreBanners } from "../../common/ExploreBanners";
 
 interface ExploreBarsViewProps {
   onBack: () => void;
+  exploreBanners?: any[];
 }
 
-export const ExploreBarsView: React.FC<ExploreBarsViewProps> = ({ onBack }) => {
+export const ExploreBarsView: React.FC<ExploreBarsViewProps> = ({ onBack, exploreBanners = [] }) => {
   return (
     <div className="fixed inset-0 z-[150] h-[100dvh] overflow-y-auto w-full bg-zinc-50 text-zinc-900 pb-12 font-['Plus_Jakarta_Sans']">
       <main className="px-6 pt-12 space-y-8">
@@ -15,6 +17,8 @@ export const ExploreBarsView: React.FC<ExploreBarsViewProps> = ({ onBack }) => {
           </button>
           <h1 className="text-3xl font-black tracking-tighter text-zinc-900 text-center w-full uppercase italic">Bares</h1>
         </header>
+
+        <ExploreBanners banners={exploreBanners} serviceType="Bares" />
 
         {/* Search & Updated Quick Filters */}
         <section className="space-y-4">

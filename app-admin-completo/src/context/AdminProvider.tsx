@@ -11,7 +11,7 @@ import type {
 } from '../lib/types';
 import { useAuth } from './AuthContext';
 import { toastSuccess, toastError, toastWarning, showConfirm } from '../lib/useToast';
-import { playIziSound } from '../lib/iziSounds';
+import { playIziSound, startOrderLoop, stopOrderLoop } from '../lib/iziSounds';
 import { countOnlineDrivers, removeDriverFromList, sortDriversByPresence, upsertDriverInList } from '../lib/driverPresence';
 
 
@@ -344,30 +344,34 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    if (userRole !== 'merchant') return;
-
-    // Se a lista estiver vazia, apenas desativamos a flag de primeiro carregamento
-    // Isso garante que quando o PRIMEIRA pedido chegar, ele toque o som.
-    if (allOrders.length === 0) {
-      if (isFirstLoad.current) {
-        isFirstLoad.current = false;
-        console.log('[SOM-WATCHER] Vigilante pronto. Lista inicial vazia.');
-      }
+    if (userRole !== 'merchant') {
+      stopOrderLoop();
       return;
     }
 
-    // Se for o primeiro carregamento e já houver pedidos (ex: refresh com pedidos na tela)
-    // apenas absorvemos os IDs para não tocar som de pedidos "velhos"
+    const actionableStatuses = ['novo', 'waiting_merchant', 'waiting_payment', 'pendente', 'pendente_pagamento', 'paid', 'pago', 'confirmed', 'confirmado'];
+    
+    // 1. Identifica pedidos que precisam de atenção (pendentes de aceite)
+    const pendingOrders = allOrders.filter(order => {
+      const status = String(order.status || '').toLowerCase();
+      // Status que exigem que o lojista veja/aceite
+      return ['novo', 'waiting_merchant', 'pendente'].includes(status);
+    });
+
+    // 2. Controla o Loop de Som
+    if (pendingOrders.length > 0) {
+      startOrderLoop('merchant');
+    } else {
+      stopOrderLoop();
+    }
+
+    // 3. Notificação visual de novos IDs (apenas para o toast/alerta visual único)
     if (isFirstLoad.current) {
       allOrders.forEach(order => heardOrderIds.current.add(order.id));
       isFirstLoad.current = false;
-      console.log(`[SOM-WATCHER] Vigilante inicializado com ${heardOrderIds.current.size} pedidos conhecidos.`);
       return;
     }
 
-    const actionableStatuses = ['novo', 'waiting_merchant', 'waiting_payment', 'pendente', 'pendente_pagamento', 'paid', 'pago', 'confirmed', 'confirmado', 'pago_finalizado'];
-    
-    // Identificar pedidos que surgiram agora na lista
     const newActionableOrders = allOrders.filter(order => {
       const status = String(order.status || '').toLowerCase();
       const isActionable = actionableStatuses.includes(status);
@@ -376,14 +380,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     if (newActionableOrders.length > 0) {
-      console.log(`[SOM-WATCHER] 🔊 Novos pedidos detectados!`, newActionableOrders.length);
-      
-      // Marcar como ouvidos imediatamente para evitar loop
       newActionableOrders.forEach(order => heardOrderIds.current.add(order.id));
-      
-      // DISPARA O SOM
-      playIziSound('merchant');
-      
       if (newActionableOrders.length === 1) {
         setNewOrderNotification({ show: true, orderId: newActionableOrders[0].id });
       }

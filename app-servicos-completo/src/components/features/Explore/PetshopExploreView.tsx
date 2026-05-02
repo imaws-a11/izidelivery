@@ -5,6 +5,7 @@ import { useApp } from '../../../contexts/AppContext';
 interface PetshopExploreViewProps {
   onBack: () => void;
   onShopClick?: (shop: any) => void;
+  exploreBanners?: any[];
 }
 
 export const PetshopExploreView: React.FC<PetshopExploreViewProps> = (props) => {

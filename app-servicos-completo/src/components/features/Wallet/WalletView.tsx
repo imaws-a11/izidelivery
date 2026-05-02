@@ -11,9 +11,9 @@ import { Capacitor } from '@capacitor/core';
 // Componente para o Leitor de QR Code usando a câmera nativa ou Web
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  
   const resultRef = useRef(onResult);
   const cancelRef = useRef(onCancel);
+  const [status, setStatus] = useState<"initializing" | "ready" | "error">("initializing");
   
   useEffect(() => {
     resultRef.current = onResult;
@@ -22,85 +22,74 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
 
   useEffect(() => {
     let isMounted = true;
+    console.log("[SCANNER] Iniciando componente...", Capacitor.getPlatform());
 
     const startNativeScan = async () => {
       try {
-        // Verifica/Solicita permissão
+        console.log("[SCANNER] Checando permissões nativas...");
         const { camera } = await BarcodeScanner.checkPermissions();
+        console.log("[SCANNER] Status atual da câmera:", camera);
+
         if (camera !== 'granted') {
+          console.log("[SCANNER] Pedindo permissão da câmera...");
           const { camera: newStatus } = await BarcodeScanner.requestPermissions();
           if (newStatus !== 'granted') {
-            console.warn("Permissão de câmera negada");
+            console.warn("[SCANNER] Permissão negada pelo usuário.");
             cancelRef.current();
             return;
           }
         }
 
-        // Abre o scanner nativo (isso abre uma nova View/Activity nativa em cima do app)
-        const { barcodes } = await BarcodeScanner.scan();
+        setStatus("ready");
+        console.log("[SCANNER] Abrindo scanner nativo...");
         
+        // Prepara a UI Nativa
+        await BarcodeScanner.hideBackground();
+        document.body.classList.add('scanner-active');
+
+        const { barcodes } = await BarcodeScanner.scan();
+        console.log("[SCANNER] Scan concluído. Barcodes encontrados:", barcodes.length);
+        
+        await BarcodeScanner.showBackground();
+        document.body.classList.remove('scanner-active');
+
         if (barcodes.length > 0 && isMounted) {
           resultRef.current(barcodes[0].displayValue);
         } else {
           cancelRef.current();
         }
       } catch (err) {
-        console.error("Erro no scanner nativo:", err);
+        console.error("[SCANNER] Erro fatal no scanner nativo:", err);
+        await BarcodeScanner.showBackground();
+        document.body.classList.remove('scanner-active');
         cancelRef.current();
       }
     };
 
     const startWebCamera = async () => {
-      await new Promise(r => setTimeout(r, 600));
+      console.log("[SCANNER] Iniciando câmera Web...");
+      // Pequeno delay para garantir que a div #reader já existe no DOM
+      await new Promise(r => setTimeout(r, 500));
       if (!isMounted) return;
 
       try {
         const scanner = new Html5Qrcode("reader");
         scannerRef.current = scanner;
 
-        const config = {
-          fps: 20,
-          aspectRatio: 1.0,
-          videoConstraints: { 
-            facingMode: "environment",
-            // @ts-ignore
-            focusMode: "continuous",
-            width: { min: 640, ideal: 1280 },
-            height: { min: 640, ideal: 1280 }
-          }
-        };
-
-        const cameras = await Html5Qrcode.getCameras();
-        if (!isMounted) return;
-
-        const back = cameras.find(c => 
-          c.label.toLowerCase().includes('back') || 
-          c.label.toLowerCase().includes('traseira') ||
-          c.label.toLowerCase().includes('rear')
-        ) || cameras[cameras.length - 1];
-
+        console.log("[SCANNER] Tentando dar start na câmera Web...");
         await scanner.start(
-          back ? back.id : { facingMode: "environment" }, 
-          config, 
-          (text) => resultRef.current(text), 
+          { facingMode: "environment" }, 
+          { fps: 20, aspectRatio: 1.0, qrbox: { width: 250, height: 250 } }, 
+          (text) => {
+            console.log("[SCANNER] QR Detectado na Web:", text);
+            resultRef.current(text);
+          }, 
           () => {}
         );
-
-        const videoTrack = scanner.getVideoTrack();
-        if (videoTrack && videoTrack.applyConstraints) {
-          const capabilities = videoTrack.getCapabilities() as any;
-          if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-            await videoTrack.applyConstraints({
-              advanced: [{ focusMode: 'continuous' }]
-            } as any);
-          }
-        }
-
+        setStatus("ready");
       } catch (err) {
-        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('play()'))) {
-          return;
-        }
-        console.warn("Sensor Izi Status:", err);
+        console.error("[SCANNER] Erro ao iniciar Html5Qrcode:", err);
+        setStatus("error");
       }
     };
 
@@ -112,68 +101,107 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
 
     return () => {
       isMounted = false;
+      console.log("[SCANNER] Desmontando componente...");
       const scanner = scannerRef.current;
       if (scanner) {
         if (scanner.isScanning) {
-          scanner.stop().catch(() => {});
+          scanner.stop().catch(e => console.error("[SCANNER] Erro ao parar WebCam:", e));
         }
         scannerRef.current = null;
+      }
+      if (Capacitor.isNativePlatform()) {
+        BarcodeScanner.showBackground().catch(() => {});
+        document.body.classList.remove('scanner-active');
       }
     };
   }, []);
 
-  // Na versão nativa, o scanner ocupa a tela inteira por conta própria.
-  // Renderizamos apenas se não for nativo ou se for um fallback visual.
   if (Capacitor.isNativePlatform()) {
     return (
-      <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-6 text-center">
-         <div className="size-20 border-2 border-yellow-400 border-t-transparent animate-spin rounded-full mb-6" />
-         <p className="font-black text-white uppercase tracking-widest text-xs">Iniciando Scanner Nativo...</p>
+      <div className="fixed inset-0 z-[2000] bg-transparent flex flex-col items-center justify-between p-12 pb-32 pointer-events-none">
+         <div className="w-full flex justify-end pointer-events-auto">
+            <button 
+              onClick={onCancel}
+              className="size-14 rounded-2xl bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
+            >
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+         </div>
+         
+         <div className="w-64 h-64 border-2 border-yellow-400 rounded-[40px] relative">
+            <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-[38px] animate-pulse" />
+            <div className="absolute top-1/2 left-0 w-full h-1 bg-yellow-400/50 blur-sm animate-scan" />
+         </div>
+
+         <div className="bg-black/60 backdrop-blur-xl px-8 py-5 rounded-[30px] border border-white/10 pointer-events-auto text-center space-y-2">
+            <p className="font-black text-white uppercase tracking-widest text-[10px]">Escanear QR Code</p>
+            <p className="text-zinc-400 text-[8px] font-bold uppercase tracking-tight">Posicione o código no centro do quadro</p>
+         </div>
+
+         <style>{`
+           @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+           .animate-scan { animation: scan 2s linear infinite; }
+           body.scanner-active { background: transparent !important; }
+           body.scanner-active #root, body.scanner-active .app-container { background: transparent !important; opacity: 0 !important; visibility: hidden !important; }
+           body.scanner-active *:not(.pointer-events-auto):not(.fixed.inset-0.z-\\[2000\\]) {
+             background-color: transparent !important;
+             border-color: transparent !important;
+             box-shadow: none !important;
+           }
+         `}</style>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black overflow-hidden flex items-center justify-center">
-      <div id="reader" className="fixed inset-0 w-full h-full bg-black" />
+    <div className="fixed inset-0 z-[2000] bg-black flex flex-col items-center justify-center">
+      <div id="reader" className="w-full h-full bg-black" />
+      
+      {status === "initializing" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black z-[2005]">
+           <div className="size-12 border-4 border-yellow-400 border-t-transparent animate-spin rounded-full" />
+           <p className="text-zinc-500 font-black text-[10px] uppercase tracking-widest">Iniciando Câmera...</p>
+        </div>
+      )}
 
-      {/* Botão de Fechar */}
-      <div className="absolute top-10 right-10 z-[1001]">
+      {status === "error" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black z-[2006] p-10 text-center">
+           <span className="material-symbols-outlined text-red-500 text-6xl">videocam_off</span>
+           <div className="space-y-2">
+             <h3 className="text-white font-black text-xl uppercase tracking-tighter">Erro na Câmera</h3>
+             <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Não foi possível acessar sua câmera. Verifique as permissões do navegador.</p>
+           </div>
+           <button 
+             onClick={onCancel}
+             className="px-10 py-4 bg-white/10 rounded-full text-white font-black text-[10px] uppercase tracking-widest"
+           >
+             Voltar para Carteira
+           </button>
+        </div>
+      )}
+
+      <div className="absolute top-10 right-10 z-[2001]">
         <button 
           onClick={onCancel}
-          className="size-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform shadow-2xl"
+          className="size-14 rounded-full bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
         >
            <span className="material-symbols-outlined text-3xl">close</span>
         </button>
       </div>
 
       <style>{`
-        #reader {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100vw !important;
-          height: 100vh !important;
-          background: #000 !important;
-        }
         #reader video {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100vw !important;
-          height: 100vh !important;
+          width: 100% !important;
+          height: 100% !important;
           object-fit: cover !important;
-          background: #000 !important;
         }
         #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) {
           display: none !important;
-          visibility: hidden !important;
         }
       `}</style>
     </div>
   );
 };
-
 
 interface WalletViewProps {
   walletTransactions: any[];
@@ -218,6 +246,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     isIziBlack: initialIsIziBlack = false,
   }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card" | "loans">("main");
+  console.log("[WALLET] Current Mode:", walletMode);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<"all" | "cashback">("all");
   const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "" });

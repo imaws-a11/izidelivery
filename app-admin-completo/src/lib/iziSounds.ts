@@ -34,27 +34,47 @@ const playTone = (
   osc.stop(ctx.currentTime + startOffset + duration);
 };
 
+let orderLoopInterval: any = null;
+
+export const startOrderLoop = async (role: 'merchant' | 'driver' = 'merchant') => {
+  if (orderLoopInterval) return;
+  
+  // Toca a primeira vez imediatamente
+  playIziSound(role);
+  
+  orderLoopInterval = setInterval(() => {
+    playIziSound(role);
+  }, 5000); // Toca a cada 5 segundos (intervalo de som + 3s de folga)
+  
+  console.log('🔊 [AUDIO] Loop de novos pedidos iniciado.');
+};
+
+export const stopOrderLoop = () => {
+  if (orderLoopInterval) {
+    clearInterval(orderLoopInterval);
+    orderLoopInterval = null;
+    console.log('🔇 [AUDIO] Loop de novos pedidos parado.');
+  }
+};
+
 export const playIziSound = async (role: 'merchant' | 'driver' | 'payment' | 'candidate') => {
   const ctx = getAudioContext();
-  console.log(`[AUDIO-CHECK] playIziSound chamada para: ${role}, Contexto: ${ctx?.state}`);
+  if (!ctx) return;
   
-  if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
+  if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
     try { await ctx.resume(); } catch (e) { console.warn('Falha ao resumir AudioContext:', e); }
   }
 
-  if (ctx) {
-     // Beep inicial rápido para "acordar" o sistema e o usuário
-     playTone(ctx, 440, 'sine', 0, 0.1, 0.2);
-  }
+  // Beep inicial rápido para garantir que o canal de áudio esteja aberto
+  playTone(ctx, 440, 'sine', 0, 0.05, 0.1);
 
   // Lista de URLs prioritárias
   const soundUrls = ['/sounds/notification.mp3', 'https://cdn.pixabay.com/audio/2021/08/04/audio_06dce69623.mp3'];
   
   const playFromBuffer = async (index: number): Promise<boolean> => {
-    if (index >= soundUrls.length || !ctx) return false;
+    if (index >= soundUrls.length) return false;
     
     try {
-      console.log(`[AUDIO] Tentando carregar: ${soundUrls[index]}`);
       const response = await fetch(soundUrls[index]);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
@@ -65,18 +85,14 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment' | 'ca
       source.buffer = audioBuffer;
       source.connect(ctx.destination);
       source.start(0);
-      console.log(`🔊 [AUDIO] Sucesso ao reproduzir: ${soundUrls[index]}`);
       return true;
     } catch (err) {
-      console.warn(`[AUDIO] Falha no índice ${index}: ${err}`);
       return playFromBuffer(index + 1);
     }
   };
 
   const success = await playFromBuffer(0);
-  
-  if (!success && ctx) {
-    console.log('[AUDIO] Todos os MP3 falharam. Usando sintetizador local...');
+  if (!success) {
     playModernChime(ctx);
   }
 };

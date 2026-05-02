@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { ExploreBanners } from "../../common/ExploreBanners";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../../../contexts/AppContext";
 import { Icon } from "../../common/Icon";
@@ -18,7 +19,7 @@ interface ExploreRestaurantsViewProps {
   setCopiedCoupon: (c: string | null) => void;
   initialCategory?: string;
   isIziBlackMembership?: boolean;
-  flashOffers?: any[];
+  exploreBanners?: any[];
 }
 
 export const ExploreRestaurantsView = ({
@@ -26,7 +27,6 @@ export const ExploreRestaurantsView = ({
   searchQuery,
   setSearchQuery,
   cart,
-  navigateSubView,
   foodCategories,
   availableCoupons,
   establishments,
@@ -35,12 +35,20 @@ export const ExploreRestaurantsView = ({
   setCopiedCoupon,
   initialCategory = "Todos",
   isIziBlackMembership = false,
-  flashOffers = []
+  exploreBanners = []
 }: ExploreRestaurantsViewProps) => {
-  const { activeService } = useApp();
+  const { activeService, navigateSubView } = useApp();
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const topServices = [
+    { label: "Restaurantes", icon: "restaurant" },
+    { label: "Mercados", icon: "shopping_cart" },
+    { label: "Farmácias", icon: "medical_services" },
+    { id: "bebidas", label: "Bebidas", icon: "local_bar" },
+    { id: "pet", label: "Petshop", icon: "pets" },
+  ];
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setIsScrolled(e.currentTarget.scrollTop > 40);
@@ -54,7 +62,7 @@ export const ExploreRestaurantsView = ({
     { id: "Saudável", label: "Saudável", img: "https://cdn-icons-png.flaticon.com/512/3194/3194591.png" },
     { id: "Italiana", label: "Italiana", img: "https://cdn-icons-png.flaticon.com/512/3132/3132721.png" },
     { id: "Marmita", label: "Marmita", img: "https://cdn-icons-png.flaticon.com/512/3443/3443393.png" },
-    { id: "Carnes", label: "Carnes", img: "https://cdn-icons-png.flaticon.com/512/3132/3132711.png" },
+    { id: "Carnes", label: "Carnes", img: "https://cdn-icons-png.flaticon.com/512/3132/3132693.png" },
     { id: "Porções", label: "Porções", img: "https://cdn-icons-png.flaticon.com/512/3132/3132675.png" },
     { id: "Churrasco", label: "Churrasco", img: "https://cdn-icons-png.flaticon.com/512/3132/3132707.png" },
   ], []);
@@ -134,6 +142,36 @@ export const ExploreRestaurantsView = ({
           </section>
         )}
 
+        {/* TOP SERVICES TABS */}
+        <section className="px-6 mb-8">
+           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+              {topServices.map(svc => (
+                <button 
+                  key={svc.label}
+                  onClick={() => {
+                    const viewMap: Record<string, string> = {
+                      "Restaurantes": "explore_restaurants",
+                      "Mercados": "explore_market",
+                      "Farmácias": "explore_pharmacy",
+                      "Bebidas": "explore_beverages",
+                      "Petshop": "explore_petshop"
+                    };
+                    const targetView = viewMap[svc.label];
+                    if (targetView) navigateSubView(targetView);
+                  }}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all border ${
+                    svc.label === "Restaurantes" 
+                    ? "bg-zinc-900 border-zinc-900 text-yellow-400 font-black shadow-xl" 
+                    : "bg-white border-zinc-100 text-zinc-400 font-bold"
+                  }`}
+                >
+                  <span className="material-symbols-rounded text-[20px]">{svc.icon}</span>
+                  <span className="text-[10px] uppercase tracking-widest">{svc.label}</span>
+                </button>
+              ))}
+           </div>
+        </section>
+
         {/* BUSCA ESTILO NEUMORPHIC */}
         <section className="px-6 mb-10">
            <div className="relative group">
@@ -150,60 +188,8 @@ export const ExploreRestaurantsView = ({
            </div>
         </section>
 
-        {/* ── SEÇÃO IZI FLASH OFFERS (BANNERS PREMIUM) ── */}
-        <section className="mb-10">
-           <div className="flex items-center justify-between px-6 mb-4">
-              <div className="flex items-center gap-2">
-                 <div className="size-2 bg-yellow-400 rounded-full animate-pulse" />
-                 <h2 className="text-[12px] font-black text-zinc-900 uppercase tracking-[0.2em]">Ofertas Izi Flash</h2>
-              </div>
-              <Icon name="bolt" className="text-yellow-500 animate-bounce" size={20} />
-           </div>
-           
-           <div className="flex gap-5 overflow-x-auto no-scrollbar px-6 pb-4">
-              {flashOffers.length > 0 ? (
-                flashOffers.map((offer, i) => (
-                  <motion.div
-                    key={offer.id || i}
-                    whileTap={{ scale: 0.98 }}
-                    className="min-w-[320px] h-[180px] rounded-[40px] bg-zinc-900 relative overflow-hidden shadow-2xl shadow-zinc-300 group"
-                  >
-                     <img src={offer.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600&auto=format&fit=crop"} className="size-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" alt={offer.title} />
-                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent p-8 flex flex-col justify-center">
-                        <span className="bg-yellow-400 text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit mb-3 shadow-lg shadow-yellow-400/20">
-                          {offer.discount || "Flash Offer"}
-                        </span>
-                        <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-tight mb-1">{offer.title || "Oferta Especial"}</h3>
-                        <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">{offer.subtitle || "Aproveite agora mesmo"}</p>
-                     </div>
-                     <div className="absolute top-4 right-6 text-white/10 italic font-black text-4xl">IZI</div>
-                  </motion.div>
-                ))
-              ) : (
-                /* Fallback Banners se não houver ofertas reais no banco */
-                [
-                  { title: "Cupom até R$ 30", sub: "Válido por 15 min", disc: "SUPER FLASH", img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=600" },
-                  { title: "Entrega Grátis", sub: "Restaurantes Selecionados", disc: "FRETE OFF", img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600" }
-                ].map((f, i) => (
-                  <motion.div
-                    key={i}
-                    whileTap={{ scale: 0.98 }}
-                    className="min-w-[320px] h-[180px] rounded-[40px] bg-zinc-900 relative overflow-hidden shadow-2xl shadow-zinc-200 group border border-white/5"
-                  >
-                     <img src={f.img} className="size-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" alt={f.title} />
-                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent p-8 flex flex-col justify-center">
-                        <span className="bg-yellow-400 text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit mb-3 shadow-lg shadow-yellow-400/20">
-                          {f.disc}
-                        </span>
-                        <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-tight mb-1">{f.title}</h3>
-                        <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">{f.sub}</p>
-                     </div>
-                     <div className="absolute top-4 right-6 text-white/10 italic font-black text-4xl">IZI</div>
-                  </motion.div>
-                ))
-              )}
-           </div>
-        </section>
+         {/* ── BANNERS DE EXPLORAÇÃO (ADMIN) ── */}
+         <ExploreBanners banners={exploreBanners} serviceType="Restaurante" />
 
         {/* CATEGORIAS 3D / IMERSIVAS */}
         <section className="mb-12">
