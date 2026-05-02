@@ -4243,7 +4243,7 @@ function App() {
                                                 </div>
                                                 
                                                 <div className="text-right shrink-0 bg-zinc-100 p-4 rounded-[28px] border border-white/5 shadow-inner">
-                                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">LÃ QUIDO</p>
+                                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">LÍQUIDO</p>
                                                     <div className="flex flex-col items-end">
                                                         <p className="text-xl font-black text-emerald-600 leading-none">
                                                             <span className="text-[10px] mr-0.5 not-italic text-emerald-600/60 font-bold">R$</span>
@@ -5228,8 +5228,8 @@ function App() {
                 <div className="rounded-[40px] p-8 space-y-8 border border-zinc-100 relative overflow-hidden bg-white shadow-xl" style={sClayLight}>
                     <div className="flex items-center justify-between">
                         <div className="flex flex-col gap-1">
-                            <h3 className="text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em]">Performance Alpha</h3>
-                            <p className="text-[9px] text-zinc-400 font-bold uppercase">Meta de Trading: 92%</p>
+                            <h3 className="text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em]">Ganhos da Semana</h3>
+                            <p className="text-[9px] text-zinc-400 font-bold uppercase">Desempenho dos ultimos 7 dias</p>
                         </div>
                         <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-inner">
                             <Icon name="monitoring" size={18} className="text-emerald-600" />
@@ -5331,20 +5331,20 @@ function App() {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            className="fixed inset-0 z-[100] bg-black no-scrollbar overflow-y-auto"
+            className="fixed inset-0 z-[100] bg-zinc-50 no-scrollbar overflow-y-auto"
         >
-            <div className="min-h-screen px-5 pt-8 pb-32 space-y-8">
+            <div className="min-h-screen px-5 pt-12 pb-32 space-y-8">
                 <header className="flex items-center justify-between px-2">
                     <div className="flex flex-col gap-1">
                         <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Saques ðŸ’°</p>
-                        <h2 className="text-4xl font-black text-white tracking-tighter drop-shadow-lg uppercase text-center">Histórico</h2>
+                        <h2 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase">Histórico</h2>
                     </div>
                     <motion.button 
                         whileTap={{ scale: 0.9 }}
                         onClick={() => setShowWithdrawHistory(false)}
-                        className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"
+                        className="size-12 rounded-2xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"
                     >
-                        <Icon name="close" className="text-white" size={24} />
+                        <Icon name="close" className="text-zinc-900" size={24} />
                     </motion.button>
                 </header>
 
@@ -5430,9 +5430,9 @@ function App() {
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => setShowReceipt(false)}
-                                    className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"
+                                    className="size-12 rounded-2xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"
                                 >
-                                    <Icon name="close" className="text-white" size={24} />
+                                    <Icon name="close" className="text-zinc-900" size={24} />
                                 </motion.button>
                             </div>
 
@@ -5544,7 +5544,7 @@ function App() {
                     </div>
 
                     {/* Breakdown Card */}
-                    <div className="clay-card-dark rounded-[40px] p-8 border border-zinc-100 space-y-6">
+                    <div className="bg-white rounded-[40px] p-8 border border-zinc-100 space-y-6">
                         <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
                             <Icon name="analytics" size={16} className="text-primary" />
                             Valores e Taxas
