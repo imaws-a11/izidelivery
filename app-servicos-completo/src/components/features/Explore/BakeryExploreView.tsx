@@ -5,6 +5,7 @@ import { useApp } from '../../../contexts/AppContext';
 interface BakeryExploreViewProps {
   onBack: () => void;
   onShopClick?: (shop: any) => void;
+  exploreBanners?: any[];
 }
 
 export const BakeryExploreView: React.FC<BakeryExploreViewProps> = (props) => {

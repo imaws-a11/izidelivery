@@ -3032,16 +3032,20 @@ function App() {
             const missionId = activeMission.realId || activeMission.id;
             if (!missionId) throw new Error('Identificador da missão não encontrado.');
             
-            // Atualização Otimista
-            const updatedMission = { ...activeMission, status: newStatus.toLowerCase(), updated_at: new Date().toISOString() };
+            // 1. Atualização Otimista & Feedback Imediato
+            const updatedMission = { 
+                ...activeMission, 
+                status: newStatus.toLowerCase(), 
+                updated_at: new Date().toISOString() 
+            };
+            
             if (!isFinishing) {
                 setActiveMission(updatedMission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
+                toastSuccess(`Status atualizado: ${newStatus === 'chegou_coleta' ? 'Chegada na Coleta' : newStatus}`);
             }
 
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            
             const token = await getSecureToken();
 
             const payload: any = {
@@ -3055,8 +3059,8 @@ function App() {
                 payload.payment_status = 'paid';
             }
 
-
-            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
+            // 2. Sincronização em Background (não travamos o botão esperando o banco)
+            fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${missionId}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': supabaseKey,
@@ -3064,25 +3068,21 @@ function App() {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=minimal'
                 },
-                body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(15000)
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("[UPDATE_STATUS] Server responded with error:", errorText);
-                
-                // Rollback otimista se falhar
-                if (!isFinishing) {
-                    setActiveMission(activeMission);
-                    localStorage.setItem('Izi_active_mission', JSON.stringify(activeMission));
+                body: JSON.stringify(payload)
+            }).then(response => {
+                if (!response.ok) {
+                    console.error("[UPDATE_STATUS] Falha tardia na sincronização:", response.status);
+                    toastError("Falha ao sincronizar status com o servidor.");
                 }
-                setIsAccepting(false);
-                toastError(`Erro ao atualizar status: ${errorText}`);
-                return;
+            }).catch(err => {
+                console.error("[UPDATE_STATUS] Erro de rede em background:", err);
+            });
+            
+            // Se for finalização, continuamos o fluxo síncrono para garantir o processamento financeiro
+            if (!isFinishing) {
+               setIsAccepting(false);
+               return; 
             }
-
-            toastSuccess(`Status atualizado: ${newStatus === 'chegou_coleta' ? 'Chegada na Coleta' : newStatus}`);
             
             if (isFinishing) {
                 // Atualizamos o objeto local para o cálculo de ganhos refletir o método de pagamento escolhido

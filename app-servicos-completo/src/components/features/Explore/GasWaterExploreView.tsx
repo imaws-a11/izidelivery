@@ -5,6 +5,7 @@ import { useApp } from '../../../contexts/AppContext';
 interface GasWaterExploreViewProps {
   onBack: () => void;
   onShopClick?: (shop: any) => void;
+  exploreBanners?: any[];
 }
 
 export const GasWaterExploreView: React.FC<GasWaterExploreViewProps> = (props) => {

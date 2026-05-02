@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../../../contexts/AppContext";
 import { MerchantCard } from "../Establishment/MerchantCard";
+import { ExploreBanners } from "../../common/ExploreBanners";
 
 interface CategoryOption {
   label: string;
@@ -15,7 +16,7 @@ interface GenericCategoryExplorerProps {
   placeholder: string;
   activeService: string;
   categories: CategoryOption[];
-  banners?: any[];
+  exploreBanners?: any[];
   infoCard?: { text: string; link: string };
   listTitle: string;
   serviceType: string | string[]; // para filtrar estabelecimentos
@@ -28,7 +29,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
   placeholder,
   activeService,
   categories,
-  banners = [],
+  exploreBanners = [],
   infoCard,
   listTitle,
   serviceType
@@ -38,7 +39,8 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
     handleShopClick: ctxHandleShopClick,
     searchQuery,
     setSearchQuery,
-    handleAddToCart
+    handleAddToCart,
+    navigateSubView
   } = useApp();
 
   const handleShopClick = onShopClick || ctxHandleShopClick;
@@ -147,6 +149,17 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
             {topServices.map(svc => (
               <button 
                 key={svc.label}
+                onClick={() => {
+                  const viewMap: Record<string, string> = {
+                    "Restaurantes": "explore_restaurants",
+                    "Mercados": "explore_market",
+                    "Farmácias": "explore_pharmacy",
+                    "Bebidas": "explore_beverages",
+                    "Petshop": "explore_petshop"
+                  };
+                  const targetView = viewMap[svc.label];
+                  if (targetView) navigateSubView(targetView);
+                }}
                 className={`flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all border ${
                   svc.label === activeService 
                   ? "bg-zinc-900 border-zinc-900 text-yellow-400 font-black shadow-xl" 
@@ -159,6 +172,9 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
             ))}
          </div>
       </section>
+
+      {/* BANNERS DE EXPLORAÇÃO */}
+      <ExploreBanners banners={exploreBanners} serviceType={activeService} />
 
       {/* CATEGORIAS DE PRODUTOS (CARDS IMERSIVOS) */}
       <section className="px-6 py-8 bg-zinc-50/30">
