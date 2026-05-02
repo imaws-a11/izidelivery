@@ -1,6 +1,190 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../../lib/supabase";
+import { Html5Qrcode } from "html5-qrcode";
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+import { Capacitor } from '@capacitor/core';
+
+// Componente para o Leitor de QR Code usando a câmera nativa ou Web
+const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const resultRef = useRef(onResult);
+  const cancelRef = useRef(onCancel);
+  const [status, setStatus] = useState<"initializing" | "ready" | "error">("initializing");
+  
+  useEffect(() => {
+    console.log("[SCANNER] Iniciando componente...", Capacitor.getPlatform());
+    resultRef.current = onResult;
+    cancelRef.current = onCancel;
+  }, [onResult, onCancel]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const startNativeScan = async () => {
+      try {
+        console.log("[SCANNER] Checando permissões nativas...");
+        const { camera } = await BarcodeScanner.checkPermissions();
+        if (camera !== 'granted') {
+          const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+          if (newStatus !== 'granted') {
+            cancelRef.current();
+            return;
+          }
+        }
+
+        setStatus("ready");
+        await BarcodeScanner.hideBackground();
+        document.body.classList.add('scanner-active');
+
+        const { barcodes } = await BarcodeScanner.scan();
+        
+        await BarcodeScanner.showBackground();
+        document.body.classList.remove('scanner-active');
+
+        if (barcodes.length > 0 && isMounted) {
+          resultRef.current(barcodes[0].displayValue);
+        } else {
+          cancelRef.current();
+        }
+      } catch (err) {
+        console.error("[SCANNER] Erro no scanner nativo:", err);
+        await BarcodeScanner.showBackground();
+        document.body.classList.remove('scanner-active');
+        cancelRef.current();
+      }
+    };
+
+    const startWebCamera = async () => {
+      console.log("[SCANNER] Iniciando câmera Web...");
+      await new Promise(r => setTimeout(r, 600));
+      if (!isMounted) return;
+
+      try {
+        const scanner = new Html5Qrcode("reader");
+        scannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: "environment" }, 
+          { fps: 20, aspectRatio: 1.0, qrbox: { width: 250, height: 250 } }, 
+          (text) => resultRef.current(text), 
+          () => {}
+        );
+        setStatus("ready");
+      } catch (err) {
+        console.error("[SCANNER] Erro ao iniciar Html5Qrcode:", err);
+        setStatus("error");
+      }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      startNativeScan();
+    } else {
+      startWebCamera();
+    }
+
+    return () => {
+      isMounted = false;
+      const scanner = scannerRef.current;
+      if (scanner) {
+        if (scanner.isScanning) {
+          scanner.stop().catch(() => {});
+        }
+        scannerRef.current = null;
+      }
+      if (Capacitor.isNativePlatform()) {
+        BarcodeScanner.showBackground().catch(() => {});
+        document.body.classList.remove('scanner-active');
+      }
+    };
+  }, []);
+
+  if (Capacitor.isNativePlatform()) {
+    return (
+      <div className="fixed inset-0 z-[2000] bg-transparent flex flex-col items-center justify-between p-12 pb-32 pointer-events-none">
+         <div className="w-full flex justify-end pointer-events-auto">
+            <button 
+              onClick={onCancel}
+              className="size-14 rounded-2xl bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
+            >
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+         </div>
+         
+         <div className="w-64 h-64 border-2 border-yellow-400 rounded-[40px] relative">
+            <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-[38px] animate-pulse" />
+            <div className="absolute top-1/2 left-0 w-full h-1 bg-yellow-400/50 blur-sm animate-scan" />
+         </div>
+
+         <div className="bg-black/60 backdrop-blur-xl px-8 py-5 rounded-[30px] border border-white/10 pointer-events-auto text-center space-y-2">
+            <p className="font-black text-white uppercase tracking-widest text-[10px]">Escanear QR Code</p>
+            <p className="text-zinc-400 text-[8px] font-bold uppercase tracking-tight">Posicione o código no centro do quadro</p>
+         </div>
+
+         <style>{`
+           @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+           .animate-scan { animation: scan 2s linear infinite; }
+           body.scanner-active { background: transparent !important; }
+           body.scanner-active #root, body.scanner-active .app-container { background: transparent !important; opacity: 0 !important; visibility: hidden !important; }
+           body.scanner-active *:not(.pointer-events-auto):not(.fixed.inset-0.z-\\[2000\\]) {
+             background-color: transparent !important;
+             border-color: transparent !important;
+             box-shadow: none !important;
+           }
+         `}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[2000] bg-black flex flex-col items-center justify-center">
+      <div id="reader" className="w-full h-full bg-black" />
+      
+      {status === "initializing" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black z-[2005]">
+           <div className="size-12 border-4 border-yellow-400 border-t-transparent animate-spin rounded-full" />
+           <p className="text-zinc-500 font-black text-[10px] uppercase tracking-widest">Iniciando Câmera...</p>
+        </div>
+      )}
+
+      {status === "error" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black z-[2006] p-10 text-center">
+           <span className="material-symbols-outlined text-red-500 text-6xl">videocam_off</span>
+           <div className="space-y-2">
+             <h3 className="text-white font-black text-xl uppercase tracking-tighter">Erro na Câmera</h3>
+             <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Não foi possível acessar sua câmera. Verifique as permissões do navegador.</p>
+           </div>
+           <button 
+             onClick={onCancel}
+             className="px-10 py-4 bg-white/10 rounded-full text-white font-black text-[10px] uppercase tracking-widest"
+           >
+             Voltar para Carteira
+           </button>
+        </div>
+      )}
+
+      <div className="absolute top-10 right-10 z-[2001]">
+        <button 
+          onClick={onCancel}
+          className="size-14 rounded-full bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
+        >
+           <span className="material-symbols-outlined text-3xl">close</span>
+        </button>
+      </div>
+
+      <style>{`
+        #reader video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+        }
+        #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) {
+          display: none !important;
+        }
+      `}</style>
+    </div>
+  );
+};
 
 interface IziPayViewProps {
   walletTransactions?: any[];
@@ -391,6 +575,20 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
     </motion.div>
   );
 
+  const handleScanResult = useCallback((text: string) => {
+    // Remove possíveis prefixos para obter apenas o ID (UUID)
+    const cleanId = text
+      .replace("izipay:", "")
+      .replace("merchant:", "")
+      .replace("user:", "")
+      .trim();
+      
+    setSubView("send");
+    // Aqui poderíamos disparar a busca do destinatário, mas o IziPayView atual é simplificado
+    // Vou deixar apenas mudando para a tela de envio por enquanto
+    alert("Destinatário detectado: " + cleanId);
+  }, []);
+
   return (
     <div className="min-h-screen bg-zinc-50 font-sans selection:bg-yellow-200 overflow-x-hidden">
       <AnimatePresence mode="wait">
@@ -398,6 +596,12 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         {subView === "send" && renderSend()}
         {subView === "my_qr" && renderMyQR()}
         {subView === "loan" && renderLoan()}
+        {subView === "scan" && (
+          <ScannerWrapper 
+            onCancel={() => setSubView("main")}
+            onResult={handleScanResult} 
+          />
+        )}
         {subView === "deposit" && (
            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 bg-white z-[120] flex flex-col">
               <header className="px-6 pt-16 pb-6 flex items-center gap-6 border-b border-zinc-100">
