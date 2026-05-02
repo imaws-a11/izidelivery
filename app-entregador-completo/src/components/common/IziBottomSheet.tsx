@@ -99,10 +99,10 @@ export const IziBottomSheet: React.FC<IziBottomSheetProps> = ({
       <div 
         className="pointer-events-auto flex flex-col w-full h-full relative"
         style={{
-          background: "linear-gradient(180deg, #09090b 0%, #000000 100%)",
+          background: "#ffffff",
           borderRadius: "40px 40px 0 0",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "0 -20px 40px rgba(0,0,0,0.6)",
+          borderTop: "1px solid rgba(0,0,0,0.05)",
+          boxShadow: "0 -20px 40px rgba(0,0,0,0.05)",
         }}
       >
         {/* Handle de arraste restrito ao topo */}
@@ -111,7 +111,7 @@ export const IziBottomSheet: React.FC<IziBottomSheetProps> = ({
           onPointerDown={(e) => dragControls.start(e)}
           style={{ touchAction: "none" }}
         >
-           <div className="w-12 h-1.5 rounded-full bg-zinc-800/80" />
+           <div className="w-12 h-1.5 rounded-full bg-zinc-200" />
         </div>
 
         {/* Conteúdo com Scroll - pb-56 garante que o botão fixo + nav bar não sobreponham o conteúdo */}

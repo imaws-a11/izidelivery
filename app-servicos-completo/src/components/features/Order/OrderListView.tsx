@@ -60,6 +60,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
     picked_up: "Coletado / Em Viagem",
     em_rota: "A Caminho do Destino",
     saiu_para_entrega: "Saindo para Entrega",
+    waiting_merchant: "Aguardando Loja",
     concluido: "Concluído",
     cancelado: "Cancelado",
   };
@@ -92,11 +93,21 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
         name: 'Compra de IZI Coins',
       };
     }
+    const categoryLabels: Record<string, string> = {
+      restaurant: 'Alimentação',
+      market: 'Mercado',
+      pharmacy: 'Farmácia',
+      beverages: 'Bebidas',
+      petshop: 'Pet Shop',
+      bakery: 'Padaria',
+      gas: 'Gás & Água',
+    };
+
     return { 
-      label: 'Alimentação',
+      label: categoryLabels[type] || 'Alimentação',
       icon: 'restaurant',
       color: 'text-yellow-600',
-      name: o.merchant_name || 'Pedido',
+      name: o.merchant_name || categoryLabels[type] || 'Pedido',
     };
   };
 
@@ -144,6 +155,23 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
               {isMobilityOrder ? parseAddressText(order.pickup_address) : order.items ? `${order.items.length} ${order.items.length === 1 ? 'item' : 'itens'}` : 'Detalhes do pedido'}
            </p>
         </div>
+
+        {(['pendente_pagamento', 'pendente', 'novo'].includes(order.status) && order.payment_status !== 'paid') && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedItem(order);
+              const method = order.payment_method;
+              if (method === 'pix') navigateSubView('pix_payment');
+              else if (method === 'lightning') navigateSubView('lightning_payment');
+              else navigateSubView('checkout');
+            }}
+            className="w-full py-4 bg-yellow-400 text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-yellow-200 flex items-center justify-center gap-2 mt-3 active:scale-95 transition-all"
+          >
+            <span className="material-symbols-rounded text-base">payments</span>
+            Voltar ao Pagamento
+          </button>
+        )}
       </motion.div>
     );
   };

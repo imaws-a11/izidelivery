@@ -31,7 +31,7 @@ export default function OrdersMerchantTab() {
     ['waiting_merchant', 'novo', 'paid', 'pago', 'confirmed', 'confirmado'].includes(o.status)
   );
   
-  // Pedidos aguardando pagamento (EXCLUÍDOS DA VISÃO DO LOJISTA ATÉ CONFIRMAÇÃO)
+  // Pedidos aguardando pagamento (Não exibidos conforme regra)
   const waitingPaymentOrders: any[] = [];
   
   // Pedidos em PRODUÇÃO ou ENTREGA
@@ -109,7 +109,7 @@ export default function OrdersMerchantTab() {
         } else {
           toastSuccess('Status do pedido atualizado.');
           if (newStatus === 'novo') {
-            // Se for um pedido novo confirmado pagamento, talvez seja o caso de alertar entregadores (opcional)
+            // Se for um pedido novo com pagamento confirmado, alertar entregadores
              supabase.functions.invoke('send-push-notification', {
                 body: {
                   driver_id: 'all',

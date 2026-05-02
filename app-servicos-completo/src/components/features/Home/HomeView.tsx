@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { MerchantCard } from "../Establishment/MerchantCard";
 import { FeaturedMerchantCard } from "./FeaturedMerchantCard";
@@ -24,6 +24,7 @@ interface HomeViewProps {
   appSettings?: any;
   setActiveService: (service: any) => void;
   flashOffers: any[];
+  onRefresh?: () => Promise<void>;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -39,8 +40,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
   setExploreCategoryState,
   appSettings,
   flashOffers,
+  onRefresh,
 }) => {
    const [isExploreOpen, setIsExploreOpen] = useState(false);
+   const [isRefreshing, setIsRefreshing] = useState(false);
+   const [pullDistance, setPullDistance] = useState(0);
 
     const handleCategoryClick = (cat: any) => {
       const title = cat.name || cat.label || "Explorar";
@@ -146,6 +150,35 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return (
       <div className="relative h-screen bg-zinc-950 overflow-hidden">
         
+        {/* INDICADOR DE PULL-TO-REFRESH */}
+        <div className="absolute top-0 inset-x-0 flex justify-center z-50 pointer-events-none">
+           <motion.div 
+             style={{ 
+               y: pullDistance > 0 ? pullDistance - 80 : -80,
+               opacity: pullDistance > 20 ? (pullDistance / 100) : 0,
+               scale: pullDistance > 20 ? Math.min(pullDistance / 80, 1.2) : 0.5
+             }}
+             className="bg-yellow-400 size-12 rounded-2xl shadow-2xl flex items-center justify-center text-black"
+           >
+              {isRefreshing ? (
+                <motion.span 
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  className="material-symbols-rounded"
+                >
+                  autorenew
+                </motion.span>
+              ) : (
+                <motion.span 
+                  animate={{ rotate: pullDistance * 2 }}
+                  className="material-symbols-rounded"
+                >
+                  arrow_downward
+                </motion.span>
+              )}
+           </motion.div>
+        </div>
+
         {/* 1. HERO CARROSSEL IMERSIVO */}
          <header className="absolute top-0 inset-x-0 h-[480px] overflow-hidden z-0 bg-zinc-900">
             <AnimatePresence mode="popLayout" initial={false}>
@@ -178,18 +211,41 @@ export const HomeView: React.FC<HomeViewProps> = ({
            )}
         </header>
 
-        {/* BOTTOM SHEET DESLIZANTE */}
+        {/* BOTTOM SHEET DESLIZANTE COM PULL-TO-REFRESH */}
         <motion.div 
           initial={{ y: 0 }}
           drag="y"
-          dragConstraints={{ top: -350, bottom: 0 }}
+          dragConstraints={{ top: -350, bottom: pullDistance > 0 ? pullDistance : 0 }}
+          onDrag={(e, info) => {
+            // Só ativa o pull-to-refresh se estiver no topo do scroll interno
+            const scrollContainer = document.getElementById('home-scroll-container');
+            if (scrollContainer && scrollContainer.scrollTop <= 0 && info.offset.y > 0) {
+               setPullDistance(info.offset.y);
+            }
+          }}
+          onDragEnd={async (e, info) => {
+            if (pullDistance > 80 && onRefresh) {
+               setIsRefreshing(true);
+               setPullDistance(80); // Trava um pouco para mostrar o loading
+               try {
+                  await onRefresh();
+               } finally {
+                  setTimeout(() => {
+                    setIsRefreshing(false);
+                    setPullDistance(0);
+                  }, 500);
+               }
+            } else {
+               setPullDistance(0);
+            }
+          }}
           className="absolute top-[400px] inset-x-0 bottom-0 bg-white rounded-t-[48px] shadow-[0_-20px_50px_rgba(0,0,0,0.4)] z-20 flex flex-col h-[calc(100%-100px)]"
         >
            <div className="w-full flex justify-center py-5 shrink-0">
               <div className="w-12 h-1.5 bg-zinc-200 rounded-full" />
            </div>
 
-           <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+           <div id="home-scroll-container" className="flex-1 overflow-y-auto no-scrollbar pb-32">
               <section className="px-6 mt-2">
                  <div className="grid grid-cols-5 gap-y-8 gap-x-4">
                     {displayServices.map((s: any) => (
