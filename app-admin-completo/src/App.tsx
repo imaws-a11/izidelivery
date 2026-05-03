@@ -13,6 +13,7 @@ import OrdersMerchantTab from './components/OrdersMerchantTab';
 import DriversTab from './components/DriversTab';
 import UsersTab from './components/UsersTab';
 import PromotionsTab from './components/PromotionsTab';
+import DriverApplicationsTab from './components/DriverApplicationsTab';
 
 import DynamicRatesTab from './components/DynamicRatesTab';
 import PartnersTab from './components/PartnersTab';
@@ -208,6 +209,7 @@ function App() {
                    <NavTab id="establishment_types" icon="hub" label="Ecossistema" />
                   <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
+                  <NavTab id="driver_applications" icon="how_to_reg" label="Aprovações" />
                   <NavTab id="users" icon="group" label="Usuários" />
                    <NavTab id="izi_black" icon="workspace_premium" label="Izi Black VIP" />
                   <NavTab id="promotions" icon="campaign" label="Promoções" />
@@ -253,6 +255,7 @@ function App() {
               {activeTab === 'orders' && userRole === 'admin' && <OrdersAdminTab />}
               {activeTab === 'orders' && userRole === 'merchant' && <OrdersMerchantTab />}
               {activeTab === 'drivers' && userRole === 'admin' && <DriversTab />}
+              {activeTab === 'driver_applications' && userRole === 'admin' && <DriverApplicationsTab />}
               {activeTab === 'users' && userRole === 'admin' && <UsersTab />}
               {activeTab === 'promotions' && userRole === 'admin' && <PromotionsTab />}
               {activeTab === 'dynamic_rates' && userRole === 'admin' && <DynamicRatesTab />}

@@ -48,7 +48,7 @@ const playTone = (
 
 let audioGeneration = 0; // Previne sons "fantasmas" iniciados concorrentemente
 
-export const playIziSound = async (role: 'merchant' | 'driver' | 'success') => {
+export const playIziSound = async (role: 'merchant' | 'driver' | 'success', loop: boolean = false) => {
   console.log(`[AUDIO] Chamada para: ${role} no APK/Web`);
   
   if (role === 'driver') stopIziSounds();
@@ -114,7 +114,7 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'success') => {
       source.connect(ctx.destination);
 
       if (role === 'driver') {
-         source.loop = true;
+         source.loop = loop;
          (window as any)._iziActiveSource = source;
       }
       

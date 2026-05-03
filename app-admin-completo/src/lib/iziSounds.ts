@@ -68,8 +68,11 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment' | 'ca
   // Beep inicial rápido para garantir que o canal de áudio esteja aberto
   playTone(ctx, 440, 'sine', 0, 0.05, 0.1);
 
-  // Lista de URLs prioritárias
-  const soundUrls = ['/sounds/notification.mp3', 'https://cdn.pixabay.com/audio/2021/08/04/audio_06dce69623.mp3'];
+  // Lista de URLs prioritárias (Sempre prefira arquivos locais na pasta public/sounds/)
+  const soundUrls = [
+    '/sounds/notification.mp3', 
+    'https://cdn.freesound.org/previews/263/263133_2064400-lq.mp3'
+  ];
   
   const playFromBuffer = async (index: number): Promise<boolean> => {
     if (index >= soundUrls.length) return false;

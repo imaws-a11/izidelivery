@@ -23,6 +23,7 @@ import { OrderListView } from "./components/features/Order/OrderListView";
 import { ProfileView } from "./components/features/Profile/ProfileView";
 import { WalletView } from "./components/features/Wallet/WalletView";
 import { IziPayView } from "./components/features/Wallet/IziPayView";
+import { DriverRegistrationView } from "./components/features/Profile/DriverRegistrationView";
 import { CartView } from "./components/features/Cart/CartView";
 import { CheckoutView } from "./components/features/Checkout/CheckoutView";
 import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
@@ -5389,6 +5390,16 @@ const navigateSubView = (target: string) => {
                 {subView === "notifications_center" && (
                   <motion.div key="notifcenter" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
                     <NotificationsCenterView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+
+                {subView === "driver_registration" && (
+                  <motion.div key="driverreg" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <DriverRegistrationView 
+                      userId={userId} 
+                      onBack={() => setSubView("none")} 
+                      showToast={showToast} 
+                    />
                   </motion.div>
                 )}
 
