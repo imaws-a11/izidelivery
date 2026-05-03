@@ -24,6 +24,18 @@ import { ProfileView } from "./components/features/Profile/ProfileView";
 import { WalletView } from "./components/features/Wallet/WalletView";
 import { IziPayView } from "./components/features/Wallet/IziPayView";
 import { DriverRegistrationView } from "./components/features/Profile/DriverRegistrationView";
+import { ChatsListView } from "./components/features/Profile/ChatsListView";
+import { AccountDetailsView } from "./components/features/Profile/AccountDetailsView";
+import { CouponsView } from "./components/features/Profile/CouponsView";
+import { DeliveryCodesView } from "./components/features/Profile/DeliveryCodesView";
+import { LoyaltyView } from "./components/features/Profile/LoyaltyView";
+import { FavoritesView } from "./components/features/Profile/FavoritesView";
+import { DonationsView } from "./components/features/Profile/DonationsView";
+import { HelpCenterView } from "./components/features/Profile/HelpCenterView";
+import { SettingsView } from "./components/features/Profile/SettingsView";
+import { SecurityView } from "./components/features/Profile/SecurityView";
+import { ConnectedAccountsView } from "./components/features/Profile/ConnectedAccountsView";
+import { SuggestRestaurantView } from "./components/features/Profile/SuggestRestaurantView";
 import { CartView } from "./components/features/Cart/CartView";
 import { CheckoutView } from "./components/features/Checkout/CheckoutView";
 import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
@@ -5442,6 +5454,68 @@ const navigateSubView = (target: string) => {
                       onBack={() => setSubView("none")} 
                       showToast={showToast} 
                     />
+                  </motion.div>
+                )}
+
+                {/* --- Profile SubViews --- */}
+                {subView === "chats" && (
+                  <motion.div key="chats" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <ChatsListView onBack={() => setSubView("none")} setSubView={setSubView} />
+                  </motion.div>
+                )}
+                {subView === "account_details" && (
+                  <motion.div key="account_details" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <AccountDetailsView onBack={() => setSubView("none")} userName={userName} userId={userId} />
+                  </motion.div>
+                )}
+                {subView === "coupons" && (
+                  <motion.div key="coupons" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <CouponsView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "delivery_code" && (
+                  <motion.div key="delivery_code" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <DeliveryCodesView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "loyalty" && (
+                  <motion.div key="loyalty" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <LoyaltyView onBack={() => setSubView("none")} userName={userName} userLevel={userLevel} userXP={userXP} />
+                  </motion.div>
+                )}
+                {subView === "favorites" && (
+                  <motion.div key="favorites" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <FavoritesView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "donations" && (
+                  <motion.div key="donations" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <DonationsView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "help" && (
+                  <motion.div key="help" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <HelpCenterView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "settings" && (
+                  <motion.div key="settings" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <SettingsView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "security" && (
+                  <motion.div key="security" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <SecurityView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "connected_accounts" && (
+                  <motion.div key="connected_accounts" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <ConnectedAccountsView onBack={() => setSubView("none")} />
+                  </motion.div>
+                )}
+                {subView === "suggest_restaurant" && (
+                  <motion.div key="suggest_restaurant" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <SuggestRestaurantView onBack={() => setSubView("none")} />
                   </motion.div>
                 )}
 

@@ -326,17 +326,18 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                </div>
 
                <div className="grid grid-cols-2 gap-4">
-                  {/* Card Dinheiro */}
+                  {/* Card Dinheiro (Consolidado) */}
                   <div className="bg-zinc-50 p-5 rounded-[32px] border border-zinc-100 flex flex-col gap-2">
                      <div className="flex items-center gap-2">
                         <div className="size-6 rounded-lg bg-emerald-500 flex items-center justify-center">
                            <span className="material-symbols-rounded text-white text-[14px]">payments</span>
                         </div>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Dinheiro</span>
+                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Saldo em R$</span>
                      </div>
                      <p className="text-xl font-black text-zinc-900 tracking-tighter">
-                        {isBalanceVisible ? `R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••"}
+                        {isBalanceVisible ? `R$ ${(balance + (coins * iziCoinValue)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••"}
                      </p>
+                     <span className="text-[7px] font-black text-zinc-400 uppercase tracking-tighter">Valor Total Disponível</span>
                   </div>
 
                   {/* Card Izi Coins */}
