@@ -5088,6 +5088,7 @@ const navigateSubView = (target: string) => {
                        userName={userName}
                        userId={userId}
                        walletBalance={walletBalance || 0}
+                       iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 1.0}
                        onBack={() => setTab("home")}
                      />
                   </motion.div>
