@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ServicesExploreViewProps {
@@ -7,6 +7,9 @@ interface ServicesExploreViewProps {
   navigateSubView: (view: string) => void;
   setExploreCategoryState?: (state: any) => void;
   setActiveService: (service: any) => void;
+  establishmentTypes?: any[];
+  ESTABLISHMENTS?: any[];
+  handleShopClick?: (shop: any) => void;
 }
 
 export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
@@ -16,6 +19,8 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
   establishmentTypes = [],
   setExploreCategoryState,
   setActiveService,
+  ESTABLISHMENTS = [],
+  handleShopClick
 }) => {
   const handleCategoryClick = (cat: any) => {
     setActiveService(cat.name || cat.label || "Explorar");
@@ -100,10 +105,12 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
     { id: 'favoritos', label: 'Favoritos', icon: 'favorite', color: 'bg-rose-500', textColor: 'text-white' },
   ];
 
-  const restaurantHighlights = [
-    { id: 'gourmet', label: 'Gourmet', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132693.png' },
-    { id: 'super', label: 'Super', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132715.png' },
-  ];
+  // Lógica para Destaques Reais em Restaurantes
+  const realRestaurantHighlights = useMemo(() => {
+    return ESTABLISHMENTS
+      .filter(m => m.category === 'restaurant' || m.type === 'restaurant')
+      .slice(0, 4); // Pega os 4 primeiros restaurantes reais
+  }, [ESTABLISHMENTS]);
 
   return (
     <AnimatePresence>
@@ -199,18 +206,41 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
                   </div>
                </div>
 
-               {/* Destaques em Restaurantes */}
-               <div>
-                  <h3 className="text-base font-black text-zinc-900 mb-6">Destaques em Restaurantes</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                     {restaurantHighlights.map(rh => (
-                        <div key={rh.id} className="bg-zinc-50 rounded-3xl p-4 flex items-center gap-3 border border-zinc-100/50">
-                           <img src={rh.img} className="size-10 object-contain" alt={rh.label} />
-                           <span className="text-xs font-black text-zinc-900">{rh.label}</span>
-                        </div>
-                     ))}
-                  </div>
-               </div>
+               {/* Destaques em Restaurantes - 100% FUNCIONAL */}
+               {realRestaurantHighlights.length > 0 && (
+                 <div>
+                    <h3 className="text-base font-black text-zinc-900 mb-6">Destaques em Restaurantes</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                       {realRestaurantHighlights.map(rh => {
+                          const name = rh.name || rh.store_name || "Restaurante";
+                          const logo = rh.logo_url || rh.store_logo || rh.image_url || rh.image || rh.img;
+                          
+                          return (
+                            <motion.div 
+                              key={rh.id} 
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => {
+                                if (handleShopClick) handleShopClick(rh);
+                                onClose();
+                              }}
+                              className="bg-zinc-50 rounded-3xl p-4 flex items-center gap-3 border border-zinc-100/50 cursor-pointer active:bg-zinc-100 transition-all"
+                            >
+                               <div className="size-10 rounded-full bg-white overflow-hidden border border-zinc-100 shrink-0 flex items-center justify-center">
+                                  {logo ? (
+                                    <img src={logo} className="size-full object-cover" alt={name} />
+                                  ) : (
+                                    <div className="size-full bg-yellow-400 flex items-center justify-center">
+                                       <span className="text-zinc-900 font-black text-xs">{name.charAt(0).toUpperCase()}</span>
+                                    </div>
+                                  )}
+                               </div>
+                               <span className="text-xs font-black text-zinc-900 truncate flex-1">{name}</span>
+                            </motion.div>
+                          );
+                       })}
+                    </div>
+                 </div>
+               )}
             </div>
 
             {/* Footer / Close Button */}

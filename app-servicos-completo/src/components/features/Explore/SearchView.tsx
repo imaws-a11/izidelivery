@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../../lib/supabase';
 import { useApp } from '../../../hooks/useApp';
 
 interface SearchViewProps {
-  onCategoryClick: (category: string) => void;
+  onCategoryClick: (category: any) => void;
   onSearch: (query: string) => void;
+  establishmentTypes?: any[];
 }
 
-export const SearchView: React.FC<SearchViewProps> = ({ onCategoryClick, onSearch }) => {
+export const SearchView: React.FC<SearchViewProps> = ({ onCategoryClick, onSearch, establishmentTypes = [] }) => {
   const { user } = useApp();
   const [query, setQuery] = useState('');
   const [missions, setMissions] = useState<any[]>([]);
@@ -41,26 +42,30 @@ export const SearchView: React.FC<SearchViewProps> = ({ onCategoryClick, onSearc
     current_progress: 1
   };
 
-  const convenienceCategories = [
-    { id: 'mercado', label: 'Mercado', img: 'https://cdn-icons-png.flaticon.com/512/3081/3081986.png', color: '#00a35e' },
-    { id: 'farmacia', label: 'Farmácia', img: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png', color: '#ff7a00', badge: 'receba rápido' },
-    { id: 'bebidas', label: 'Bebidas', img: 'https://cdn-icons-png.flaticon.com/512/3125/3125713.png', color: '#facc15' },
-    { id: 'corridas', label: 'Viagens', img: 'https://cdn-icons-png.flaticon.com/512/3125/3125724.png', color: '#000000', brand: 'Uber' },
-    { id: 'canarinho', label: 'Canarinho Izi', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132721.png', color: '#facc15' },
-  ];
+  // Lógica Sênior: Filtrar e Organizar Categorias Reais
+  const categories = useMemo(() => {
+    const types = establishmentTypes.filter(t => t.is_active !== false);
+    
+    return {
+      convenience: types.filter(t => ['market', 'pharmacy', 'beverages', 'gas'].includes(t.value?.toLowerCase())),
+      restaurants: types.filter(t => !['market', 'pharmacy', 'beverages', 'gas'].includes(t.value?.toLowerCase()))
+    };
+  }, [establishmentTypes]);
 
-  const restaurantCategories = [
-    { id: 'pizza', label: 'Pizza', color: '#ff7a00', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132693.png' },
-    { id: 'hamburguer', label: 'Lanches', color: '#facc15', img: 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png' },
-    { id: 'japonesa', label: 'Japonesa', color: '#000000', img: 'https://cdn-icons-png.flaticon.com/512/2252/2252431.png' },
-    { id: 'brasileira', label: 'Brasileira', color: '#00a35e', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132715.png' },
-    { id: 'doces', label: 'Doces', color: '#ff69b4', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132709.png' },
-    { id: 'padaria', label: 'Padaria', color: '#8b4513', img: 'https://cdn-icons-png.flaticon.com/512/3081/3081913.png' },
-  ];
+  // Fallback de cores e imagens para categorias dinâmicas
+  const getCategoryStyles = (slug: string) => {
+    const s = slug.toLowerCase();
+    if (s.includes('restaurante') || s.includes('food')) return { color: '#ff7a00', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132693.png' };
+    if (s.includes('mercado') || s.includes('market')) return { color: '#00a35e', img: 'https://cdn-icons-png.flaticon.com/512/3081/3081986.png' };
+    if (s.includes('farmacia') || s.includes('pharmacy')) return { color: '#ef4444', img: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' };
+    if (s.includes('bebida') || s.includes('beverage')) return { color: '#facc15', img: 'https://cdn-icons-png.flaticon.com/512/3125/3125713.png' };
+    if (s.includes('pet')) return { color: '#3b82f6', img: 'https://cdn-icons-png.flaticon.com/512/3081/3081913.png' };
+    return { color: '#18181b', img: 'https://cdn-icons-png.flaticon.com/512/3132/3132715.png' };
+  };
 
   return (
     <div className="flex flex-col h-full bg-white overflow-y-auto no-scrollbar pb-32">
-      {/* Search Header - Moved down as requested */}
+      {/* Search Header */}
       <div className="sticky top-0 z-50 bg-white px-5 pt-24 pb-4 border-b border-zinc-50 shadow-sm">
         <div className="relative group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
@@ -80,7 +85,7 @@ export const SearchView: React.FC<SearchViewProps> = ({ onCategoryClick, onSearc
       </div>
 
       <div className="px-5 space-y-8 mt-4">
-        {/* Dynamic Progress Card Izi Style */}
+        {/* Progress Card */}
         <div className="bg-white rounded-3xl border border-zinc-100 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex flex-col">
@@ -112,7 +117,7 @@ export const SearchView: React.FC<SearchViewProps> = ({ onCategoryClick, onSearc
           </div>
         </div>
 
-        {/* Alguém buscando cupons? Section - Yellow Tickets */}
+        {/* Cupons */}
         {coupons.length > 0 && (
           <div className="space-y-4">
               <h3 className="text-[18px] font-black text-zinc-900 tracking-tight">Alguém buscando cupons?</h3>
@@ -123,74 +128,79 @@ export const SearchView: React.FC<SearchViewProps> = ({ onCategoryClick, onSearc
                           whileTap={{ scale: 0.95 }}
                           className="relative min-w-[140px] h-20 bg-yellow-400 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-yellow-100"
                       >
-                          {/* Ticket notches */}
                           <div className="absolute -left-2 top-1/2 -translate-y-1/2 size-4 bg-white rounded-full" />
                           <div className="absolute -right-2 top-1/2 -translate-y-1/2 size-4 bg-white rounded-full" />
-                          
                           <span className="text-black text-[9px] font-bold uppercase opacity-60 leading-none">Cupom de</span>
                           <span className="text-black text-2xl font-black italic tracking-tighter">
                             {coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : `R$ ${coupon.discount_value}`}
                           </span>
-                          <span className="text-black text-[8px] font-black uppercase tracking-widest mt-1">Clique para copiar</span>
                       </motion.div>
                   ))}
               </div>
           </div>
         )}
 
-        {/* Conveniência Section */}
-        <div className="space-y-4">
-            <h3 className="text-[18px] font-black text-zinc-900 tracking-tight">Conveniência</h3>
-            <div className="grid grid-cols-2 gap-3">
-                {convenienceCategories.map((cat, i) => (
-                    <motion.button
-                        key={cat.id}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => onCategoryClick(cat.id)}
-                        className={`relative h-28 rounded-2xl overflow-hidden ${i === 4 ? 'col-span-2' : ''}`}
-                        style={{ backgroundColor: cat.color }}
-                    >
-                        <div className="absolute inset-0 p-4 flex flex-col justify-start z-10 text-left">
-                            <span className={`font-black text-xl leading-tight tracking-tight ${cat.color === '#facc15' ? 'text-black' : 'text-white'}`}>{cat.label}</span>
-                            {cat.badge && (
-                                <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 mt-1 ${cat.color === '#facc15' ? 'text-black/70' : 'text-white/90'}`}>
-                                    <span className="material-symbols-rounded text-[12px] fill-1">bolt</span>
-                                    {cat.badge}
-                                </span>
-                            )}
-                        </div>
-                        <img 
-                          src={cat.img} 
-                          className={`absolute right-[-10px] bottom-[-10px] ${i === 4 ? 'w-32 h-full opacity-100' : 'w-20 h-20 rotate-[-5deg] opacity-80'} object-contain`} 
-                          alt={cat.label} 
-                        />
-                    </motion.button>
-                ))}
-            </div>
-        </div>
+        {/* Conveniência Real */}
+        {categories.convenience.length > 0 && (
+          <div className="space-y-4">
+              <h3 className="text-[18px] font-black text-zinc-900 tracking-tight">Conveniência</h3>
+              <div className="grid grid-cols-2 gap-3">
+                  {categories.convenience.map((cat, i) => {
+                      const styles = getCategoryStyles(cat.value || cat.id);
+                      return (
+                          <motion.button
+                              key={cat.id}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => onCategoryClick(cat)}
+                              className="relative h-28 rounded-2xl overflow-hidden shadow-sm"
+                              style={{ backgroundColor: styles.color }}
+                          >
+                              <div className="absolute inset-0 p-4 flex flex-col justify-start z-10 text-left">
+                                  <span className={`font-black text-xl leading-tight tracking-tight ${styles.color === '#facc15' ? 'text-black' : 'text-white'}`}>
+                                    {cat.name || cat.label}
+                                  </span>
+                              </div>
+                              <img 
+                                src={cat.icon && cat.icon.startsWith('http') ? cat.icon : styles.img} 
+                                className="absolute right-[-5px] bottom-[-5px] w-20 h-20 rotate-[-5deg] opacity-80 object-contain" 
+                                alt={cat.name} 
+                              />
+                          </motion.button>
+                      );
+                  })}
+              </div>
+          </div>
+        )}
 
-        {/* Restaurantes Section */}
-        <div className="space-y-4">
-            <h3 className="text-[18px] font-black text-zinc-900 tracking-tight">Restaurantes</h3>
-            <div className="grid grid-cols-2 gap-3 pb-12">
-                {restaurantCategories.map((cat) => (
-                    <motion.button
-                        key={cat.id}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => onCategoryClick(cat.id)}
-                        className="relative h-32 rounded-2xl overflow-hidden shadow-sm flex flex-col items-start p-4"
-                        style={{ backgroundColor: cat.color }}
-                    >
-                        <span className={`font-black text-lg text-left leading-tight tracking-tight z-10 ${cat.color === '#facc15' ? 'text-black' : 'text-white'}`}>{cat.label}</span>
-                        <img 
-                          src={cat.img} 
-                          className="absolute right-[-10px] bottom-[-10px] w-24 h-24 object-contain" 
-                          alt={cat.label} 
-                        />
-                    </motion.button>
-                ))}
-            </div>
-        </div>
+        {/* Restaurantes Reais */}
+        {categories.restaurants.length > 0 && (
+          <div className="space-y-4">
+              <h3 className="text-[18px] font-black text-zinc-900 tracking-tight">Explorar Categorias</h3>
+              <div className="grid grid-cols-2 gap-3 pb-12">
+                  {categories.restaurants.map((cat) => {
+                      const styles = getCategoryStyles(cat.value || cat.id);
+                      return (
+                          <motion.button
+                              key={cat.id}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => onCategoryClick(cat)}
+                              className="relative h-32 rounded-2xl overflow-hidden shadow-sm flex flex-col items-start p-4"
+                              style={{ backgroundColor: styles.color }}
+                          >
+                              <span className={`font-black text-lg text-left leading-tight tracking-tight z-10 ${styles.color === '#facc15' ? 'text-black' : 'text-white'}`}>
+                                {cat.name || cat.label}
+                              </span>
+                              <img 
+                                src={cat.icon && cat.icon.startsWith('http') ? cat.icon : styles.img} 
+                                className="absolute right-[-5px] bottom-[-5px] w-24 h-24 object-contain" 
+                                alt={cat.name} 
+                              />
+                          </motion.button>
+                      );
+                  })}
+              </div>
+          </div>
+        )}
       </div>
     </div>
   );

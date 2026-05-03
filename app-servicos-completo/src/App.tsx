@@ -5099,7 +5099,33 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "busca" && (
                   <motion.div key="busca-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <SearchView onCategoryClick={(cat) => navigateSubView(cat + "_list")} onSearch={(q) => setSearchQuery(q)} />
+                     <SearchView 
+                        establishmentTypes={establishmentTypes}
+                        onCategoryClick={(cat) => {
+                           const slug = (cat.value || cat.id || "").toLowerCase();
+                           if (['restaurants', 'food', 'restaurant', 'restaurante'].includes(slug)) {
+                              setRestaurantInitialCategory(null);
+                              navigateSubView("explore_restaurants");
+                           } else if (['market', 'mercado'].includes(slug)) {
+                              navigateSubView("explore_market");
+                           } else if (['pharmacy', 'farmacia'].includes(slug)) {
+                              navigateSubView("explore_pharmacy");
+                           } else if (['beverages', 'bebidas'].includes(slug)) {
+                              navigateSubView("explore_beverages");
+                           } else {
+                              // Fallback para lista genérica
+                              setExploreCategoryState({
+                                id: slug,
+                                title: cat.name || cat.label,
+                                tagline: `Tudo de ${cat.name || cat.label} para você`,
+                                icon: cat.icon || 'storefront',
+                                primaryColor: 'bg-yellow-400'
+                              });
+                              navigateSubView('explore_category');
+                           }
+                        }} 
+                        onSearch={(q) => setSearchQuery(q)} 
+                     />
                   </motion.div>
                 )}
               </AnimatePresence>
