@@ -85,10 +85,18 @@ export const PixPaymentView: React.FC = () => {
         orderId = order.id;
         orderRef = order;
       } else {
-        await supabase.from("orders_delivery").update({ 
+        const { error: updateErr } = await supabase.from("orders_delivery").update({ 
           status: "pendente_pagamento", 
-          payment_method: "pix" 
+          payment_method: "pix",
+          user_id: userId // Reforça para o RLS
         }).eq("id", orderId);
+
+        if (updateErr) {
+          console.error("[PIX] Erro ao atualizar ordem:", updateErr);
+          toastError("Erro ao preparar o pagamento. Tente novamente.");
+          setPixConfirmed(false);
+          return;
+        }
       }
 
       const cleanCpf = pixCpf.replace(/\D/g, "");
@@ -97,7 +105,7 @@ export const PixPaymentView: React.FC = () => {
           amount: Number(total.toFixed(2)),
           orderId: orderId,
           payment_method_id: 'pix',
-          email: "cliente@izidelivery.com", // Fallback ou pegar do Auth
+          email: user?.email || "cliente@izidelivery.com",
           customer: {
             cpf: cleanCpf,
             name: userName || "Cliente IziDelivery",
