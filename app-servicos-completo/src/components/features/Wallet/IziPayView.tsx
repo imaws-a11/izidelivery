@@ -208,6 +208,7 @@ interface IziPayViewProps {
   userId?: string | null;
   onBack?: () => void;
   walletBalance?: number;
+  iziCoinValue?: number;
 }
 
 const QuickAction = ({ icon, label, onClick, color = "bg-zinc-50", active = false }: any) => (
@@ -255,7 +256,8 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
   userName = "Usuário",
   userId,
   onBack,
-  walletBalance = 0
+  walletBalance = 0,
+  iziCoinValue = 1.0
 }) => {
   const [subView, setSubView] = useState<"main" | "send" | "my_qr" | "loan" | "deposit" | "scan" | "statement">("main");
   const [balance, setBalance] = useState(walletBalance);
@@ -309,30 +311,70 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         </div>
 
         <div className="bg-white p-8 rounded-[48px] shadow-[0_30px_60px_rgba(0,0,0,0.3)] relative z-20 border border-white/20">
-          <div className="flex justify-between items-start mb-10">
-            <div>
-              <div className="flex items-center gap-2 mb-2 ml-1">
-                <p className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em]">Saldo Disponível</p>
-                <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="text-zinc-300">
-                  <span className="material-symbols-rounded text-sm">{isBalanceVisible ? 'visibility' : 'visibility_off'}</span>
-                </button>
-              </div>
-              <h2 className="text-4xl font-black text-zinc-900 tracking-tighter">
-                {isBalanceVisible ? `R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••••"}
-              </h2>
+            {/* Design Consolidado com Duas Carteiras */}
+            <div className="space-y-6">
+               <div className="space-y-1">
+                  <div className="flex items-center gap-2 ml-1">
+                     <p className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em]">Patrimônio Total (BRL)</p>
+                     <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="text-zinc-300">
+                        <span className="material-symbols-rounded text-sm">{isBalanceVisible ? 'visibility' : 'visibility_off'}</span>
+                     </button>
+                  </div>
+                  <h2 className="text-4xl font-black text-zinc-900 tracking-tighter">
+                     {isBalanceVisible ? `R$ ${(balance + (coins * iziCoinValue)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••••"}
+                  </h2>
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                  {/* Card Dinheiro */}
+                  <div className="bg-zinc-50 p-5 rounded-[32px] border border-zinc-100 flex flex-col gap-2">
+                     <div className="flex items-center gap-2">
+                        <div className="size-6 rounded-lg bg-emerald-500 flex items-center justify-center">
+                           <span className="material-symbols-rounded text-white text-[14px]">payments</span>
+                        </div>
+                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Dinheiro</span>
+                     </div>
+                     <p className="text-xl font-black text-zinc-900 tracking-tighter">
+                        {isBalanceVisible ? `R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••"}
+                     </p>
+                  </div>
+
+                  {/* Card Izi Coins */}
+                  <div className="bg-zinc-900 p-5 rounded-[32px] border border-zinc-800 flex flex-col gap-2 shadow-xl">
+                     <div className="flex items-center gap-2">
+                        <div className="size-6 rounded-lg bg-yellow-400 flex items-center justify-center">
+                           <span className="material-symbols-rounded text-black text-[14px] fill-1">stars</span>
+                        </div>
+                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Moedas</span>
+                     </div>
+                     <div className="flex flex-col">
+                        <p className="text-xl font-black text-white tracking-tighter leading-none">
+                           {isBalanceVisible ? coins.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : "••••"}
+                        </p>
+                        <span className="text-[8px] font-black text-yellow-400/50 uppercase tracking-widest mt-1">Izi Coins</span>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Cotação Informativa Destaque - Compacto */}
+               <div className="bg-yellow-400 rounded-[24px] p-3 flex items-center justify-between shadow-lg shadow-yellow-400/10 border border-yellow-300">
+                  <div className="flex items-center gap-3">
+                     <div className="size-8 rounded-xl bg-black flex items-center justify-center">
+                        <span className="material-symbols-rounded text-yellow-400 text-base font-black">currency_exchange</span>
+                     </div>
+                     <div>
+                        <p className="text-[8px] font-black text-black/40 uppercase tracking-widest leading-none mb-0.5">Cotação Garantida</p>
+                        <p className="text-xs font-black text-black uppercase tracking-tighter">1 IZI = R$ {iziCoinValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} BRL</p>
+                     </div>
+                  </div>
+                  <div className="bg-black/5 px-2 py-1 rounded-lg flex items-center gap-1.5">
+                     <span className="material-symbols-rounded text-black text-[14px]">trending_up</span>
+                     <span className="text-[9px] font-black text-black uppercase">Estável</span>
+                  </div>
+               </div>
             </div>
-            <div className="bg-zinc-900 px-5 py-3 rounded-[24px] flex items-center gap-3 border border-zinc-800 shadow-xl">
-              <div className="size-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.4)]">
-                <span className="material-symbols-rounded text-black text-base font-black fill-1">stars</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-black text-white leading-none">{coins.toLocaleString('pt-BR')}</span>
-                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mt-0.5">Izi Coins</span>
-              </div>
-            </div>
-          </div>
           
-          <div className="flex gap-4">
+          <div className="flex gap-4 mt-10">
             <motion.button 
               whileTap={{ scale: 0.96 }}
               onClick={() => setSubView("deposit")}
