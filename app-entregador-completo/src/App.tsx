@@ -1235,6 +1235,9 @@ function App() {
     const prefVehicleTypesRef = useRef(prefVehicleTypes);
     useEffect(() => { prefVehicleTypesRef.current = prefVehicleTypes; }, [prefVehicleTypes]);
 
+    const driverVehicleRef = useRef(driverVehicle);
+    useEffect(() => { driverVehicleRef.current = driverVehicle; }, [driverVehicle]);
+
     const [prefServiceTypes, setPrefServiceTypes] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem('pref_services');
@@ -2769,9 +2772,7 @@ function App() {
                 const isCompatible = () => {
                     const type = normalizeServiceType(o.service_type);
                     const pServices = prefServiceTypesRef.current;
-                    const pVehicles = prefVehicleTypesRef.current;
-                    
-                    if (pVehicles.length === 0) return false;
+                    const myVehicle = driverVehicleRef.current?.toLowerCase() || 'moto';
 
                     const allServicesEnabled = pServices.includes('all_services');
                     const isDelivery = ['restaurant', 'market', 'pharmacy', 'beverages', 'package', 'motoboy'].includes(type);
@@ -2789,10 +2790,10 @@ function App() {
                     }
 
                     // Filtro de VeÃ­culos
-                    const canDoMoto = pVehicles.includes('moto');
-                    const canDoBike = pVehicles.includes('bike');
-                    const canDoCar = pVehicles.includes('carro');
-                    const canDoLarge = pVehicles.some(v => ['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g'].includes(v));
+                    const canDoMoto = ['moto', 'mototaxi'].includes(myVehicle);
+                    const canDoBike = ['bike', 'bicicleta'].includes(myVehicle);
+                    const canDoCar = ['carro'].includes(myVehicle);
+                    const canDoLarge = ['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g'].includes(myVehicle);
 
                     if (isDelivery) return canDoMoto || canDoBike || canDoCar;
                     if (type === 'mototaxi') return canDoMoto;
@@ -3404,27 +3405,30 @@ function App() {
         }
     };
 
-    const handleSavePlate = async (plateVal: string) => {
-        const val = plateVal.trim().toUpperCase();
-        if (!val) { toastError('Informe a placa do veículo'); return; }
+    const handleSavePlate = async (plateVal: string, vehicleVal: string) => {
+        const val = vehicleVal === 'bicicleta' ? '' : plateVal.trim().toUpperCase();
+        if (vehicleVal !== 'bicicleta' && !val) { toastError('Informe a placa do veículo'); return; }
+        if (!vehicleVal) { toastError('Selecione o tipo de veículo'); return; }
         if (!driverId) return;
 
         setIsSavingPlate(true);
         try {
             const { error } = await supabase
                 .from('drivers_delivery')
-                .update({ license_plate: val })
+                .update({ license_plate: val, vehicle_type: vehicleVal })
                 .eq('id', driverId);
 
             if (error) throw error;
 
             setDriverPlate(val);
+            setDriverVehicle(vehicleVal);
             localStorage.setItem('izi_driver_plate', val);
+            localStorage.setItem('izi_driver_vehicle', vehicleVal);
             setIsEditingPlate(false);
-            toastSuccess('Placa atualizada!');
+            toastSuccess('Veículo atualizado!');
         } catch (e: any) {
             console.error('[PLATE] ERRO:', e);
-            toastError('Erro ao salvar placa');
+            toastError('Erro ao salvar veículo');
         } finally {
             setIsSavingPlate(false);
         }
@@ -6094,7 +6098,7 @@ function App() {
                     </button>
                     <div className="flex flex-col items-end">
                         <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em]">Izi Pilot</p>
-                        <h2 className="text-lg font-black text-zinc-900">Veículo</h2>
+                        <h2 className="text-lg font-black text-zinc-900">Meus Veículos</h2>
                     </div>
                 </header>
 
@@ -6110,53 +6114,90 @@ function App() {
                                 <Icon name="badge" className="text-yellow-600 text-[28px]" />
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black text-zinc-900 tracking-tighter">Placa do Veículo</h3>
+                                <h3 className="text-2xl font-black text-zinc-900 tracking-tighter">Tipo de Veículo</h3>
                                 <p className="text-[11px] text-zinc-400 leading-relaxed font-bold max-w-[240px] mt-2">
-                                    Mantenha sua placa atualizada para que lojistas e clientes identifiquem seu veículo facilmente.
+                                    Mantenha seu veículo atualizado para que lojistas e clientes identifiquem você facilmente.
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
-                            <Icon name="tag" size={14} className="text-zinc-200" /> Placa (Ex: ABC1234 ou ABC1D23)
-                        </label>
-                        <div className="relative">
-                            <input 
-                                type="text"
-                                value={driverPlate}
-                                onChange={(e) => {
-                                    setDriverPlate(e.target.value.toUpperCase());
-                                    setIsEditingPlate(true);
-                                }}
-                                placeholder="ABC1234"
-                                className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 transition-all outline-none"
-                            />
-                            {isEditingPlate && (
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
-                                </div>
-                            )}
+                    <div className="space-y-6">
+                        <div className="space-y-4">
+                            <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
+                                <Icon name="two_wheeler" size={14} className="text-zinc-200" /> Veículo Utilizado
+                            </label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { id: 'mototaxi', icon: 'two_wheeler', label: 'Moto' },
+                                    { id: 'carro', icon: 'directions_car', label: 'Carro' },
+                                    { id: 'bicicleta', icon: 'pedal_bike', label: 'Bike' },
+                                    { id: 'fiorino', icon: 'airport_shuttle', label: 'Fiorino' },
+                                    { id: 'caminhonete', icon: 'rv_hookup', label: 'Pickup' },
+                                    { id: 'van', icon: 'directions_bus', label: 'Van' },
+                                    { id: 'vuc', icon: 'local_shipping', label: 'VUC' },
+                                    { id: 'bau_p', icon: 'inventory_2', label: 'Baú P' },
+                                    { id: 'bau_m', icon: 'inventory_2', label: 'Baú M' },
+                                    { id: 'bau_g', icon: 'inventory_2', label: 'Baú G' },
+                                ].map((type) => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => { setDriverVehicle(type.id); setIsEditingPlate(true); }}
+                                        className={`h-24 rounded-[24px] font-black text-[10px] flex flex-col items-center justify-center gap-2 transition-all border ${
+                                            driverVehicle === type.id 
+                                                ? 'bg-yellow-400 text-zinc-900 border-yellow-300 shadow-[0_10px_20px_rgba(250,204,21,0.2)] scale-105' 
+                                                : 'bg-white text-zinc-400 border-zinc-100 shadow-sm hover:bg-zinc-50'
+                                        }`}
+                                    >
+                                        <Icon name={type.icon} size={28} className={driverVehicle === type.id ? 'text-zinc-900' : 'text-zinc-300'} />
+                                        <span className="uppercase tracking-widest">{type.label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+
+                        {driverVehicle !== 'bicicleta' && (
+                            <div className="space-y-4">
+                                <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
+                                    <Icon name="tag" size={14} className="text-zinc-200" /> Placa (Ex: ABC1234 ou ABC1D23)
+                                </label>
+                                <div className="relative">
+                                    <input 
+                                        type="text"
+                                        value={driverPlate}
+                                        onChange={(e) => {
+                                            setDriverPlate(e.target.value.toUpperCase());
+                                            setIsEditingPlate(true);
+                                        }}
+                                        placeholder="ABC1234"
+                                        className="w-full h-16 bg-white shadow-sm border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 transition-all outline-none"
+                                    />
+                                    {isEditingPlate && (
+                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                            <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-4">
                         <button 
-                            onClick={() => handleSavePlate(driverPlate)}
-                            disabled={driverPlate.length < 7 || isSavingPlate}
+                            onClick={() => handleSavePlate(driverPlate, driverVehicle)}
+                            disabled={(!driverVehicle || (driverVehicle !== 'bicicleta' && driverPlate.length < 7)) || isSavingPlate}
                             className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
-                                (driverPlate.length >= 7)
-                                    ? 'bg-yellow-400 text-zinc-900 shadow-[0_10px_30px_rgba(250,204,21,0.3)] hover:scale-[1.02] active:scale-95 border border-yellow-300' 
+                                (!(!driverVehicle || (driverVehicle !== 'bicicleta' && driverPlate.length < 7)))
+                                    ? 'bg-zinc-900 text-white shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-95 border border-zinc-800' 
                                     : 'bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed border border-zinc-100'
                             }`}
                         >
                             {isSavingPlate ? (
-                                <Icon name="sync" className="animate-spin" />
+                                <Icon name="sync" className="animate-spin text-white" />
                             ) : (
-                                <Icon name="task_alt" size={20} />
+                                <Icon name="task_alt" size={20} className="text-yellow-400" />
                             )}
-                            {isSavingPlate ? 'Salvando...' : 'Atualizar Placa'}
+                            {isSavingPlate ? 'Salvando...' : 'Atualizar Veículo'}
                         </button>
                     </div>
                 </div>
@@ -6517,9 +6558,8 @@ function App() {
                 'bau_g': ['frete', 'mudanca']
             };
             
-            // Se o motorista tem múltiplos veículos nas preferências, verificamos a união das compatibilidades
-            const myVehicles = prefVehicleTypes.length > 0 ? prefVehicleTypes : [driverVehicle?.toLowerCase() || 'moto'];
-            const allowedServices = myVehicles.flatMap(v => compatibilityMap[v] || []);
+            const myVehicle = driverVehicle?.toLowerCase() || 'moto';
+            const allowedServices = compatibilityMap[myVehicle] || [];
 
             if (!allowedServices.includes(key)) {
                 toastError("Este serviço não está disponível para suas categorias de veículos selecionadas");
@@ -6689,57 +6729,7 @@ function App() {
                         </div>
                     </div>
 
-                    {/* Veículo */}
-                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
-                            <div className="size-8 rounded-[12px] bg-orange-400/10 flex items-center justify-center">
-                                <Icon name="local_shipping" size={16} className="text-orange-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-[0.25em]">Meus Veículos</h3>
-                                <p className="text-[9px] text-zinc-400 mt-0.5">Selecione todos os veículos que você possui</p>
-                            </div>
-                        </div>
-                        <div className="divide-y divide-zinc-100">
-                            {[
-                                { key: 'moto',       label: 'Moto',              icon: 'two_wheeler',    sub: 'Motocicleta de qualquer cilindrada' },
-                                { key: 'bike',       label: 'Bicicleta',         icon: 'pedal_bike',     sub: 'Bike convencional ou elétrica' },
-                                { key: 'carro',      label: 'Carro',             icon: 'directions_car', sub: 'Passeio, sedan ou hatch' },
-                                { key: 'fiorino',    label: 'Fiorino',           icon: 'airport_shuttle',sub: 'Furgoneta de pequeno porte' },
-                                { key: 'caminhonete',label: 'Caminhonete',       icon: 'rv_hookup',      sub: 'Pickup ou caminhonete' },
-                                { key: 'van',        label: 'Van',               icon: 'directions_bus', sub: 'Van de carga ou passageiros' },
-                                { key: 'vuc',        label: 'VUC',               icon: 'local_shipping', sub: 'Veículo Urbano de Carga' },
-                                { key: 'bau_p',      label: 'Baú P',             icon: 'inventory_2',    sub: 'Caminhão baú pequeno' },
-                                { key: 'bau_m',      label: 'Baú M',             icon: 'inventory_2',    sub: 'Caminhão baú médio' },
-                                { key: 'bau_g',      label: 'Baú G',             icon: 'inventory_2',    sub: 'Caminhão baú grande' },
-                            ].map(v => {
-                                const active = prefVehicleTypes.includes(v.key);
-                                return (
-                                    <div key={v.key} className="flex items-center justify-between px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`size-10 rounded-[14px] flex items-center justify-center transition-all ${
-                                                active ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-zinc-50 border border-zinc-100'
-                                            }`}>
-                                                <Icon name={v.icon} size={18} className={active ? 'text-orange-500' : 'text-zinc-300'} />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-zinc-900">{v.label}</p>
-                                                <p className="text-[9px] text-zinc-400 mt-0.5">{v.sub}</p>
-                                            </div>
-                                        </div>
-                                        <ClayToggle enabled={active} onToggle={() => {
-                                            const updated = active
-                                                ? prefVehicleTypes.filter(x => x !== v.key)
-                                                : [...prefVehicleTypes, v.key];
-                                            setPrefVehicleTypes(updated);
-                                            localStorage.setItem('pref_vehicle', JSON.stringify(updated));
-                                            syncPreferencesToDB({ pref_vehicle: updated });
-                                        }} />
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
+
 
                     {/* Raio Máximo */}
                     <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] p-6">
