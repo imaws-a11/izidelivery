@@ -3833,16 +3833,27 @@ function App() {
     const renderDashboard = () => (
         <div className="flex-1 flex flex-col relative overflow-hidden bg-zinc-50">
             {/* Pull to Refresh Indicator */}
-            <motion.div 
-                style={{ y: pullY - 60 }}
-                className="absolute top-0 left-0 right-0 flex justify-center z-50 pointer-events-none"
+            <motion.div
+                animate={{ y: pullY > 0 ? pullY - 52 : -52 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="absolute top-0 left-0 right-0 flex flex-col items-center gap-1 z-50 pointer-events-none"
             >
-                <div className="bg-white size-10 rounded-full flex items-center justify-center shadow-lg border border-zinc-100">
-                    <Icon name="sync" className={`text-yellow-500 ${isRefreshing ? 'animate-spin' : ''}`} size={20} />
+                <div className={`size-11 rounded-full flex items-center justify-center shadow-xl border-2 transition-colors ${
+                    pullY >= 60 ? 'bg-yellow-400 border-yellow-300' : 'bg-white border-zinc-100'
+                }`}>
+                    <motion.div
+                        animate={{ rotate: isRefreshing ? 360 : pullY * 3 }}
+                        transition={isRefreshing ? { repeat: Infinity, duration: 0.8, ease: 'linear' } : { duration: 0 }}
+                    >
+                        <Icon name="sync" className={pullY >= 60 ? 'text-zinc-900' : 'text-zinc-400'} size={20} />
+                    </motion.div>
                 </div>
+                {pullY >= 60 && !isRefreshing && (
+                    <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest bg-white/80 px-2 py-0.5 rounded-full backdrop-blur-sm">Soltar para atualizar</span>
+                )}
             </motion.div>
 
-            <div 
+            <div
                 className="flex-1 overflow-y-auto w-full no-scrollbar pt-6 pb-40"
                 onTouchStart={(e) => {
                     if (e.currentTarget.scrollTop <= 0) {
@@ -3853,13 +3864,17 @@ function App() {
                 }}
                 onTouchMove={(e) => {
                     if (touchStartY.current === 0 || isRefreshing) return;
-                    const diff = e.touches[0].clientY - touchStartY.current;
-                    if (diff > 0 && e.currentTarget.scrollTop <= 0) {
-                        setPullY(Math.min(diff * 0.4, 100));
+                    const dy = e.touches[0].clientY - touchStartY.current;
+                    if (dy > 0 && e.currentTarget.scrollTop <= 0) {
+                        // Resistência logarítmica — parece natural no APK
+                        const resistance = Math.log10(1 + dy) * 28;
+                        setPullY(Math.min(resistance, 110));
+                    } else if (dy < 0) {
+                        setPullY(0);
                     }
                 }}
                 onTouchEnd={() => {
-                    if (pullY > 60 && !isRefreshing) {
+                    if (pullY >= 60 && !isRefreshing) {
                         onRefresh();
                     } else {
                         setPullY(0);
@@ -3868,16 +3883,16 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
-                    <header className="bg-yellow-400 rounded-[3rem] overflow-hidden relative p-10 flex flex-col items-center text-center gap-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
+                    <header className="bg-yellow-400 rounded-[3rem] overflow-hidden relative p-7 flex flex-col items-center text-center gap-5 shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
                     {/* Elementos Decorativos de Fundo */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/40 rounded-full blur-[100px] pointer-events-none" />
                     <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-black/5 rounded-full blur-[80px] pointer-events-none" />
 
                     {/* Perfil Centralizado */}
                     <div className="relative z-10 flex flex-col items-center gap-4">
-                        <div 
+                        <div
                             onClick={() => setActiveTab('profile')}
-                            className="w-24 h-24 rounded-[32px] border-4 border-white overflow-hidden shadow-2xl bg-zinc-100 rotate-3 hover:rotate-0 transition-transform duration-500 cursor-pointer relative group"
+                            className="w-20 h-20 rounded-[28px] border-4 border-white overflow-hidden shadow-2xl bg-zinc-100 hover:scale-105 transition-transform duration-300 cursor-pointer relative group"
                         >
                             {driverAvatar ? (
                                 <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -3961,31 +3976,33 @@ function App() {
                 </section>
 
                 <section className="space-y-6">
-                    <div className="flex flex-col items-center justify-center gap-4 text-center">
-                        <div className="flex items-center justify-center gap-3">
-                                                    <h3 className="text-xl font-black text-zinc-900 tracking-tighter uppercase drop-shadow-sm text-center">Novos Pedidos</h3>
-                            <button 
+                    <div className="flex flex-col items-center justify-center gap-3 text-center">
+                        <div className="w-full bg-white rounded-[24px] border border-zinc-100 shadow-sm px-5 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-100 px-3 py-1.5 rounded-full">
+                                    <div className="size-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                                    <p className="text-yellow-600 font-black text-[9px] uppercase tracking-[0.25em]">Radar Ativo</p>
+                                </div>
+                                <h3 className="text-base font-black text-zinc-900 tracking-tight uppercase">Novos Pedidos</h3>
+                            </div>
+                            <button
                                 onClick={() => fetchOrders()}
                                 disabled={isSyncing || !isOnline}
-                                className={`size-10 flex items-center justify-center rounded-xl transition-all ${
-                                    isOnline 
-                                        ? isSyncing 
-                                            ? 'bg-yellow-400 text-zinc-900' 
-                                            : 'bg-white text-zinc-400 hover:bg-zinc-100' 
-                                        : 'bg-zinc-100 text-zinc-300 cursor-not-allowed opacity-50'
-                                } border border-zinc-200 active:scale-90`}
+                                className={`size-9 flex items-center justify-center rounded-[14px] transition-all active:scale-90 ${
+                                    isOnline
+                                        ? isSyncing
+                                            ? 'bg-yellow-400 text-zinc-900 shadow-[0_4px_12px_rgba(250,204,21,0.3)]'
+                                            : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100 border border-zinc-200'
+                                        : 'bg-zinc-100 text-zinc-300 cursor-not-allowed opacity-50 border border-zinc-100'
+                                }`}
                             >
                                 <motion.div
                                     animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
-                                    transition={isSyncing ? { repeat: Infinity, duration: 1.2, ease: "linear" } : { duration: 0.3 }}
+                                    transition={isSyncing ? { repeat: Infinity, duration: 0.9, ease: 'linear' } : { duration: 0.3 }}
                                 >
-                                    <Icon name="sync" size={20} />
+                                    <Icon name="sync" size={18} />
                                 </motion.div>
                             </button>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white px-5 py-2.5 rounded-full border border-zinc-100 shadow-inner">
-                            <div className="size-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.4)]" />
-                            <p className="text-yellow-600 font-black text-[10px] uppercase tracking-[0.3em]">Radar Ativo</p>
                         </div>
                     </div>
                     <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar -mx-6 px-6">
