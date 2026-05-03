@@ -1163,7 +1163,22 @@ function App() {
     const [modalRoutePolyline, setModalRoutePolyline] = useState<string | null>(null);
     const [modalRouteInfo, setModalRouteInfo] = useState<{start: any, end: any} | null>(null);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
-    const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100, performance: [0, 0, 0, 0, 0, 0, 0] });
+    const [stats, setStats] = useState({ 
+        balance: 0, 
+        today: 0, 
+        weekly: 0, 
+        monthly: 0,
+        yearly: 0,
+        totalEarnings: 0, 
+        count: 0, 
+        level: 1, 
+        xp: 0, 
+        nextXp: 100, 
+        performance: [0, 0, 0, 0, 0, 0, 0],
+        weeklyEarnings: [0, 0, 0, 0, 0, 0, 0],
+        monthlyPerformance: Array(12).fill(0)
+    });
+    const [earningsViewTab, setEarningsViewTab] = useState<'week' | 'month' | 'year'>('week');
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
     const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
     const [isFinanceLoading, setIsFinanceLoading] = useState(false);
@@ -2993,7 +3008,7 @@ function App() {
                 headers: authHeaders,
                 body: JSON.stringify({
                     status: newStatus,
-                    driver_id: driverId,
+                    driver_id: driverId, // Garante que o driver_id seja enviado para passar no with_check
                     updated_at: new Date().toISOString()
                 })
             });
@@ -3092,39 +3107,53 @@ function App() {
             if (estTypes) setEstablishmentTypes(estTypes);
 
             // 2. Processamento financeiro unificado
-            let balance = 0, todaySum = 0, weeklySum = 0, totalGanhos = 0;
+            let balance = 0, todaySum = 0, weeklySum = 0, monthlySum = 0, yearlySum = 0, totalGanhos = 0;
             const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
             const startOfWeek = new Date(); 
             const diffDays = (startOfWeek.getDay() === 0 ? 6 : startOfWeek.getDay() - 1);
             startOfWeek.setDate(startOfWeek.getDate() - diffDays);
             startOfWeek.setHours(0, 0, 0, 0);
+            
+            const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+            const startOfYear = new Date(); startOfYear.setMonth(0, 1); startOfYear.setHours(0, 0, 0, 0);
+
+            const weeklyEarnings = [0, 0, 0, 0, 0, 0, 0];
+            const monthlyPerformance = Array(12).fill(0);
 
             if (txs) {
                 setEarningsHistory(txs.filter((t: any) => t.type !== 'saque'));
                 setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
 
                 txs.forEach((t: any) => {
-                    // 'pagamento' é débito de cliente — nunca deve afetar saldo do entregador
                     if (t.type === 'pagamento') return;
-
                     const amount = Number(t.amount);
                     const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback'].includes(t.type);
                     balance = isCredit ? balance + amount : balance - amount;
 
-                    // Apenas ganhos reais de trabalho entram nos totais
                     const isEarning = ['venda', 'vaga_dedicada', 'bonus', 'deposito'].includes(t.type);
                     if (isEarning) {
                         const tDate = new Date(t.created_at);
                         totalGanhos += amount;
 
                         if (tDate >= startOfDay) todaySum += amount;
-                        if (tDate >= startOfWeek) weeklySum += amount;
+                        if (tDate >= startOfWeek) {
+                            weeklySum += amount;
+                            const day = tDate.getDay();
+                            const idx = day === 0 ? 6 : day - 1;
+                            weeklyEarnings[idx] += amount;
+                        }
+                        if (tDate >= startOfMonth) monthlySum += amount;
+                        if (tDate >= startOfYear) {
+                            yearlySum += amount;
+                            const month = tDate.getMonth();
+                            monthlyPerformance[month] += amount;
+                        }
                     }
                 });
             }
 
-            // 3. Cálculo de Performance Semanal (últimos 7 dias)
-            const performance = [0, 0, 0, 0, 0, 0, 0]; // S, T, Q, Q, S, S, D
+            // 3. Cálculo de Performance (Contagem de entregas últimos 7 dias)
+            const performance = [0, 0, 0, 0, 0, 0, 0]; 
             const now = new Date();
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(now.getDate() - 7);
@@ -3146,11 +3175,15 @@ function App() {
                 balance: Number(balance.toFixed(2)), 
                 today: Number(todaySum.toFixed(2)), 
                 weekly: Number(weeklySum.toFixed(2)), 
+                monthly: Number(monthlySum.toFixed(2)),
+                yearly: Number(yearlySum.toFixed(2)),
                 totalEarnings: Number(totalGanhos.toFixed(2)), 
                 count: orders?.length || 0, 
                 xp: (orders?.length || 0) * 15,
                 level: Math.floor(((orders?.length || 0) * 15) / 100) + 1,
-                performance
+                performance,
+                weeklyEarnings,
+                monthlyPerformance
             }));
 
             if (txs) {
@@ -3227,6 +3260,7 @@ function App() {
 
                 const payload: any = {
                     status: newStatus.toLowerCase(),
+                    driver_id: driverId, // Adicionado para satisfazer a política with_check do RLS
                     updated_at: new Date().toISOString()
                 };
                 if (paymentConfirmedMode === 'dinheiro') {
@@ -5392,213 +5426,227 @@ function App() {
     };
 
     const renderEarningsView = () => {
-        const sClayLight: React.CSSProperties = {
-            borderRadius: '35px',
-            background: '#ffffff',
-            boxShadow: '12px 12px 24px rgba(0,0,0,0.05), -8px -8px 16px rgba(255,255,255,0.8), inset 4px 4px 8px rgba(255,255,255,0.5)',
-            border: '1px solid rgba(0,0,0,0.05)'
-        };
-        const sClayIcon: React.CSSProperties = {
-            background: 'rgba(255,217,0,0.1)',
-            boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.5), inset -2px -2px 4px rgba(0,0,0,0.05)',
-        };
-        const sClayYellow: React.CSSProperties = {
-            borderRadius: '45px',
-            background: '#facd07',
-            boxShadow: '15px 15px 35px rgba(0,0,0,0.4), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.1)',
-        };
+        const tabs = [
+            { id: 'week', label: 'Semana', icon: 'view_week' },
+            { id: 'month', label: 'Mês', icon: 'calendar_month' },
+            { id: 'year', label: 'Ano', icon: 'event_repeat' },
+        ] as const;
+
+        const mainValue = earningsViewTab === 'week' ? stats.weekly :
+                         earningsViewTab === 'month' ? stats.monthly :
+                         stats.yearly;
+
+        const chartData = earningsViewTab === 'week' ? stats.weeklyEarnings : 
+                         earningsViewTab === 'month' ? stats.monthlyPerformance : 
+                         [stats.yearly];
+
+        const chartLabels = earningsViewTab === 'week' ? ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'] :
+                           earningsViewTab === 'month' ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] :
+                           [new Date().getFullYear().toString()];
+
+        const maxVal = Math.max(...chartData, 50);
 
         return (
             <motion.div 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                className="px-5 space-y-8 pb-48 pt-6 overflow-y-auto no-scrollbar"
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                className="flex-1 flex flex-col bg-zinc-50 overflow-hidden"
             >
-                {/* Visual Marker for Debugging */}
-                <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
-
-                <header className="flex flex-col items-center text-center gap-1 px-2">
-                    <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.5em] opacity-70">Izi Pay ðŸš€</p>
-                    <h2 className="text-4xl font-black text-zinc-900 tracking-tighter drop-shadow-sm uppercase text-center">Seus Resultados</h2>
-                </header>
-
-                {/* Claymorphic Balance Card Premium */}
-                <div 
-                    onClick={handleWithdrawRequest}
-                    className="rounded-[45px] p-8 relative overflow-hidden group border-t-4 border-white/40 cursor-pointer active:scale-[0.98] transition-all" 
-                    style={sClayYellow}
-                >
-                    <div className="absolute -right-6 -top-6 opacity-20 rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                        <Icon name="account_balance_wallet" size={160} className="text-stone-900" />
-                    </div>
-                    
-                    <div className="relative z-10 space-y-10">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-stone-800 text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Saldo Disponível</p>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-2xl font-bold text-stone-900 opacity-60">R$</span>
-                                    <span className="text-6xl font-black text-stone-950 tracking-tighter leading-none">
-                                        {stats.balance.toFixed(2).replace('.', ',')}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <motion.button 
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={(e) => { e.stopPropagation(); setShowWithdrawHistory(true); }}
-                                    className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
-                                >
-                                    <Icon name="history" className="text-stone-950" size={20} />
-                                </motion.button>
-                                <motion.button 
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={(e) => { e.stopPropagation(); setShowBankDetails(true); }}
-                                    className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
-                                >
-                                    <Icon name="account_balance" className="text-stone-950" size={20} />
-                                </motion.button>
-                            </div>
-                        </div>
-
-                        <motion.button 
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setShowWithdrawModal(true)}
-                            className="w-full h-18 bg-zinc-900 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 group"
-                        >
-                            <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
-                                <Icon name="payments" size={20} />
-                            </div>
-                            Sacar Ganhos
-                        </motion.button>
-                    </div>
-                </div>
-
-                {/* Premium Stats Grid */}
-                <div className="grid grid-cols-2 gap-5 px-1">
-                    <div className="rounded-[35px] p-6 space-y-4 border border-zinc-100 relative overflow-hidden bg-white shadow-xl" style={sClayLight}>
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-400/5 blur-2xl rounded-full" />
-                        <div className="size-12 rounded-2xl flex items-center justify-center border border-yellow-400/20 shadow-inner" style={sClayIcon}>
-                            <Icon name="today" size={24} className="text-yellow-600 drop-shadow-sm" />
-                        </div>
-                        <div>
-                            <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Ganhos hoje</p>
-                            <p className="text-2xl font-black text-zinc-900 tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
-                        </div>
-                    </div>
-                    
-                    <div className="rounded-[35px] p-6 space-y-4 border border-zinc-100 relative overflow-hidden bg-white shadow-xl" style={sClayLight}>
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-blue-400/5 blur-2xl rounded-full" />
-                        <div className="size-12 rounded-2xl flex items-center justify-center border border-blue-400/20 shadow-inner" style={{...sClayIcon, background: 'rgba(59,130,246,0.1)'}}>
-                            <Icon name="local_shipping" size={24} className="text-blue-600 drop-shadow-sm" />
-                        </div>
-                        <div>
-                            <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Entregas</p>
-                            <p className="text-2xl font-black text-zinc-900 tracking-tighter">{stats.count}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Performance Chart - CANDLESTICKS */}
-                <div className="rounded-[40px] p-8 space-y-8 border border-zinc-100 relative overflow-hidden bg-white shadow-xl" style={sClayLight}>
+                {/* Header Premium */}
+                <div className="px-6 pt-8 pb-4 space-y-6">
                     <div className="flex items-center justify-between">
-                        <div className="flex flex-col gap-1">
-                            <h3 className="text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em]">Ganhos da Semana</h3>
-                            <p className="text-[9px] text-zinc-400 font-bold uppercase">Desempenho dos ultimos 7 dias</p>
+                        <div>
+                            <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em] mb-1">Financial Hub</p>
+                            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">Meus Ganhos</h2>
                         </div>
-                        <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-inner">
-                            <Icon name="monitoring" size={18} className="text-emerald-600" />
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setShowBankDetails(true)}
+                                className="size-11 rounded-2xl bg-white border border-zinc-100 shadow-sm flex items-center justify-center text-zinc-400 active:scale-95 transition-all"
+                            >
+                                <Icon name="account_balance" size={20} />
+                            </button>
+                            <button 
+                                onClick={() => setShowWithdrawHistory(true)}
+                                className="size-11 rounded-2xl bg-white border border-zinc-100 shadow-sm flex items-center justify-center text-zinc-400 active:scale-95 transition-all"
+                            >
+                                <Icon name="history" size={20} />
+                            </button>
                         </div>
                     </div>
-                    
-                    <div className="h-44 flex items-end justify-between gap-2 px-1 pt-6 relative">
-                        {/* Grade de fundo do gráfico */}
-                        <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none opacity-[0.05]">
-                            <div className="h-px bg-zinc-200 w-full" />
-                            <div className="h-px bg-zinc-200 w-full" />
-                            <div className="h-px bg-zinc-200 w-full" />
-                            <div className="h-px bg-zinc-200 w-full" />
-                        </div>
 
-                        {stats.performance.map((val, i) => {
-                            const maxVal = Math.max(...stats.performance, 10);
-                            const baseHeight = (val / maxVal) * 100;
+                    {/* Selector de Período */}
+                    <div className="flex p-1.5 bg-zinc-100/50 rounded-[24px] gap-1 border border-zinc-100">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setEarningsViewTab(tab.id)}
+                                className={`flex-1 py-3 rounded-[18px] flex items-center justify-center gap-2 transition-all ${
+                                    earningsViewTab === tab.id 
+                                    ? 'bg-white shadow-sm text-zinc-900' 
+                                    : 'text-zinc-400 hover:text-zinc-600'
+                                }`}
+                            >
+                                <Icon name={tab.icon} size={16} className={earningsViewTab === tab.id ? 'text-yellow-500' : ''} />
+                                <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-40 space-y-8">
+                    {/* Main Balance Display */}
+                    <div className="relative pt-6 pb-2">
+                        <div className="flex flex-col items-center">
+                            <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Total no Período</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-black text-zinc-300">R$</span>
+                                <span className="text-7xl font-black text-zinc-950 tracking-tighter leading-none">
+                                    {mainValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                            </div>
                             
-                            // Simulação de Candlestick (Abertura, Fechamento, Máxima, Mínima)
-                            const isUp = i % 2 === 0 || i === 6; // Simula tendência
-                            const open = isUp ? baseHeight * 0.7 : baseHeight * 0.9;
-                            const close = isUp ? baseHeight : baseHeight * 0.6;
-                            const high = Math.max(open, close) * 1.15;
-                            const low = Math.min(open, close) * 0.85;
-                            
-                            const isToday = i === (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
-                            const candleColor = isUp ? '#10b981' : '#f43f5e';
-
-                            return (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-4 group relative h-full justify-end">
-                                    <div className="w-full flex flex-col items-center relative h-full justify-end pb-1">
-                                        {/* Pavio (Wick) */}
-                                        <motion.div 
-                                            initial={{ scaleY: 0 }}
-                                            animate={{ scaleY: 1 }}
-                                            style={{ 
-                                                height: `${Math.max(high - low, 10)}%`,
-                                                bottom: `${low}%`,
-                                                backgroundColor: candleColor,
-                                                width: '1px',
-                                                opacity: 0.4
-                                            }}
-                                            className="absolute left-1/2 -translate-x-1/2"
-                                        />
-                                        
-                                        {/* Corpo da Vela */}
-                                        <motion.div 
-                                            initial={{ height: 0 }} 
-                                            animate={{ height: `${Math.max(Math.abs(close - open), 4)}%` }} 
-                                            style={{ 
-                                                bottom: `${Math.min(open, close)}%`,
-                                                backgroundColor: candleColor,
-                                                boxShadow: isToday ? `0 0 15px ${candleColor}66` : 'none'
-                                            }}
-                                            className={`w-full max-w-[10px] rounded-sm transition-all duration-700 relative z-10 ${
-                                                isToday ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'
-                                            }`}
-                                        />
-
-                                        {isToday && (
-                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[7px] font-black px-1.5 py-0.5 rounded-md shadow-lg z-20 whitespace-nowrap">
-                                                LIVE âš¡
-                                            </div>
-                                        )}
-                                    </div>
-                                    <span className={`text-[8px] font-black uppercase tracking-widest ${isToday ? 'text-yellow-600' : 'text-zinc-300'}`}>
-                                        {['S','T','Q','Q','S','S','D'][i]}
+                            <div className="mt-8 flex items-center gap-3">
+                                <div className="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full flex items-center gap-2">
+                                    <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">
+                                        Saldo: R$ {stats.balance.toFixed(2).replace('.', ',')}
                                     </span>
                                 </div>
-                            );
-                        })}
+                                <button 
+                                    onClick={handleWithdrawRequest}
+                                    className="px-6 py-2 bg-zinc-900 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
+                                >
+                                    Sacar Agora
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                {/* Info Message Claymorphic - PAGAMENTO SEGURO */}
-                <div className="rounded-[32px] p-6 flex items-center gap-5 border border-zinc-100 relative overflow-hidden bg-zinc-50" style={sClayLight}>
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-yellow-400/5 to-transparent pointer-events-none" />
-                    <div className="size-14 rounded-2xl flex items-center justify-center shrink-0 border border-yellow-400/20 shadow-inner bg-white">
-                        <Icon name="verified_user" className="text-yellow-600" size={24} />
-                    </div>
-                    <div className="space-y-1 relative z-10">
-                        <p className="text-[10px] text-zinc-900 font-black uppercase tracking-widest leading-none">Pagamento Seguro Auditado</p>
-                        <p className="text-[9px] text-zinc-400 font-bold leading-relaxed">
-                            Suas transferências PIX são protegidas por <span className="text-yellow-600/60">criptografia Izi</span> e liberadas em até 24h.
-                        </p>
-                    </div>
-                </div>
+                    {/* Chart Section */}
+                    <div className="bg-white rounded-[40px] p-8 border border-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.03)] space-y-8">
+                        <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-1">
+                                <h3 className="text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em]">Fluxo de Caixa</h3>
+                                <p className="text-[9px] text-zinc-400 font-bold uppercase">Performance Financeira</p>
+                            </div>
+                            <div className="px-3 py-1 bg-yellow-50 border border-yellow-100 rounded-full">
+                                <span className="text-[8px] font-black text-yellow-600 uppercase tracking-widest">Top 5% Pilotos</span>
+                            </div>
+                        </div>
 
-                {/* Placeholder for spacer to ensure visibility */}
-                <div className="h-10" />
+                        <div className="h-48 flex items-end justify-between gap-2 pt-6 relative">
+                            {/* Background Lines */}
+                            <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none opacity-[0.05]">
+                                <div className="h-px bg-zinc-900 w-full" />
+                                <div className="h-px bg-zinc-900 w-full" />
+                                <div className="h-px bg-zinc-900 w-full" />
+                            </div>
+
+                            {chartData.map((val, i) => {
+                                const height = (val / maxVal) * 100;
+                                const isCurrent = earningsViewTab === 'week' ? (i === (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)) : 
+                                                 earningsViewTab === 'month' ? (i === new Date().getMonth()) : false;
+
+                                return (
+                                    <div key={i} className="flex-1 flex flex-col items-center gap-4 group h-full justify-end relative">
+                                        <div className="w-full flex flex-col items-center relative h-full justify-end">
+                                            {/* Glow Effect for active */}
+                                            {isCurrent && (
+                                                <div className="absolute bottom-0 w-full h-full bg-yellow-400/10 blur-xl rounded-full" />
+                                            )}
+                                            
+                                            <motion.div
+                                                initial={{ height: 0 }}
+                                                animate={{ height: `${Math.max(height, 4)}%` }}
+                                                transition={{ type: 'spring', stiffness: 100, delay: i * 0.05 }}
+                                                className={`w-full max-w-[12px] rounded-t-full rounded-b-lg transition-all relative z-10 ${
+                                                    isCurrent 
+                                                    ? 'bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' 
+                                                    : 'bg-zinc-200 group-hover:bg-zinc-300'
+                                                }`}
+                                            />
+                                            
+                                            {val > 0 && (
+                                                <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md pointer-events-none z-20">
+                                                    R${val.toFixed(0)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className={`text-[8px] font-black uppercase tracking-widest ${isCurrent ? 'text-zinc-900' : 'text-zinc-300'}`}>
+                                            {chartLabels[i]}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Pro Driver Metrics Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm space-y-4">
+                            <div className="size-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
+                                <Icon name="bolt" size={20} className="text-yellow-500" />
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Eficiência</p>
+                                <p className="text-lg font-black text-zinc-900 leading-none">R$ {(mainValue / (stats.count || 1)).toFixed(2).replace('.', ',')}</p>
+                                <p className="text-[8px] text-zinc-400 font-bold uppercase mt-1">Média p/ entrega</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm space-y-4">
+                            <div className="size-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
+                                <Icon name="trending_up" size={20} className="text-emerald-500" />
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Progresso</p>
+                                <p className="text-lg font-black text-zinc-900 leading-none">+12.5%</p>
+                                <p className="text-[8px] text-zinc-400 font-bold uppercase mt-1">vs. período anterior</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Dedicated Section - "Queridos Entregadores" */}
+                    <div className="bg-zinc-900 rounded-[40px] p-8 relative overflow-hidden group">
+                        <div className="absolute right-0 top-0 w-40 h-40 bg-yellow-400/10 blur-[80px] -mr-20 -mt-20" />
+                        
+                        <div className="relative z-10 space-y-6">
+                            <div className="flex items-center gap-3">
+                                <div className="size-12 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg rotate-3 group-hover:rotate-0 transition-transform">
+                                    <Icon name="military_tech" size={28} className="text-zinc-900" />
+                                </div>
+                                <div>
+                                    <h4 className="text-white font-black text-sm uppercase tracking-wider">Status: Elite Pro</h4>
+                                    <p className="text-yellow-400/60 text-[10px] font-bold uppercase tracking-widest">Nível {stats.level} â€¢ {stats.xp} XP</p>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Progresso Level Up</span>
+                                    <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">{stats.xp}/{stats.nextXp} XP</span>
+                                </div>
+                                <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${(stats.xp / stats.nextXp) * 100}%` }}
+                                        className="h-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)]"
+                                    />
+                                </div>
+                            </div>
+
+                            <p className="text-[10px] text-white/50 font-medium leading-relaxed italic">
+                                "Sua dedicação é o que move a Izi. Continue acelerando rumo aos melhores bônus da cidade!"
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="h-8" />
+                </div>
             </motion.div>
         );
-    };
+    };;
 
     const renderWithdrawHistoryView = () => (
         <motion.div 
