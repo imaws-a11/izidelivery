@@ -210,7 +210,7 @@ interface IziPayViewProps {
   walletBalance?: number;
 }
 
-const QuickAction = ({ icon, label, onClick, color = "bg-white", active = false }: any) => (
+const QuickAction = ({ icon, label, onClick, color = "bg-zinc-50", active = false }: any) => (
   <motion.button 
     whileTap={{ scale: 0.92 }}
     onClick={onClick}
@@ -223,25 +223,31 @@ const QuickAction = ({ icon, label, onClick, color = "bg-white", active = false 
   </motion.button>
 );
 
-const TransactionItem = ({ title, date, amount, icon, color }: any) => (
-  <div className="flex items-center justify-between p-5 hover:bg-zinc-50 transition-all rounded-[28px] border border-transparent hover:border-zinc-100 group">
-    <div className="flex items-center gap-5">
-      <div className={`size-12 rounded-2xl ${color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
-        <span className="material-symbols-rounded text-xl font-black">{icon}</span>
+const TransactionItem = ({ title, date, amount, icon, color }: any) => {
+  const displayTitle = (title?.toLowerCase().includes('adjustment') || title?.toLowerCase().includes('manual')) 
+    ? "Crédito Izi" 
+    : title;
+
+  return (
+    <div className="flex items-center justify-between p-5 hover:bg-zinc-50 transition-all rounded-[28px] border border-transparent hover:border-zinc-100 group">
+      <div className="flex items-center gap-5">
+        <div className={`size-12 rounded-2xl ${color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+          <span className="material-symbols-rounded text-xl font-black">{icon}</span>
+        </div>
+        <div>
+          <p className="font-black text-[15px] text-zinc-900 tracking-tight">{displayTitle}</p>
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">{date}</p>
+        </div>
       </div>
-      <div>
-        <p className="font-black text-[15px] text-zinc-900 tracking-tight">{title}</p>
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">{date}</p>
+      <div className="text-right">
+        <p className={`font-black text-base tracking-tighter ${amount.startsWith('+') ? 'text-emerald-500' : 'text-zinc-900'}`}>
+          {amount}
+        </p>
+        <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest">Confirmado</span>
       </div>
     </div>
-    <div className="text-right">
-      <p className={`font-black text-base tracking-tighter ${amount.startsWith('+') ? 'text-emerald-500' : 'text-zinc-900'}`}>
-        {amount}
-      </p>
-      <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest">Confirmado</span>
-    </div>
-  </div>
-);
+  );
+};
 
 export const IziPayView: React.FC<IziPayViewProps> = ({ 
   walletTransactions = [], 
@@ -251,7 +257,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
   onBack,
   walletBalance = 0
 }) => {
-  const [subView, setSubView] = useState<"main" | "send" | "my_qr" | "loan" | "deposit" | "scan">("main");
+  const [subView, setSubView] = useState<"main" | "send" | "my_qr" | "loan" | "deposit" | "scan" | "statement">("main");
   const [balance, setBalance] = useState(walletBalance);
   const [coins, setCoins] = useState(iziCoins);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
@@ -347,10 +353,10 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
 
       <main className="px-6 -mt-12 space-y-12 relative z-30">
         <section className="bg-white rounded-[48px] p-8 shadow-xl border border-zinc-100 flex items-center justify-between gap-2">
-          <QuickAction icon="qr_code_scanner" label="Escanear" onClick={() => setSubView("scan")} active />
+          <QuickAction icon="qr_code_scanner" label="Escanear" onClick={() => setSubView("scan")} />
           <QuickAction icon="send" label="Enviar" onClick={() => setSubView("send")} />
           <QuickAction icon="qr_code_2" label="Meu QR" onClick={() => setSubView("my_qr")} />
-          <QuickAction icon="receipt_long" label="Extrato" onClick={() => {}} />
+          <QuickAction icon="receipt_long" label="Extrato" onClick={() => setSubView("statement")} />
         </section>
 
         <section>
@@ -386,7 +392,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
            <div className="absolute top-0 right-0 size-40 bg-white/10 blur-[50px] -mr-20 -mt-20" />
            <div className="relative z-10 flex flex-col gap-2">
               <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest self-start">Benefício Exclusivo</span>
-              <h4 className="text-2xl font-black tracking-tight leading-tight max-w-[200px]">Pague com Izi Pay e ganhe 5% Cashback</h4>
+              <h4 className="text-2xl font-black tracking-tight leading-tight max-w-[200px]">Pague com Izi Pay e ganhe 1% de Cashback</h4>
               <p className="text-white/60 text-xs font-bold mt-2">Em todos os estabelecimentos parceiros</p>
            </div>
            <span className="material-symbols-rounded text-[100px] text-white/5 absolute -right-4 -bottom-6 rotate-12">account_balance_wallet</span>
@@ -676,6 +682,45 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
             onCancel={() => setSubView("main")}
             onResult={handleScanResult} 
           />
+        )}
+        {subView === "statement" && (
+           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed inset-0 bg-white z-[120] flex flex-col">
+              <header className="px-6 pt-20 pb-6 flex items-center gap-6 border-b border-zinc-100 sticky top-0 bg-white z-20">
+                 <button onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-black font-black">
+                    <span className="material-symbols-rounded">arrow_back</span>
+                 </button>
+                 <h2 className="text-xl font-black uppercase tracking-tighter">Extrato Completo</h2>
+              </header>
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                 <div className="bg-zinc-900 p-8 rounded-[40px] text-white mb-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 size-32 bg-yellow-400/20 blur-[50px] rounded-full" />
+                    <p className="text-zinc-500 font-black text-[10px] uppercase tracking-[0.3em] mb-2">Balanço do Mês</p>
+                    <h3 className="text-3xl font-black tracking-tighter">
+                       R$ {walletTransactions.reduce((acc, tx) => acc + (tx.type === 'credit' ? tx.amount : -tx.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </h3>
+                 </div>
+
+                 {walletTransactions.length > 0 ? (
+                    walletTransactions.map((tx, idx) => (
+                      <TransactionItem 
+                         key={tx.id || idx}
+                         title={tx.description || tx.type}
+                         date={new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                         amount={`${tx.type === 'credit' ? '+' : '-'} R$ ${tx.amount.toFixed(2)}`}
+                         icon={tx.type === 'credit' ? 'add' : 'remove'}
+                         color={tx.type === 'credit' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}
+                      />
+                    ))
+                 ) : (
+                    <div className="py-20 flex flex-col items-center text-center px-10">
+                       <div className="size-20 rounded-[32px] bg-zinc-50 flex items-center justify-center mb-6 border border-zinc-100">
+                          <span className="material-symbols-rounded text-4xl text-zinc-300">history</span>
+                       </div>
+                       <p className="text-[13px] font-black text-zinc-400 uppercase tracking-widest">Nenhuma transação encontrada</p>
+                    </div>
+                 )}
+              </div>
+           </motion.div>
         )}
         {subView === "deposit" && (
            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 bg-white z-[120] flex flex-col">
