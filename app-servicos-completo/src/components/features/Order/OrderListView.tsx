@@ -122,17 +122,9 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
         whileTap={{ scale: 0.98 }}
         onClick={() => {
           setSelectedItem(order);
-          const isHistory = ["concluido", "cancelado"].includes(order.status);
-          if (isCoin) {
-            if (onOpenCoinTracking) onOpenCoinTracking(order);
-            else navigateSubView("izi_coin_tracking");
-          } else if (isHistory) {
-            navigateSubView("order_detail");
-          } else if (isMobilityOrder || !!order.scheduled_at) {
-            navigateSubView("logistics_tracking");
-          } else {
-            navigateSubView("active_order");
-          }
+          // O usuário deseja ver os detalhes do pedido ao clicar no card
+          // Independentemente de ser Coin, Histórico ou Ativo.
+          navigateSubView("order_detail");
         }}
         className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4 shadow-sm"
       >
@@ -177,7 +169,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F7F7F7] text-zinc-900 pb-32 overflow-y-auto no-scrollbar">
+    <div className="flex flex-col min-h-screen bg-[#F7F7F7] text-zinc-900 pb-32 overflow-y-auto no-scrollbar">
       <header className="bg-white px-6 pt-12 pb-6 border-b border-zinc-100 sticky top-0 z-50">
          <h1 className="text-xl font-black tracking-tight">Pedidos</h1>
       </header>

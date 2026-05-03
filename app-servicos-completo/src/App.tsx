@@ -127,6 +127,15 @@ function App() {
     toastSuccess, toastError, showConfirm
   } = useApp();
 
+  // Injeta função global de navegação para componentes modulares
+  useEffect(() => {
+    (window as any).izi_navigate = (targetView: string, item?: any) => {
+      if (item) setSelectedItem(item);
+      setSubView(targetView);
+    };
+    return () => { delete (window as any).izi_navigate; };
+  }, [setSubView, setSelectedItem]);
+
   const { unreadCount } = useNotification();
 
   const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
@@ -4987,7 +4996,7 @@ const navigateSubView = (target: string) => {
           )}
 
           {view === "app" && (
-            <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen relative overflow-hidden bg-black">
+            <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen relative overflow-hidden bg-[#F7F7F7]">
               
               {/* Barra Superior Flutuante Minimalista */}
               <AnimatePresence>
@@ -5347,7 +5356,13 @@ const navigateSubView = (target: string) => {
 
                 {subView === "order_detail" && (
                   <motion.div key="odetail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                     <OrderDetailView order={selectedItem} onBack={() => setSubView("none")} onSupport={() => setSubView("order_support")} />
+                     <OrderDetailView 
+                       order={selectedItem} 
+                       onBack={() => setSubView("none")} 
+                       onSupport={() => setSubView("order_support")}
+                       toastSuccess={toastSuccess}
+                       toastError={toastError}
+                     />
                   </motion.div>
                 )}
 
@@ -5468,12 +5483,12 @@ const navigateSubView = (target: string) => {
                 {/* Suporte, Chat e Feedback */}
                 {subView === "order_support" && (
                   <motion.div key="osupport" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                    <OrderSupportView />
+                    <OrderSupportView order={selectedItem} onBack={() => setSubView("order_detail")} />
                   </motion.div>
                 )}
                 {subView === "order_chat" && (
                   <motion.div key="ochat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                    <OrderSupportView />
+                    <OrderSupportView order={selectedItem} onBack={() => setSubView("none")} />
                   </motion.div>
                 )}
                 {subView === "order_feedback" && (
