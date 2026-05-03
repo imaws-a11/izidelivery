@@ -36,11 +36,13 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
         setStatus("ready");
         await BarcodeScanner.hideBackground();
         document.body.classList.add('scanner-active');
+        document.documentElement.classList.add('scanner-active');
 
         const { barcodes } = await BarcodeScanner.scan();
         
         await BarcodeScanner.showBackground();
         document.body.classList.remove('scanner-active');
+        document.documentElement.classList.remove('scanner-active');
 
         if (barcodes.length > 0 && isMounted) {
           resultRef.current(barcodes[0].displayValue);
@@ -122,15 +124,28 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
          </div>
 
          <style>{`
-           @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-           .animate-scan { animation: scan 2s linear infinite; }
-           body.scanner-active { background: transparent !important; }
-           body.scanner-active #root, body.scanner-active .app-container { background: transparent !important; opacity: 0 !important; visibility: hidden !important; }
-           body.scanner-active *:not(.pointer-events-auto):not(.fixed.inset-0.z-\\[2000\\]) {
-             background-color: transparent !important;
-             border-color: transparent !important;
-             box-shadow: none !important;
-           }
+            @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+            .animate-scan { animation: scan 2s linear infinite; }
+            
+            body.scanner-active { 
+              background: transparent !important; 
+            }
+            
+            html.scanner-active, 
+            body.scanner-active #root, 
+            body.scanner-active .app-container { 
+              background: transparent !important; 
+              background-color: transparent !important;
+              opacity: 0 !important; 
+              visibility: hidden !important; 
+            }
+
+            body.scanner-active *:not(.pointer-events-auto):not(.fixed.inset-0.z-\\[2000\\]) {
+              background-color: transparent !important;
+              background: transparent !important;
+              border-color: transparent !important;
+              box-shadow: none !important;
+            }
          `}</style>
       </div>
     );
@@ -399,10 +414,21 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         <div className="p-8 bg-zinc-50 rounded-[40px] border border-zinc-100 shadow-inner">
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-1">Destinatário</p>
           <div className="flex items-center gap-4">
-             <div className="size-12 rounded-2xl bg-zinc-200 flex items-center justify-center shrink-0">
-                <span className="material-symbols-rounded text-zinc-500">person_search</span>
+             <div className="size-12 rounded-2xl bg-zinc-900 flex items-center justify-center shrink-0">
+                <span className="material-symbols-rounded text-yellow-400">person</span>
              </div>
-             <input autoFocus placeholder="E-mail, CPF ou @usuário" className="flex-1 bg-transparent text-xl font-black outline-none placeholder:text-zinc-300" />
+             <input 
+               autoFocus={!recipientData}
+               placeholder="E-mail, CPF ou @usuário" 
+               value={recipientData ? recipientData.name : manualRecipient}
+               onChange={(e) => setManualRecipient(e.target.value)}
+               className="flex-1 bg-transparent text-xl font-black outline-none placeholder:text-zinc-300" 
+             />
+             {recipientData && (
+                <button onClick={() => setRecipientData(null)} className="size-8 rounded-full bg-zinc-200 flex items-center justify-center">
+                   <span className="material-symbols-rounded text-xs">close</span>
+                </button>
+             )}
           </div>
         </div>
 
@@ -410,7 +436,14 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-1">Valor da Transferência</p>
           <div className="flex items-baseline gap-3">
             <span className="text-2xl font-black text-zinc-400">R$</span>
-            <input type="number" placeholder="0,00" className="flex-1 bg-transparent text-6xl font-black outline-none text-zinc-900 tracking-tighter" />
+            <input 
+              autoFocus={!!recipientData}
+              type="number" 
+              placeholder="0,00" 
+              value={sendAmount}
+              onChange={(e) => setSendAmount(e.target.value)}
+              className="flex-1 bg-transparent text-6xl font-black outline-none text-zinc-900 tracking-tighter" 
+            />
           </div>
           <div className="mt-6 flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
              <span className="text-zinc-400">Saldo em Carteira</span>
@@ -461,8 +494,21 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
 
         <div className="bg-white p-12 rounded-[64px] shadow-[0_40px_80px_rgba(0,0,0,0.5)] relative overflow-hidden group mb-12">
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-transparent pointer-events-none" />
-          <div className="size-64 bg-zinc-50 rounded-[40px] flex items-center justify-center border-2 border-dashed border-zinc-200">
-            <span className="material-symbols-rounded text-[200px] text-zinc-900">qr_code_2</span>
+          <div className="size-72 bg-white rounded-[48px] flex items-center justify-center border-2 border-zinc-100 shadow-inner overflow-hidden p-8 relative">
+            {userId ? (
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=izipay:${userId}&margin=10`}
+                className="w-full h-full object-contain transition-opacity duration-500"
+                alt="Meu QR Code Izi Pay"
+                onLoad={(e) => (e.currentTarget.style.opacity = '1')}
+                style={{ opacity: 0 }}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-4 text-zinc-300">
+                 <div className="size-12 border-4 border-zinc-100 border-t-yellow-400 rounded-full animate-spin" />
+                 <p className="text-[9px] font-black uppercase tracking-[0.2em]">Sincronizando ID...</p>
+              </div>
+            )}
           </div>
           <div className="absolute bottom-6 inset-x-0 flex justify-center">
              <div className="bg-zinc-900 px-4 py-1.5 rounded-full flex items-center gap-2">
@@ -575,19 +621,48 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
     </motion.div>
   );
 
-  const handleScanResult = useCallback((text: string) => {
-    // Remove possíveis prefixos para obter apenas o ID (UUID)
+  const [recipientData, setRecipientData] = useState<{ id: string, name: string } | null>(null);
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [isSearchingRecipient, setIsSearchingRecipient] = useState(false);
+
+  const handleScanResult = useCallback(async (text: string) => {
     const cleanId = text
       .replace("izipay:", "")
       .replace("merchant:", "")
       .replace("user:", "")
       .trim();
       
-    setSubView("send");
-    // Aqui poderíamos disparar a busca do destinatário, mas o IziPayView atual é simplificado
-    // Vou deixar apenas mudando para a tela de envio por enquanto
-    alert("Destinatário detectado: " + cleanId);
+    setIsSearchingRecipient(true);
+    setShowScanModal(true);
+    setRecipientData({ id: cleanId, name: "Buscando..." });
+
+    try {
+      const { data, error } = await supabase
+        .from('users_delivery')
+        .select('name, email')
+        .eq('id', cleanId)
+        .single();
+
+      if (data) {
+        setRecipientData({ id: cleanId, name: data.name || data.email || "Usuário Izi" });
+      } else {
+        setRecipientData({ id: cleanId, name: "Usuário Não Encontrado" });
+      }
+    } catch (err) {
+      setRecipientData({ id: cleanId, name: "Erro ao buscar" });
+    } finally {
+      setIsSearchingRecipient(false);
+    }
   }, []);
+
+  const proceedToTransfer = () => {
+    setShowScanModal(false);
+    setSubView("send");
+  };
+
+  // Atualizando o renderSend para usar recipientData
+  const [sendAmount, setSendAmount] = useState("");
+  const [manualRecipient, setManualRecipient] = useState("");
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans selection:bg-yellow-200 overflow-x-hidden">
@@ -640,6 +715,80 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                  </div>
               </div>
            </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Scan Customizado */}
+      <AnimatePresence>
+        {showScanModal && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowScanModal(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2100]"
+            />
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed bottom-0 inset-x-0 bg-white rounded-t-[50px] z-[2101] p-8 pb-12 shadow-[0_-20px_40px_rgba(0,0,0,0.1)]"
+            >
+              <div className="w-12 h-1.5 bg-zinc-100 rounded-full mx-auto mb-10" />
+              
+              <div className="flex flex-col items-center text-center space-y-6">
+                <div className="size-24 rounded-[40px] bg-yellow-400 flex items-center justify-center shadow-2xl shadow-yellow-200">
+                   <span className="material-symbols-rounded text-4xl text-black font-black">person_check</span>
+                </div>
+                
+                <div className="space-y-2">
+                   <h3 className="text-2xl font-black tracking-tighter uppercase">
+                     {isSearchingRecipient ? "Buscando Perfil..." : "Destinatário Identificado"}
+                   </h3>
+                   <p className="text-zinc-500 text-sm font-medium px-4">
+                     {isSearchingRecipient 
+                       ? "Aguarde enquanto validamos as informações no servidor..." 
+                       : `Você está prestes a enviar saldo para ${recipientData?.name}.`}
+                   </p>
+                </div>
+
+                <div className="w-full bg-zinc-50 p-6 rounded-[32px] border border-zinc-100 flex items-center gap-4">
+                   <div className="size-12 rounded-2xl bg-zinc-900 flex items-center justify-center">
+                      <span className="material-symbols-rounded text-yellow-400">
+                        {isSearchingRecipient ? "sync" : "verified"}
+                      </span>
+                   </div>
+                   <div className="text-left">
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                        {isSearchingRecipient ? "ID Detectado" : "Confirmar Destinatário"}
+                      </p>
+                      <p className="text-base font-black text-zinc-900 tracking-tight">
+                        {recipientData?.name}
+                      </p>
+                   </div>
+                </div>
+
+                <div className="w-full grid grid-cols-1 gap-4 pt-4">
+                  <motion.button 
+                    whileTap={{ scale: 0.96 }}
+                    disabled={isSearchingRecipient}
+                    onClick={proceedToTransfer}
+                    className={`w-full h-20 rounded-[32px] font-black uppercase tracking-widest shadow-2xl transition-all ${isSearchingRecipient ? 'bg-zinc-200 text-zinc-400 shadow-none' : 'bg-zinc-900 text-white shadow-zinc-900/20'}`}
+                  >
+                    {isSearchingRecipient ? "Aguarde..." : "Confirmar e Enviar"}
+                  </motion.button>
+                  <button 
+                    onClick={() => setShowScanModal(false)}
+                    className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em] pt-2"
+                  >
+                    Cancelar e Voltar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
