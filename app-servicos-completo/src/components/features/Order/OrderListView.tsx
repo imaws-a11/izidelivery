@@ -170,7 +170,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F7F7F7] text-zinc-900 pb-32 overflow-y-auto no-scrollbar">
-      <header className="bg-white px-6 pt-12 pb-6 border-b border-zinc-100 sticky top-0 z-50">
+      <header className="bg-white px-6 pt-20 pb-6 border-b border-zinc-100 sticky top-0 z-50">
          <h1 className="text-xl font-black tracking-tight">Pedidos</h1>
       </header>
 

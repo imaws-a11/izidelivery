@@ -403,7 +403,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       exit={{ x: "100%" }}
       className="fixed inset-0 bg-white z-[100] flex flex-col"
     >
-      <header className="px-6 pt-16 pb-6 flex items-center gap-6 sticky top-0 bg-white z-50">
+      <header className="px-6 pt-20 pb-6 flex items-center gap-6 sticky top-0 bg-white z-50">
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
           <span className="material-symbols-rounded text-black font-black">arrow_back</span>
         </motion.button>
@@ -481,7 +481,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       <motion.button 
         whileTap={{ scale: 0.9 }} 
         onClick={() => setSubView("main")} 
-        className="size-14 bg-white/5 border border-white/10 backdrop-blur-2xl rounded-full flex items-center justify-center text-white absolute top-12 left-6"
+        className="size-14 bg-white/5 border border-white/10 backdrop-blur-2xl rounded-full flex items-center justify-center text-white absolute top-16 left-6"
       >
         <span className="material-symbols-rounded font-black">close</span>
       </motion.button>
@@ -551,7 +551,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       exit={{ y: "100%" }}
       className="fixed inset-0 bg-zinc-50 z-[100] overflow-y-auto"
     >
-      <header className="px-6 pt-16 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 sticky top-0 z-20">
+      <header className="px-6 pt-20 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 sticky top-0 z-20">
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
           <span className="material-symbols-rounded text-black font-black">arrow_back</span>
         </motion.button>
@@ -679,7 +679,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         )}
         {subView === "deposit" && (
            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 bg-white z-[120] flex flex-col">
-              <header className="px-6 pt-16 pb-6 flex items-center gap-6 border-b border-zinc-100">
+              <header className="px-6 pt-20 pb-6 flex items-center gap-6 border-b border-zinc-100">
                  <button onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-black font-black">
                     <span className="material-symbols-rounded">arrow_back</span>
                  </button>

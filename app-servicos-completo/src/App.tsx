@@ -4739,7 +4739,7 @@ const navigateSubView = (target: string) => {
                    <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] px-2">Meio de Pagamento</h3>
                    <div className="grid grid-cols-3 gap-3">
                       {[
-                        { id: 'cartao', icon: 'credit_card', label: 'CartÃ£o' },
+                        { id: 'cartao', icon: 'credit_card', label: 'Cartão' },
                         { id: 'pix', icon: 'pix', label: 'Pix' },
                         { id: 'lightning', icon: 'bolt', label: 'Lightning' }
                       ].map((method) => (
@@ -4772,7 +4772,7 @@ const navigateSubView = (target: string) => {
                     <div className="size-6 border-4 border-black/20 border-t-black rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar DepÃ³sito</span>
+                      <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar Depósito</span>
                       <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
                     </>
                   )}
@@ -4884,7 +4884,7 @@ const navigateSubView = (target: string) => {
 
   const BottomNav = () => {
     const navItems = [
-      { id: "home", icon: "home", label: "InÃ­cio" },
+      { id: "home", icon: "home", label: "Início" },
       { id: "busca", icon: "search", label: "Busca" },
       { id: "wallet", icon: "payments", label: "Izi Pay" },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
@@ -4985,7 +4985,7 @@ const navigateSubView = (target: string) => {
                   <span className="text-2xl font-black text-yellow-400 tracking-tighter">IZI</span>
                 </div>
               </div>
-              <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando ExperiÃªncia</p>
+              <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
             </motion.div>
           )}
 

@@ -42,7 +42,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div className="flex flex-col min-h-screen bg-[#F7F7F7] text-zinc-900 pb-32">
       {/* HEADER */}
-      <header className="bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
+      <header className="bg-white px-6 pt-20 pb-6 flex items-center justify-between border-b border-zinc-100">
         <h1 className="text-xl font-black tracking-tight">Perfil</h1>
       </header>
 
