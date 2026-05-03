@@ -46,6 +46,7 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
   const [newBairroFee, setNewBairroFee] = useState('');
   const [newCustomSpecialty, setNewCustomSpecialty] = useState('');
   const [slotType, setSlotType] = useState<'recurring' | 'fixed'>(slot?.slot_date ? 'fixed' : 'recurring');
+  const [recurringType, setRecurringType] = useState<'weekly' | 'monthly'>(slot?.metadata?.days_of_month ? 'monthly' : 'weekly');
   
   
   const [activeTab, setActiveTab] = useState<'config' | 'candidates'>('config');
@@ -408,17 +409,21 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
 
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Data ou Recorrência</label>
-                  <div className="flex gap-4">
+                  <div className="flex p-1 bg-white/5 border border-white/10 rounded-2xl">
                     <button 
                       type="button"
                       onClick={() => {
                         setSlotType('recurring');
                         setEditingItem(prev => ({ ...prev, slot_date: null }));
                       }}
-                      className={`flex-1 p-5 rounded-3xl border transition-all flex flex-col items-center gap-2 ${slotType === 'recurring' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-slate-500'}`}
+                      className={`flex-1 py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${
+                        slotType === 'recurring' 
+                        ? 'bg-primary text-slate-900 font-bold shadow-lg shadow-primary/20 scale-[1.02]' 
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
                     >
-                      <span className="material-symbols-outlined">repeat</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest">Recorrente</span>
+                      <span className="material-symbols-outlined text-[20px]">repeat</span>
+                      <span className="text-[11px] uppercase tracking-wider">Recorrente</span>
                     </button>
                     <button 
                       type="button"
@@ -426,57 +431,123 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
                         setSlotType('fixed');
                         setEditingItem(prev => ({ ...prev, day_of_week: null }));
                       }}
-                      className={`flex-1 p-5 rounded-3xl border transition-all flex flex-col items-center gap-2 ${slotType === 'fixed' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-slate-500'}`}
+                      className={`flex-1 py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${
+                        slotType === 'fixed' 
+                        ? 'bg-primary text-slate-900 font-bold shadow-lg shadow-primary/20 scale-[1.02]' 
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
                     >
-                      <span className="material-symbols-outlined">calendar_today</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest">Data Única</span>
+                      <span className="material-symbols-outlined text-[20px]">calendar_today</span>
+                      <span className="text-[11px] uppercase tracking-wider">Data Única</span>
                     </button>
-                  </div>
-                     {slotType === 'recurring' ? (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {[
-                        { val: 'Monday', label: 'Seg' },
-                        { val: 'Tuesday', label: 'Ter' },
-                        { val: 'Wednesday', label: 'Qua' },
-                        { val: 'Thursday', label: 'Qui' },
-                        { val: 'Friday', label: 'Sex' },
-                        { val: 'Saturday', label: 'Sáb' },
-                        { val: 'Sunday', label: 'Dom' }
-                      ].map(day => {
-                        const isSelected = editingItem.day_of_week?.split(',').includes(day.val);
-                        return (
+                          {slotType === 'recurring' ? (
+                    <div className="space-y-6 mt-2">
+                      <div className="flex gap-2 p-1.5 bg-black/20 rounded-2xl w-fit">
+                        <button 
+                          type="button"
+                          onClick={() => setRecurringType('weekly')}
+                          className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${recurringType === 'weekly' ? 'bg-primary text-slate-950 shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                          Semanal
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setRecurringType('monthly')}
+                          className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${recurringType === 'monthly' ? 'bg-primary text-slate-950 shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                          Mensal
+                        </button>
+                      </div>
+
+                      {recurringType === 'weekly' ? (
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { val: 'Monday', label: 'Seg' },
+                            { val: 'Tuesday', label: 'Ter' },
+                            { val: 'Wednesday', label: 'Qua' },
+                            { val: 'Thursday', label: 'Qui' },
+                            { val: 'Friday', label: 'Sex' },
+                            { val: 'Saturday', label: 'Sáb' },
+                            { val: 'Sunday', label: 'Dom' }
+                          ].map(day => {
+                            const isSelected = editingItem.day_of_week?.split(',').includes(day.val);
+                            return (
+                              <button
+                                key={day.val}
+                                type="button"
+                                onClick={() => {
+                                  const currentStr = editingItem.day_of_week || '';
+                                  let current = currentStr === 'Daily' ? [] : currentStr.split(',').filter(Boolean);
+                                  const next = current.includes(day.val) 
+                                    ? current.filter(d => d !== day.val)
+                                    : [...current, day.val];
+                                  setEditingItem({ ...editingItem, day_of_week: next.join(','), metadata: { ...editingItem.metadata, days_of_month: null } });
+                                }}
+                                className={`px-4 py-3 rounded-2xl border font-bold text-xs transition-all ${
+                                  isSelected 
+                                    ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
+                                    : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                                }`}
+                              >
+                                {day.label}
+                              </button>
+                            );
+                          })}
                           <button
-                            key={day.val}
                             type="button"
-                            onClick={() => {
-                              const currentStr = editingItem.day_of_week || '';
-                              let current = currentStr === 'Daily' ? [] : currentStr.split(',').filter(Boolean);
-                              const next = current.includes(day.val) 
-                                ? current.filter(d => d !== day.val)
-                                : [...current, day.val];
-                              setEditingItem({ ...editingItem, day_of_week: next.join(',') });
-                            }}
+                            onClick={() => setEditingItem({ ...editingItem, day_of_week: 'Daily', metadata: { ...editingItem.metadata, days_of_month: null } })}
                             className={`px-4 py-3 rounded-2xl border font-bold text-xs transition-all ${
-                              isSelected 
+                              editingItem.day_of_week === 'Daily'
                                 ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
                                 : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
                             }`}
                           >
-                            {day.label}
+                            Diário
                           </button>
-                        );
-                      })}
-                      <button
-                        type="button"
-                        onClick={() => setEditingItem({ ...editingItem, day_of_week: 'Daily' })}
-                        className={`px-4 py-3 rounded-2xl border font-bold text-xs transition-all ${
-                          editingItem.day_of_week === 'Daily'
-                            ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
-                            : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
-                        }`}
-                      >
-                        Diário
-                      </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-7 gap-2">
+                          {[...Array(31)].map((_, i) => {
+                            const day = i + 1;
+                            const currentDays = editingItem.metadata?.days_of_month || [];
+                            const isSelected = currentDays.includes(day);
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() => {
+                                  const next = isSelected 
+                                    ? currentDays.filter((d: number) => d !== day)
+                                    : [...currentDays, day];
+                                  setEditingItem({ 
+                                    ...editingItem, 
+                                    day_of_week: null, 
+                                    metadata: { ...editingItem.metadata, days_of_month: next } 
+                                  });
+                                }}
+                                className={`aspect-square flex items-center justify-center rounded-xl border text-[10px] font-black transition-all ${
+                                  isSelected 
+                                    ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
+                                    : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div className="pt-4 border-t border-white/5 space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Data de Término (Opcional)</label>
+                        <input 
+                          type="date" 
+                          value={editingItem.metadata?.expires_at || ''} 
+                          onChange={e => setEditingItem({...editingItem, metadata: {...editingItem.metadata, expires_at: e.target.value}})}
+                          className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-4 font-bold text-sm outline-none text-white [color-scheme:dark]"
+                        />
+                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest ml-4 italic">A vaga será desativada automaticamente nesta data.</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-2">
@@ -606,16 +677,17 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
                     <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${editingItem.is_active ? 'left-7' : 'left-1'}`}></div>
                   </button>
                 </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-8">
+                <button onClick={handleLocalSave} disabled={isSaving} className="bg-primary text-slate-950 px-16 py-6 rounded-[32px] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:scale-105 active:scale-95 transition-all outline-none">
+                  {isSaving ? 'Salvando...' : 'Publicar Alterações'}
+                </button>
               </div>
             </div>
-
-            <div className="flex justify-end pt-8">
-              <button onClick={handleLocalSave} disabled={isSaving} className="bg-primary text-slate-950 px-16 py-6 rounded-[32px] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:scale-105 active:scale-95 transition-all outline-none">
-                {isSaving ? 'Salvando...' : 'Publicar Alterações'}
-              </button>
-            </div>
           </div>
-        </div>
 
         {/* Time Picker Pop-up */}
         <AnimatePresence>
