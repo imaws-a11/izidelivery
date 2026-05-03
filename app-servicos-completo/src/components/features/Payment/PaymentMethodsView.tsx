@@ -104,7 +104,7 @@ export const PaymentMethodsView = () => {
            </div>
 
            <div className="space-y-4">
-              {savedCards.length === 0 ? (
+              {(!savedCards || savedCards.length === 0) ? (
                 <div className="bg-zinc-900/20 rounded-[35px] p-10 border border-dashed border-white/10 text-center">
                    <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest leading-relaxed">Nenhum cartão de crédito<br/>armazenado com segurança.</p>
                 </div>

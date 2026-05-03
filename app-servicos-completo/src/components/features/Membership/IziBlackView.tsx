@@ -118,9 +118,9 @@ export const IziBlackView = () => {
         {/* Global Stats */}
         <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="grid grid-cols-3 gap-6 bg-white/5 rounded-[40px] p-8 border border-white/5 shadow-2xl">
           {[
-            { value: myOrders.length, label: 'Pedidos', icon: 'package' },
-            { value: `R$${iziCashbackEarned.toFixed(0)}`, label: 'Cashback', icon: 'monetization_on' },
-            { value: `R$${(myOrders.length * 5).toFixed(0)}`, label: 'Economia', icon: 'shield' },
+            { value: myOrders?.length || 0, label: 'Pedidos', icon: 'package' },
+            { value: `R$${iziCashbackEarned?.toFixed(0) || '0'}`, label: 'Cashback', icon: 'monetization_on' },
+            { value: `R$${((myOrders?.length || 0) * 5).toFixed(0)}`, label: 'Economia', icon: 'shield' },
           ].map((stat, i) => (
             <div key={i} className="text-center space-y-2 group">
               <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-yellow-400 group-hover:scale-110 transition-all border border-white/5">
