@@ -1220,6 +1220,14 @@ function App() {
     const [showPlateModal, setShowPlateModal] = useState(false);
     const [isEditingPlate, setIsEditingPlate] = useState(false);
     const [isSavingPlate, setIsSavingPlate] = useState(false);
+    // Estados para cadastro de novo veículo
+    const [showNewVehicleForm, setShowNewVehicleForm] = useState(false);
+    const [newVehicleType, setNewVehicleType] = useState('');
+    const [newVehiclePlate, setNewVehiclePlate] = useState('');
+    const [newVehicleModel, setNewVehicleModel] = useState('');
+    const [newVehicleColor, setNewVehicleColor] = useState('');
+    const [isSavingNewVehicle, setIsSavingNewVehicle] = useState(false);
+    const [myVehicleRequests, setMyVehicleRequests] = useState<any[]>([]);
     const [showPreferences, setShowPreferences] = useState(false);
 
     const [showReceipt, setShowReceipt] = useState(false);
@@ -2883,6 +2891,17 @@ function App() {
         recoverActiveMission();
     }, [driverId, isAuthenticated]);
 
+    // Carregar solicitações de veículo do entregador
+    useEffect(() => {
+        if (!driverId || !isAuthenticated) return;
+        supabase
+            .from('driver_vehicle_requests')
+            .select('*')
+            .eq('driver_id', driverId)
+            .order('created_at', { ascending: false })
+            .then(({ data }) => { if (data) setMyVehicleRequests(data); });
+    }, [driverId, isAuthenticated]);
+
     // Gancho para buscar coordenadas reais do lojista se os campos pickup_lat/lng estiverem vazios no pedido
     useEffect(() => {
         const fetchMerchantCoords = async () => {
@@ -3433,6 +3452,50 @@ function App() {
             setIsSavingPlate(false);
         }
     };
+
+    const handleSubmitNewVehicle = async () => {
+        if (!newVehicleType) { toastError('Selecione o tipo de veículo'); return; }
+        const needsPlate = newVehicleType !== 'bicicleta';
+        if (needsPlate && newVehiclePlate.trim().length < 7) { toastError('Informe a placa (mín. 7 caracteres)'); return; }
+        if (!newVehicleModel.trim()) { toastError('Informe o modelo do veículo'); return; }
+        if (!driverId) return;
+
+        setIsSavingNewVehicle(true);
+        try {
+            const { error } = await supabase
+                .from('driver_vehicle_requests')
+                .insert({
+                    driver_id: driverId,
+                    vehicle_type: newVehicleType,
+                    plate: needsPlate ? newVehiclePlate.trim().toUpperCase() : null,
+                    model: newVehicleModel.trim(),
+                    color: newVehicleColor.trim(),
+                    status: 'pending',
+                });
+
+            if (error) throw error;
+
+            toastSuccess('Solicitação enviada! O admin irá avaliar seu veículo.');
+            setShowNewVehicleForm(false);
+            setNewVehicleType('');
+            setNewVehiclePlate('');
+            setNewVehicleModel('');
+            setNewVehicleColor('');
+            // Recarregar solicitações
+            const { data } = await supabase
+                .from('driver_vehicle_requests')
+                .select('*')
+                .eq('driver_id', driverId)
+                .order('created_at', { ascending: false });
+            if (data) setMyVehicleRequests(data);
+        } catch (e: any) {
+            console.error('[NEW_VEHICLE] ERRO:', e);
+            toastError('Erro ao enviar solicitação');
+        } finally {
+            setIsSavingNewVehicle(false);
+        }
+    };
+
 
     const handleLogout = useCallback(() => {
         setIsProfileNotFound(false);
@@ -6077,7 +6140,22 @@ function App() {
     );
 
     const renderPlateEditView = () => {
+        const nvVehicleOptions = [
+            { id: 'mototaxi',    icon: 'two_wheeler',    label: 'Moto' },
+            { id: 'carro',       icon: 'directions_car', label: 'Carro' },
+            { id: 'bicicleta',   icon: 'pedal_bike',     label: 'Bike' },
+            { id: 'fiorino',     icon: 'airport_shuttle',label: 'Fiorino' },
+            { id: 'caminhonete', icon: 'rv_hookup',      label: 'Pickup' },
+            { id: 'van',         icon: 'directions_bus', label: 'Van' },
+            { id: 'vuc',         icon: 'local_shipping', label: 'VUC' },
+            { id: 'bau_p',       icon: 'inventory_2',    label: 'Baú P' },
+            { id: 'bau_m',       icon: 'inventory_2',    label: 'Baú M' },
+            { id: 'bau_g',       icon: 'inventory_2',    label: 'Baú G' },
+        ];
+        const nvNeedsPlate = newVehicleType !== 'bicicleta';
+        const nvCanSubmit = !!newVehicleType && !!newVehicleModel.trim() && (!nvNeedsPlate || newVehiclePlate.trim().length >= 7);
         return (
+            <>
             <motion.div
                 key="plate-edit-modal"
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
@@ -6200,10 +6278,148 @@ function App() {
                             {isSavingPlate ? 'Salvando...' : 'Atualizar Veículo'}
                         </button>
                     </div>
+
+                    {/* Divisor */}
+                    <div className="flex items-center gap-3 pt-4">
+                        <div className="flex-1 h-px bg-zinc-100" />
+                        <span className="text-[9px] font-black text-zinc-300 uppercase tracking-widest">Outros Veículos</span>
+                        <div className="flex-1 h-px bg-zinc-100" />
+                    </div>
+
+                    {/* Botão Cadastrar Novo Veículo */}
+                    <button
+                        onClick={() => setShowNewVehicleForm(true)}
+                        className="w-full h-16 rounded-[28px] border-2 border-dashed border-zinc-200 flex items-center justify-center gap-3 text-zinc-400 font-black text-[11px] uppercase tracking-[0.2em] hover:border-yellow-400 hover:text-yellow-600 transition-all active:scale-95"
+                    >
+                        <Icon name="add_circle" size={20} />
+                        Cadastrar Novo Veículo
+                    </button>
+
+                    {/* Lista de solicitações enviadas */}
+                    {myVehicleRequests.length > 0 && (
+                        <div className="space-y-3">
+                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Solicitações Enviadas</p>
+                            {myVehicleRequests.map((req) => {
+                                const statusMap: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+                                    pending:  { label: 'Em Análise',  color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-100',  icon: 'schedule' },
+                                    approved: { label: 'Aprovado',    color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: 'check_circle' },
+                                    rejected: { label: 'Reprovado',   color: 'text-rose-600',   bg: 'bg-rose-50 border-rose-100',    icon: 'cancel' },
+                                };
+                                const s = statusMap[req.status] || statusMap.pending;
+                                const vehicleLabels: Record<string, string> = {
+                                    mototaxi: 'Moto', carro: 'Carro', bicicleta: 'Bike',
+                                    fiorino: 'Fiorino', caminhonete: 'Pickup', van: 'Van',
+                                    vuc: 'VUC', bau_p: 'Baú P', bau_m: 'Baú M', bau_g: 'Baú G',
+                                };
+                                return (
+                                    <div key={req.id} className={`flex items-center justify-between p-4 rounded-[20px] border ${s.bg}`}>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-black text-zinc-900">{vehicleLabels[req.vehicle_type] || req.vehicle_type}</p>
+                                            <p className="text-[10px] text-zinc-400 font-bold">{req.model} {req.plate ? `• ${req.plate}` : ''}</p>
+                                        </div>
+                                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${s.bg} border`}>
+                                            <Icon name={s.icon} size={12} className={s.color} />
+                                            <span className={`text-[9px] font-black uppercase tracking-wider ${s.color}`}>{s.label}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </motion.div>
+
+            {/* MODAL: Formulario de Novo Veiculo */}
+            {showNewVehicleForm && (
+                <AnimatePresence>
+                    <motion.div
+                        key="new-vehicle-modal"
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[400] bg-black/50 backdrop-blur-sm flex items-end justify-center"
+                        onClick={() => setShowNewVehicleForm(false)}
+                    >
+                        <motion.div
+                            initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+                            className="w-full max-w-lg bg-white rounded-t-[40px] p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto" />
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[9px] font-black text-yellow-600 uppercase tracking-[0.3em]">Cadastro</p>
+                                    <h3 className="text-xl font-black text-zinc-900 tracking-tighter">Novo Veículo</h3>
+                                </div>
+                                <button onClick={() => setShowNewVehicleForm(false)} className="size-10 rounded-[16px] bg-zinc-50 border border-zinc-100 flex items-center justify-center active:scale-95">
+                                    <Icon name="close" className="text-zinc-400" />
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-zinc-400 font-bold leading-relaxed bg-blue-50 border border-blue-100 rounded-[16px] p-4">
+                                <span className="text-blue-600">ℹ️</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
+                            </p>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <Icon name="directions_car" size={13} className="text-zinc-300" /> Tipo de Veículo
+                                </label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {nvVehicleOptions.map((v) => (
+                                        <button key={v.id} onClick={() => setNewVehicleType(v.id)}
+                                            className={`h-20 rounded-[18px] flex flex-col items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-wide transition-all border ${
+                                                newVehicleType === v.id
+                                                    ? 'bg-yellow-400 text-zinc-900 border-yellow-300 scale-105 shadow-[0_8px_16px_rgba(250,204,21,0.25)]'
+                                                    : 'bg-zinc-50 text-zinc-400 border-zinc-100 hover:bg-zinc-100'
+                                            }`}>
+                                            <Icon name={v.icon} size={20} className={newVehicleType === v.id ? 'text-zinc-900' : 'text-zinc-300'} />
+                                            {v.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <Icon name="drive_eta" size={13} className="text-zinc-300" /> Modelo
+                                </label>
+                                <input type="text" value={newVehicleModel} onChange={(e) => setNewVehicleModel(e.target.value)}
+                                    placeholder="Ex: Honda CG 160, VW Gol, Ford Transit..."
+                                    className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <Icon name="palette" size={13} className="text-zinc-300" /> Cor
+                                </label>
+                                <input type="text" value={newVehicleColor} onChange={(e) => setNewVehicleColor(e.target.value)}
+                                    placeholder="Ex: Preto, Branco, Prata..."
+                                    className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all" />
+                            </div>
+                            {nvNeedsPlate && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <Icon name="tag" size={13} className="text-zinc-300" /> Placa
+                                    </label>
+                                    <input type="text" value={newVehiclePlate}
+                                        onChange={(e) => setNewVehiclePlate(e.target.value.toUpperCase())}
+                                        placeholder="ABC1234 ou ABC1D23" maxLength={8}
+                                        className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all uppercase" />
+                                </div>
+                            )}
+                            <button onClick={handleSubmitNewVehicle} disabled={!nvCanSubmit || isSavingNewVehicle}
+                                className={`w-full h-16 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg ${
+                                    nvCanSubmit && !isSavingNewVehicle
+                                        ? 'bg-yellow-400 text-zinc-900 shadow-[0_10px_25px_rgba(250,204,21,0.3)] hover:scale-[1.02] active:scale-95'
+                                        : 'bg-zinc-100 text-zinc-300 cursor-not-allowed'
+                                }`}>
+                                {isSavingNewVehicle ? <Icon name="sync" className="animate-spin" size={18} /> : <Icon name="send" size={18} />}
+                                {isSavingNewVehicle ? 'Enviando...' : 'Enviar para Avaliação'}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                </AnimatePresence>
+            )}
+            </>
         );
     };
+
+
 
     const renderProfileNotFoundView = () => {
         return (
