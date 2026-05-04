@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../../../hooks/useApp";
 import { Icon } from "../../common/Icon";
+import { showConfirm } from "../../../lib/useToast";
 
 export const OrderStatusView = () => {
   const { 
@@ -83,7 +84,8 @@ export const OrderStatusView = () => {
            {status === 'pendente' && (
              <button 
                onClick={async () => {
-                 if(window.confirm("Deseja cancelar seu pedido?")) {
+                 const confirm = await showConfirm({ message: "Deseja cancelar seu pedido?", danger: true });
+                 if(confirm) {
                    const success = await handleCancelOrder(selectedItem.id);
                    if(success) setSubView("none");
                  }

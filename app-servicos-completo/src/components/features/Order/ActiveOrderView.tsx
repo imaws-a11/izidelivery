@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Icon } from "../../common/Icon";
+import { showConfirm } from "../../../lib/useToast";
 
 interface ActiveOrderViewProps {
   selectedItem: any;
@@ -251,9 +252,10 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                     className="mt-6"
                   >
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         console.log("[DEBUG] Clique no botão de cancelar. OrderID:", selectedItem?.id);
-                        if(window.confirm("Deseja realmente cancelar este pedido?")) {
+                        const confirm = await showConfirm({ message: "Deseja realmente cancelar este pedido?", danger: true });
+                        if(confirm) {
                           onCancelOrder(selectedItem?.id);
                         }
                       }}

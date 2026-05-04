@@ -1,5 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import pixLogo from "../../../assets/images/pix-logo.png";
 
 interface CheckoutViewProps {
   cart: any[];
@@ -102,7 +103,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       color: "text-blue-500",
       active: paymentMethodsActive.card !== false
     },
-    { id: "pix", icon: "pix", label: "PIX", sub: "Instantâneo", color: "text-emerald-500", active: paymentMethodsActive.pix !== false },
+    { id: "pix", icon: "pix", label: "PIX", sub: "Instantâneo", color: "text-emerald-500", active: paymentMethodsActive.pix !== false, isImage: true, imageSrc: pixLogo },
     {
       id: "saldo",
       icon: "account_balance_wallet",
@@ -157,7 +158,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   className={`flex flex-col items-start p-5 rounded-[32px] border-4 transition-all duration-300 ${paymentMethod === m.id ? 'border-yellow-400 bg-white shadow-2xl shadow-yellow-100' : 'border-zinc-50 bg-zinc-50 opacity-60'}`}
                 >
                   <div className={`size-10 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4`}>
-                    <span className={`material-symbols-rounded ${paymentMethod === m.id ? 'text-yellow-600' : m.color}`}>{m.icon}</span>
+                    {(m as any).isImage ? (
+                      <img src={(m as any).imageSrc} alt={m.label} className="size-6 object-contain" />
+                    ) : (
+                      <span className={`material-symbols-rounded ${paymentMethod === m.id ? 'text-yellow-600' : m.color}`}>{m.icon}</span>
+                    )}
                   </div>
                   <p className="text-[12px] font-black text-zinc-900 uppercase tracking-tighter leading-tight">{m.label}</p>
                   <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">{m.sub}</p>

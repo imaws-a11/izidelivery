@@ -1,6 +1,7 @@
 import React from "react";
 import { useApp } from "../../../hooks/useApp";
 import { supabase } from "../../../lib/supabase";
+import { showConfirm } from "../../../lib/useToast";
 export const LightningPaymentView: React.FC = () => {
   const {
     selectedItem,
@@ -40,7 +41,8 @@ export const LightningPaymentView: React.FC = () => {
 
   const handleCancel = async () => {
     if (!selectedItem?.id) return;
-    if (window.confirm("Deseja realmente cancelar esta solicitação de recarga?")) {
+    const confirm = await showConfirm({ message: "Deseja realmente cancelar esta solicitação de recarga?", danger: true });
+    if (confirm) {
       try {
         const { data: orderData } = await supabase.from("orders_delivery").select("status").eq("id", selectedItem.id).single();
         if (orderData && ["novo", "pendente", "pendente_pagamento"].includes(orderData.status)) {

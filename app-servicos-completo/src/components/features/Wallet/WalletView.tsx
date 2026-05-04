@@ -1232,8 +1232,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
     const { error } = await supabase.from("payment_methods").insert({
       user_id: userId,
       brand,
-      last_four,
-      token: "tok_" + Math.random().toString(36).substr(2, 9),
+      last4: last_four,
+      type: "credit_card",
       is_default: savedCards.length === 0
     });
     
@@ -1273,8 +1273,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
                const { error } = await supabase.from("payment_methods").insert({
                  user_id: userId,
                  brand: brand,
-                 last_four: last4,
-                 token: token,
+                 last4: last4,
+                 type: "credit_card",
                  is_default: savedCards.length === 0
                });
                

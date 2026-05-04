@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import pixLogo from "../../../assets/images/pix-logo.png";
 
 interface MobilityPaymentViewProps {
   paymentMethod: string;
@@ -69,7 +70,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
 
   const methods = [
     { id: 'cartao', icon: 'credit_card', label: 'Cartão via App', sub: selectedCard ? `${selectedCard.brand} •••• ${selectedCard.last4}` : 'Pague com segurança pelo App', color: '#3B82F6', disabled: false },
-    { id: 'pix', icon: 'pix', label: 'PIX Instantâneo', sub: 'Aprovação imediata via QR Code', color: '#10B981', disabled: false },
+    { id: 'pix', icon: 'pix', label: 'PIX Instantâneo', sub: 'Aprovação imediata via QR Code', color: '#10B981', disabled: false, isImage: true },
     { id: 'bitcoin_lightning', icon: 'bolt', label: 'Bitcoin Lightning', sub: 'Pagamento instantâneo em Satoshis', color: '#F97316', disabled: false },
     { id: 'saldo', icon: 'account_balance_wallet', label: 'Saldo Izi Pay', sub: `R$ ${(walletBalance || 0).toFixed(2).replace('.', ',')} + ${iziCoins} coins`, color: '#06B6D4', disabled: totalBalance < price },
     { id: 'dinheiro', icon: 'payments', label: 'Dinheiro em Espécie', sub: 'Pagamento direto no local', color: '#6B7280', disabled: false },
@@ -188,7 +189,11 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
                       }`}
                   >
                     <div className={`size-9 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-black/10' : 'bg-gray-100'}`}>
-                      <span className={`material-symbols-outlined text-lg font-black ${isSelected ? 'text-black' : 'text-gray-600'}`}>{m.icon}</span>
+                      {(m as any).isImage ? (
+                        <img src={pixLogo} alt="Pix" className="size-5 object-contain" />
+                      ) : (
+                        <span className={`material-symbols-outlined text-lg font-black ${isSelected ? 'text-black' : 'text-gray-600'}`}>{m.icon}</span>
+                      )}
                     </div>
                     <div className="flex-1 text-left">
                       <p className={`text-sm font-black leading-none mb-0.5 ${isSelected ? 'text-black' : 'text-gray-800'}`}>{m.label}</p>

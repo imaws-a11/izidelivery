@@ -4,6 +4,7 @@ import { supabase } from "../../../lib/supabase";
 import { Html5Qrcode } from "html5-qrcode";
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { Capacitor } from '@capacitor/core';
+import pixLogo from "../../../assets/images/pix-logo.png";
 
 // Componente para o Leitor de QR Code usando a câmera nativa ou Web
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
@@ -816,7 +817,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                     <div className="space-y-4">
                        {[
                          { id: 'lightning', label: 'Bitcoin Lightning', desc: 'Aprovação Instantânea • Cashback 1%', icon: 'bolt', color: 'text-yellow-600', bg: 'bg-yellow-50' },
-                         { id: 'pix', label: 'PIX Copia e Cola', desc: 'Liberação em poucos segundos', icon: 'pix', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                         { id: 'pix', label: 'PIX Copia e Cola', desc: 'Liberação em poucos segundos', icon: 'pix', color: 'text-emerald-600', bg: 'bg-emerald-50', isImage: true },
                          { id: 'cartao', label: 'Cartão de Crédito', desc: 'Em até 12x no App', icon: 'credit_card', color: 'text-blue-600', bg: 'bg-blue-50' }
                        ].map((m) => (
                          <button 
@@ -825,7 +826,11 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                            className={`w-full p-6 rounded-[32px] border-2 flex items-center gap-6 transition-all active:scale-[0.98] ${depositMethod === m.id ? 'bg-white border-yellow-400 shadow-xl shadow-yellow-400/5' : 'bg-white border-zinc-100'}`}
                          >
                             <div className={`size-14 rounded-2xl ${m.bg} flex items-center justify-center shrink-0`}>
-                               <span className={`material-symbols-rounded text-3xl font-black ${m.color}`}>{m.icon}</span>
+                               {(m as any).isImage ? (
+                                 <img src={pixLogo} alt="Pix" className="size-8 object-contain" />
+                               ) : (
+                                 <span className={`material-symbols-rounded text-3xl font-black ${m.color}`}>{m.icon}</span>
+                               )}
                             </div>
                             <div className="text-left flex-1">
                                <p className="font-black text-zinc-900 text-lg leading-none">{m.label}</p>

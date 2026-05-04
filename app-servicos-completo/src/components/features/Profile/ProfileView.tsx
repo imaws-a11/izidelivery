@@ -1,5 +1,8 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { supabase } from "../../../lib/supabase";
+import { uploadToCloudinary } from "../../../lib/cloudinary";
+import { toastError, toastSuccess } from "../../../lib/useToast";
 
 interface ProfileViewProps {
   userId: string | null;
@@ -19,10 +22,61 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   logout,
   setSubView,
 }) => {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    const fetchProfile = async () => {
+      const { data, error } = await supabase
+        .from("users_delivery")
+        .select("avatar_url")
+        .eq("id", userId)
+        .maybeSingle();
+      if (!error && data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+    fetchProfile();
+  }, [userId]);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userId) return;
+
+    setIsUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      if (url) {
+        const { error } = await supabase
+          .from("users_delivery")
+          .update({ avatar_url: url })
+          .eq("id", userId);
+
+        if (error) {
+          toastError("Erro ao salvar a foto de perfil.");
+        } else {
+          setAvatarUrl(url);
+          toastSuccess("Foto de perfil atualizada!");
+        }
+      } else {
+        toastError("Erro ao fazer upload da imagem.");
+      }
+    } catch (e) {
+      toastError("Erro ao processar imagem.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDecolarClick = () => {
+    toastSuccess("Em breve! Acúmulo de pontos Decolar nas suas compras Izi.");
+  };
   const menuItems = [
     { icon: "emoji_events", label: "Missões", action: () => setSubView?.("user_missions") },
     { icon: "chat_bubble", label: "Conversas", action: () => setSubView?.("chats") },
-    { icon: "notifications", label: "Notificações", action: () => setSubView?.("notifications_center"), badge: 1 },
+    { icon: "notifications", label: "Notificações", action: () => setSubView?.("notifications_center") },
     { icon: "description", label: "Dados da conta", action: () => setSubView?.("account_details") },
     { icon: "credit_card", label: "Pagamentos", action: () => setSubView?.("payments") },
     { icon: "star", label: "Clube Izi", action: () => setSubView?.("izi_black_purchase") },
@@ -49,11 +103,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* USER INFO */}
       <section className="bg-white px-6 py-6 flex items-center gap-4">
-        <div className="size-20 rounded-full overflow-hidden bg-yellow-100 border-2 border-white shadow-xl">
+        <div 
+          onClick={() => fileInputRef.current?.click()}
+          className="size-20 rounded-full overflow-hidden bg-yellow-100 border-2 border-white shadow-xl relative cursor-pointer group shrink-0"
+        >
            <img 
-             src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`} 
+             src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`} 
              alt="Avatar" 
-             className="size-full object-cover"
+             className={`size-full object-cover transition-opacity ${isUploading ? 'opacity-50' : 'group-hover:opacity-80'}`}
+           />
+           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="material-symbols-outlined text-white text-xl">photo_camera</span>
+           </div>
+           {isUploading && (
+             <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+                <div className="size-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+             </div>
+           )}
+           <input 
+             type="file" 
+             ref={fileInputRef}
+             className="hidden" 
+             accept="image/*"
+             onChange={handlePhotoUpload}
            />
         </div>
         <div className="flex flex-col">
@@ -69,6 +141,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <section className="px-4 mt-4">
          <motion.div 
            whileTap={{ scale: 0.98 }}
+           onClick={handleDecolarClick}
            className="w-full h-32 rounded-[24px] bg-gradient-to-r from-zinc-900 to-zinc-800 p-6 relative overflow-hidden shadow-lg cursor-pointer"
          >
             <div className="flex items-center gap-2 mb-3">

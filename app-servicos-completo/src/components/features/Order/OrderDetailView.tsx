@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { showConfirm } from '../../../lib/useToast';
 
 interface OrderDetailViewProps {
   order: any;
@@ -137,7 +138,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
             <button
               onClick={async () => {
-                if (!confirm('Deseja realmente cancelar este pedido?')) return;
+                const confirm = await showConfirm({ message: 'Deseja realmente cancelar este pedido?', danger: true });
+                if (!confirm) return;
                 const { error } = await supabase
                   .from('orders_delivery')
                   .update({ status: 'cancelado' })

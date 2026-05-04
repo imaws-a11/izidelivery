@@ -4,6 +4,7 @@ import { useAddress } from "../../../hooks/useAddress";
 import { useApp } from "../../../hooks/useApp";
 import { AddressSearchInput } from "./AddressSearchInput";
 import { Icon } from "../../common/Icon";
+import { showConfirm } from "../../../lib/useToast";
 
 export const AddressListView = () => {
   const { 
@@ -245,8 +246,9 @@ export const AddressListView = () => {
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => {
-                        if(window.confirm("Remover este endereço?")) handleDeleteAddress(addr.id);
+                      onClick={async () => {
+                        const confirm = await showConfirm({ message: "Remover este endereço?", danger: true });
+                        if(confirm) handleDeleteAddress(addr.id);
                       }}
                       className={`size-10 rounded-xl flex items-center justify-center border transition-all ${
                         addr.active ? 'bg-zinc-900 border-zinc-800 text-red-400/50' : 'bg-white border-zinc-100 text-red-500/30'

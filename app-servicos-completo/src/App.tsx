@@ -3,6 +3,7 @@ import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import iziCoinImg from "./assets/images/izi-coin-premium.png";
+import pixLogo from "./assets/images/pix-logo.png";
 import { supabase } from "./lib/supabase";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
 import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
@@ -158,7 +159,8 @@ function App() {
     handleConfirmMobility, calculateVanPrice, calculateFreightPrice, calculateDynamicPrice,
     selectedCard, setSelectedCard,
     walletBalance, setWalletBalance, iziCoins, setIziCoins,
-    paymentMethod, setPaymentMethod
+    paymentMethod, setPaymentMethod,
+    savedCards, fetchSavedCards, handleDeleteCard
   } = useApp();
 
   // Injeta função global de navegação para componentes modulares
@@ -183,7 +185,6 @@ function App() {
   const [aiMessage, setAiMessage] = useState("OlÃ¡! Como posso ajudar vocÃª hoje?");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
-  const [savedCards, setSavedCards] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   
   const sendInternalNotification = async (title: string, body: string, data: any = {}) => {
@@ -330,7 +331,7 @@ function App() {
                 toastSuccess("Pedido em rota! Prepare-se para receber.");
                 setSubView("active_order");
              } else if (newOrder.status === "cancelado") {
-                toastError("O pedido foi cancelado pela loja.");
+                // Remove notification for cancelled orders
                 setSubView("none");
              }
           }
@@ -1047,19 +1048,7 @@ function App() {
     };
   }, [userId]);
 
-  const fetchSavedCards = async (uid: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setSavedCards(data || []);
-    } catch (err) {
-      console.error("Erro ao buscar cartÃµes:", err);
-    }
-  };
+
   
 
   const handleCancelOrder = async (orderId: string) => {
@@ -1105,7 +1094,7 @@ function App() {
       return;
     }
 
-    const confirm = window.confirm("Deseja realmente cancelar esta recarga?");
+    const confirm = await showConfirm({ message: "Deseja realmente cancelar esta recarga?", danger: true });
     if (!confirm) return;
 
     try {
@@ -2238,9 +2227,9 @@ function App() {
 
   const handlePlaceOrder = async (useCoins = false) => {
 
-    if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
-    if (!userId) { alert("FaÃ§a login para continuar."); return; }
-    if (cart.length === 0) { alert("Seu carrinho estÃ¡ vazio."); return; }
+    if (!paymentMethod) { toastWarning("Selecione uma forma de pagamento."); return; }
+    if (!userId) { toastWarning("Faça login para continuar."); return; }
+    if (cart.length === 0) { toastWarning("Seu carrinho está vazio."); return; }
 
     // VerificaÃ§Ã£o de Estabelecimento Aberto antes de prosseguir
     const currentShopId = selectedShop?.id || cart[0]?.merchant_id || cart.find(i => i.merchant_id)?.merchant_id || null;
@@ -2369,7 +2358,7 @@ function App() {
           return;
         } catch (e: any) {
           console.error("LN Error:", e);
-          alert(`Erro ao iniciar pagamento Bitcoin: ${e.message || "Tente outro mÃ©todo."}`);
+          toastError(`Erro ao iniciar pagamento Bitcoin: ${e.message || "Tente outro método."}`);
           return;
         }
       }
@@ -4116,7 +4105,7 @@ const navigateSubView = (target: string) => {
                    <div className="grid grid-cols-3 gap-3">
                       {[
                         { id: 'lightning', icon: 'bolt', label: 'Lightning' },
-                        { id: 'pix', icon: 'pix', label: 'Pix' },
+                        { id: 'pix', icon: 'pix', label: 'Pix', isImage: true },
                         { id: 'cartao', icon: 'credit_card', label: 'Cartão' }
                       ].map((method) => (
                        <button
@@ -4128,7 +4117,11 @@ const navigateSubView = (target: string) => {
                              : "bg-white border-zinc-100 text-zinc-400 hover:border-zinc-300"
                            }`}
                        >
-                         <span className="material-symbols-rounded text-2xl font-black">{method.icon}</span>
+                         {(method as any).isImage ? (
+                           <img src={pixLogo} alt="Pix" className="size-7 object-contain" />
+                         ) : (
+                           <span className="material-symbols-rounded text-2xl font-black">{method.icon}</span>
+                         )}
                          <span className="text-[9px] font-black uppercase tracking-widest leading-none">{method.label}</span>
                        </button>
                      ))}
@@ -4850,10 +4843,9 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
 
-                {/* --- Profile SubViews --- */}
                 {subView === "chats" && (
                   <motion.div key="chats" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                    <ChatsListView onBack={() => setSubView("none")} setSubView={setSubView} />
+                    <ChatsListView onBack={() => setSubView("none")} setSubView={setSubView} userId={userId} setSelectedItem={setSelectedItem} />
                   </motion.div>
                 )}
                 {subView === "account_details" && (

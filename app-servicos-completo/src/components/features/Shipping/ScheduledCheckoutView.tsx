@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../hooks/useApp";
+import pixLogo from "../../../assets/images/pix-logo.png";
 
 interface ScheduledCheckoutViewProps {
   onBack: () => void;
@@ -12,7 +13,7 @@ interface ScheduledCheckoutViewProps {
 }
 
 const PAYMENT_METHODS = [
-  { id: "pix", label: "Pix", icon: "pix" },
+  { id: "pix", label: "Pix", icon: "pix", isImage: true },
   { id: "credit", label: "Crédito", icon: "credit_card" },
   { id: "debit", label: "Débito", icon: "payment" },
   { id: "cash", label: "Dinheiro", icon: "payments" },
@@ -348,7 +349,11 @@ export const ScheduledCheckoutView: React.FC<ScheduledCheckoutViewProps> = ({
             }`}
           >
             <div className={`size-12 rounded-2xl flex items-center justify-center ${paymentMethod === m.id ? "bg-white/10" : "bg-zinc-50"}`}>
-              <span className="material-symbols-rounded text-xl">{m.icon}</span>
+              {(m as any).isImage ? (
+                <img src={pixLogo} alt="Pix" className="size-6 object-contain" />
+              ) : (
+                <span className="material-symbols-rounded text-xl">{m.icon}</span>
+              )}
             </div>
             <span className="font-black text-base">{m.label}</span>
             {paymentMethod === m.id && (

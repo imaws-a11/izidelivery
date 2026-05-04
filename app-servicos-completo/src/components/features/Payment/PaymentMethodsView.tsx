@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useApp } from "../../../hooks/useApp";
 import { Icon } from "../../common/Icon";
+import pixLogo from "../../../assets/images/pix-logo.png";
+import { supabase } from "../../../lib/supabase";
+import { toastSuccess, toastError } from "../../../lib/useToast";
 
 export const PaymentMethodsView = () => {
   const { 
@@ -11,20 +14,26 @@ export const PaymentMethodsView = () => {
     paymentMethod, 
     setPaymentMethod,
     globalSettings,
-    savedCards, 
+    savedCards = [], 
     handleDeleteCard, 
     walletBalance, 
-    iziCoins 
+    iziCoins,
+    userId
   } = useApp();
 
   const [isAddingCard, setIsAddingCard] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const iziCoinValue = globalSettings?.izi_coin_value || 1.0;
 
   const paymentOptions = [
     { id: 'wallet', title: 'Izi Pay (Saldo)', sub: `Disponível: R$ ${walletBalance.toFixed(2)}`, icon: 'account_balance_wallet', color: 'text-emerald-400' },
     { id: 'izicoin', title: 'Izi Coins', sub: `Saldo: ${iziCoins.toFixed(2)} (R$ ${(iziCoins * iziCoinValue).toFixed(2)})`, icon: 'monetization_on', color: 'text-yellow-400' },
-    { id: 'pix',    title: 'Pix', sub: 'Pagamento instantâneo', icon: 'payments', color: 'text-blue-400' },
+    { id: 'pix',    title: 'Pix', sub: 'Pagamento instantâneo', icon: 'payments', color: 'text-blue-400', isImage: true },
     { id: 'lightning', title: 'Bitcoin Lightning', sub: 'Sats via Lightning Network', icon: 'bolt', color: 'text-orange-400' },
   ];
 
@@ -36,28 +45,141 @@ export const PaymentMethodsView = () => {
     }
   };
 
+  const handleSaveCard = async () => {
+    if (!cardNumber || !cardName || !cardExpiry || !cardCvv || !userId) {
+      toastError("Preencha todos os campos do cartão.");
+      return;
+    }
+
+    setIsSaving(true);
+    const lastFour = cardNumber.replace(/\D/g, "").slice(-4);
+    let brand = "Cartão";
+    if (cardNumber.startsWith("4")) brand = "Visa";
+    else if (cardNumber.startsWith("5")) brand = "Mastercard";
+    else if (cardNumber.startsWith("3")) brand = "Amex";
+
+    try {
+      const { error } = await supabase.from("payment_methods").insert({
+        user_id: userId,
+        brand: brand,
+        last4: lastFour,
+        type: "credit_card",
+        is_default: (savedCards?.length || 0) === 0
+      });
+
+      if (error) {
+        console.error("[PAYMENT] Erro ao salvar no Supabase:", error);
+        toastError("Erro ao salvar o cartão no banco: " + error.message);
+      } else {
+        toastSuccess("Cartão adicionado com sucesso!");
+        setIsAddingCard(false);
+        setCardNumber("");
+        setCardName("");
+        setCardExpiry("");
+        setCardCvv("");
+      }
+    } catch (err: any) {
+      console.error("[PAYMENT] Erro interno:", err);
+      toastError("Erro interno ao processar cartão: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="absolute inset-0 z-40 bg-[#050505] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-      <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 py-8 border-b border-white/5">
+    <div className="absolute inset-0 z-40 bg-[#F7F7F7] text-zinc-900 flex flex-col overflow-y-auto no-scrollbar pb-32">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl flex items-center justify-between px-6 py-8 border-b border-zinc-100">
         <div className="flex items-center gap-5">
           <motion.button 
             whileTap={{ scale: 0.9 }}
             onClick={handleBack} 
-            className="size-12 rounded-[22px] bg-zinc-900 border border-white/5 flex items-center justify-center shadow-xl"
+            className="size-12 rounded-[22px] bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-sm"
           >
-            <span className="material-symbols-outlined text-white text-2xl">arrow_back</span>
+            <span className="material-symbols-outlined text-zinc-900 text-2xl">arrow_back</span>
           </motion.button>
           <div>
-            <h1 className="font-black text-2xl text-white tracking-tighter uppercase leading-none">Pagamento</h1>
-            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-2">Gerencie seus métodos</p>
+            <h1 className="font-black text-2xl text-zinc-900 tracking-tighter uppercase leading-none">Pagamento</h1>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-2">Gerencie seus métodos</p>
           </div>
         </div>
       </header>
 
       <main className="px-6 py-10 space-y-12">
+        <AnimatePresence mode="wait">
+          {isAddingCard ? (
+            <motion.section 
+              key="add-card-form"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+               <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] px-2 mb-4">Novo Cartão de Crédito</h3>
+               <div className="bg-white rounded-[32px] p-6 shadow-xl border border-zinc-100 space-y-5">
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Número do Cartão</label>
+                   <input 
+                     type="text" 
+                     placeholder="0000 0000 0000 0000"
+                     value={cardNumber}
+                     onChange={(e) => setCardNumber(e.target.value)}
+                     className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
+                   />
+                 </div>
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Nome Impresso</label>
+                   <input 
+                     type="text" 
+                     placeholder="Nome como está no cartão"
+                     value={cardName}
+                     onChange={(e) => setCardName(e.target.value)}
+                     className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200 uppercase"
+                   />
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Validade</label>
+                     <input 
+                       type="text" 
+                       placeholder="MM/AA"
+                       value={cardExpiry}
+                       onChange={(e) => setCardExpiry(e.target.value)}
+                       className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">CVV</label>
+                     <input 
+                       type="text" 
+                       placeholder="123"
+                       value={cardCvv}
+                       onChange={(e) => setCardCvv(e.target.value)}
+                       className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
+                     />
+                   </div>
+                 </div>
+               </div>
+               
+               <motion.button 
+                 whileTap={{ scale: 0.98 }}
+                 onClick={handleSaveCard}
+                 disabled={isSaving}
+                 className="w-full bg-yellow-400 text-black h-16 rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:translate-y-1 transition-all disabled:opacity-50 mt-6"
+               >
+                 {isSaving ? "Salvando..." : "Salvar Cartão Seguro"}
+               </motion.button>
+            </motion.section>
+          ) : (
+            <motion.div
+              key="payment-list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-12"
+            >
         {/* Active Payment Methods */}
         <section className="space-y-6">
-           <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] px-2">Métodos Principais</h3>
+           <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] px-2">Métodos Principais</h3>
            <div className="space-y-4">
               {paymentOptions.map((opt, i) => (
                 <motion.div 
@@ -66,23 +188,27 @@ export const PaymentMethodsView = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => setPaymentMethod(opt.id)}
-                  className={`p-6 rounded-[35px] border-2 flex items-center justify-between transition-all cursor-pointer active:scale-[0.98]
+                  className={`p-6 rounded-[32px] border-2 flex items-center justify-between transition-all cursor-pointer active:scale-[0.98]
                     ${paymentMethod === opt.id 
-                      ? 'bg-zinc-900/60 border-yellow-400/30 shadow-[15px_15px_30px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)]' 
-                      : 'bg-zinc-900/20 border-white/5 opacity-60'
+                      ? 'bg-zinc-950 border-zinc-900 text-white shadow-xl shadow-zinc-200' 
+                      : 'bg-white border-zinc-100 text-zinc-900 shadow-sm opacity-90 hover:opacity-100'
                     }`}
                 >
                    <div className="flex items-center gap-5">
-                      <div className={`size-14 rounded-[22px] bg-black/40 flex items-center justify-center border border-white/5 shadow-inner`}>
-                         <span className={`material-symbols-outlined ${opt.color} text-2xl`}>{opt.icon}</span>
+                      <div className={`size-14 rounded-2xl ${paymentMethod === opt.id ? 'bg-zinc-800' : 'bg-zinc-50'} flex items-center justify-center border border-zinc-100/10 shadow-inner`}>
+                         {(opt as any).isImage ? (
+                           <img src={pixLogo} alt="Pix" className="size-8 object-contain" />
+                         ) : (
+                           <span className={`material-symbols-outlined ${opt.color} text-2xl`}>{opt.icon}</span>
+                         )}
                       </div>
                       <div>
-                         <p className="font-black text-sm text-white tracking-tight">{opt.title}</p>
-                         <p className="text-[10px] font-bold text-zinc-500 mt-0.5">{opt.sub}</p>
+                         <p className={`font-black text-sm tracking-tight ${paymentMethod === opt.id ? 'text-white' : 'text-zinc-900'}`}>{opt.title}</p>
+                         <p className={`text-[10px] font-bold mt-0.5 ${paymentMethod === opt.id ? 'text-zinc-400' : 'text-zinc-500'}`}>{opt.sub}</p>
                       </div>
                    </div>
                    {paymentMethod === opt.id && (
-                     <div className="size-6 rounded-full bg-yellow-400 flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.4)]">
+                     <div className="size-6 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
                         <span className="material-symbols-outlined text-black text-[16px] font-black">check</span>
                      </div>
                    )}
@@ -94,10 +220,10 @@ export const PaymentMethodsView = () => {
         {/* Saved Cards */}
         <section className="space-y-6">
            <div className="flex items-center justify-between px-2">
-              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em]">Cartões Salvos</h3>
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em]">Cartões Salvos</h3>
               <button 
-                onClick={() => setSubView("add_card")}
-                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest active:scale-95"
+                onClick={() => setIsAddingCard(true)}
+                className="text-[10px] font-black text-yellow-600 uppercase tracking-widest active:scale-95"
               >
                 Adicionar Novo
               </button>
@@ -105,8 +231,8 @@ export const PaymentMethodsView = () => {
 
            <div className="space-y-4">
               {(!savedCards || savedCards.length === 0) ? (
-                <div className="bg-zinc-900/20 rounded-[35px] p-10 border border-dashed border-white/10 text-center">
-                   <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest leading-relaxed">Nenhum cartão de crédito<br/>armazenado com segurança.</p>
+                <div className="bg-zinc-50 rounded-[32px] p-10 border border-dashed border-zinc-200 text-center">
+                   <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest leading-relaxed">Nenhum cartão de crédito<br/>armazenado com segurança.</p>
                 </div>
               ) : savedCards.map((card: any, i: number) => (
                 <motion.div 
@@ -118,30 +244,30 @@ export const PaymentMethodsView = () => {
                     setPaymentMethod('credit_card');
                     setSelectedCard(card);
                   }}
-                  className={`p-6 rounded-[35px] border-2 flex items-center justify-between transition-all cursor-pointer active:scale-[0.98]
+                  className={`p-6 rounded-[32px] border-2 flex items-center justify-between transition-all cursor-pointer active:scale-[0.98]
                     ${(paymentMethod === 'credit_card' && selectedCard?.id === card.id)
-                      ? 'bg-zinc-900/60 border-yellow-400/30 shadow-[15px_15px_30px_rgba(0,0,0,0.4)]' 
-                      : 'bg-zinc-900/20 border-white/5 opacity-60'
+                      ? 'bg-zinc-950 border-zinc-900 text-white shadow-xl shadow-zinc-200' 
+                      : 'bg-white border-zinc-100 text-zinc-900 shadow-sm opacity-90 hover:opacity-100'
                     }`}
                 >
                    <div className="flex items-center gap-5">
-                      <div className="size-14 rounded-[22px] bg-black/40 flex items-center justify-center border border-white/5 shadow-inner">
-                         <Icon name="credit_card" size={24} className="text-zinc-400" />
+                      <div className={`size-14 rounded-2xl ${paymentMethod === 'credit_card' && selectedCard?.id === card.id ? 'bg-zinc-800' : 'bg-zinc-50'} flex items-center justify-center border border-zinc-100/10 shadow-inner`}>
+                         <Icon name="credit_card" size={24} className={paymentMethod === 'credit_card' && selectedCard?.id === card.id ? "text-zinc-300" : "text-zinc-500"} />
                       </div>
                       <div>
-                         <p className="font-black text-sm text-white tracking-tight">•••• {card.last_four}</p>
-                         <p className="text-[10px] font-bold text-zinc-500 mt-0.5 uppercase tracking-widest">{card.brand || 'Cartão'}</p>
+                         <p className={`font-black text-sm tracking-tight ${paymentMethod === 'credit_card' && selectedCard?.id === card.id ? 'text-white' : 'text-zinc-900'}`}>•••• {card.last_four || card.last4}</p>
+                         <p className={`text-[10px] font-bold mt-0.5 uppercase tracking-widest ${paymentMethod === 'credit_card' && selectedCard?.id === card.id ? 'text-zinc-400' : 'text-zinc-500'}`}>{card.brand || 'Cartão'}</p>
                       </div>
                    </div>
                    <div className="flex items-center gap-3">
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }}
-                        className="size-10 rounded-2xl bg-zinc-800 border border-white/5 flex items-center justify-center text-zinc-600 hover:text-red-400 transition-colors"
+                        className="size-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 hover:text-red-500 transition-colors"
                       >
                          <span className="material-symbols-outlined text-[18px]">delete</span>
                       </button>
                       {(paymentMethod === 'credit_card' && selectedCard?.id === card.id) && (
-                        <div className="size-6 rounded-full bg-yellow-400 flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.4)]">
+                        <div className="size-6 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
                            <span className="material-symbols-outlined text-black text-[16px] font-black">check</span>
                         </div>
                       )}
@@ -150,6 +276,9 @@ export const PaymentMethodsView = () => {
               ))}
            </div>
         </section>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

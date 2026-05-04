@@ -9,8 +9,11 @@ interface WalletContextData {
   iziCashbackEarned: number;
   isIziBlackMembership: boolean;
   walletTransactions: any[];
+  savedCards: any[];
   isLoadingWallet: boolean;
   fetchWalletData: () => Promise<void>;
+  fetchSavedCards: () => Promise<void>;
+  handleDeleteCard: (id: string) => Promise<void>;
   setUserXP: React.Dispatch<React.SetStateAction<number>>;
   setIziCoins: React.Dispatch<React.SetStateAction<number>>;
 }
@@ -25,6 +28,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [savedCards, setSavedCards] = useState<any[]>([]);
   const [isLoadingWallet, setIsLoadingWallet] = useState(false);
 
   const fetchWalletData = useCallback(async () => {
@@ -73,6 +77,31 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [userId]);
 
+  const fetchSavedCards = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setSavedCards(data || []);
+    } catch (err) {
+      console.error("Erro ao buscar cartões:", err);
+    }
+  }, [userId]);
+
+  const handleDeleteCard = async (id: string) => {
+    try {
+      const { error } = await supabase.from('payment_methods').delete().eq('id', id);
+      if (error) throw error;
+      setSavedCards(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      console.error("Erro ao deletar cartão:", err);
+    }
+  };
+
   useEffect(() => {
     if (!userId) {
       setWalletBalance(0);
@@ -81,6 +110,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     fetchWalletData();
+    fetchSavedCards();
 
     const userProfileSub = supabase
       .channel(`user_sync_${userId}`)
@@ -121,9 +151,19 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       )
       .subscribe();
 
+    const cardsSub = supabase
+      .channel(`cards_sync_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payment_methods', filter: `user_id=eq.${userId}` },
+        () => fetchSavedCards()
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(userProfileSub);
       supabase.removeChannel(walletTxSub);
+      supabase.removeChannel(cardsSub);
     };
   }, [userId, fetchWalletData]);
 
@@ -135,8 +175,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       iziCashbackEarned,
       isIziBlackMembership,
       walletTransactions,
+      savedCards,
       isLoadingWallet,
       fetchWalletData,
+      fetchSavedCards,
+      handleDeleteCard,
       setUserXP,
       setIziCoins
     }}>
