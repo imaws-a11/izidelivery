@@ -245,26 +245,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
         {/* BOTTOM SHEET ULTRA PROFISSIONAL */}
         <motion.div 
           animate={{ y: sheetMode === 'expanded' ? -380 : 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          transition={{ type: "spring", damping: 35, stiffness: 350 }}
           drag="y"
-          dragControls={dragControls}
-          dragListener={false}
+          dragElastic={0.05}
           dragConstraints={{ top: -380, bottom: 0 }}
           onDragEnd={(e, info) => {
-            if (info.offset.y < -50) setSheetMode('expanded');
-            if (info.offset.y > 50) {
+            const v = info.velocity.y;
+            const o = info.offset.y;
+            if (o < -50 || v < -500) setSheetMode('expanded');
+            else if (o > 50 || v > 500) {
               setSheetMode('normal');
               if (internalSearch) setInternalSearch('');
             }
           }}
           className="fixed top-[420px] inset-x-0 bottom-0 bg-white rounded-t-[48px] shadow-[0_-20px_50px_rgba(0,0,0,0.4)] z-20 flex flex-col overflow-hidden"
-          style={{ height: 'calc(100vh - 40px)' }}
+          style={{ height: 'calc(100vh - 40px)', touchAction: 'pan-y' }}
         >
            {/* Handle de Arrasto */}
-           <div 
-             onPointerDown={(e) => dragControls.start(e)}
-             className="w-full flex justify-center py-5 shrink-0 cursor-grab active:cursor-grabbing"
-           >
+           <div className="w-full flex justify-center py-5 shrink-0">
               <div className="w-12 h-1.5 bg-zinc-200 rounded-full" />
            </div>
 

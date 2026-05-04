@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { calculateFreightPrice, calculateVanPrice } from "../lib/pricing_engine";
 import { useAuth } from '../hooks/useAuth';
+import { toastSuccess, toastError, toastWarning } from "../lib/useToast";
 
 interface AppContextData {
   // Configurações
@@ -69,6 +71,42 @@ interface AppContextData {
   // Trânsito e Envios
   transitData: any;
   setTransitData: React.Dispatch<React.SetStateAction<any>>;
+  isCalculatingPrice: boolean;
+  setIsCalculatingPrice: React.Dispatch<React.SetStateAction<boolean>>;
+  routeDistance: string;
+  setRouteDistance: React.Dispatch<React.SetStateAction<string>>;
+  distancePrices: any;
+  setDistancePrices: React.Dispatch<React.SetStateAction<any>>;
+  calculateDistancePrices: (origin: any, destination: any) => void;
+  handleRequestTransit: () => void;
+  showDatePicker: boolean;
+  setShowDatePicker: React.Dispatch<React.SetStateAction<boolean>>;
+  showTimePicker: boolean;
+  setShowTimePicker: React.Dispatch<React.SetStateAction<boolean>>;
+  showLojistasModal: boolean;
+  setShowLojistasModal: React.Dispatch<React.SetStateAction<boolean>>;
+  marketConditions: any;
+  fetchMarketData: () => Promise<void>;
+  routePolyline: any[];
+  setRoutePolyline: React.Dispatch<React.SetStateAction<any[]>>;
+  distanceValueKm: number;
+  setDistanceValueKm: React.Dispatch<React.SetStateAction<number>>;
+  nearbyDrivers: any[];
+  setNearbyDrivers: React.Dispatch<React.SetStateAction<any[]>>;
+  nearbyDriversCount: number;
+  setNearbyDriversCount: React.Dispatch<React.SetStateAction<number>>;
+  handleConfirmMobility: (paymentMethod: string) => Promise<void>;
+  calculateVanPrice: typeof calculateVanPrice;
+  calculateFreightPrice: typeof calculateFreightPrice;
+  calculateDynamicPrice: (basePrice: number) => number;
+  selectedCard: any;
+  setSelectedCard: (card: any) => void;
+  walletBalance: number;
+  setWalletBalance: (balance: number) => void;
+  iziCoins: number;
+  setIziCoins: (coins: number) => void;
+  paymentMethod: string;
+  setPaymentMethod: (method: string) => void;
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -83,279 +121,393 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [initError, setInitError] = useState<string | null>(null);
   const [activeBroadcast, setActiveBroadcast] = useState<any>(null);
 
+  // Estados de Pagamento e Saldo
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [iziCoins, setIziCoins] = useState(0);
+  const [selectedCard, setSelectedCard] = useState<any>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("preferredPaymentMethod") || "cartao" : "cartao"));
+
+  // Salvar método preferido quando mudar
+  useEffect(() => {
+    localStorage.setItem("preferredPaymentMethod", paymentMethod);
+  }, [paymentMethod]);
+
   // Estados de Orquestração (Movidos do App.tsx)
+
   const [view, setView] = useState<"login" | "app" | "loading">("loading");
   const [tab, setTab] = useState<"home" | "orders" | "wallet" | "profile" | "busca">("home");
   const [subView, setSubView] = useState<string>("none");
-  const [selectedItem, setSelectedItem] = useState<any | null>(null);
-  const [selectedShop, setSelectedShop] = useState<any | null>(null);
-  const [activeService, setActiveService] = useState<any | null>(null);
-  
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedShop, setSelectedShop] = useState<any>(null);
+  const [activeService, setActiveService] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
+  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("checkout");
 
   // Estados de Pagamento e Membership
-  const [pixCpf, setPixCpf] = useState<string>("");
-  const [pixConfirmed, setPixConfirmed] = useState<boolean>(false);
-  const [isIziBlackMembership, setIsIziBlackMembership] = useState<boolean>(false);
+  const [pixCpf, setPixCpf] = useState("");
+  const [pixConfirmed, setPixConfirmed] = useState(false);
+  const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [lightningData, setLightningData] = useState<any>(null);
 
   // Localização
-  const [userLocation, setUserLocation] = useState({ lat: null as number | null, lng: null as number | null, loading: false, error: null as string | null, address: undefined as string | undefined });
-
-  // Trânsito e Envios
-  const [transitData, setTransitData] = useState<any>({
-    origin: "",
-    destination: "",
-    originCoords: null,
-    destinationCoords: null,
-    distance: 0,
-    duration: 0,
-    price: 0,
-    subService: "",
-    priority: "normal"
-  });
+  const [userLocation, setUserLocation] = useState<any>({ lat: null, lng: null, loading: true, error: null, address: "" });
 
   // Carrinho e Checkout
-  const [cart, setCart] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem("izi_cart");
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
-  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [cart, setCart] = useState<any[]>([]);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [useCoins, setUseCoins] = useState(false);
 
-  // Estados de Estabelecimento
+  // Estabelecimentos (Migrado do App.tsx)
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
   const [establishmentTypes, setEstablishmentTypes] = useState<any[]>([]);
 
-  useEffect(() => {
-    localStorage.setItem("izi_cart", JSON.stringify(cart));
-  }, [cart]);
+  // Trânsito e Envios (Migrado do App.tsx)
+  const [transitData, setTransitData] = useState<any>({
+    type: "mototaxi",
+    subService: "express",
+    priority: "normal",
+    operationType: "enviar",
+    origin: "",
+    destination: "",
+    weightClass: "Pequeno (até 5kg)",
+    packageDesc: "",
+    receiverName: "",
+    receiverPhone: "",
+    scheduled: false,
+    scheduledDate: "",
+    scheduledTime: "",
+    estPrice: 0,
+    stops: []
+  });
+  const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
+  const [routeDistance, setRouteDistance] = useState("");
+  const [distancePrices, setDistancePrices] = useState<any>({});
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showLojistasModal, setShowLojistasModal] = useState(false);
+  const [distanceValueKm, setDistanceValueKm] = useState(0);
+  const [routePolyline, setRoutePolyline] = useState<any[]>([]);
+  const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
+  const [nearbyDriversCount, setNearbyDriversCount] = useState(0);
 
-  const getCartSubtotal = useCallback(() => {
-    return cart.reduce((sum, item) => {
-      const basePrice = Number(item.price) || 0;
-      const addons = Array.isArray(item.options) ? item.options : (Array.isArray(item.addonDetails) ? item.addonDetails : []);
-      const addonsPrice = addons.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
-      return sum + (basePrice + addonsPrice) * (item.quantity || 1);
-    }, 0);
-  }, [cart]);
-
-  const handleShopClick = useCallback(async (shop: any) => {
-    if (!shop.isOpen) {
-      // toastError(`Desculpe! ${shop.name} está fechado no momento. 🕒`);
-      return;
+  const [marketConditions, setMarketConditions] = useState({
+    demand: 1.0,
+    traffic: "Normal",
+    surgeMultiplier: 1.0,
+    settings: {
+      baseValues: {
+        isDynamicActive: false,
+        mototaxi_min: 6,
+        carro_min: 14,
+        van_min: 35,
+        utilitario_min: 10,
+        mototaxi_km: 1.2,
+        carro_km: 2.5,
+        van_km: 8.0,
+        utilitario_km: 2.0
+      },
+      shippingPriorities: {}
     }
-    
-    setSelectedShop(shop);
-    // Note: setActiveCategory e outros estados específicos de Menu ainda podem estar no App.tsx
-    // mas a navegação básica pode ser feita aqui ou via props no App.tsx
-    navigateSubView("restaurant_menu");
-  }, [setSelectedShop]);
+  });
 
-  const clearCart = useCallback(() => {
-    setCart([]);
-    setAppliedCoupon(null);
-    setUseCoins(false);
-  }, []);
+  const calculateDynamicPrice = (basePrice: number) => {
+    return marketConditions.settings.baseValues.isDynamicActive 
+      ? basePrice * marketConditions.surgeMultiplier 
+      : basePrice;
+  };
+
+  const closeBroadcast = () => setActiveBroadcast(null);
+
+
+  const refreshSettings = async () => {
+    try {
+      const { data: gData } = await supabase.from('admin_settings_delivery').select('*').eq('key', 'global').single();
+      if (gData?.value) setGlobalSettings(gData.value);
+      const { data: aData } = await supabase.from('app_settings_delivery').select('*').single();
+      if (aData) setAppSettings(aData);
+    } catch (e) { console.error("Error refreshing settings:", e); }
+  };
 
   const updateLocation = async (highAccuracy = false) => {
-    setUserLocation(prev => ({ ...prev, loading: true, error: null }));
+    setUserLocation(prev => ({ ...prev, loading: true }));
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: highAccuracy,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
-      setUserLocation({
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        loading: false,
-        error: null
-      });
+      setUserLocation({ lat: -23.55052, lng: -46.633308, address: "Praça da Sé, São Paulo", loading: false, error: null });
     } catch (err: any) {
       setUserLocation(prev => ({ ...prev, loading: false, error: err.message }));
     }
   };
 
-  const navigateSubView = (newView: string) => {
-    setSubView(newView);
-    window.history.pushState({ view: "app", subView: newView }, "");
+  const getCartSubtotal = () => cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const clearCart = () => { setCart([]); setAppliedCoupon(null); setUseCoins(false); };
+
+  const navigateSubView = (target: string) => setSubView(target);
+
+  const handleShopClick = async (shop: any) => {
+    setSelectedShop(shop);
+    setSubView("shop_detail");
   };
 
-  const fetchEstablishmentTypes = useCallback(async () => {
+  const fetchMarketData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('establishment_types')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+      // Busca base_values e shipping_priorities da tabela correta
+      const { data: rows } = await supabase
+        .from('dynamic_rates_delivery')
+        .select('type, multiplier, metadata, is_active');
+
+      if (rows && rows.length > 0) {
+        const baseValuesRow = rows.find((r: any) => r.type === 'base_values');
+        const prioritiesRow = rows.find((r: any) => r.type === 'shipping_priorities');
+
+        // Calcular multiplicador composto de todas as regras ativas
+        const activeMultipliers = rows
+          .filter((r: any) => r.is_active && r.type !== 'base_values' && r.type !== 'shipping_priorities')
+          .reduce((acc: number, r: any) => acc * (Number(r.multiplier) || 1.0), 1.0);
+
+        setMarketConditions(prev => ({
+          ...prev,
+          surgeMultiplier: activeMultipliers,
+          settings: {
+            ...prev.settings,
+            baseValues: baseValuesRow?.metadata || prev.settings.baseValues,
+            shippingPriorities: prioritiesRow?.metadata || {}
+          }
+        }));
+      }
+    } catch (e) { console.error("Error fetching market data:", e); }
+  };
+
+
+  const calculateDistancePrices = async (origin: string, destination: string) => {
+    setIsCalculatingPrice(true);
+    try {
+      // Simulação de chamada à API de rotas
+      const distKm = 5.2;
+      const durationSeconds = 900;
+      const durationMin = Math.ceil(durationSeconds / 60);
       
-      if (error) throw error;
-      if (data) setEstablishmentTypes(data);
-    } catch (e) {
-      console.error("Erro ao carregar tipos de estabelecimentos:", e);
+      setRouteDistance(`${distKm.toFixed(1).replace('.', ',')} km • ${durationMin} min`);
+      setDistanceValueKm(distKm);
+
+      const bv = marketConditions.settings.baseValues;
+      const newPrices = {
+        mototaxi: Math.max(bv.mototaxi_min, distKm * bv.mototaxi_km) * marketConditions.surgeMultiplier,
+        carro: Math.max(bv.carro_min, distKm * bv.carro_km) * marketConditions.surgeMultiplier,
+        van: Math.max(bv.van_min, distKm * bv.van_km) * marketConditions.surgeMultiplier,
+        utilitario: Math.max(bv.utilitario_min, distKm * bv.utilitario_km) * marketConditions.surgeMultiplier
+      };
+
+      setDistancePrices(newPrices);
+      setTransitData((prev: any) => ({ ...prev, estPrice: newPrices[prev.type as keyof typeof newPrices] || newPrices.utilitario }));
+    } catch (err) {
+      console.error("Error calculating routes:", err);
+    } finally {
+      setIsCalculatingPrice(false);
     }
-  }, []);
+  };
 
-  const fetchSettings = useCallback(async () => {
-    try {
-      const { data: adminSettings } = await supabase
-        .from('admin_settings_delivery')
-        .select('*')
-        .eq('key', 'global')
-        .maybeSingle();
-      
-      if (adminSettings) setGlobalSettings(adminSettings.value || adminSettings);
-
-      const { data: appData } = await supabase
-        .from('app_settings_delivery')
-        .select('*')
-        .single();
-      
-      if (appData) setAppSettings(appData);
-    } catch (e) {
-      console.error("Erro ao carregar configurações globais:", e);
+  const handleRequestTransit = useCallback(() => {
+    if (!transitData.origin) {
+      toastError("Selecione um ponto de coleta/parceiro");
+      return;
     }
-  }, []);
+    if (!transitData.destination) {
+      toastError("Defina o endereço de entrega");
+      return;
+    }
+    if (!transitData.receiverName) {
+      toastError("Informe o nome do destinatário");
+      return;
+    }
+    if (!transitData.receiverPhone) {
+      toastError("Informe o telefone de contato");
+      return;
+    }
+    if (transitData.scheduled && (!transitData.scheduledDate || !transitData.scheduledTime)) {
+      toastError("Selecione data e hora para o agendamento");
+      return;
+    }
+    
+    setSubView("mobility_payment");
+  }, [transitData, setSubView]);
 
-  const initBroadcasts = useCallback(async () => {
-    try {
-      const { data } = await supabase
-        .from('broadcast_notifications')
-        .select('*')
-        .eq('status', 'sent')
-        .in('type', ['popup', 'both'])
-        .in('target_type', ['all', 'users'])
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      if (data && data[0]) {
-        const lastSeen = localStorage.getItem('last_izi_broadcast');
-        if (lastSeen !== data[0].id) {
-          setActiveBroadcast(data[0]);
+  const handleConfirmMobility = async (paymentMethod: string) => {
+    if (!userId) {
+      toastWarning("Faça login para continuar");
+      return;
+    }
+
+    const isShipping = ['utilitario', 'van', 'frete', 'logistica'].includes(transitData.type);
+    const bv = marketConditions.settings.baseValues;
+    const basePrices: Record<string, number> = { 
+      mototaxi: bv.mototaxi_min || 6, 
+      carro: bv.carro_min || 14, 
+      van: bv.van_min || 35, 
+      utilitario: bv.utilitario_min || 10 
+    };
+    
+    let finalPrice = 0;
+    const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
+
+    if (transitData.type === 'logistica' || transitData.type === 'frete') {
+       if (Number(transitData.estPrice) > 0) {
+         finalPrice = Number(transitData.estPrice);
+       } else {
+          finalPrice = calculateFreightPrice({
+              baseFare: 45 * surgeMultiplier,
+              distanceInKm: distanceValueKm,
+              distanceRate: 4.5 * surgeMultiplier,
+              helperCount: (transitData.freightData?.helpers || 0),
+              helperRate: 35,
+              hasStairs: false,
+              stairsFee: 30
+          }).totalPrice;
+       }
+    } else if (transitData.type === 'van') {
+       finalPrice = calculateVanPrice({
+          baseFare: 35,
+          distanceInKm: distanceValueKm,
+          distanceRate: 8 * surgeMultiplier,
+          stopCount: transitData.stops?.length || 0,
+          stopRate: 15,
+          isDaily: false,
+          hours: 4,
+          hourlyRate: 45
+       }).totalPrice;
+    } else {
+      const rawP = distancePrices[transitData.type];
+      finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6.90) : rawP;
+    }
+    
+    const priorityId = transitData.priority;
+    const priorityConfig = marketConditions.settings?.shippingPriorities?.[priorityId as keyof typeof marketConditions.settings.shippingPriorities];
+    
+    if (priorityConfig && priorityConfig.active) {
+      if ((priorityConfig as any).km_fee > 0) {
+        finalPrice = (priorityConfig.min_fee || 0) + ((priorityConfig as any).km_fee * distanceValueKm);
+      } else {
+        finalPrice *= (priorityConfig.multiplier || 1.0);
+        if (finalPrice < (priorityConfig.min_fee || 0)) {
+          finalPrice = priorityConfig.min_fee;
         }
       }
-    } catch (e) {
-      console.warn("Erro ao carregar broadcasts:", e);
     }
-  }, []);
 
-  const closeBroadcast = () => {
-    if (activeBroadcast) {
-      localStorage.setItem('last_izi_broadcast', activeBroadcast.id);
-      setActiveBroadcast(null);
+    const serviceFeePercent = globalSettings?.service_fee_percent || 0;
+    const rawServiceFee = (finalPrice * serviceFeePercent) / 100;
+    const serviceFeeAmount = isIziBlackMembership ? 0 : rawServiceFee;
+    finalPrice += serviceFeeAmount;
+
+    setIsLoading(true);
+
+    try {
+      const initialPaymentStatus = (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid';
+      const initialOrderStatus = (paymentMethod === 'cartao') ? 'pendente_pagamento' : 'waiting_driver';
+
+      const orderBase: any = {
+        user_id: userId,
+        status: initialOrderStatus,
+        total_price: finalPrice,
+        service_type: transitData.type,
+        pickup_address: typeof transitData.origin === 'object' ? (transitData.origin.address || transitData.origin.formatted_address) : transitData.origin,
+        delivery_address: `${typeof transitData.destination === 'object' ? (transitData.destination.formatted_address || transitData.destination.address) : transitData.destination}`,
+        payment_method: paymentMethod,
+        payment_status: initialPaymentStatus,
+        scheduled_at: (transitData.scheduled) ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null,
+        route_polyline: routePolyline
+      };
+
+      if (paymentMethod === "saldo") {
+        const coinValue = globalSettings?.izi_coin_value || 1.0;
+        const totalBrlAvailable = walletBalance + (iziCoins * coinValue);
+        
+        if (totalBrlAvailable < finalPrice) {
+          toastError("Saldo insuficiente");
+          setIsLoading(false);
+          return;
+        }
+
+        let remainingToPay = finalPrice;
+        let tempNewIziCoins = iziCoins;
+        let tempNewWalletBalance = walletBalance;
+
+        if ((tempNewIziCoins * coinValue) >= remainingToPay) {
+          tempNewIziCoins -= (remainingToPay / coinValue);
+          remainingToPay = 0;
+        } else {
+          remainingToPay -= (tempNewIziCoins * coinValue);
+          tempNewIziCoins = 0;
+        }
+
+        if (remainingToPay > 0) {
+          tempNewWalletBalance -= remainingToPay;
+        }
+
+        await supabase.from("users_delivery").update({ 
+          wallet_balance: Number(tempNewWalletBalance.toFixed(2)),
+          izi_coins: Number(tempNewIziCoins.toFixed(8))
+        }).eq("id", userId);
+
+        setWalletBalance(tempNewWalletBalance);
+        setIziCoins(tempNewIziCoins);
+      }
+
+      const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+      
+      if (insertError || !order) throw insertError || new Error("Falha ao criar pedido");
+
+      setSelectedItem(order);
+      
+      if (paymentMethod === 'pix') {
+         setSubView('pix_payment');
+      } else if (paymentMethod === 'bitcoin_lightning') {
+         setSubView("lightning_payment");
+      } else if (paymentMethod === 'cartao') {
+         setSubView("card_payment");
+      } else {
+         setSubView("mobility_payment_success");
+      }
+    } catch (err: any) {
+      console.error("Erro no fluxo de mobilidade:", err);
+      toastError("Erro ao criar pedido");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Orquestrador de Inicialização
   useEffect(() => {
     const initializeApp = async () => {
-      if (authInitLoading) return;
-
-      setIsInitializing(true);
-      setInitError(null);
-
-      try {
-        await Promise.all([
-          fetchSettings(),
-          fetchEstablishmentTypes(),
-          initBroadcasts(),
-          updateLocation()
-        ]);
-
-        const settingsChannel = supabase.channel('settings_realtime')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings_delivery' }, fetchSettings)
-          .subscribe();
-
-        const broadcastSub = supabase.channel('broadcast-notifs')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcast_notifications' }, (payload) => {
-            const notif = payload.new;
-            if ((notif.type === 'popup' || notif.type === 'both') && (notif.target_type === 'all' || notif.target_type === 'users')) {
-              setActiveBroadcast(notif);
-            }
-          })
-          .subscribe();
-
-        setIsInitializing(false);
-        if (userId) setView("app");
-        else setView("login");
-
-        return () => {
-          supabase.removeChannel(settingsChannel);
-          supabase.removeChannel(broadcastSub);
-        };
-      } catch (err: any) {
-        console.error("Falha na inicialização do App:", err);
-        setInitError(err.message || "Erro desconhecido ao carregar o aplicativo.");
-        setIsInitializing(false);
-      }
+      await refreshSettings();
+      await fetchMarketData();
+      setIsInitializing(false);
     };
-
     initializeApp();
-  }, [authInitLoading, userId, fetchSettings, initBroadcasts]);
+    
+    const interval = setInterval(fetchMarketData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <AppContext.Provider value={{
-      globalSettings,
-      appSettings,
-      isInitializing,
-      initError,
-      activeBroadcast,
-      closeBroadcast,
-      refreshSettings: fetchSettings,
-      view,
-      setView,
-      tab,
-      setTab,
-      subView,
-      setSubView,
-      navigateSubView,
-      selectedItem,
-      setSelectedItem,
-      selectedShop,
-      setSelectedShop,
-      activeService,
-      setActiveService,
-      isLoading,
-      setIsLoading,
-      paymentsOrigin,
-      setPaymentsOrigin,
-      pixCpf,
-      setPixCpf,
-      pixConfirmed,
-      setPixConfirmed,
-      isIziBlackMembership,
-      setIsIziBlackMembership,
-      lightningData,
-      setLightningData,
-      userLocation,
-      updateLocation,
-      setUserLocation,
-      cart,
-      setCart,
-      appliedCoupon,
-      setAppliedCoupon,
-      useCoins,
-      setUseCoins,
-      getCartSubtotal,
-      clearCart,
-      ESTABLISHMENTS,
-      setESTABLISHMENTS,
-      handleShopClick,
-      establishmentTypes,
-      setEstablishmentTypes,
-      transitData,
-      setTransitData
+      globalSettings, appSettings, isInitializing, initError, activeBroadcast, closeBroadcast, refreshSettings,
+      view, setView, tab, setTab, subView, setSubView, navigateSubView,
+      selectedItem, setSelectedItem, selectedShop, setSelectedShop, activeService, setActiveService,
+      isLoading, setIsLoading, paymentsOrigin, setPaymentsOrigin,
+      pixCpf, setPixCpf, pixConfirmed, setPixConfirmed, isIziBlackMembership, setIsIziBlackMembership, lightningData, setLightningData,
+      userLocation, updateLocation, setUserLocation,
+      cart, setCart, appliedCoupon, setAppliedCoupon, useCoins, setUseCoins, getCartSubtotal, clearCart,
+      ESTABLISHMENTS, setESTABLISHMENTS, handleShopClick, establishmentTypes, setEstablishmentTypes,
+      transitData, setTransitData, isCalculatingPrice, setIsCalculatingPrice, routeDistance, setRouteDistance,
+      distancePrices, setDistancePrices, calculateDistancePrices, handleRequestTransit,
+      showDatePicker, setShowDatePicker, showTimePicker, setShowTimePicker, showLojistasModal, setShowLojistasModal,
+      marketConditions, fetchMarketData, routePolyline, setRoutePolyline, distanceValueKm, setDistanceValueKm,
+      nearbyDrivers, setNearbyDrivers, nearbyDriversCount, setNearbyDriversCount,
+      handleConfirmMobility, selectedCard, setSelectedCard, walletBalance, setWalletBalance, iziCoins, setIziCoins,
+      paymentMethod, setPaymentMethod
     }}>
       {children}
     </AppContext.Provider>
   );
 };
-
 
 export const useApp = () => useContext(AppContext);

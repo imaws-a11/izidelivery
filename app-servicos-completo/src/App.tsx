@@ -9,7 +9,8 @@ import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
 import { GMAPS_KEY } from "./config";
 // Mercado Pago
 import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
-import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
+// pricing_engine movido para AppContext
+
 
 // Novos Componentes Modulares
 import { Icon } from "./components/common/Icon";
@@ -54,6 +55,7 @@ import { FlashOffersListView } from "./components/features/FlashOffersListView";
 import { AddressListView } from "./components/features/Address/AddressListView";
 import { NotificationsCenterView } from "./components/features/Notifications/NotificationsCenterView";
 import { QuestCenterView } from "./components/features/Gamification/QuestCenterView";
+import { ShippingDetailsView } from "./components/features/Shipping/ShippingDetailsView";
 import { IziBlackView } from "./components/features/Membership/IziBlackView";
 import { ExploreEnviosView } from "./components/features/Shipping/ExploreEnviosView";
 import { ExploreEnviosUberView } from "./components/features/Shipping/ExploreEnviosUberView";
@@ -128,7 +130,7 @@ function App() {
     userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versões locais legadas
 
     // Outros Contextos
-    walletBalance, iziCoins, setIziCoins, userXP, setUserXP, iziCashbackEarned, isIziBlackMembership, walletTransactions, fetchWalletData,
+    userXP, setUserXP, iziCashbackEarned, isIziBlackMembership, walletTransactions, fetchWalletData,
     orders, activeOrder, fetchOrders, setActiveOrder,
     savedAddresses, saveAddress, deleteAddress, setActiveAddress,
 
@@ -136,7 +138,26 @@ function App() {
     cart, setCart, appliedCoupon, setAppliedCoupon, useCoins, setUseCoins, getCartSubtotal, clearCart: _ignoredClearCart,
 
     // Libs
-    toastSuccess, toastError, showConfirm
+    toastSuccess, toastError, showConfirm,
+
+    // Trânsito & Envios (Migrados)
+    transitData, setTransitData,
+    isCalculatingPrice, setIsCalculatingPrice,
+    routeDistance, setRouteDistance,
+    distancePrices, setDistancePrices,
+    calculateDistancePrices, handleRequestTransit,
+    showDatePicker, setShowDatePicker,
+    showTimePicker, setShowTimePicker,
+    showLojistasModal, setShowLojistasModal,
+    marketConditions, fetchMarketData,
+    routePolyline, setRoutePolyline,
+    distanceValueKm, setDistanceValueKm,
+    nearbyDrivers, setNearbyDrivers,
+    nearbyDriversCount, setNearbyDriversCount,
+    handleConfirmMobility, calculateVanPrice, calculateFreightPrice, calculateDynamicPrice,
+    selectedCard, setSelectedCard,
+    walletBalance, setWalletBalance, iziCoins, setIziCoins,
+    paymentMethod, setPaymentMethod
   } = useApp();
 
   // Injeta função global de navegação para componentes modulares
@@ -2026,9 +2047,8 @@ function App() {
       },
     ]);
   }, [subView, chatMessages.length, selectedItem?.driver_name, selectedItem?.merchant_name]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showLojistasModal, setShowLojistasModal] = useState(false);
+  // Estados de modal migrados para o AppContext
+
   const [partnerStores, setPartnerStores] = useState<any[]>([]);
   useEffect(() => {
     const fetchPartners = async () => {
@@ -2568,7 +2588,8 @@ const navigateSubView = (target: string) => {
       "",
     );
   };
-  const [selectedCard, setSelectedCard] = useState<any>(null);
+  // selectedCard movido para AppContext
+
   const [activeCategory, setActiveCategory] = useState<string>("Destaques");
   const [restaurantInitialCategory, setRestaurantInitialCategory] = useState("Todos");
   const [activeMenuCategory, setActiveMenuCategory] = useState("Destaques");
@@ -2650,51 +2671,8 @@ const navigateSubView = (target: string) => {
 
 
 
-  const [filterTab, setFilterTab] = useState<"ativos" | "historico">("ativos");
-  const [transitData, setTransitData] = useState({
-    origin: { address: "", lat: null as number | null, lng: null as number | null } as any,
-    destination: { address: "", lat: null as number | null, lng: null as number | null } as any,
-    stops: [] as any[],
-    type: "mototaxi" as "mototaxi" | "carro" | "van" | "utilitario" | "frete",
-    estPrice: 0,
-    scheduled: false,
-    scheduledDate: "",
-    scheduledTime: "",
-    receiverName: "",
-    receiverPhone: "",
-    packageDesc: "",
-    weightClass: "Pequeno (atÃ© 5kg)",
-    // Novos campos para Frete e Van
-    vehicleCategory: "Fiorino",
-    helpers: 0,
-    accessibility: { stairsAtOrigin: false, stairsAtDestination: false, serviceElevator: false },
-    cargoPhotos: [] as string[],
-    passengers: 1,
-    tripType: "only_one_way" as "only_one_way" | "round_trip" | "hourly",
-    luggage: "none" as "none" | "medium" | "large",
-    purpose: "",
-    priority: "normal" as "turbo" | "light" | "normal" | "scheduled",
-    operationType: "enviar" as "enviar" | "retirar",
-    subService: "express" as "express" | "coleta",
-    pickupCode: "",
-    invoiceNumber: "",
-    pickupSector: "",
-    excursionData: {
-      passengers: 10,
-      tripType: 'ida_e_volta',
-      departureDate: '',
-      returnDate: '',
-      notes: ''
-    }
-  });
-  const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
-  const [distanceValueKm, setDistanceValueKm] = useState(0);
-  const [routePolyline, setRoutePolyline] = useState<string>("");
-  const [routeDistance, setRouteDistance] = useState<string>("");
-  const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
-  const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
-  const [nearbyDriversCount, setNearbyDriversCount] = useState(0);
   const [mobilityStep, setMobilityStep] = useState(1);
+
 
       // [Comentario Limpo pelo Sistema]
   useEffect(() => {
@@ -3083,15 +3061,20 @@ const navigateSubView = (target: string) => {
 
   // Taxa de entrega REATIVA â€” recalcula quando GPS, carrinho, lojista ou membership mudam.
 
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
+  // paymentMethod centralizado no useApp
   const [changeFor, setChangeFor] = useState("");
-  useEffect(() => {
-    localStorage.setItem("preferredPaymentMethod", paymentMethod);
-  }, [paymentMethod]);
+
   const [deliveryType] = useState<"delivery" | "pickup">("delivery");
 
   const [cpf, setCpf] = useState<string>("");
+  useEffect(() => {
+    if (GMAPS_KEY) {
+      (window as any).GMAPS_KEY = GMAPS_KEY;
+    }
+  }, []);
+
   const [profileCpf, setProfileCpf] = useState<string>("");
+
   const [orderNotes] = useState<string>("");
   const [showPixPayment, setShowPixPayment] = useState(false);
 
@@ -3111,35 +3094,8 @@ const navigateSubView = (target: string) => {
   const [beverageOffers, setBeverageOffers] = useState<any[]>([]);
 
       // [Comentario Limpo pelo Sistema]
-  const [marketConditions, setMarketConditions] = useState({
-    demand: 1.0,
-    traffic: "Normal",
-    weather: "Ensolarado",
-    surgeMultiplier: 1.0,
-    settings: {
-      equilibrium: { threshold: 1.2, sensitivity: 2.0, maxSurge: 4.0 },
-      weather: {
-        rain: { multiplier: 1.3, active: true },
-        storm: { multiplier: 1.8, active: true },
-        snow: { multiplier: 2.5, active: false }
-      },
-      shippingPriorities: {
-        normal: { multiplier: 1.0, min_fee: 8 },
-        light: { multiplier: 1.2, min_fee: 12 },
-        turbo: { multiplier: 1.5, min_fee: 15 },
-        scheduled: { multiplier: 1.0, min_fee: 12 }
-      },
-      baseValues: {
-        mototaxi_min: 6.0, mototaxi_km: 2.5,
-        carro_min: 14.0, carro_km: 4.5,
-        van_min: 35.0, van_km: 8.0,
-        utilitario_min: 10.0, utilitario_km: 3.0,
-        logistica_min: 45.0, logistica_km: 8.0,
-        logistica_stairs: 30.0, logistica_helper: 35.0,
-        isDynamicActive: true
-      }
-    }
-  });
+  // marketConditions movido para o AppContext
+
 
   // Taxa de entrega REATIVA â€” recalcula quando GPS, carrinho, lojista, membership ou surge mudam.
   const currentDeliveryFee = useMemo(
@@ -3206,602 +3162,12 @@ const navigateSubView = (target: string) => {
 
   const lunchCategories = [
     { id: "all",     name: "Todos",           icon: "restaurant" },
-    { id: "promo",   name: "PromoÃ§Ã£o do Dia", icon: "percent" },
+    { id: "promo",   name: "Promoção do Dia", icon: "percent" },
     { id: "monte",   name: "Monte o seu",     icon: "flatware" },
     { id: "pratos",  name: "Pratos feitos",   icon: "rice_bowl" },
     { id: "marmita", name: "Marmitas",        icon: "lunch_dining" },
   ];
 
-  const fetchMarketData = async () => {
-    try {
-      // [Comentario Limpo pelo Sistema]
-      const { data: ratesData } = await supabase
-        .from('dynamic_rates_delivery')
-        .select('*');
-      
-      const config = {
-        equilibrium: ratesData?.find(r => r.type === 'equilibrium')?.metadata || marketConditions.settings.equilibrium,
-        weather: ratesData?.find(r => r.type === 'weather_rules')?.metadata || marketConditions.settings.weather,
-        baseValues: ratesData?.find(r => r.type === 'base_values')?.metadata || marketConditions.settings.baseValues,
-        flowControl: ratesData?.find(r => r.type === 'flow_control')?.metadata || marketConditions.settings.flowControl,
-        shippingPriorities: ratesData?.find(r => r.type === 'shipping_priorities')?.metadata || marketConditions.settings.shippingPriorities,
-        peakHours: (ratesData?.find(r => r.type === 'peak_hour')?.metadata as any)?.rules || []
-      };
-
-      // 2. Contagem de Motoristas On-line (Oferta Real)
-      const { count: onlineDrivers } = await supabase
-        .from('drivers_delivery')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_online', true);
-
-      // 3. Viagens/Pedidos Abertos (Demanda Real)
-      const { count: pendingOrders } = await supabase
-        .from('orders_delivery')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
-
-      const weathers = ["Ensolarado", "Nublado", "Chuva Leve", "Tempestade"];
-      const now = new Date();
-      const hour = now.getHours();
-      
-      // SincronizaÃ§Ã£o Real: O clima Ã© definido pelo Admin. Se nenhum estiver ativo, usa lÃ³gica temporal.
-      let currentWeather = (hour > 18 || hour < 6) ? "Nublado" : "Ensolarado";
-      if (config.weather?.storm?.active) currentWeather = "Tempestade";
-      else if (config.weather?.rain?.active) currentWeather = "Chuva Leve";
-      else if (config.weather?.snow?.active) currentWeather = "Nublado"; // Neve mapeado para nublado visualmente aqui
-
-      const drivers = onlineDrivers || 1; 
-      const orders = pendingOrders || 0;
-      const ratio = orders / drivers;
-
-      // --- LOGICA DE SURGE (%) ---
-      let surge = 1.0;
-
-      // 1. Modo Inteligente (Algoritmo de EquilÃ­brio)
-      const { threshold, sensitivity, maxSurge } = config.equilibrium;
-      if (config.flowControl?.mode === 'auto') {
-        if (ratio > threshold) {
-          surge = 1.0 + (ratio - threshold) * sensitivity;
-        }
-      }
-
-      // 2. Regras de Clima
-      if (currentWeather === "Tempestade" && config.weather?.storm?.active) surge += (config.weather.storm.multiplier - 1);
-      if (currentWeather === "Chuva Leve" && config.weather?.rain?.active) surge += (config.weather.rain.multiplier - 1);
-      
-      // 3. Regras de HorÃ¡rio de Pico (Peak Hours do Admin)
-      config.peakHours.forEach((rule: any) => {
-        if (rule.active) {
-            // No momento usamos apenas multiplicador global se houver, mas podemos expandir para labels
-            // Ex: "AcrÃ©scimo Noturno"
-            surge += (rule.multiplier - 1);
-        }
-      });
-
-      // 4. Overrides do Admin (Surge CrÃ­tico)
-      if (config.flowControl?.highDemandActive) {
-        surge = Math.max(surge, 1.5); // ForÃ§a pelo menos 1.5x
-      }
-
-      const finalSurge = Math.max(1.0, Math.min(maxSurge || 4.0, surge));
-
-      setMarketConditions({
-        demand: parseFloat(ratio.toFixed(2)),
-        traffic: ratio > 1.5 ? "Congestionado" : (ratio > 1 ? "Moderado" : "Normal"),
-        weather: currentWeather,
-        surgeMultiplier: parseFloat(finalSurge.toFixed(2)),
-        settings: config as any
-      });
-    } catch (error) {
-    }
-  };
-
-  useEffect(() => {
-    fetchMarketData();
-    const interval = setInterval(fetchMarketData, 20000); // Sincroniza a cada 20s
-    return () => clearInterval(interval);
-  }, []);
-
-  const calculateDynamicPrice = (basePrice: number) => {
-    return marketConditions.settings.baseValues.isDynamicActive 
-      ? basePrice * marketConditions.surgeMultiplier 
-      : basePrice;
-  };
-
-      // [Comentario Limpo pelo Sistema]
-  const calculateDistancePrices = (origin: any, destination: any) => {
-    const extractStr = (val: any) => {
-      if (typeof val === 'string') return val;
-      if (typeof val === 'object' && val !== null) return val.address || val.formatted_address || val.display_name || "";
-      return "";
-    };
-
-    const originStr = extractStr(origin);
-    const destStr = extractStr(destination);
-
-    if (!originStr || !destStr || !window.google?.maps) return;
-    setIsCalculatingPrice(true);
-    setDistancePrices({});
-
-    try {
-      const callRoutesAPI = async () => {
-        try {
-          const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Goog-Api-Key': GMAPS_KEY,
-              'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs'
-            },
-            body: JSON.stringify({
-              origin: { address: originStr },
-              destination: { address: destStr },
-              travelMode: 'DRIVE',
-              routingPreference: 'TRAFFIC_AWARE',
-              computeAlternativeRoutes: false,
-              languageCode: 'pt-BR',
-              units: 'METRIC'
-            })
-          });
-
-          const data = await res.json();
-          if (!res.ok) {
-            console.error("Routes API Error Payload:", { origin, destination });
-            console.error("Routes API Error Response:", data);
-            setIsCalculatingPrice(false);
-            return;
-          }
-
-          setIsCalculatingPrice(false);
-
-          if (data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
-            const distKm = (route.distanceMeters || 0) / 1000;
-            
-            // Converter duraÃ§Ã£o (string "123s") para minutos
-            const durationSeconds = route.duration ? parseInt(route.duration.replace('s', '')) : 0;
-            const durationMin = Math.ceil(durationSeconds / 60);
-            
-            const distText = distKm.toFixed(1).replace('.', ',') + " km";
-            const durationText = durationMin + " min";
-            
-            setRouteDistance(`${distText} â€¢ ${durationText}`);
-            setDistanceValueKm(distKm);
-
-            // Decodificar Polyline para exibir no mapa
-            if (route.polyline?.encodedPolyline && window.google?.maps?.geometry?.encoding) {
-              const path = window.google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
-              const points = path.map(p => ({ lat: p.lat(), lng: p.lng() }));
-              setRoutePolyline(points as any);
-            }
-
-            // Continuar com o cÃ¡lculo de preÃ§os (que usa distKm e marketConditions jÃ¡ no escopo pai)
-            processPrices(distKm);
-          }
-        } catch (err) {
-          console.error("Routes API Error:", err);
-          setIsCalculatingPrice(false);
-        }
-      };
-
-      const processPrices = (distKm: number) => {
-        const bv = marketConditions.settings.baseValues;
-        const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
-        
-        const mototaxi_min   = parseFloat(String(bv.mototaxi_min))   || 6.0;
-        const mototaxi_km    = parseFloat(String(bv.mototaxi_km))    || 2.5;
-        const mototaxi_int   = Math.max(0.1, parseFloat(String(bv.mototaxi_km_interval)) || 1.0);
-        
-        const carro_min      = parseFloat(String(bv.carro_min))      || 14.0;
-        const carro_km       = parseFloat(String(bv.carro_km))       || 4.5;
-        const carro_int      = Math.max(0.1, parseFloat(String(bv.carro_km_interval)) || 1.0);
-        
-        const van_min        = parseFloat(String(bv.van_min))        || 35.0;
-        const van_km         = parseFloat(String(bv.van_km))         || 8.0;
-        const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
-            
-        // PreÃ§os base para UtilitÃ¡rio (Izi Envios) vindos da seÃ§Ã£o Shipping Priorities
-        const priorities = marketConditions.settings?.shippingPriorities || {};
-        const scheduledCfg = priorities.scheduled || { min_fee: 15, km_fee: 1 };
-        const normalCfg    = priorities.normal    || { min_fee: 10, km_fee: 1 };
-        
-        const utilitario_min = parseFloat(String(scheduledCfg.min_fee)) || 15.0;
-        const utilitario_km  = parseFloat(String((scheduledCfg as any).km_fee))  || 1.0;
-        const utilitario_int = 1.0;
-            
-        const logistica_min  = parseFloat(String(bv.logistica_min))  || 45.0;
-            const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
-            const logistica_int  = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
-
-            // LogÃ­stica Customizada por VeÃ­culo (ResiliÃªncia de chaves snake_case e camelCase)
-            const getVal = (k1: string, k2: string, fallback: number) => {
-              const v = bv[k1] || bv[k2];
-              return v ? parseFloat(String(v)) : fallback;
-            };
-
-            const fiorino_min = getVal('fiorino_min', 'fiorinoMin', logistica_min);
-            const fiorino_km  = getVal('fiorino_km',  'fiorinoKm',  logistica_km);
-            const bau_p_min   = getVal('bau_p_min',   'bauPMin',    logistica_min);
-            const bau_p_km    = getVal('bau_p_km',    'bauPKm',     logistica_km);
-            const bau_m_min   = getVal('bau_m_min',   'bauMMin',    logistica_min);
-            const bau_m_km    = getVal('bau_m_km',    'bauMKm',     logistica_km);
-            const bau_g_min   = getVal('bau_g_min',   'bauGMin',    logistica_min);
-            const bau_g_km    = getVal('bau_g_km',    'bauGKm',     logistica_km);
-            const aberto_min  = getVal('aberto_min',  'abertoMin',  logistica_min);
-            const aberto_km   = getVal('aberto_km',   'abertoKm',   logistica_km);
-
-            const newPrices = {
-              mototaxi:   parseFloat(((mototaxi_min   + (mototaxi_km   * (distKm / mototaxi_int)))   * surge).toFixed(2)),
-              carro:      parseFloat(((carro_min      + (carro_km      * (distKm / carro_int)))      * surge).toFixed(2)),
-              van:        parseFloat(((van_min        + (van_km        * (distKm / van_int)))        * surge).toFixed(2)),
-              utilitario: parseFloat(((utilitario_min + (utilitario_km * distKm)) * surge).toFixed(2)),
-              logistica:  parseFloat(((logistica_min  + (logistica_km  * (distKm / logistica_int)))  * surge).toFixed(2)),
-              // PreÃ§os especÃ­ficos de logÃ­stica - Agora puramente Lineares (KM * DistÃ¢ncia)
-              fiorino:    parseFloat(((fiorino_min + (fiorino_km * distKm)) * surge).toFixed(2)),
-              bau_p:      parseFloat(((bau_p_min   + (bau_p_km   * distKm)) * surge).toFixed(2)),
-              bau_m:      parseFloat(((bau_m_min   + (bau_m_km   * distKm)) * surge).toFixed(2)),
-              bau_g:      parseFloat(((bau_g_min   + (bau_g_km   * distKm)) * surge).toFixed(2)),
-              aberto:     parseFloat(((aberto_min  + (aberto_km  * distKm)) * surge).toFixed(2)),
-              van_carga:  parseFloat(((van_min     + (van_km     * distKm)) * surge).toFixed(2)),
-            };
-            setDistancePrices(newPrices);
-            setTransitData(prev => {
-              // 1. Wizard de LogÃ­stica/Frete
-              if ((prev.type === 'logistica' || prev.type === 'frete') && prev.vehicleCategory) {
-                return prev;
-              }
-              
-              // 2. Regra Izi Envios (Prioridades)
-              if (prev.type === 'utilitario') {
-                 const pKey = prev.priority || 'normal';
-                 const config = priorities[pKey as keyof typeof priorities];
-                 if (config) {
-                    const price = (Number(config.min_fee) + (Number((config as any).km_fee) * distKm)) * (Number(config.multiplier) || 1);
-                    return { ...prev, estPrice: parseFloat(price.toFixed(2)) };
-                 }
-              }
-
-              // 3. Demais Categorias
-              const finalBasePrice = newPrices[prev.type as keyof typeof newPrices] || newPrices.mototaxi;
-              return { ...prev, estPrice: finalBasePrice };
-            });
-
-            supabase
-              .from('drivers_delivery')
-              .select('id, name, vehicle_type, rating')
-              .eq('is_online', true)
-              .limit(5)
-              .then(({ data }) => {
-                if (data) {
-                  setNearbyDrivers(data);
-                  setNearbyDriversCount(data.length);
-                }
-              });
-            }; // Fim do processPrices
-
-            // Chamar a nova API de Rotas (v2)
-            callRoutesAPI();
-        } catch (err) {
-            console.error("Error calculating routes:", err);
-            setIsCalculatingPrice(false);
-        }
-    };
-
-
-  const handleRequestTransit = () => {
-    if (!transitData.origin) {
-      toastError("Selecione um ponto de coleta/parceiro");
-      return;
-    }
-    if (!transitData.destination) {
-      toastError("Defina o endereÃ§o de entrega");
-      return;
-    }
-    if (!transitData.receiverName) {
-      toastError("Informe o nome do destinatÃ¡rio");
-      return;
-    }
-    if (!transitData.receiverPhone) {
-      toastError("Informe o telefone de contato");
-      return;
-    }
-    if (transitData.scheduled && (!transitData.scheduledDate || !transitData.scheduledTime)) {
-      toastError("Selecione data e hora para o agendamento");
-      return;
-    }
-    setSubView("mobility_payment");
-  };
-
-  const handleConfirmMobility = async (paymentMethod: string) => {
-    if (!userId) {
-      toastWarning("FaÃ§a login para continuar");
-      setView("login");
-      return;
-    }
-
-    const isShipping = ['utilitario', 'van', 'frete', 'logistica'].includes(transitData.type);
-    const bv = marketConditions.settings.baseValues;
-    const basePrices: Record<string, number> = { 
-      mototaxi: bv.mototaxi_min || 6, 
-      carro: bv.carro_min || 14, 
-      van: bv.van_min || 35, 
-      utilitario: bv.utilitario_min || 10 
-    };
-    
-      // [Comentario Limpo pelo Sistema]
-    let finalPrice = 0;
-    const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
-
-    if (transitData.type === 'logistica' || transitData.type === 'frete') {
-       if (Number(transitData.estPrice) > 0) {
-         finalPrice = Number(transitData.estPrice);
-       } else {
-          const vehicleConfigs: Record<string, { min: string, km: string, int: string }> = {
-            "Fiorino": { min: 'fiorino_min', km: 'fiorino_km', int: 'fiorino_km_interval' },
-            "Van Carga": { min: 'van_min', km: 'van_km', int: 'van_km_interval' },
-            "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km', int: 'caminhonete_km_interval' },
-            "CaminhÃ£o BaÃº Pequeno": { min: 'bau_p_min', km: 'bau_p_km', int: 'bau_p_km_interval' },
-            "CaminhÃ£o BaÃº MÃ©dio": { min: 'bau_m_min', km: 'bau_m_km', int: 'bau_m_km_interval' },
-            "CaminhÃ£o BaÃº Grande": { min: 'bau_g_min', km: 'bau_g_km', int: 'bau_g_km_interval' },
-            "CaminhÃ£o Aberto": { min: 'aberto_min', km: 'aberto_km', int: 'aberto_km_interval' }
-          };
-
-          const configKeys = vehicleConfigs[transitData.vehicleCategory];
-          let baseFare = parseFloat(String(bv.logistica_min || 45));
-          let distanceRate = parseFloat(String(bv.logistica_km || 4.5));
-          let logistica_int = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
-
-          if (configKeys && bv[configKeys.min] && parseFloat(String(bv[configKeys.min])) > 0) {
-              baseFare = parseFloat(String(bv[configKeys.min]));
-              distanceRate = parseFloat(String(bv[configKeys.km]));
-              logistica_int = Math.max(0.1, parseFloat(String(bv[configKeys.int])) || 1.0);
-          } else {
-              const vehicleMultipliers: Record<string, number> = {
-                "Fiorino": 1.0,
-                "Van Carga": 1.0,
-                "Caminhonete": 1.25,
-                "CaminhÃ£o BaÃº Pequeno": 1.6,
-                "CaminhÃ£o BaÃº MÃ©dio": 2.2,
-                "CaminhÃ£o BaÃº Grande": 3.5,
-                "CaminhÃ£o Aberto": 1.9,
-              };
-              const multiplier = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
-              baseFare *= multiplier;
-              distanceRate *= multiplier;
-          }
-
-          finalPrice = calculateFreightPrice({
-              baseFare: baseFare * surgeMultiplier,
-              distanceInKm: Math.ceil((distanceValueKm || 1) / logistica_int),
-              distanceRate: distanceRate * surgeMultiplier,
-              helperCount: (transitData.freightData?.helpers || 0),
-              helperRate: parseFloat(String(bv.logistica_helper || 35)),
-              hasStairs: transitData.freightData?.hasStairs,
-              stairsFee: parseFloat(String(bv.logistica_stairs || 30))
-          }).totalPrice;
-       }
-    } else if (transitData.type === 'van') {
-       const van_int = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
-       finalPrice = calculateVanPrice({
-          baseFare: parseFloat(String(bv.van_min || 35)),
-          distanceInKm: Math.ceil((distanceValueKm || 1) / van_int),
-          distanceRate: parseFloat(String(bv.van_km || 8)) * surgeMultiplier,
-          stopCount: transitData.stops?.length || 0,
-          stopRate: 15, // Mover para settings se necessÃ¡rio
-          isDaily: transitData.tripType === 'hourly',
-          hours: 4,
-          hourlyRate: 45
-       }).totalPrice;
-    } else {
-      // Para outros tipos (mototaxi, carro, utilitario), usamos o preÃ§o jÃ¡ calculado no preview
-      // que agora tambÃ©m Ã© aditivo por padrÃ£o.
-      const rawP = distancePrices[transitData.type];
-      finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6.90) : rawP;
-    }
-    
-    // Inserindo lÃ³gica de prioridade de envio (Turbo, Light, etc)
-    const priorityId = transitData.priority;
-    const priorityConfig = marketConditions.settings?.shippingPriorities?.[priorityId as keyof typeof marketConditions.settings.shippingPriorities];
-    
-    if (priorityConfig && priorityConfig.active) {
-      if ((priorityConfig as any).km_fee > 0) {
-        // CÃ¡lculo independente por prioridade (Base + KM * DistÃ¢ncia)
-        finalPrice = (priorityConfig.min_fee || 0) + ((priorityConfig as any).km_fee * distanceValueKm);
-      } else {
-        // CÃ¡lculo baseado em multiplicador (Legado)
-        finalPrice *= (priorityConfig.multiplier || 1.0);
-        if (finalPrice < (priorityConfig.min_fee || 0)) {
-          finalPrice = priorityConfig.min_fee;
-        }
-      }
-    }
-
-      // [Comentario Limpo pelo Sistema]
-    const serviceFeePercent = globalSettings?.service_fee_percent || 0;
-    const rawServiceFee = (finalPrice * serviceFeePercent) / 100;
-    const serviceFeeAmount = isIziBlackMembership ? 0 : rawServiceFee;
-    finalPrice += serviceFeeAmount;
-
-    setIsLoading(true);
-
-
-    try {
-      // 1. Criar o pedido (inicialmente pendente se for cartao, ou pago se for saldo/dinheiro)
-      const initialPaymentStatus = (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid';
-      const initialOrderStatus = (paymentMethod === 'cartao') ? 'pendente_pagamento' : 'waiting_driver';
-
-      const orderBase: any = {
-        user_id: userId,
-        merchant_id: null,
-        status: initialOrderStatus,
-        total_price: finalPrice,
-        service_type: transitData.type,
-        pickup_address: typeof transitData.origin === 'object' ? (transitData.origin.address || transitData.origin.formatted_address) : transitData.origin,
-        delivery_address: `${typeof transitData.destination === 'object' ? (transitData.destination.formatted_address || transitData.destination.address || JSON.stringify(transitData.destination)) : transitData.destination} | OBS: ${
-          transitData.type === 'van'
-            ? `EXCURSÃƒO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}. ${transitData.excursionData.notes || ''}`
-            : (transitData.type === 'logistica' || transitData.type === 'frete')
-              ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes. ${
-                  (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'NecessÃ¡rio subir ESCADAS.' : 'Sem escadas.'
-                }`
-              : isShipping
-                ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-                : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTÃ¡xi' : 'Particular'})`
-        }`,
-        payment_method: paymentMethod,
-        payment_status: initialPaymentStatus,
-        scheduled_at: (transitData.scheduled || transitData.type === 'van') ? (transitData.type === 'van' ? transitData.excursionData.departureDate : `${transitData.scheduledDate}T${transitData.scheduledTime}:00`) : null,
-        route_polyline: routePolyline
-      };
-
-      // LÃ³gica de DÃ©bito de Saldo (OcorrerÃ¡ ANTES da criaÃ§Ã£o do pedido para garantir atomicidade)
-      let finalNewIziCoins = iziCoins;
-      let finalNewWalletBalance = walletBalance;
-
-      if (paymentMethod === "saldo") {
-        const coinValue = globalSettings?.izi_coin_value || 1.0;
-        const totalBrlAvailable = walletBalance + (iziCoins * coinValue);
-        
-        if (totalBrlAvailable < finalPrice) {
-          toastError("Saldo insuficiente na carteira IZI Pay.");
-          setIsLoading(false);
-          return;
-        }
-
-        let remainingToPay = finalPrice;
-        let tempNewIziCoins = iziCoins;
-        let tempNewWalletBalance = walletBalance;
-
-        const coinsAvailableValue = tempNewIziCoins * coinValue;
-        if (coinsAvailableValue >= remainingToPay) {
-          tempNewIziCoins -= (remainingToPay / coinValue);
-          remainingToPay = 0;
-        } else {
-          remainingToPay -= coinsAvailableValue;
-          tempNewIziCoins = 0;
-        }
-
-        if (remainingToPay > 0) {
-          tempNewWalletBalance -= remainingToPay;
-          remainingToPay = 0;
-        }
-
-        // Executar o dÃ©bito no banco ANTES de criar o pedido
-        const { error: updateErr } = await supabase.from("users_delivery").update({ 
-          wallet_balance: Number(tempNewWalletBalance.toFixed(2)),
-          izi_coins: Number(tempNewIziCoins.toFixed(8))
-        }).eq("id", userId);
-
-        if (updateErr) {
-          console.error("Erro crÃ­tico ao debitar saldo:", updateErr);
-          throw new Error("NÃ£o foi possÃ­vel processar o dÃ©bito na sua carteira. Tente novamente.");
-        }
-
-        finalNewIziCoins = tempNewIziCoins;
-        finalNewWalletBalance = tempNewWalletBalance;
-      }
-
-      // 1. Criar o pedido
-      const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
-      
-      if (insertError || !order) {
-        // SE FALHOU AO CRIAR O PEDIDO, PRECISAMOS ESTORNAR O SALDO SE FOI DEBITADO!
-        if (paymentMethod === "saldo") {
-           await supabase.from("users_delivery").update({ 
-             wallet_balance: walletBalance,
-             izi_coins: iziCoins
-           }).eq("id", userId);
-        }
-        throw insertError || new Error("Falha ao criar registro do pedido");
-      }
-
-      // 2. LÃ³gica de PÃ³s-DÃ©bito (Registrar transaÃ§Ã£o e atualizar estado local)
-      if (paymentMethod === "saldo") {
-        setWalletBalance(finalNewWalletBalance);
-        setIziCoins(finalNewIziCoins);
-
-        await supabase.from("wallet_transactions_delivery").insert({
-          user_id: userId,
-          type: "pagamento",
-          amount: finalPrice,
-          description: `ServiÃ§o #${order.id.slice(0, 6).toUpperCase()}: ${transitData.type}`,
-          balance_after: finalNewWalletBalance
-        });
-      }
-
-
-      if (transitData.type === 'van') {
-        await supabase.from("excursions_delivery").insert({
-          order_id: order.id, trip_type: transitData.excursionData.tripType,
-          passengers: transitData.excursionData.passengers, departure_date: transitData.excursionData.departureDate,
-          return_date: transitData.excursionData.tripType === 'ida_e_volta' ? transitData.excursionData.returnDate : null,
-          additional_notes: transitData.excursionData.notes
-        });
-      }
-
-      if (paymentMethod === 'pix') {
-         setPixConfirmed(false); setPixCpf("");
-         setSelectedItem({ ...order, total_price: finalPrice });
-         setSubView('pix_payment');
-         setIsLoading(false);
-         return;
-      } else if (paymentMethod === 'bitcoin_lightning') {
-          try {
-            const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-              body: { amount: finalPrice, orderId: order.id, memo: `Viagem Izi #${order.id}` },
-            });
-            if (!lnErr && lnData?.payment_request) {
-               const lData = { 
-                 payment_request: lnData.payment_request, 
-                 satoshis: lnData.satoshis,
-                 btc_price_brl: lnData.btc_price_brl 
-               };
-               setLightningData(lData);
-               setSelectedItem({ 
-                 ...order, 
-                 lightningInvoice: lData.payment_request, 
-                 satoshis: lData.satoshis, 
-                 btc_price_brl: lData.btc_price_brl,
-                 total_price: finalPrice 
-               });
-               setSubView("lightning_payment");
-               setIsLoading(false);
-               return;
-            }
-          } catch(e) { console.error("LN Error:", e); }
-      } else if (paymentMethod === 'cartao') {
-          if (selectedCard) {
-            handleConfirmSavedCardShortcut(order.id, finalPrice, "mobility");
-            return;
-          }
-          setSelectedItem(order);
-          setSubView("card_payment");
-          setIsLoading(false);
-          return;
-      }
-
-
-      const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
-      setTransitHistory(newHistory);
-      localStorage.setItem("transitHistory", JSON.stringify(newHistory));
-      setSelectedItem(order);
-      
-      if (paymentMethod !== 'pix' && paymentMethod !== 'bitcoin_lightning') {
-        const isLogisticsService = ['frete', 'logistica', 'van'].includes(transitData.type);
-        if (transitData.scheduled) {
-          toastSuccess("Agendamento confirmado com sucesso!");
-          setSubView("mobility_payment_success");
-        } else {
-          setSubView("mobility_payment_success");
-        }
-      }
-    } catch (err: any) {
-      console.error("Erro no fluxo de mobilidade:", err);
-      toastError("NÃ£o foi possÃ­vel criar seu pedido: " + err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Auto-rotate ad banner
   useEffect(() => {
@@ -4982,7 +4348,26 @@ const navigateSubView = (target: string) => {
     handleConfirmMobility,
     calculateDynamicPrice,
     updateLocation,
-    userLocation
+    userLocation,
+    // Pagamento
+    paymentMethod,
+    setPaymentMethod,
+    isIziBlackMembership,
+    walletBalance,
+    iziCoins,
+    globalSettings,
+    selectedCard,
+    // Navegação e UI
+    userLevel,
+    showToast: toastError,
+    toastSuccess,
+    userName,
+    selectedItem,
+    setSelectedItem,
+    setShowDatePicker,
+    setShowTimePicker,
+    setPaymentsOrigin,
+    navigateSubView,
   };
 
   return (
@@ -5338,6 +4723,12 @@ const navigateSubView = (target: string) => {
                 {subView === "explore_scheduled" && (
                   <motion.div key="exp_sched" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
                     <ExploreScheduledView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
+                  </motion.div>
+                )}
+
+                {subView === "shipping_details" && (
+                  <motion.div key="shipping_details" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }} className="absolute inset-0 z-[170]">
+                    <ShippingDetailsView />
                   </motion.div>
                 )}
 

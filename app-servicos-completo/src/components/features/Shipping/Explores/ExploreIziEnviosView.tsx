@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GoogleMap, Marker } from "@react-google-maps/api";
-import { useApp } from "../../../../contexts/AppContext";
+import { useApp } from "../../../../hooks/useApp";
 import { supabase } from "../../../../lib/supabase";
 import { useGoogleMapsLoader } from "../../../../hooks/useGoogleMapsLoader";
 
@@ -34,58 +34,72 @@ interface ExploreIziEnviosViewProps {
 }
 
 export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBack }) => {
-  const { setSubView, setTransitData, transitData, userLocation } = useApp();
+  const { setSubView, setTransitData, transitData, userLocation, calculateDistancePrices } = useApp();
   const { isLoaded } = useGoogleMapsLoader();
   const [view, setView] = useState<"explore" | "plan_trip" | "select_priority">("plan_trip");
   const [selectedPriority, setSelectedPriority] = useState<string>("normal");
-  const [sheetPos, setSheetPos] = useState(42);
-
   const [originQuery, setOriginQuery] = useState("Minha localização");
   const [destQuery, setDestQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<"origin" | "dest" | null>(null);
+  const [sheetPos, setSheetPos] = useState(42);
   const [dynamicServices, setDynamicServices] = useState<any[]>([]);
-
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
-  const distanceMatrixService = useRef<google.maps.DistanceMatrixService | null>(null);
 
   const center = useMemo(() => ({
     lat: userLocation.lat || -20.1438,
     lng: userLocation.lng || -44.1989
   }), [userLocation.lat, userLocation.lng]);
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const { data: categories } = await supabase
-          .from('izi_service_categories')
-          .select('*')
-          .eq('category_type', 'shipping_priority')
-          .eq('is_active', true);
+  const fetchServices = async () => {
+    try {
+      const { data: categories } = await supabase
+        .from('izi_service_categories')
+        .select('*')
+        .eq('category_type', 'shipping_priority');
 
-        const { data: rates } = await supabase
-          .from('dynamic_rates_delivery')
-          .select('metadata')
-          .eq('type', 'shipping_priorities')
-          .maybeSingle();
+      const { data: rates } = await supabase
+        .from('dynamic_rates_delivery')
+        .select('*')
+        .eq('type', 'shipping_priorities')
+        .maybeSingle();
 
-        if (categories) {
-          const formatted = categories.map(cat => ({
-            id: cat.category_key,
-            name: cat.label,
-            img: cat.icon_url || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png',
-            price: rates?.metadata?.[cat.category_key]?.min_fee || 15,
-            badge: cat.category_key === 'turbo' ? 'Flash' : (cat.category_key === 'scheduled' ? 'Agendado' : null)
-          }));
-          setDynamicServices(formatted);
-          if (formatted.length > 0) setSelectedPriority(formatted[0].id);
-        }
-      } catch (e) {
-        console.error("Erro ao buscar serviços de envio:", e);
+      if (categories) {
+        const iconMapping: Record<string, string> = {
+          'turbo': 'https://cdn-icons-png.flaticon.com/512/4300/4300059.png',
+          'light': 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png',
+          'normal': 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png',
+          'scheduled': 'https://cdn-icons-png.flaticon.com/512/2766/2766144.png'
+        };
+
+        const timeMapping: Record<string, string> = {
+          'turbo': 'Em até 15 min',
+          'light': 'Em até 30 min',
+          'normal': 'Em até 60 min',
+          'scheduled': 'Hora Marcada'
+        };
+
+        const formatted = categories.map(cat => ({
+          id: cat.category_key,
+          name: cat.label,
+          img: cat.icon_url || iconMapping[cat.category_key] || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png',
+          price: rates?.metadata?.[cat.category_key]?.min_fee || 15,
+          badge: cat.category_key === 'turbo' ? 'Flash' : (cat.category_key === 'scheduled' ? 'Agendado' : null),
+          time: timeMapping[cat.category_key] || 'Entrega Imediata'
+        }));
+        setDynamicServices(formatted);
+        if (formatted.length > 0) setSelectedPriority(formatted[0].id);
       }
-    };
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
     fetchServices();
   }, []);
+
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const distanceMatrixService = useRef<google.maps.DistanceMatrixService | null>(null);
 
   useEffect(() => {
     if (isLoaded && window.google) {
@@ -104,12 +118,12 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
     };
     autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
       if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-        const userLatLng = new google.maps.LatLng(center.lat, center.lng);
+        const userLatLng = new window.google.maps.LatLng(center.lat, center.lng);
         distanceMatrixService.current?.getDistanceMatrix({
           origins: [userLatLng],
           destinations: predictions.map(p => ({ placeId: p.place_id })),
-          travelMode: google.maps.TravelMode.DRIVING,
-          unitSystem: google.maps.UnitSystem.METRIC,
+          travelMode: window.google.maps.TravelMode.DRIVING,
+          unitSystem: window.google.maps.UnitSystem.METRIC,
         }, (response, distStatus) => {
           if (distStatus === "OK" && response) {
             setSuggestions(predictions.map((p, index) => ({
@@ -120,6 +134,8 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
             })));
           }
         });
+      } else {
+        setSuggestions([]);
       }
     });
   }, [center]);
@@ -133,12 +149,18 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
   }, [destQuery, originQuery, isSearching, fetchSuggestions]);
 
   const handleSelectLocation = (loc: any) => {
+    const destStr = `${loc.title}, ${loc.subtitle}`;
+    const originStr = originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery;
+    
     setTransitData((prev: any) => ({
       ...prev,
-      destination: `${loc.title}, ${loc.subtitle}`,
-      origin: originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery,
+      destination: destStr,
+      origin: originStr,
       destinationCoords: { lat: center.lat, lng: center.lng }
     }));
+    
+    calculateDistancePrices(originStr, destStr);
+
     setView("select_priority");
     setSheetPos(42);
   };
@@ -197,8 +219,8 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
                     id={s.id} 
                     title={s.name} 
                     img={s.img} 
-                    time={s.id === 'scheduled' ? 'Hora Marcada' : 'Entrega Imediata'} 
-                    price={`R$ ${s.price.toFixed(2).replace('.', ',')}`} 
+                    time={s.time} 
+                    price={`~ R$ ${s.price.toFixed(2).replace('.', ',')}`} 
                     badge={s.badge}
                     selected={selectedPriority === s.id} 
                     onClick={() => setSelectedPriority(s.id)} 

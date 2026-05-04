@@ -4106,7 +4106,20 @@ function App() {
                                                     <div className="flex flex-col bg-zinc-50 p-3 rounded-xl border border-zinc-100 col-span-2">
                                                         <span className="text-[8px] sm:text-[9px] uppercase font-bold text-yellow-600/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
                                                         <span className="text-yellow-600 text-xs sm:text-sm font-black leading-tight uppercase mb-1 truncate">
-                                                            {order.store_name || order.merchant_name || 'Estabelecimento Parceiro'}
+                                                            {order.store_name || order.merchant_name || (() => {
+                                                               const st = (order.service_type || '').toLowerCase();
+                                                               if (st === 'mototaxi') return 'MotoTaxi IZI';
+                                                               if (st === 'carro' || st === 'car_ride') return 'Carro Particular IZI';
+                                                               if (st === 'van') return 'Van IZI Express';
+                                                               if (st === 'utilitario') return 'Utilitario IZI';
+                                                               if (st === 'frete' || st === 'logistica') return 'Frete / Logistica IZI';
+                                                               if (st === 'motoboy' || st === 'package') return 'Motoboy / Envio IZI';
+                                                               if (st === 'restaurant') return 'Restaurante Parceiro';
+                                                               if (st === 'market') return 'Mercado Parceiro';
+                                                               if (st === 'pharmacy') return 'Farmacia Parceira';
+                                                               if (st === 'beverages') return 'Distribuidora de Bebidas';
+                                                               return presentation.headline || 'Servico IZI';
+                                                             })()}
                                                         </span>
                                                         <span className="text-zinc-800 text-[11px] sm:text-xs font-bold leading-relaxed break-words">
                                                             {cleanAddressText(order.origin || order.pickup_address) || presentation.pickupText || 'Endereço de coleta não informado'}
@@ -7370,6 +7383,79 @@ function App() {
                                 <div className="flex flex-col items-end">
                                     <span className="text-yellow-600 font-black text-xs">{realTimeRoute?.durationText || '-- min'}</span>
                                     <span className="text-[8px] font-black text-zinc-950 uppercase tracking-widest">Estimado</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* === ENDEREÇOS DE COLETA E ENTREGA === */}
+                        <section className="bg-white border border-zinc-100 rounded-3xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.03)]">
+                            <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
+                                <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em]">Rota da Missão</h2>
+                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{realTimeRoute?.distanceText || (activeMission.distance_km ? `${parseFloat(activeMission.distance_km).toFixed(1)} km` : '-- km')}</span>
+                            </div>
+
+                            {/* Ponto de Coleta */}
+                            <div className="flex items-start gap-4 px-5 py-4 border-b border-zinc-100">
+                                <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
+                                    <div className="size-8 rounded-xl bg-yellow-400 flex items-center justify-center shadow-md">
+                                        <Icon name="storefront" size={16} className="text-zinc-950" />
+                                    </div>
+                                    <div className="w-0.5 h-6 bg-zinc-200 rounded-full" />
+                                </div>
+                                <div className="flex-1 min-w-0 pb-1">
+                                    <span className="text-[9px] font-black text-yellow-600 uppercase tracking-[0.3em] block mb-0.5">
+                                        {isMobility ? 'Embarque' : 'Ponto de Coleta'}
+                                    </span>
+                                    {(activeMission.merchant_name || activeMission.store_name) && (
+                                        <p className="text-zinc-950 font-black text-xs uppercase tracking-tight truncate mb-0.5">
+                                            {activeMission.merchant_name || activeMission.store_name}
+                                        </p>
+                                    )}
+                                    <p className="text-zinc-600 font-semibold text-[11px] leading-snug break-words">
+                                        {pickupOnly || 'Endereço de coleta não informado'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Paradas intermediárias (se houver) */}
+                            {activeMission.stops && Array.isArray(JSON.parse(activeMission.stops || '[]')) && JSON.parse(activeMission.stops || '[]').length > 0 && (
+                                JSON.parse(activeMission.stops).map((stop: any, i: number) => (
+                                    <div key={i} className="flex items-start gap-4 px-5 py-3 border-b border-zinc-100 bg-zinc-50/50">
+                                        <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
+                                            <div className="size-8 rounded-xl bg-zinc-200 flex items-center justify-center">
+                                                <Icon name="add_location" size={14} className="text-zinc-600" />
+                                            </div>
+                                            <div className="w-0.5 h-6 bg-zinc-200 rounded-full" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] block mb-0.5">Parada {i + 1}</span>
+                                            <p className="text-zinc-700 font-semibold text-[11px] leading-snug break-words">
+                                                {typeof stop === 'string' ? stop : (stop.address || stop.formatted_address || JSON.stringify(stop))}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+
+                            {/* Destino Final */}
+                            <div className="flex items-start gap-4 px-5 py-4">
+                                <div className="flex flex-col items-center shrink-0 pt-1">
+                                    <div className="size-8 rounded-xl bg-zinc-900 flex items-center justify-center shadow-md">
+                                        <Icon name="location_on" size={16} className="text-yellow-400" />
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] block mb-0.5">
+                                        {isMobility ? 'Destino' : 'Endereço de Entrega'}
+                                    </span>
+                                    {(activeMission.receiver_name || activeMission.recipient_name) && (
+                                        <p className="text-zinc-950 font-black text-xs uppercase tracking-tight truncate mb-0.5">
+                                            {activeMission.receiver_name || activeMission.recipient_name}
+                                        </p>
+                                    )}
+                                    <p className="text-zinc-600 font-semibold text-[11px] leading-snug break-words">
+                                        {addressOnly || 'Endereço de entrega não informado'}
+                                    </p>
                                 </div>
                             </div>
                         </section>

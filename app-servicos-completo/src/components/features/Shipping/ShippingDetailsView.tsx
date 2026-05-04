@@ -23,19 +23,19 @@ export const ShippingDetailsView = () => {
   } = useApp();
 
   return (
-    <div className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-6">
-      <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50">
+    <div className="absolute inset-0 z-[120] bg-[#F8F9FA] text-zinc-900 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-6">
+      <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-[#F8F9FA]/90 backdrop-blur-xl z-50">
         <button
-          onClick={() => navigateSubView("explore_envios")}
-          className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800"
+          onClick={() => navigateSubView("explore_izi_envios")}
+          className="size-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-zinc-900 active:scale-90 transition-all border border-zinc-200"
         >
           <Icon name="arrow_back" />
         </button>
         <div className="text-right">
-          <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
+          <h2 className="text-2xl font-black text-zinc-900 tracking-tighter leading-none mb-1">
             Detalhes
           </h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Informacoes de Entrega</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-600">Informações de Entrega</p>
         </div>
       </header>
 
@@ -49,13 +49,13 @@ export const ShippingDetailsView = () => {
             
             <div className="space-y-4">
               {/* ORIGEM (COLETA) */}
-              <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex flex-col gap-2">
+              <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm flex flex-col gap-2">
                 <div className="flex justify-between items-center mb-4 ml-1">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Origem (Onde Coletar?)</p>
+                   <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em]">Origem (Onde Coletar?)</p>
                    <button 
                      onClick={() => updateLocation(true)}
                      disabled={userLocation.loading}
-                     className="flex items-center gap-1.5 text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-400/5 disabled:opacity-50"
+                     className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-50 disabled:opacity-50 border border-yellow-100"
                    >
                       {userLocation.loading
                         ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" /><path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
@@ -67,7 +67,7 @@ export const ShippingDetailsView = () => {
                 <AddressSearchInput 
                   initialValue={transitData.origin}
                   placeholder="Endereço de partida..."
-                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
+                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-400"
                   userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                   onSelect={(place) => {
                     const ori = place.formatted_address || "";
@@ -82,12 +82,12 @@ export const ShippingDetailsView = () => {
               </div>
 
               {/* DESTINO */}
-              <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
+              <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
                  <AddressSearchInput 
                    initialValue={transitData.destination}
                    placeholder="Digite o endereço de destino..."
-                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
+                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-400"
                    userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                    onSelect={(place) => {
                      const dest = place.formatted_address || "";
@@ -108,9 +108,9 @@ export const ShippingDetailsView = () => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-yellow-400 border border-yellow-400 p-8 rounded-[45px] shadow-[8px_8px_20px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] relative overflow-hidden"
+            className="bg-yellow-400 p-8 rounded-[45px] shadow-lg relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 size-32 bg-white/20 blur-[50px] -mr-16 -mt-16 pointer-events-none" />
+            <div className="absolute top-0 right-0 size-32 bg-white/40 blur-[50px] -mr-16 -mt-16 pointer-events-none" />
             <div className="flex items-center justify-between gap-4 relative z-10">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
@@ -139,7 +139,7 @@ export const ShippingDetailsView = () => {
                   </h4>
                 </div>
               </div>
-              <div className="size-14 rounded-2xl bg-black/5 flex items-center justify-center border border-black/10">
+              <div className="size-14 rounded-2xl bg-white/30 flex items-center justify-center border border-white/40 backdrop-blur-sm">
                 <span className="material-symbols-outlined text-black text-2xl">receipt_long</span>
               </div>
             </div>
@@ -165,14 +165,14 @@ export const ShippingDetailsView = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button 
                     onClick={() => setTransitData({...transitData, operationType: "enviar"})}
-                    className={`py-8 rounded-[35px] border transition-all flex flex-col items-center justify-center gap-3 ${transitData.operationType === "enviar" ? "bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-800 border-white/5 text-zinc-500 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)]"}`}
+                    className={`py-8 rounded-[35px] border transition-all flex flex-col items-center justify-center gap-3 ${transitData.operationType === "enviar" ? "bg-yellow-400 border-yellow-400 text-black shadow-md" : "bg-white border-zinc-200 text-zinc-400 shadow-sm"}`}
                   >
                     <span className="material-symbols-outlined text-3xl">outbox</span>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center">Vou Enviar</span>
                   </button>
                   <button 
                     onClick={() => setTransitData({...transitData, operationType: "retirar"})}
-                    className={`py-8 rounded-[35px] border transition-all flex flex-col items-center justify-center gap-3 ${transitData.operationType === "retirar" ? "bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-800 border-white/5 text-zinc-500 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)]"}`}
+                    className={`py-8 rounded-[35px] border transition-all flex flex-col items-center justify-center gap-3 ${transitData.operationType === "retirar" ? "bg-yellow-400 border-yellow-400 text-black shadow-md" : "bg-white border-zinc-200 text-zinc-400 shadow-sm"}`}
                   >
                     <span className="material-symbols-outlined text-3xl">store</span>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center px-2">Retirar em Loja / Casa</span>
@@ -181,9 +181,9 @@ export const ShippingDetailsView = () => {
               ) : (
                 <button 
                   onClick={() => setShowLojistasModal(true)}
-                  className="w-full py-10 rounded-[40px] border bg-yellow-400 border-yellow-400 text-black shadow-[8px_8px_20px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] flex flex-col items-center gap-3 active:scale-[0.98] transition-all group"
+                  className="w-full py-10 rounded-[40px] border bg-yellow-400 border-yellow-400 text-black shadow-lg flex flex-col items-center gap-3 active:scale-[0.98] transition-all group"
                 >
-                  <div className="size-14 rounded-full bg-black/10 flex items-center justify-center mb-1">
+                  <div className="size-14 rounded-full bg-white/30 flex items-center justify-center mb-1 backdrop-blur-sm">
                     <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">storefront</span>
                   </div>
                   <span className="text-[11px] font-black uppercase tracking-[0.3em] text-center px-6">
@@ -195,25 +195,25 @@ export const ShippingDetailsView = () => {
 
             {(transitData.subService === "express" || transitData.subService === "agendado") && (
               <>
-                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome de quem recebe</p>
+                <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                   <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Nome de quem recebe</p>
                    <input 
                      type="text" 
                      value={transitData.receiverName || ""}
                      onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
                      placeholder="Ex: João Silva"
-                     className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
+                     className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-300"
                    />
                 </div>
 
-                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone de Contato</p>
+                <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                   <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Telefone de Contato</p>
                    <input 
                      type="tel" 
                      value={transitData.receiverPhone || ""}
                      onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
                      placeholder="(11) 99999-9999"
-                     className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
+                     className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-300"
                    />
                 </div>
               </>
@@ -221,21 +221,21 @@ export const ShippingDetailsView = () => {
 
             {transitData.subService === "coleta" && (
               <div className="space-y-4">
-                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Coleta (Origem/Parceiro)</p>
+                <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                   <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Endereço de Coleta (Origem/Parceiro)</p>
                    <AddressSearchInput 
                      initialValue={transitData.origin || ""}
                      placeholder="Confirme o endereço do parceiro..."
                      onSelect={(data) => setTransitData(prev => ({ ...prev, origin: data.formatted_address || "" }))}
-                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-400"
                    />
                 </div>
-                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
+                <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                  <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
                  <AddressSearchInput 
                    initialValue={transitData.destination || ""}
                    placeholder="Onde devemos entregar?"
-                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
+                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-400"
                    userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                    onSelect={(place) => {
                      const dest = place.formatted_address || "";
@@ -258,47 +258,47 @@ export const ShippingDetailsView = () => {
               <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Detalhes do Parceiro Izi</h3>
             </div>
             <div className="space-y-4">
-              <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome do Parceiro / Loja</p>
+              <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Nome do Parceiro / Loja</p>
                  <input 
                    type="text" 
                    value={transitData.receiverName || ""}
                    onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
                    placeholder="Ex: Hub Logístico Izi"
-                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-300"
                  />
               </div>
 
-              <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone do Parceiro</p>
+              <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Telefone do Parceiro</p>
                  <input 
                    type="tel" 
                    value={transitData.receiverPhone || ""}
                    onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
                    placeholder="(11) 99999-9999"
-                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-300"
                  />
               </div>
 
-              <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
+              <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
                  <input 
                    type="text" 
                    value={transitData.pickupCode || ""}
                    onChange={(e) => setTransitData({...transitData, pickupCode: e.target.value})}
                    placeholder="Ex: ABC123456"
-                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-300"
                  />
               </div>
 
-              <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
+              <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
                  <input 
                    type="text" 
                    value={transitData.pickupSector || ""}
                    onChange={(e) => setTransitData({...transitData, pickupSector: e.target.value})}
                    placeholder="Piso / Corredor"
-                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-300"
                  />
               </div>
             </div>
@@ -312,14 +312,14 @@ export const ShippingDetailsView = () => {
           </div>
 
           <div className="space-y-4">
-             <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
-                <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
+             <div className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm">
+                <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
                 <textarea 
                   value={transitData.packageDesc || ""}
                   onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
                   placeholder="Ex: 2 Camisetas, 1 Par de Tênis..."
                   rows={3}
-                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white resize-none"
+                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-zinc-900 placeholder:text-zinc-300 resize-none"
                 />
              </div>
 
@@ -330,8 +330,8 @@ export const ShippingDetailsView = () => {
                     onClick={() => setTransitData({...transitData, weightClass: weight})}
                     className={`py-5 px-4 rounded-[30px] text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95 ${
                       transitData.weightClass === weight 
-                        ? 'bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]' 
-                        : 'bg-zinc-800 border-white/5 text-zinc-500 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)] hover:border-zinc-700'
+                        ? 'bg-yellow-400 border-yellow-400 text-black shadow-md' 
+                        : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300'
                     }`}
                   >
                     {weight}
@@ -348,29 +348,29 @@ export const ShippingDetailsView = () => {
               <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Agendamento da Coleta</h3>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div onClick={() => setShowDatePicker(true)} className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] cursor-pointer active:scale-95 transition-all">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Data</p>
+              <div onClick={() => setShowDatePicker(true)} className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm cursor-pointer active:scale-95 transition-all">
+                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Data</p>
                  <div className="flex items-center justify-between">
-                   <span className="text-base font-bold text-white">{transitData.scheduledDate || "Selecionar data"}</span>
-                   <span className="material-symbols-outlined text-yellow-400 text-sm">calendar_month</span>
+                   <span className="text-base font-bold text-zinc-900">{transitData.scheduledDate || "Selecionar data"}</span>
+                   <span className="material-symbols-outlined text-yellow-600 text-sm">calendar_month</span>
                  </div>
               </div>
-              <div onClick={() => setShowTimePicker(true)} className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] cursor-pointer active:scale-95 transition-all">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Horário</p>
+              <div onClick={() => setShowTimePicker(true)} className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm cursor-pointer active:scale-95 transition-all">
+                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-2 ml-1">Horário</p>
                  <div className="flex items-center justify-between">
-                   <span className="text-base font-bold text-white">{transitData.scheduledTime || "Selecionar hora"}</span>
-                   <span className="material-symbols-outlined text-yellow-400 text-sm">schedule</span>
+                   <span className="text-base font-bold text-zinc-900">{transitData.scheduledTime || "Selecionar hora"}</span>
+                   <span className="material-symbols-outlined text-yellow-600 text-sm">schedule</span>
                  </div>
               </div>
             </div>
           </motion.section>
         )}
 
-        <div className="bg-zinc-800 p-7 rounded-[40px] border border-amber-400/20 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex items-start gap-5">
-           <div className="size-12 rounded-2xl bg-amber-400/10 flex items-center justify-center shrink-0 border border-amber-400/20 shadow-inner">
-             <span className="material-symbols-outlined text-amber-400 text-xl font-bold">warning</span>
+        <div className="bg-yellow-50 p-7 rounded-[40px] border border-yellow-200/50 shadow-sm flex items-start gap-5">
+           <div className="size-12 rounded-2xl bg-yellow-100 flex items-center justify-center shrink-0 border border-yellow-200">
+             <span className="material-symbols-outlined text-yellow-700 text-xl font-bold">warning</span>
            </div>
-           <p className="text-[10px] font-black text-amber-400/70 leading-relaxed uppercase tracking-[0.1em]">
+           <p className="text-[10px] font-black text-yellow-800 leading-relaxed uppercase tracking-[0.1em]">
              Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
            </p>
         </div>
@@ -378,17 +378,17 @@ export const ShippingDetailsView = () => {
 
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-8 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent z-50">
+      <div className="fixed bottom-0 left-0 right-0 p-8 pb-8 bg-gradient-to-t from-[#F8F9FA] via-[#F8F9FA]/90 to-transparent z-50">
         <button
           disabled={isLoading}
           onClick={handleRequestTransit}
-          className="w-full bg-yellow-400 text-black font-black text-xl py-6 rounded-[30px] shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
+          className="w-full bg-zinc-900 text-white font-black text-xl py-6 rounded-[30px] shadow-2xl shadow-black/20 active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
         >
           {isLoading ? (
-            <div className="size-7 border-4 border-black/30 border-t-black rounded-full animate-spin"></div>
+            <div className="size-7 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
           ) : (
             <>
-              <span className="uppercase tracking-[0.1em]">Continuar</span>
+              <span className="uppercase tracking-[0.1em]">Confirmar e Pagar</span>
               <Icon name="arrow_forward" />
             </>
           )}
