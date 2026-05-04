@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { SplashScreen as CapacitorSplash } from '@capacitor/splash-screen';
 
 interface SplashScreenProps {
   finishLoading: () => void;
@@ -12,10 +11,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ finishLoading }) => {
     // para dar tempo do usuário ver a convergência inicial.
     const timer = setTimeout(() => {
       finishLoading();
-      
-      if (Capacitor.isNativePlatform()) {
-        CapacitorSplash.hide().catch(() => {});
-      }
     }, 4500);
 
     return () => clearTimeout(timer);

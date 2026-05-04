@@ -3983,7 +3983,10 @@ function App() {
                                 </p>
                             </div>
                             <button 
-                                onClick={() => setShowOnboarding(true)}
+                                onClick={() => {
+                                    console.log("[DEBUG] Clique em Detalhes", { showOnboarding, driverId, isAuthenticated });
+                                    setShowOnboarding(true);
+                                }}
                                 className="h-10 px-4 rounded-xl bg-white text-rose-500 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg"
                             >
                                 Detalhes
@@ -8213,24 +8216,151 @@ function App() {
                     </div>
                 )}
                 {isAuthenticated && (
-                    <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
-                        <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
-                        <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
-                        <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
-                        <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
-                        <AnimatePresence>{showPersonalDataModal && renderPersonalDataModal()}</AnimatePresence>
-                        <AnimatePresence>{showPlateModal && renderPlateEditView()}</AnimatePresence>
-                        <AnimatePresence>{showPreferences && renderPreferencesView()}</AnimatePresence>
+                    <>
+                        <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
+                            <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
+                            <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
+                            <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
+                            <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
+                            <AnimatePresence>{showPersonalDataModal && renderPersonalDataModal()}</AnimatePresence>
+                            <AnimatePresence>{showPlateModal && renderPlateEditView()}</AnimatePresence>
+                            <AnimatePresence>{showPreferences && renderPreferencesView()}</AnimatePresence>
  
-                        <AnimatePresence>
-                            {selectedSlot && renderSlotDetailsBottomSheet()}
-                        </AnimatePresence>
+                            <AnimatePresence>
+                                {selectedSlot && renderSlotDetailsBottomSheet()}
+                            </AnimatePresence>
 
-                        {isProfileNotFound && renderProfileNotFoundView()}
+                            {isProfileNotFound && renderProfileNotFoundView()}
 
-                        {showOnboarding && driverId && (
+                            {showSlotAppliedSuccess && (
+                                <motion.div 
+                                    initial={{ opacity: 0 }} 
+                                    animate={{ opacity: 1 }} 
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 z-[300] bg-white flex flex-col items-center justify-center p-8 text-center"
+                                >
+                                    <motion.div 
+                                        initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
+                                        animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                        transition={{ type: "spring", damping: 12 }}
+                                        className="size-32 rounded-[48px] bg-yellow-400 flex items-center justify-center mb-10 relative"
+                                        style={{
+                                            boxShadow: '0 20px 50px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.7), inset -8px -8px 16px rgba(0,0,0,0.15)'
+                                        }}
+                                    >
+                                        <Icon name="verified" size={56} className="text-zinc-950" />
+                                        <motion.div 
+                                            animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
+                                            transition={{ duration: 2, repeat: Infinity }}
+                                            className="absolute inset-0 border-4 border-yellow-400/50 rounded-[48px]"
+                                        />
+                                    </motion.div>
+                                    
+                                    <h2 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase leading-none mb-4 text-center">
+                                        Candidatura <br />
+                                        <span className="text-yellow-600">Enviada com Sucesso!</span>
+                                    </h2>
+
+                                    {selectedSlot && (
+                                        <div className="bg-zinc-50 border border-zinc-100 rounded-3xl p-6 w-full max-w-xs mb-8 shadow-sm flex flex-col items-center">
+                                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2">Valor Garantido</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-lg font-bold text-emerald-600">R$</span>
+                                                <span className="text-4xl font-black text-emerald-600 tracking-tighter">
+                                                    {Number(selectedSlot.fee_per_day || 0).toFixed(2).replace('.', ',')}
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 bg-emerald-100/50 px-4 py-1.5 rounded-full border border-emerald-200">
+                                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">
+                                                    até {selectedSlot.metadata?.base_deliveries || 10} entregas
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    <p className="text-zinc-400 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase leading-relaxed">
+                                        Seu perfil premium foi enviado para análise. Fique atento às suas notificações!
+                                    </p>
+
+                                    <button
+                                        onClick={() => {
+                                            setShowSlotAppliedSuccess(false);
+                                            setSelectedSlot(null);
+                                        }}
+                                        className="w-full max-w-xs h-18 rounded-[2.5rem] bg-zinc-900 text-white font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all"
+                                    >
+                                        Voltar para Vagas
+                                    </button>
+                                    
+                                    <div className="absolute bottom-12 left-0 right-0 flex justify-center opacity-10">
+                                        <div className="w-16 h-1.5 bg-zinc-900 rounded-full" />
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            <div className="flex flex-col h-full overflow-hidden">
+                                {activeTab !== 'dashboard' && renderHeader()}
+                                
+                                <main className="flex-1 overflow-y-auto no-scrollbar relative">
+                                    <AnimatePresence mode="wait">
+                                        {activeTab === 'dashboard' && <div key="dash">{renderDashboard()}</div>}
+                                        {activeTab === 'history' && <div key="hist">{renderHistoryView()}</div>}
+                                        {activeTab === 'earnings' && <div key="earn">{renderEarningsView()}</div>}
+                                        {activeTab === 'profile' && <div key="prof">{renderProfileView()}</div>}
+                                        {activeTab === 'missions' && <div key="miss" className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></div>}
+                                        {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
+                                        {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
+                                    </AnimatePresence>
+
+                                    <AnimatePresence>
+                                        {activeMission && activeTab !== 'active_mission' && (
+                                            <motion.button 
+                                                key="mission-btn" 
+                                                initial={{ y: 80, opacity: 0 }} 
+                                                animate={{ y: 0, opacity: 1 }} 
+                                                exit={{ y: 80, opacity: 0 }} 
+                                                onClick={() => setActiveTab('active_mission')} 
+                                                className="fixed bottom-28 left-5 right-5 z-[60] bg-yellow-400 text-zinc-950 rounded-[2.5rem] h-20 flex items-center justify-between px-8 shadow-[0_25px_50px_rgba(250,204,21,0.3)]"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="size-4 bg-zinc-950 rounded-full animate-ping" />
+                                                    <div className="flex flex-col items-start">
+                                                        <span className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-950/60 leading-none mb-1">Missão Ativa</span>
+                                                        <span className="font-black text-xs uppercase tracking-[0.1em] text-zinc-950">Continuar Entrega</span>
+                                                    </div>
+                                                </div>
+                                                <div className="size-12 bg-zinc-950/10 rounded-2xl flex items-center justify-center shadow-inner">
+                                                    <Icon name="arrow_forward" className="text-zinc-950 text-2xl font-black" />
+                                                </div>
+                                            </motion.button>
+                                        )}
+                                    </AnimatePresence>
+
+                                    {!activeMission && (
+                                        <motion.button 
+                                            initial={{ scale: 0, y: 50 }} 
+                                            animate={{ scale: 1, y: 0 }} 
+                                            whileTap={{ scale: 0.9 }} 
+                                            onClick={handleToggleOnline} 
+                                            className={`fixed bottom-40 right-6 z-[90] size-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
+                                                isOnline ? 'bg-emerald-500' : 'bg-zinc-900'
+                                            }`}
+                                        >
+                                            <Icon 
+                                                name="power_settings_new" 
+                                                size={32} 
+                                                className="text-white" 
+                                            />
+                                        </motion.button>
+                                    )}
+                                </main>
+                                {renderBottomNavigation()}
+                            </div>
+                        </div>
+
+                        {showOnboarding && (
                             <OnboardingView 
-                                userId={driverId} 
+                                userId={driverId || ''} 
                                 onApproved={() => {
                                     setShowOnboarding(false);
                                     setIsProfileNotFound(false);
@@ -8240,134 +8370,10 @@ function App() {
                                     setShowOnboarding(false);
                                     handleLogout();
                                 }}
+                                onClose={() => setShowOnboarding(false)}
                             />
                         )}
-
-                        {showSlotAppliedSuccess && (
-                            <motion.div 
-                                initial={{ opacity: 0 }} 
-                                animate={{ opacity: 1 }} 
-                                exit={{ opacity: 0 }}
-                                className="fixed inset-0 z-[300] bg-white flex flex-col items-center justify-center p-8 text-center"
-                            >
-                                <motion.div 
-                                    initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
-                                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                                    transition={{ type: "spring", damping: 12 }}
-                                    className="size-32 rounded-[48px] bg-yellow-400 flex items-center justify-center mb-10 relative"
-                                    style={{
-                                        boxShadow: '0 20px 50px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.7), inset -8px -8px 16px rgba(0,0,0,0.15)'
-                                    }}
-                                >
-                                    <Icon name="verified" size={56} className="text-zinc-950" />
-                                    <motion.div 
-                                        animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
-                                        transition={{ duration: 2, repeat: Infinity }}
-                                        className="absolute inset-0 border-4 border-yellow-400/50 rounded-[48px]"
-                                    />
-                                </motion.div>
-                                
-                                <h2 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase leading-none mb-4 text-center">
-                                    Candidatura <br />
-                                    <span className="text-yellow-600">Enviada com Sucesso!</span>
-                                </h2>
-
-                                {selectedSlot && (
-                                    <div className="bg-zinc-50 border border-zinc-100 rounded-3xl p-6 w-full max-w-xs mb-8 shadow-sm flex flex-col items-center">
-                                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2">Valor Garantido</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-lg font-bold text-emerald-600">R$</span>
-                                            <span className="text-4xl font-black text-emerald-600 tracking-tighter">
-                                                {Number(selectedSlot.fee_per_day || 0).toFixed(2).replace('.', ',')}
-                                            </span>
-                                        </div>
-                                        <div className="mt-2 bg-emerald-100/50 px-4 py-1.5 rounded-full border border-emerald-200">
-                                            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">
-                                                até {selectedSlot.metadata?.base_deliveries || 10} entregas
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                <p className="text-zinc-400 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase leading-relaxed">
-                                    Seu perfil premium foi enviado para análise. Fique atento às suas notificações!
-                                </p>
-
-                                <button
-                                    onClick={() => {
-                                        setShowSlotAppliedSuccess(false);
-                                        setSelectedSlot(null);
-                                    }}
-                                    className="w-full max-w-xs h-18 rounded-[2.5rem] bg-zinc-900 text-white font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all"
-                                >
-                                    Voltar para Vagas
-                                </button>
-                                
-                                <div className="absolute bottom-12 left-0 right-0 flex justify-center opacity-10">
-                                    <div className="w-16 h-1.5 bg-zinc-900 rounded-full" />
-                                </div>
-                            </motion.div>
-                        )}
-
-                        <div className="flex flex-col h-full overflow-hidden">
-                            {activeTab !== 'dashboard' && renderHeader()}
-                            
-                            <main className="flex-1 overflow-y-auto no-scrollbar relative">
-                                <AnimatePresence mode="wait">
-                                    {activeTab === 'dashboard' && <div key="dash">{renderDashboard()}</div>}
-                                    {activeTab === 'history' && <div key="hist">{renderHistoryView()}</div>}
-                                    {activeTab === 'earnings' && <div key="earn">{renderEarningsView()}</div>}
-                                    {activeTab === 'profile' && <div key="prof">{renderProfileView()}</div>}
-                                    {activeTab === 'missions' && <div key="miss" className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></div>}
-                                    {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
-                                    {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
-                                </AnimatePresence>
-
-                                <AnimatePresence>
-                                    {activeMission && activeTab !== 'active_mission' && (
-                                        <motion.button 
-                                            key="mission-btn" 
-                                            initial={{ y: 80, opacity: 0 }} 
-                                            animate={{ y: 0, opacity: 1 }} 
-                                            exit={{ y: 80, opacity: 0 }} 
-                                            onClick={() => setActiveTab('active_mission')} 
-                                            className="fixed bottom-28 left-5 right-5 z-[60] bg-yellow-400 text-zinc-950 rounded-[2.5rem] h-20 flex items-center justify-between px-8 shadow-[0_25px_50px_rgba(250,204,21,0.3)]"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-4 bg-zinc-950 rounded-full animate-ping" />
-                                                <div className="flex flex-col items-start">
-                                                    <span className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-950/60 leading-none mb-1">Missão Ativa</span>
-                                                    <span className="font-black text-xs uppercase tracking-[0.1em] text-zinc-950">Continuar Entrega</span>
-                                                </div>
-                                            </div>
-                                            <div className="size-12 bg-zinc-950/10 rounded-2xl flex items-center justify-center shadow-inner">
-                                                <Icon name="arrow_forward" className="text-zinc-950 text-2xl font-black" />
-                                            </div>
-                                        </motion.button>
-                                    )}
-                                </AnimatePresence>
-
-                                {!activeMission && (
-                                    <motion.button 
-                                        initial={{ scale: 0, y: 50 }} 
-                                        animate={{ scale: 1, y: 0 }} 
-                                        whileTap={{ scale: 0.9 }} 
-                                        onClick={handleToggleOnline} 
-                                        className={`fixed bottom-40 right-6 z-[90] size-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
-                                            isOnline ? 'bg-emerald-500' : 'bg-zinc-900'
-                                        }`}
-                                    >
-                                        <Icon 
-                                            name="power_settings_new" 
-                                            size={32} 
-                                            className="text-white" 
-                                        />
-                                    </motion.button>
-                                )}
-                            </main>
-                            {renderBottomNavigation()}
-                        </div>
-                    </div>
+                    </>
                 )}
             </AnimatePresence>
 

@@ -1973,22 +1973,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchMerchants]);
 
   const handleDeleteMerchant = useCallback(async (id: string) => {
-    if (!await showConfirm({ message: 'Excluir este lojista?' })) return;
+    if (!await showConfirm({ message: 'Excluir este lojista permanentemente (incluindo conta de acesso)?' })) return;
     try {
+      // 1. Tentar deletar do Auth via Edge Function
+      await supabase.functions.invoke('create-admin-user', {
+        body: { action: 'delete', userId: id }
+      });
+
+      // 2. Tentar deletar da tabela
       const { error } = await supabase.from('admin_users').delete().eq('id', id);
+      
       if (error) {
         if (error.code === '23503') {
           await supabase.from('admin_users').update({ is_deleted: true, is_active: false }).eq('id', id);
-          toastWarning('Este lojista possui registros vinculados e não pode ser excluído. Ele foi arquivado.');
+          toastWarning('Este lojista possui registros vinculados e não pôde ser excluído da tabela, mas sua conta de acesso foi removida.');
         } else {
           throw error;
         }
       } else {
-        toastSuccess('Lojista removido!');
+        toastSuccess('Lojista e conta de acesso removidos!');
       }
       fetchMerchants();
     } catch (err: any) {
-      toastError(err.message);
+      toastError('Erro na exclusão: ' + err.message);
     }
   }, [fetchMerchants]);
 
@@ -2015,22 +2022,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchDrivers, selectedDriverStudio]);
 
   const handleDeleteDriver = useCallback(async (id: string) => {
-    if (!await showConfirm({ message: 'Excluir este entregador?' })) return;
+    if (!await showConfirm({ message: 'Excluir este entregador permanentemente (incluindo conta de acesso)?' })) return;
     try {
+      // 1. Tentar deletar do Auth via Edge Function
+      await supabase.functions.invoke('manage-driver-auth', {
+        body: { action: 'delete', authId: id }
+      });
+
+      // 2. Tentar deletar da tabela
       const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
+      
       if (error) {
         if (error.code === '23503') {
           await supabase.from('drivers_delivery').update({ is_deleted: true, is_active: false }).eq('id', id);
-          toastWarning('O entregador possui histórico de pedidos e não pode ser removido integralmente. Ele foi arquivado.');
+          toastWarning('O entregador possui histórico e não pôde ser removido da tabela, mas sua conta de acesso foi excluída.');
         } else {
           throw error;
         }
       } else {
-        toastSuccess('Entregador removido!');
+        toastSuccess('Entregador e conta de acesso removidos!');
       }
       fetchDrivers();
     } catch (err: any) {
-      toastError(err.message);
+      toastError('Erro na exclusão: ' + err.message);
     }
   }, [fetchDrivers]);
 
@@ -2133,22 +2147,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchUsers]);
 
   const handleDeleteUser = useCallback(async (id: string) => {
-    if (!await showConfirm({ message: 'Excluir este cliente?' })) return;
+    if (!await showConfirm({ message: 'Excluir este cliente permanentemente (incluindo conta de acesso)?' })) return;
     try {
+      // 1. Tentar deletar do Auth via Edge Function
+      await supabase.functions.invoke('manage-user-auth', {
+        body: { action: 'delete', authId: id }
+      });
+
+      // 2. Tentar deletar da tabela
       const { error } = await supabase.from('users_delivery').delete().eq('id', id);
+      
       if (error) {
         if (error.code === '23503') {
           await supabase.from('users_delivery').update({ is_deleted: true, is_active: false }).eq('id', id);
-          toastWarning('Este cliente possui histórico de pedidos e não pode ser excluído. Ele foi arquivado.');
+          toastWarning('O cliente possui histórico e não pôde ser removido da tabela, mas sua conta de acesso foi excluída.');
         } else {
           throw error;
         }
       } else {
-        toastSuccess('Cliente removido!');
+        toastSuccess('Cliente e conta de acesso removidos!');
       }
       fetchUsers();
     } catch (err: any) {
-      toastError(err.message);
+      toastError('Erro na exclusão: ' + err.message);
     }
   }, [fetchUsers]);
 
