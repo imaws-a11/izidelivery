@@ -20,6 +20,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   setSubView,
 }) => {
   const menuItems = [
+    { icon: "emoji_events", label: "Missões", action: () => setSubView?.("user_missions") },
     { icon: "chat_bubble", label: "Conversas", action: () => setSubView?.("chats") },
     { icon: "notifications", label: "Notificações", action: () => setSubView?.("notifications_center"), badge: 1 },
     { icon: "description", label: "Dados da conta", action: () => setSubView?.("account_details") },

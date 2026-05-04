@@ -93,22 +93,41 @@ export default function GamificationTab() {
     }, [fetchData]);
 
     const handleSaveMission = async () => {
-        if (!currentMission?.title || !(currentMission as any)?.target_type) {
-            toastError('Preencha os campos obrigatórios');
+        if (!currentMission?.title) {
+            toastError('Preencha o título da missão');
             return;
         }
 
         try {
+            const m = currentMission as any;
+            // Mapear campos do modal para colunas reais do banco
+            const payload: any = {
+                title: m.title,
+                description: m.description || '',
+                audience: m.audience || 'user',
+                trigger_event: m.trigger_event || 'complete_delivery',
+                target_action: m.trigger_event || 'complete_delivery', // coluna NOT NULL
+                target_value: m.target_value || 1,
+                reward_xp: m.reward_xp || 10,
+                reward_coins: m.reward_coins || 0,
+                icon: m.icon || 'emoji_events',
+                color: m.color || '#FFD700',
+                is_active: m.is_active !== false,
+                type: m.type || 'one_time',
+            };
+            if (m.id) payload.id = m.id;
+
             const { error } = await supabase
                 .from('gamification_missions')
-                .upsert(currentMission);
+                .upsert(payload);
 
             if (error) throw error;
             toastSuccess('Missão salva com sucesso!');
             setShowMissionModal(false);
             fetchData();
-        } catch (error) {
-            toastError('Erro ao salvar missão');
+        } catch (error: any) {
+            console.error('Erro ao salvar missão:', error);
+            toastError(`Erro ao salvar missão: ${error?.message || error}`);
         }
     };
 
@@ -225,7 +244,7 @@ export default function GamificationTab() {
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">Catálogo de Missões</h3>
                             <button 
-                                onClick={() => { setCurrentMission({ is_active: true, reward_xp: 10, target_value: 1, target_action: 'user' }); setShowMissionModal(true); }}
+                                onClick={() => { setCurrentMission({ is_active: true, reward_xp: 10, target_value: 1, audience: 'user', trigger_event: 'complete_delivery' } as any); setShowMissionModal(true); }}
                                 className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2"
                             >
                                 <span className="material-symbols-outlined text-sm">add</span>
@@ -428,8 +447,8 @@ export default function GamificationTab() {
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Público Alvo</label>
                                         <select 
-                                            value={(currentMission as any)?.target_type || 'user'}
-                                            onChange={(e) => setCurrentMission({ ...currentMission, target_type: e.target.value as any } as any)}
+                                            value={(currentMission as any)?.audience || 'user'}
+                                            onChange={(e) => setCurrentMission({ ...currentMission, audience: e.target.value } as any)}
                                             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 text-sm font-black italic"
                                         >
                                             <option value="user">Usuário (Cliente)</option>
@@ -439,8 +458,8 @@ export default function GamificationTab() {
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Evento Gatilho</label>
                                         <select 
-                                            value={(currentMission as any)?.action_type || 'complete_delivery'}
-                                            onChange={(e) => setCurrentMission({ ...currentMission, action_type: e.target.value } as any)}
+                                            value={(currentMission as any)?.trigger_event || 'complete_delivery'}
+                                            onChange={(e) => setCurrentMission({ ...currentMission, trigger_event: e.target.value } as any)}
                                             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 text-sm font-black italic"
                                         >
                                             <option value="complete_delivery">Pedido Concluído / Entrega</option>

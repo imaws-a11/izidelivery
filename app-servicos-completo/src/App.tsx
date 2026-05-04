@@ -30,6 +30,7 @@ import { AccountDetailsView } from "./components/features/Profile/AccountDetails
 import { CouponsView } from "./components/features/Profile/CouponsView";
 import { DeliveryCodesView } from "./components/features/Profile/DeliveryCodesView";
 import { LoyaltyView } from "./components/features/Profile/LoyaltyView";
+import { UserMissionsView } from "./components/features/Profile/UserMissionsView";
 import { FavoritesView } from "./components/features/Profile/FavoritesView";
 import { DonationsView } from "./components/features/Profile/DonationsView";
 import { HelpCenterView } from "./components/features/Profile/HelpCenterView";
@@ -4872,6 +4873,11 @@ const navigateSubView = (target: string) => {
                 {subView === "loyalty" && (
                   <motion.div key="loyalty" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
                     <LoyaltyView onBack={() => setSubView("none")} userName={userName} userLevel={userLevel} userXP={userXP} />
+                  </motion.div>
+                )}
+                {subView === "user_missions" && (
+                  <motion.div key="user_missions" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                    <UserMissionsView userId={userId} onBack={() => setSubView("none")} />
                   </motion.div>
                 )}
                 {subView === "favorites" && (

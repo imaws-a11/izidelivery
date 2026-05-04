@@ -159,7 +159,11 @@ export const MissionsView = ({ driverId }: { driverId: string }) => {
     const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const fetchMissions = useCallback(async () => {
-        if (!driverId) return;
+        console.log('[MISSIONS] Iniciando busca para driver:', driverId);
+        if (!driverId) {
+            console.log('[MISSIONS] driverId ausente, abortando busca.');
+            return;
+        }
         setIsLoading(true);
         try {
             const { data: missionsData } = await supabase
@@ -167,7 +171,9 @@ export const MissionsView = ({ driverId }: { driverId: string }) => {
                 .select('*')
                 .eq('audience', 'driver')
                 .eq('is_active', true);
-            setMissions(missionsData || []);
+            
+            console.log('[MISSIONS] Dados recebidos:', missionsData);
+            setMissions(missionsData && missionsData.length > 0 ? missionsData : []);
 
             const { data: progressData } = await supabase
                 .from('gamification_progress')
@@ -214,9 +220,9 @@ export const MissionsView = ({ driverId }: { driverId: string }) => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex-1 flex flex-col bg-zinc-50 h-full overflow-hidden"
+                className="flex-1 flex flex-col bg-zinc-50 min-h-0 overflow-hidden"
             >
-                <header className="px-6 pt-12 pb-6 bg-white/80 backdrop-blur-xl border-b border-zinc-100 flex items-center justify-between sticky top-0 z-50">
+                <header className="px-6 pt-4 pb-6 bg-white/80 backdrop-blur-xl border-b border-zinc-100 flex items-center justify-between sticky top-0 z-50">
                     <div className="flex flex-col">
                         <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em] mb-1">Gamificação</p>
                         <h2 className="text-2xl font-black text-zinc-900 tracking-tighter uppercase leading-none">Suas Missões</h2>
@@ -329,13 +335,13 @@ export const MissionsView = ({ driverId }: { driverId: string }) => {
                                             {/* Recompensas */}
                                             <div className="flex items-center gap-2 mb-5">
                                                 <span className="text-[9px] font-black text-zinc-300 uppercase tracking-widest">Recompensa:</span>
-                                                {mission.reward_extra_fee > 0 && (
+                                                {mission.reward_extra_fee && Number(mission.reward_extra_fee) > 0 && (
                                                     <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                                                         <Icon name="payments" size={13} className="text-emerald-600" />
-                                                        <span className="text-emerald-600 font-black text-[11px]">+R$ {Number(mission.reward_extra_fee).toFixed(2)}</span>
+                                                        <span className="text-emerald-600 font-black text-[11px]">+R$ {Number(mission.reward_extra_fee).toFixed(2).replace('.', ',')}</span>
                                                     </div>
                                                 )}
-                                                {mission.reward_xp > 0 && (
+                                                {mission.reward_xp && Number(mission.reward_xp) > 0 && (
                                                     <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">
                                                         <Icon name="stars" size={13} className="text-blue-600" />
                                                         <span className="text-blue-600 font-black text-[11px]">+{mission.reward_xp} XP</span>

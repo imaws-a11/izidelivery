@@ -6,6 +6,7 @@ import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
 import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
@@ -95,6 +96,7 @@ function Icon({ name, className = "", size = 20 }: any) {
     'today': BespokeIcons.Clock,
     'route': BespokeIcons.Map,
     'military_tech': BespokeIcons.Shield,
+    'workspace_premium': BespokeIcons.Shield,
     'event_available': BespokeIcons.Check,
     'history_edu': BespokeIcons.History,
     'sentiment_dissatisfied': BespokeIcons.Help,
@@ -1244,6 +1246,7 @@ function App() {
     const [isSavingNewVehicle, setIsSavingNewVehicle] = useState(false);
     const [myVehicleRequests, setMyVehicleRequests] = useState<any[]>([]);
     const [showPreferences, setShowPreferences] = useState(false);
+    const [showHelpModal, setShowHelpModal] = useState(false);
 
     const [showReceipt, setShowReceipt] = useState(false);
     const [selectedReceiptUrl, setSelectedReceiptUrl] = useState('');
@@ -3170,6 +3173,31 @@ function App() {
                 });
             }
 
+            const totalXp = (orders?.length || 0) * 15;
+            const levels = [
+                { lvl: 1, xp: 0 },
+                { lvl: 2, xp: 100 },
+                { lvl: 3, xp: 300 },
+                { lvl: 4, xp: 600 },
+                { lvl: 5, xp: 1000 },
+                { lvl: 6, xp: 1500 },
+                { lvl: 7, xp: 2200 },
+                { lvl: 8, xp: 3000 },
+                { lvl: 9, xp: 4000 },
+                { lvl: 10, xp: 6000 }
+            ];
+
+            let currentLvl = 1;
+            let nextLvlXp = 100;
+            for (let i = 0; i < levels.length; i++) {
+                if (totalXp >= levels[i].xp) {
+                    currentLvl = levels[i].lvl;
+                    nextLvlXp = levels[i+1] ? levels[i+1].xp : levels[i].xp + 1000;
+                } else {
+                    break;
+                }
+            }
+
             setStats(prev => ({ 
                 ...prev, 
                 balance: Number(balance.toFixed(2)), 
@@ -3179,8 +3207,9 @@ function App() {
                 yearly: Number(yearlySum.toFixed(2)),
                 totalEarnings: Number(totalGanhos.toFixed(2)), 
                 count: orders?.length || 0, 
-                xp: (orders?.length || 0) * 15,
-                level: Math.floor(((orders?.length || 0) * 15) / 100) + 1,
+                xp: totalXp,
+                level: currentLvl,
+                nextXp: nextLvlXp,
                 performance,
                 weeklyEarnings,
                 monthlyPerformance
@@ -4190,7 +4219,6 @@ function App() {
                     </div>
                 </section>
 
-                {/* Seção de Vagas Dedicadas no Dashboard */}
                 <section className="space-y-6">
                     <div className="flex flex-col items-center justify-center gap-4 text-center">
                         <h3 className="text-xl font-black text-zinc-900 tracking-tighter uppercase text-center">Vagas Dedicadas</h3>
@@ -4220,15 +4248,12 @@ function App() {
                                     // 1. Vaga Confirmada: SEMPRE APARECE (Ignora filtros de atividade/data)
                                     if (isAccepted) return true;
 
-                                    // 2. Vaga Disponível: Deve estar ativa e ser para hoje (ou recorrente hoje)
-                                    if (!slot.is_active) return false;
+                                    // 2. Vaga Normal: Filtra por status ativo e data/recorrência
+                                    if (slot.status !== 'active') return false;
 
-                                    // Filtro de data (Evita lixo de datas passadas)
-                                    if (slot.slot_date && slot.slot_date < todayStr) return false;
-                                    if (meta.expires_at && meta.expires_at < todayStr) return false;
-
-                                    // Regra de exibição por dia (Hoje ou Futuras)
-                                    if (slot.slot_date && slot.slot_date >= todayStr) return true;
+                                    if (slot.slot_date) {
+                                        if (slot.slot_date === todayStr) return true;
+                                    }
                                     
                                     if (!slot.slot_date) {
                                         // Recorrente: verifica se é hoje para não encher o dashboard com tudo
@@ -4263,103 +4288,101 @@ function App() {
                                 const maxDeliveries = (slot.metadata?.base_deliveries || slot.max_deliveries || 0);
                                 
                                 return (
-                                        <motion.button 
+                                    <motion.button 
                                         key={slot.id}
-                                        onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                        className={`relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-xl ${isAccepted ? 'border-2 border-emerald-500/40 bg-emerald-50' : 'border border-zinc-100 bg-white'}`}
+                                        onClick={() => { setSelectedSlot(slot); }}
+                                        className={`relative w-full rounded-[40px] overflow-hidden p-6 sm:p-7 flex flex-col gap-5 text-left active:scale-[0.97] transition-all group shadow-xl ${isAccepted ? 'border-2 border-emerald-500 bg-emerald-50/40' : 'border border-zinc-100 bg-white'}`}
                                     >
+                                        {/* Selo de Vaga Conquistada no Canto Superior Esquerdo */}
+                                        {isAccepted && (
+                                            <div className="absolute top-0 left-0 p-4 z-20">
+                                                <div className="size-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 -rotate-6 group-hover:rotate-0 transition-transform">
+                                                     <Icon name="verified" size={24} />
+                                                </div>
+                                            </div>
+                                        )}
 
-
-                                        <div className="relative z-10 flex items-start justify-between">
-                                            <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
-                                                <div className={`size-16 rounded-[24px] bg-white border flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative ${isAccepted ? 'border-emerald-500/20' : 'border-zinc-100'}`}>
+                                        <div className="relative z-10 flex items-start justify-between gap-3 sm:gap-4">
+                                            <div className="flex gap-4 items-center flex-1 min-w-0 pr-10">
+                                                <div className={`size-14 sm:size-16 rounded-[24px] bg-white border flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative ${isAccepted ? 'border-emerald-500/20' : 'border-zinc-100'}`}>
                                                     {slot.admin_users?.store_logo ? (
                                                         <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                                     ) : (
                                                         <div className={`size-full flex items-center justify-center ${isAccepted ? 'bg-emerald-500/10' : 'bg-yellow-400/10'}`}>
-                                                            <Icon name="military_tech" className={isAccepted ? 'text-emerald-500' : 'text-yellow-600'} size={32} />
+                                                            <Icon name="military_tech" className={isAccepted ? 'text-emerald-500' : 'text-yellow-600'} size={28} />
                                                         </div>
                                                     )}
                                                 </div>
                                                 
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1.5">
-                                                        <div className={`size-4 rounded-full flex items-center justify-center border ${isAccepted ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
-                                                            <Icon name="verified" className={isAccepted ? 'text-emerald-500' : 'text-blue-500'} size={10} />
-                                                        </div>
-                                                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] truncate ${isAccepted ? 'text-emerald-600' : 'text-blue-600'}`}>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <p className={`text-[9px] font-black uppercase tracking-[0.2em] truncate ${isAccepted ? 'text-emerald-600' : 'text-zinc-400'}`}>
                                                             {slot.admin_users?.store_name || 'Parceiro Izi'}
                                                         </p>
                                                     </div>
-                                                    <h4 className={`text-lg font-black tracking-tight truncate leading-tight mb-1 ${isAccepted ? 'text-emerald-700' : 'text-zinc-900'}`}>{slot.title}</h4>
-                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                                        <Icon name="location_on" className="text-zinc-400" size={10} />
-                                                        <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-yellow-600 mt-1">
-                                                        <Icon name="event" size={10} />
-                                                        <span>
-                                                            {slot.slot_date 
-                                                                ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
-                                                                : (slot.day_of_week === 'Daily' ? 'Diário' : (
-                                                                    slot.day_of_week?.split(',').map((d: string) => ({
-                                                                        'Monday': 'Seg', 'Tuesday': 'Ter', 'Wednesday': 'Qua', 
-                                                                        'Thursday': 'Qui', 'Friday': 'Sex', 'Saturday': 'Sáb', 'Sunday': 'Dom'
-                                                                    }[d] || d)).join(', ') || 'Recorrente'
-                                                                ))}
-                                                        </span>
+                                                    <h4 className={`text-base sm:text-lg font-black tracking-tight leading-tight mb-1.5 ${isAccepted ? 'text-emerald-700' : 'text-zinc-900'}`}>{slot.title}</h4>
+                                                    
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-start gap-1.5 text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+                                                            <Icon name="location_on" className="text-zinc-300 mt-0.5" size={10} />
+                                                            <span className="leading-tight line-clamp-1 break-words">{slot.admin_users?.store_address || 'Unidade Local'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-yellow-600">
+                                                            <Icon name="event" size={10} />
+                                                            <span>
+                                                                {slot.slot_date 
+                                                                    ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+                                                                    : (slot.day_of_week === 'Daily' ? 'Diário' : (
+                                                                        slot.day_of_week?.split(',').map((d: string) => ({
+                                                                            'Monday': 'Seg', 'Tuesday': 'Ter', 'Wednesday': 'Qua', 
+                                                                            'Thursday': 'Qui', 'Friday': 'Sex', 'Saturday': 'Sáb', 'Sunday': 'Dom'
+                                                                        }[d] || d)).join(', ') || 'Recorrente'
+                                                                    ))}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                             
-                                            <div className="text-right shrink-0 bg-white p-4 rounded-[28px] border border-zinc-100 shadow-inner">
-                                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
-                                                <div className="flex flex-col items-end">
-                                                    <p className={`text-2xl font-black leading-none ${isAccepted ? 'text-emerald-600' : 'text-yellow-600'}`}>
-                                                        <span className="text-xs mr-0.5 not-italic font-bold opacity-60">R$</span>
-                                                        {parseFloat(slot.fee_per_day || 0).toFixed(0)}
-                                                    </p>
-                                                    <div className={`mt-2 py-1 px-3 ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-400'} text-zinc-900 rounded-full shadow-lg`}>
-                                                        <p className="text-[8px] font-black uppercase tracking-tight">Até {maxDeliveries} Entregas</p>
-                                                    </div>
+                                            <div className="shrink-0 bg-white p-3 sm:p-4 rounded-[28px] border border-zinc-100 shadow-inner flex flex-col items-center justify-center min-w-[95px] sm:min-w-[105px]">
+                                                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Valor Diária</p>
+                                                <p className={`text-xl sm:text-2xl font-black leading-none ${isAccepted ? 'text-emerald-600' : 'text-yellow-600'}`}>
+                                                    <span className="text-[10px] mr-0.5 font-bold opacity-60">R$</span>
+                                                    {parseFloat(slot.fee_per_day || 0).toFixed(0)}
+                                                </p>
+                                                <div className={`mt-2 py-0.5 px-2.5 ${isAccepted ? 'bg-emerald-500/10 text-emerald-600' : 'bg-yellow-400 text-zinc-900'} rounded-lg`}>
+                                                    <p className="text-[7px] font-black uppercase tracking-tight">Até {maxDeliveries} Ent.</p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {hasApplied && (
-                                            <div className={`relative z-10 mx-6 mt-2 px-6 py-4 rounded-3xl flex items-center justify-between border shadow-sm transition-all duration-500 ${
-                                                isAccepted 
-                                                    ? 'bg-emerald-500/10 border-emerald-500/30 shadow-emerald-500/10' 
-                                                    : 'bg-yellow-400/10 border-yellow-500/30'
-                                            }`}>
+                                        {hasApplied && !isAccepted && (
+                                            <div className="relative z-10 mx-1 px-5 py-3.5 rounded-[24px] flex items-center justify-between bg-yellow-400/10 border border-yellow-500/30">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="relative">
-                                                        <div className={`size-2.5 rounded-full ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-500'} ${isAccepted ? '' : 'animate-pulse'}`} />
-                                                        {isAccepted && <div className="absolute inset-0 size-2.5 rounded-full bg-emerald-500 animate-ping opacity-50" />}
-                                                    </div>
-                                                    <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${isAccepted ? 'text-emerald-700' : 'text-yellow-700'}`}>
-                                                        {isAccepted ? 'VAGA CONQUISTADA' : 'AGUARDANDO LOJISTA'}
+                                                    <div className="size-2 rounded-full bg-yellow-500 animate-pulse" />
+                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-700">
+                                                        AGUARDANDO LOJISTA
                                                     </span>
                                                 </div>
-                                                <div className={`size-8 rounded-xl flex items-center justify-center ${isAccepted ? 'bg-emerald-500 text-white' : 'bg-yellow-400 text-zinc-900 shadow-sm'}`}>
-                                                    <Icon name={isAccepted ? 'verified' : 'hourglass_empty'} size={18} className={!isAccepted ? 'animate-spin-slow' : ''} />
+                                                <div className="size-7 rounded-xl bg-yellow-400 text-zinc-900 flex items-center justify-center shadow-sm">
+                                                    <Icon name="hourglass_empty" size={14} className="animate-spin-slow" />
                                                 </div>
                                             </div>
                                         )}
 
-                                        <div className="relative z-10 w-full h-px bg-zinc-100/50 mt-2" />
+                                        <div className="relative z-10 w-full h-px bg-zinc-100/50" />
 
                                         <div className="relative z-10 flex items-center justify-between w-full">
                                             <div className="flex items-center gap-3">
-                                                <div className={`size-10 rounded-2xl flex items-center justify-center border shrink-0 transition-colors ${
+                                                <div className={`size-9 rounded-xl flex items-center justify-center border shrink-0 ${
                                                     isAccepted ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-zinc-50 border-zinc-100'
                                                 }`}>
-                                                    <Icon name="schedule" className={isAccepted ? 'text-emerald-600' : 'text-zinc-400'} size={18} />
+                                                    <Icon name="schedule" className={isAccepted ? 'text-emerald-600' : 'text-zinc-400'} size={16} />
                                                 </div>
-                                                <p className={`text-[11px] font-bold uppercase tracking-wider ${isAccepted ? 'text-emerald-600' : 'text-zinc-500'}`}>{slot.working_hours}</p>
+                                                <p className={`text-[10px] font-bold uppercase tracking-wider ${isAccepted ? 'text-emerald-600' : 'text-zinc-500'}`}>{slot.working_hours}</p>
                                             </div>
                                             <div className={`flex items-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${
-                                                isAccepted ? 'text-emerald-600 group-hover:translate-x-1' : 'text-yellow-600 group-hover:translate-x-1'
+                                                isAccepted ? 'text-emerald-600' : 'text-yellow-600'
                                             }`}>
                                                 {isAccepted ? 'Ver Posto de Trabalho' : 'Ver Detalhes'} <Icon name="arrow_forward" size={16} />
                                             </div>
@@ -4825,45 +4848,38 @@ function App() {
 
 
     const renderDedicatedView = () => {
-        const slot = selectedSlot;
-        
-        if (!slot) {
-            return (
-                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
-                    <header className="text-center">
-                        <p className="text-[9px] font-black text-yellow-600 uppercase tracking-[0.5em]">Exclusivo</p>
-                        <h2 className="text-3xl font-black text-zinc-900 tracking-tight mt-1 uppercase">Vagas Dedicadas</h2>
-                        <p className="text-xs text-zinc-400 mt-1 font-bold">Seja piloto exclusivo de um parceiro Izi.</p>
-                    </header>
+        return (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
+                <header className="text-center">
+                    <p className="text-[9px] font-black text-yellow-600 uppercase tracking-[0.5em]">Exclusivo</p>
+                    <h2 className="text-3xl font-black text-zinc-900 tracking-tight mt-1 uppercase">Vagas Dedicadas</h2>
+                    <p className="text-xs text-zinc-400 mt-1 font-bold">Seja piloto exclusivo de um parceiro Izi.</p>
+                </header>
 
-                    {dedicatedSlots.length === 0 ? (
-                        <div className="py-20 bg-zinc-50 border border-zinc-100 border-dashed rounded-[40px] flex flex-col items-center gap-4 text-center">
-                            <Icon name="sentiment_dissatisfied" className="text-4xl text-zinc-200" />
-                            <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest">Nenhuma vaga disponível</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {[...dedicatedSlots]
-                                .filter(s => {
-                                    // Oculta se a data já passou
-                                    const todayStr = new Date().toLocaleDateString('en-CA');
-                                    if (s.slot_date && s.slot_date < todayStr) return false;
-
-                                    // Regra de ouro: Vaga confirmada (por mim) permanece na tela para acompanhamento
-                                    const myApp = myApplications.find(app => String(app.slot_id) === String(s.id));
-                                    
-                                    return s.is_active || myApp?.status === 'accepted';
-                                })
-                                .sort((a, b) => {
+                {dedicatedSlots.length === 0 ? (
+                    <div className="py-20 bg-zinc-50 border border-zinc-100 border-dashed rounded-[40px] flex flex-col items-center gap-4 text-center">
+                        <Icon name="sentiment_dissatisfied" className="text-4xl text-zinc-200" />
+                        <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest">Nenhuma vaga disponível</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {[...dedicatedSlots]
+                            .filter(s => {
+                                const todayStr = new Date().toLocaleDateString('en-CA');
+                                if (s.slot_date && s.slot_date < todayStr) return false;
+                                const myApp = myApplications.find(app => String(app.slot_id) === String(s.id));
+                                return s.is_active || myApp?.status === 'accepted';
+                            })
+                            .sort((a, b) => {
                                 const appA = myApplications.find(app => String(app.slot_id) === String(a.id));
                                 const appB = myApplications.find(app => String(app.slot_id) === String(b.id));
                                 if (appA?.status === 'accepted' && appB?.status !== 'accepted') return -1;
                                 if (appB?.status === 'accepted' && appA?.status !== 'accepted') return 1;
                                 return 0;
                             }).map((s: any, i: number) => {
-                                const hasApplied = myApplications.some(app => String(app.slot_id) === String(s.id));
                                 const application = myApplications.find(app => String(app.slot_id) === String(s.id));
                                 const isAccepted = application?.status === 'accepted';
+                                const hasApplied = !!application;
                                 
                                 return (
                                     <motion.button 
@@ -4871,16 +4887,27 @@ function App() {
                                         initial={{ opacity: 0, scale: 0.9, y: 10 }} 
                                         animate={{ opacity: 1, scale: 1, y: 0 }} 
                                         transition={{ delay: i * 0.05 }}
-                                        onClick={() => setSelectedSlot(s)}
+                                        onClick={async () => {
+                                            if (Capacitor.isNativePlatform()) {
+                                                await Haptics.impact({ style: ImpactStyle.Light });
+                                            }
+                                            setSelectedSlot(s);
+                                        }}
                                         className={`w-full transition-all p-8 flex items-center gap-6 group text-left relative overflow-hidden active:scale-[0.98] ${
                                             isAccepted 
                                             ? 'bg-emerald-50 border-2 border-emerald-500 rounded-[32px] shadow-lg shadow-emerald-500/10' 
                                             : 'bg-white border border-zinc-100 rounded-[32px] shadow-lg'
                                         }`}
                                     >
-                                        {/* Efeito sutil para vagas aprovadas */}
+                                        {isAccepted && <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />}
+                                        
+                                        {/* Selo de Vaga Conquistada */}
                                         {isAccepted && (
-                                            <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />
+                                            <div className="absolute top-0 left-0 p-4 z-20">
+                                                <div className="size-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 -rotate-6 transition-transform">
+                                                     <Icon name="verified" size={18} />
+                                                </div>
+                                            </div>
                                         )}
 
                                         <div className={`size-16 rounded-[24px] border flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500 ${
@@ -4912,21 +4939,6 @@ function App() {
                                                     <Icon name="schedule" size={12} className={isAccepted ? 'text-emerald-600' : 'text-yellow-600'} />
                                                     <p className={`text-[9px] font-black uppercase tracking-wider ${isAccepted ? 'text-emerald-600' : 'text-zinc-500'}`}>{s.working_hours || 'A combinar'}</p>
                                                 </div>
-                                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${
-                                                    isAccepted ? 'bg-emerald-100/50 border-emerald-200' : 'bg-zinc-50 border-zinc-100'
-                                                }`}>
-                                                    <Icon name="event" size={12} className={isAccepted ? 'text-emerald-600' : 'text-yellow-600'} />
-                                                    <p className={`text-[9px] font-black uppercase tracking-wider ${isAccepted ? 'text-emerald-600' : 'text-zinc-500'}`}>
-                                                        {s.slot_date 
-                                                            ? new Date(s.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-                                                            : (s.day_of_week === 'Daily' ? 'Diário' : (
-                                                                s.day_of_week?.split(',').map((d: string) => ({
-                                                                    'Monday': 'Seg', 'Tuesday': 'Ter', 'Wednesday': 'Qua', 
-                                                                    'Thursday': 'Qui', 'Friday': 'Sex', 'Saturday': 'Sáb', 'Sunday': 'Dom'
-                                                                }[d] || d)).join(',') || 'Recorrente'
-                                                            ))}
-                                                    </p>
-                                                </div>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 flex flex-col items-end gap-1">
@@ -4953,371 +4965,219 @@ function App() {
                                                     </div>
                                                 </div>
                                             )}
-                                            {!hasApplied && !s.is_active && (
-                                                <div className="mt-2">
-                                                    <div className="bg-zinc-100 text-zinc-400 border border-zinc-200 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-                                                        <Icon name="block" size={12} /> Vaga Ocupada
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     </motion.button>
                                 );
                             })}
-                        </div>
-                    )}
-                </motion.div>
-            );
-        }
+                    </div>
+                )}
+            </motion.div>
+        );
+    };
+
+    const renderSlotDetailsBottomSheet = () => {
+        if (!selectedSlot) return null;
         
-        const hasApplied = myApplications.some(app => String(app.slot_id) === String(slot.id));
+        const slot = selectedSlot;
         const application = myApplications.find(app => String(app.slot_id) === String(slot.id));
         const isAccepted = application?.status === 'accepted';
-        
+        const hasApplied = !!application;
         const customBenefits = slot.metadata?.custom_benefits || [];
         const neighborhoodExtras = slot.metadata?.bairros_extras || slot.metadata?.neighborhood_extras || [];
         const requirements: string[] = slot.metadata?.custom_specialties || [];
 
-        const sClayLight: React.CSSProperties = {
-            background: '#ffffff',
-            borderRadius: '2.5rem',
-            border: '1px solid rgba(0,0,0,0.05)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-        };
-        const sClayIcon: React.CSSProperties = {
-            background: '#f8fafc',
-            border: '1px solid rgba(0,0,0,0.05)',
-        };
-
         return (
-            <motion.div 
-                initial={{ opacity: 0, y: 30 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: 30 }} 
-                className="fixed inset-0 z-[150] bg-white overflow-y-auto no-scrollbar pb-48"
-            >
-                {/* Hero Header */}
-                <header className="relative h-96 w-full shrink-0 overflow-hidden">
-                    {slot.admin_users?.store_banner ? (
-                        <img src={slot.admin_users.store_banner} className="w-full h-full object-cover" alt="" />
-                    ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-zinc-100 via-zinc-50 to-zinc-200" />
-                    )}
-                    
-                    {/* Overlay para contraste */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-black/30" />
-                    
-                    {/* Selo de Vaga Conquistada (Celebration Banner) */}
-                    {isAccepted && (
-                        <motion.div 
-                            initial={{ y: -100 }}
-                            animate={{ y: 0 }}
-                            className="absolute top-0 left-0 right-0 bg-emerald-500 py-3 flex items-center justify-center gap-3 z-30 shadow-lg"
-                        >
-                            <Icon name="verified" size={20} className="text-white" />
-                            <span className="text-white font-black uppercase tracking-[0.3em] text-[10px]">Parabéns! Você é o Piloto Oficial desta vaga</span>
-                        </motion.div>
-                    )}
-
-                    <button 
-                        onClick={() => setSelectedSlot(null)}
-                        className="absolute top-16 left-6 size-12 rounded-2xl bg-white/80 backdrop-blur-xl border border-zinc-200 flex items-center justify-center text-zinc-900 active:scale-90 transition-all z-20 shadow-xl"
-                    >
-                        <Icon name="arrow_back" size={24} />
-                    </button>
-
-                    <div className="absolute bottom-10 left-6 right-6 z-10">
-                        <div className="flex items-end gap-6">
-                            <div className={`size-28 rounded-[36px] p-1.5 shadow-2xl overflow-hidden border-4 border-white shrink-0 relative ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-400'}`}>
-                                {slot.admin_users?.store_logo ? (
-                                    <img src={slot.admin_users.store_logo} className="w-full h-full object-cover rounded-[28px]" alt="" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <Icon name={isAccepted ? 'verified' : 'stars'} className="text-white" size={56} />
-                                    </div>
-                                )}
-                                {isAccepted && (
-                                    <div className="absolute -right-2 -bottom-2 bg-white rounded-full p-2 shadow-lg">
-                                        <Icon name="check_circle" className="text-emerald-500" size={24} />
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0 pb-2">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm border ${
-                                        isAccepted ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-yellow-400 text-zinc-900 border-yellow-300'
-                                    }`}>
-                                        {isAccepted ? 'SEU POSTO' : 'VAGA ABERTA'}
-                                    </span>
-                                    <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full border border-zinc-100 shadow-sm">
-                                        <div className="size-1.5 rounded-full bg-emerald-500" />
-                                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Verificado</span>
+            <div className="fixed inset-0 z-[125] flex items-end justify-center">
+                {/* Backdrop */}
+                <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+                    onClick={() => setSelectedSlot(null)}
+                />
+                
+                <IziBottomSheet snapPoints={["85vh", "95vh"]} initialSnap={0}>
+                        <div className="px-6 pb-20 space-y-8">
+                            {/* Header do Slot */}
+                            <div className="flex items-start gap-5">
+                                <div className={`size-20 rounded-[28px] border flex items-center justify-center shrink-0 overflow-hidden shadow-inner ${
+                                    isAccepted ? 'bg-emerald-50 border-emerald-200' : 'bg-yellow-50 border-yellow-100'
+                                }`}>
+                                    {slot.admin_users?.store_logo ? (
+                                        <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
+                                    ) : (
+                                        <Icon name={isAccepted ? 'verified' : 'stars'} size={32} className={isAccepted ? 'text-emerald-600' : 'text-yellow-600'} />
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
+                                    <h2 className="text-2xl font-black text-zinc-900 tracking-tight leading-tight uppercase">{slot.title}</h2>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Icon name="location_on" size={12} className="text-zinc-300" />
+                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
                                     </div>
                                 </div>
-                                <p className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-1 drop-shadow-sm">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
-                                <h2 className={`text-4xl font-black tracking-tighter leading-none uppercase drop-shadow-md ${isAccepted ? 'text-emerald-600' : 'text-zinc-900'}`}>{slot.title}</h2>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                <div className="px-6 space-y-8 py-10">
-                    {/* Estilo Comprovante/Ticket para Candidaturas */}
-                    {hasApplied && (
-                        <motion.div 
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className={`bg-white rounded-[2.5rem] border-2 shadow-2xl relative overflow-hidden ${
-                                isAccepted ? 'border-emerald-500/20' : application?.status === 'rejected' ? 'border-rose-500/20' : 'border-yellow-500/20'
-                            }`}
-                        >
-                            {/* Topo do Recibo */}
-                            <div className={`p-6 flex justify-between items-center text-white ${
-                                isAccepted ? 'bg-emerald-500' : application?.status === 'rejected' ? 'bg-rose-500' : 'bg-yellow-500'
-                            }`}>
-                                <div className="flex items-center gap-3">
-                                    <Icon name={isAccepted ? 'verified_user' : 'hourglass_empty'} size={24} />
-                                    <span className="font-black uppercase tracking-widest text-xs">
-                                        {isAccepted ? 'Comprovante de Exclusividade' : 'Comprovante de Candidatura'}
-                                    </span>
-                                </div>
-                                <span className="text-[10px] font-bold opacity-70">ID: {slot.id.slice(0,8).toUpperCase()}</span>
                             </div>
 
-                            {/* Conteúdo do Recibo */}
-                            <div className="p-8 space-y-6">
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Entregador</p>
-                                        <p className="text-xl font-black text-zinc-900 uppercase">{driverName}</p>
+                            {/* Status Card / Recibo Style */}
+                            {hasApplied ? (
+                                <div className={`rounded-[32px] border-2 overflow-hidden shadow-xl ${
+                                    isAccepted ? 'border-emerald-500/20 bg-emerald-50/30' : 'border-yellow-500/20 bg-yellow-50/30'
+                                }`}>
+                                    <div className={`px-6 py-3 flex justify-between items-center text-white ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-500'}`}>
+                                        <div className="flex items-center gap-2">
+                                            <Icon name={isAccepted ? 'verified' : 'history'} size={16} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">{isAccepted ? 'Comprovante Oficial' : 'Candidatura Enviada'}</span>
+                                        </div>
+                                        <span className="text-[8px] font-black opacity-60">ID: {slot.id.slice(0,8).toUpperCase()}</span>
                                     </div>
-                                    <div className="size-16 bg-zinc-50 rounded-2xl flex items-center justify-center border border-zinc-100">
-                                        <Icon name={isAccepted ? 'qr_code_2' : 'pending_actions'} size={40} className="text-zinc-300" />
-                                    </div>
-                                </div>
-
-                                <div className="bg-zinc-50/50 p-4 rounded-2xl border border-zinc-100">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Status Atual</p>
-                                        <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                                            isAccepted ? 'bg-emerald-500 text-white' : application?.status === 'rejected' ? 'bg-rose-500 text-white' : 'bg-yellow-400 text-zinc-900'
-                                        }`}>
-                                            {isAccepted ? 'Vaga Confirmada' : application?.status === 'rejected' ? 'Não Selecionado' : 'Em Análise'}
+                                    <div className="p-6 space-y-4">
+                                        <div className="flex justify-between items-end">
+                                            <div>
+                                                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Garantido por Dia</p>
+                                                <p className="text-3xl font-black text-zinc-900 leading-none">
+                                                    <span className="text-sm font-bold opacity-30 mr-1 text-emerald-600">R$</span>
+                                                    {parseFloat(slot.fee_per_day || 0).toFixed(0)}
+                                                </p>
+                                            </div>
+                                            <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                isAccepted ? 'bg-emerald-500 text-white' : 'bg-white border border-yellow-400 text-yellow-600'
+                                            }`}>
+                                                {isAccepted ? 'Piloto Exclusivo' : 'Em Análise'}
+                                            </div>
+                                        </div>
+                                        <div className="h-px bg-zinc-200 border-dashed border-t" />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Horário</p>
+                                                <p className="text-xs font-black text-zinc-800 uppercase tracking-tight">{slot.working_hours}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Início</p>
+                                                <p className="text-xs font-black text-zinc-800 uppercase tracking-tight">
+                                                    {slot.slot_date ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR') : 'Imediato'}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-6 py-6 border-y border-dashed border-zinc-200">
-                                    <div>
-                                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Início Estimado</p>
-                                        <p className="font-black text-zinc-900">
-                                            {slot.slot_date 
-                                                ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR')
-                                                : 'Imediato'
-                                            }
-                                        </p>
+                            ) : (
+                                <div className="bg-zinc-900 rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl -mr-16 -mt-16 rounded-full" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 opacity-50">Diária Garantida</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-2xl font-black text-yellow-400">R$</span>
+                                        <span className="text-7xl font-black tracking-tighter leading-none">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Horário</p>
-                                        <p className="font-black text-zinc-900">{slot.working_hours}</p>
+                                    <div className="mt-6 flex items-center gap-3 bg-white/10 w-fit px-4 py-2 rounded-2xl border border-white/10 backdrop-blur-md">
+                                        <Icon name="schedule" size={16} className="text-yellow-400" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">{slot.working_hours}</p>
                                     </div>
                                 </div>
+                            )}
 
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Estabelecimento</p>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`size-8 rounded-lg flex items-center justify-center ${isAccepted ? 'bg-emerald-100' : 'bg-yellow-100'}`}>
-                                            <Icon name="store" size={16} className={isAccepted ? 'text-emerald-600' : 'text-yellow-700'} />
+                            {/* Detalhes e Benefícios */}
+                            <div className="space-y-8">
+                                <section className="space-y-4">
+                                    <h3 className="text-lg font-black text-zinc-900 tracking-tight uppercase flex items-center gap-2">
+                                        <div className="size-1.5 rounded-full bg-yellow-400" /> Detalhes da Vaga
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-zinc-50 p-5 rounded-[24px] border border-zinc-100 flex flex-col items-center text-center gap-2">
+                                            <Icon name="local_shipping" size={20} className="text-zinc-400" />
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Extra p/ entrega</p>
+                                                <p className="text-xs font-black text-zinc-900">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')}</p>
+                                            </div>
                                         </div>
-                                        <p className="font-black text-zinc-900 uppercase text-sm">{slot.admin_users?.store_name}</p>
+                                        <div className="bg-zinc-50 p-5 rounded-[24px] border border-zinc-100 flex flex-col items-center text-center gap-2">
+                                            <Icon name="inventory_2" size={20} className="text-zinc-400" />
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Incluso na diária</p>
+                                                <p className="text-xs font-black text-zinc-900">{slot.metadata?.base_deliveries || 0} entregas</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p className="text-[11px] font-medium text-zinc-500 leading-tight">
-                                        {slot.admin_users?.store_address}
-                                    </p>
-                                </div>
-                            </div>
+                                </section>
 
-                            {/* Rodapé do Recibo (Picotado Decorativo) */}
-                            <div className={`relative h-4 overflow-hidden ${isAccepted ? 'bg-emerald-500/5' : 'bg-yellow-500/5'}`}>
-                                <div className="absolute top-0 left-0 right-0 flex justify-between px-2">
-                                    {[...Array(20)].map((_, i) => (
-                                        <div key={i} className="size-4 bg-white rounded-full -mt-2" />
-                                    ))}
-                                </div>
-                            </div>
-                            
-                            <div className={`p-4 flex justify-center ${isAccepted ? 'bg-emerald-50' : 'bg-yellow-50'}`}>
-                                <button className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-full transition-all ${
-                                    isAccepted ? 'text-emerald-600 hover:bg-emerald-100' : 'text-yellow-700 hover:bg-yellow-100'
-                                }`}>
-                                    <Icon name="share" size={14} /> Compartilhar Comprovante
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Ganho Card em Claymorphism (Mantido para não-aceitos ou como info adicional) */}
-                    {!isAccepted && (
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className={`p-10 relative overflow-hidden group rounded-[3rem] shadow-2xl ${
-                                isAccepted ? 'bg-emerald-500 text-white' : 'clay-card-yellow text-zinc-950'
-                            }`}
-                        >
-                            <div className={`absolute -right-10 -bottom-10 size-64 blur-[80px] rounded-full transition-transform duration-1000 ${
-                                isAccepted ? 'bg-white/20 group-hover:scale-150' : 'bg-white/40 group-hover:scale-150'
-                            }`}></div>
-                            <div className="relative z-10">
-                                <div className="flex justify-between items-center mb-8">
-                                    <p className={`font-black uppercase text-[11px] tracking-[0.4em] ${isAccepted ? 'opacity-80' : 'opacity-60'}`}>Diária Garantida</p>
-                                    <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg ${
-                                        isAccepted ? 'bg-white/20 border border-white/20' : 'bg-black/5'
-                                    }`}>
-                                        <Icon name="paid" size={26} className={isAccepted ? 'text-white' : 'text-zinc-900'} />
-                                    </div>
-                                </div>
-                                <div className="flex items-baseline gap-4">
-                                    <span className={`text-4xl font-black ${isAccepted ? 'opacity-60' : 'opacity-30'}`}>R$</span>
-                                    <span className="text-[7rem] font-black tracking-tighter leading-none drop-shadow-2xl">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
-                                </div>
-                                <div className={`mt-10 flex items-center gap-4 w-fit px-8 py-4 rounded-3xl border shadow-xl backdrop-blur-xl ${
-                                    isAccepted ? 'bg-white/10 border-white/20 text-white' : 'bg-white/40 border-white/40 text-zinc-900'
-                                }`}>
-                                    <Icon name="schedule" size={20} />
-                                    <p className="text-xs font-black uppercase tracking-[0.15em]">
-                                        {slot.slot_date 
-                                            ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
-                                            : (slot.day_of_week === 'Daily' ? 'Todos os dias' : (
-                                                slot.day_of_week?.split(',').map((d: string) => ({
-                                                    'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 
-                                                    'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
-                                                }[d] || d)).join(', ') || 'Recorrente'
+                                {customBenefits.length > 0 && (
+                                    <section className="space-y-4">
+                                        <h3 className="text-lg font-black text-zinc-900 tracking-tight uppercase flex items-center gap-2">
+                                            <div className="size-1.5 rounded-full bg-yellow-400" /> Bônus Adicionais
+                                        </h3>
+                                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                                            {customBenefits.map((ben: any, idx: number) => (
+                                                <div key={idx} className="shrink-0 bg-white border border-zinc-100 p-4 rounded-2xl shadow-sm flex flex-col items-center text-center gap-2 min-w-[120px]">
+                                                    <Icon name="star" size={16} className="text-yellow-600" />
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{ben.label || 'Incentivo'}</p>
+                                                        <p className="text-xs font-black text-yellow-600">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
+                                                    </div>
+                                                </div>
                                             ))}
-                                        {' • '}
-                                        {slot.working_hours}
-                                    </p>
-                                </div>
-                            </div>
-                            <Icon name="verified" size={240} className={`absolute -right-16 -bottom-16 rotate-12 transition-all duration-1000 ${
-                                isAccepted ? 'opacity-15 group-hover:scale-110' : 'opacity-0'
-                            }`} />
-                            {!isAccepted && <Icon name="payments" size={200} className="absolute -right-12 -bottom-12 opacity-5 rotate-12" />}
-                        </motion.div>
-                    )}
+                                        </div>
+                                    </section>
+                                )}
 
-                    {/* Benefícios e Extras */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayLight}>
-                            <div className="size-12 rounded-2xl flex items-center justify-center border border-zinc-100" style={sClayIcon}>
-                                <Icon name="location_on" size={20} className="text-yellow-600" />
-                            </div>
-                            <div className="space-y-1 w-full overflow-hidden px-2">
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Endereço Base</p>
-                                <p className="text-xs font-black text-zinc-900 break-words line-clamp-2 w-full leading-tight uppercase tracking-tight" title={slot.admin_users?.store_address || slot.city}>
-                                    {slot.admin_users?.store_address || slot.city || 'Sua Região'}
-                                </p>
+                                {requirements.length > 0 && (
+                                    <section className="space-y-4">
+                                        <h3 className="text-lg font-black text-zinc-900 tracking-tight uppercase flex items-center gap-2">
+                                            <div className="size-1.5 rounded-full bg-yellow-400" /> Requisitos
+                                        </h3>
+                                        <div className="grid gap-3">
+                                            {requirements.map((req: any, idx: number) => (
+                                                <div key={idx} className="bg-zinc-50/50 p-4 rounded-2xl border border-zinc-100 flex items-center gap-4">
+                                                    <div className="size-8 rounded-lg bg-white flex items-center justify-center border border-zinc-100 shadow-sm">
+                                                        <Icon name="check" size={16} className="text-emerald-500" />
+                                                    </div>
+                                                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">{typeof req === 'string' ? req : req.label}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
                             </div>
                         </div>
-                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayLight}>
-                            <div className="size-12 rounded-2xl flex items-center justify-center border border-zinc-100" style={sClayIcon}>
-                                <Icon name="analytics" size={20} className="text-yellow-600" />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Após {slot.metadata?.base_deliveries || 0} saídas</p>
-                                <p className="text-sm font-black text-zinc-900">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')} extra</p>
-                            </div>
+
+                        {/* Botão de Ação Fixo no Bottom Sheet */}
+                        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
+                            {!hasApplied ? (
+                                <button 
+                                    onClick={async () => {
+                                        if (Capacitor.isNativePlatform()) {
+                                            await Haptics.impact({ style: ImpactStyle.Heavy });
+                                        }
+                                        handleApplyToSlot(slot);
+                                    }}
+                                    disabled={applyingSlotId === slot.id}
+                                    className="w-full h-18 bg-yellow-400 text-zinc-950 rounded-[28px] font-black text-sm uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all pointer-events-auto flex items-center justify-center gap-3"
+                                >
+                                    {applyingSlotId === slot.id ? (
+                                        <div className="size-6 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Icon name="touch_app" size={24} />
+                                            Candidatar Agora
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={async () => {
+                                        if (Capacitor.isNativePlatform()) {
+                                            await Haptics.impact({ style: ImpactStyle.Light });
+                                        }
+                                        setSelectedSlot(null);
+                                    }}
+                                    className="w-full h-18 bg-zinc-900 text-white rounded-[28px] font-black text-sm uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all pointer-events-auto"
+                                >
+                                    Fechar Detalhes
+                                </button>
+                            )}
                         </div>
-                    </div>
-
-                    {/* Bonus Extra */}
-                    {customBenefits.length > 0 && (
-                        <section className="space-y-6">
-                            <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
-                                <span className="size-2 rounded-full bg-yellow-500" />
-                                Bônus e Extras
-                            </h3>
-                            <div className="flex overflow-x-auto gap-4 -mx-6 px-6 no-scrollbar pb-2">
-                                {customBenefits.map((ben: any, idx: number) => (
-                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-zinc-100" style={sClayLight}>
-                                        <div className="size-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                            <Icon name="star" className="text-yellow-600" size={20} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{ben.label || ben.title || 'Incentivo'}</p>
-                                            <p className="text-lg font-black text-yellow-600 leading-none">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                    
-                    {/* Regiões Extras */}
-                    {neighborhoodExtras.length > 0 && (
-                        <section className="space-y-6">
-                            <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
-                                <span className="size-2 rounded-full bg-yellow-500" />
-                                Taxas por Região
-                            </h3>
-                            <div className="flex overflow-x-auto gap-4 -mx-6 px-6 no-scrollbar pb-2">
-                                {neighborhoodExtras.map((item: any, idx: number) => (
-                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-zinc-100" style={sClayLight}>
-                                        <div className="size-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                            <Icon name="location_on" className="text-yellow-600" size={20} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{item.label}</p>
-                                            <p className="text-lg font-black text-yellow-600 leading-none">+ R$ {parseFloat(item.fee || item.value || 0).toFixed(2).replace('.', ',')}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Descrição */}
-                    {slot.description && (
-                        <section className="space-y-6">
-                             <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
-                                <span className="size-2 rounded-full bg-yellow-500" />
-                                Sobre a Vaga
-                            </h3>
-                            <div className="p-6 border border-zinc-100 leading-relaxed shadow-sm" style={sClayLight}>
-                                <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">{slot.description}</p>
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Requisitos */}
-                    <section className="space-y-6">
-                        <h3 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
-                            <span className="size-2 rounded-full bg-yellow-500" />
-                            Requisitos
-                        </h3>
-                        {requirements.length === 0 ? (
-                            <div className="p-5 border border-zinc-100 rounded-[2rem] flex items-center gap-4 opacity-40 shadow-sm" style={sClayLight}>
-                                <Icon name="check_circle" size={20} className="text-yellow-600 shrink-0" />
-                                <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Nenhum requisito específico cadastrado</p>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4">
-                                {requirements.map((req: any, idx: number) => (
-                                    <div key={idx} className="p-2 pr-6 flex items-center gap-5 border border-zinc-100" style={sClayLight}>
-                                        <div className="size-12 rounded-[20px] flex items-center justify-center shrink-0 shadow-inner" style={sClayIcon}>
-                                            <Icon name="check" size={20} className="text-yellow-600" />
-                                        </div>
-                                        <div className="flex-1 py-2">
-                                            <p className="text-xs font-black text-zinc-900 uppercase tracking-widest">{typeof req === 'string' ? req : req.label}</p>
-                                            {req.detail && <p className="text-[10px] font-bold text-zinc-400 mt-0.5 uppercase tracking-tighter">{req.detail}</p>}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </section>
+                    </IziBottomSheet>
                 </div>
-            </motion.div>
         );
     };
 
@@ -5621,17 +5481,29 @@ function App() {
                     </div>
 
                     {/* Dedicated Section - "Queridos Entregadores" */}
-                    <div className="bg-zinc-900 rounded-[40px] p-8 relative overflow-hidden group">
+                    <div 
+                        onClick={() => setActiveTab('missions')}
+                        className="bg-zinc-900 rounded-[40px] p-8 relative overflow-hidden group active:scale-[0.98] transition-all cursor-pointer"
+                    >
                         <div className="absolute right-0 top-0 w-40 h-40 bg-yellow-400/10 blur-[80px] -mr-20 -mt-20" />
                         
                         <div className="relative z-10 space-y-6">
                             <div className="flex items-center gap-3">
                                 <div className="size-12 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg rotate-3 group-hover:rotate-0 transition-transform">
-                                    <Icon name="military_tech" size={28} className="text-zinc-900" />
+                                    <Icon name="workspace_premium" size={28} className="text-zinc-900" />
                                 </div>
                                 <div>
-                                    <h4 className="text-white font-black text-sm uppercase tracking-wider">Status: Elite Pro</h4>
-                                    <p className="text-yellow-400/60 text-[10px] font-bold uppercase tracking-widest">Nível {stats.level} â€¢ {stats.xp} XP</p>
+                                    <h4 className="text-white font-black text-sm uppercase tracking-wider">
+                                        Status: {(() => {
+                                            const titles: Record<number, string> = {
+                                                1: 'Explorador', 2: 'Entusiasta', 3: 'Frequente', 4: 'Dedicado', 
+                                                5: 'Veterano', 6: 'Expert', 7: 'Campeão', 8: 'Lenda', 
+                                                9: 'Ícone', 10: 'Imortal IZI'
+                                            };
+                                            return titles[stats.level] || 'Elite Pro';
+                                        })()}
+                                    </h4>
+                                    <p className="text-yellow-400/60 text-[10px] font-bold uppercase tracking-widest">Nível {stats.level} • {stats.xp} XP</p>
                                 </div>
                             </div>
                             
@@ -5659,7 +5531,7 @@ function App() {
                 </div>
             </motion.div>
         );
-    };;
+    };
 
     const renderWithdrawHistoryView = () => (
         <motion.div 
@@ -6130,7 +6002,7 @@ function App() {
                     { label: 'Dados Bancários', icon: 'account_balance', color: 'text-emerald-400' },
                     { label: 'Veículo & Placa', icon: 'directions_car', color: 'text-yellow-400' },
                     { label: 'Preferências', icon: 'settings', color: 'text-zinc-400' },
-                    { label: 'Ajuda & Suporte', icon: 'support_agent', color: 'text-blue-400' }
+                    { label: 'Ajuda', icon: 'support_agent', color: 'text-blue-400' }
                 ].map((item, i) => (
                     <button 
                         key={i} 
@@ -6139,6 +6011,7 @@ function App() {
                             if (item.label === 'Dados Bancários') setShowBankDetails(true);
                             if (item.label === 'Veículo & Placa') setShowPlateModal(true);
                             if (item.label === 'Preferências') setShowPreferences(true);
+                            if (item.label === 'Ajuda') setShowHelpModal(true);
                         }}
                         className="w-full bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]"
                     >
@@ -6768,6 +6641,122 @@ function App() {
                             )}
                             {isSavingPix ? 'Autenticando...' : 'Salvar Dados Bancários'}
                         </button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    };
+
+    const renderHelpModal = () => {
+        const supportPhone = '5531995610728';
+        const activeCustomerPhone = activeMission?.customer_phone || activeMission?.phone;
+        const activeCustomerName = activeMission?.user_name || activeMission?.customer || 'Cliente';
+
+        return (
+            <motion.div 
+                initial={{ opacity: 0, y: '100%' }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: '100%' }}
+                className="fixed inset-0 z-[400] flex flex-col bg-zinc-50"
+            >
+                <div className="flex items-center justify-between px-6 py-6 bg-white border-b border-zinc-100">
+                    <button onClick={() => setShowHelpModal(false)} className="size-10 rounded-xl flex items-center justify-center bg-zinc-50 border border-zinc-100 active:scale-90 transition-all">
+                        <Icon name="arrow_back" className="text-zinc-900" />
+                    </button>
+                    <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest">Ajuda</h3>
+                    <div className="size-10" />
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 no-scrollbar">
+                    {/* Suporte Izi */}
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-2">Suporte Administrativo</h4>
+                        <button 
+                            onClick={() => window.open(`https://wa.me/${supportPhone}`, '_blank')}
+                            className="w-full bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm flex items-center gap-5 active:scale-[0.98] transition-all group"
+                        >
+                            <div className="size-14 rounded-2xl bg-emerald-50 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
+                                <Icon name="support_agent" className="text-emerald-500 text-2xl" />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className="text-sm font-black text-zinc-900">Suporte Izi Delivery</p>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Falar com administrador via WhatsApp</p>
+                            </div>
+                            <Icon name="chevron_right" className="text-zinc-200" />
+                        </button>
+                    </div>
+
+                    {/* Contato com Usuários */}
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-2">Contatos da Missão</h4>
+                        {activeMission ? (
+                            <div className="space-y-3">
+                                {activeCustomerPhone && (
+                                    <button 
+                                        onClick={() => {
+                                            const cleanPhone = String(activeCustomerPhone).replace(/\D/g, '');
+                                            const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+                                            window.open(`https://wa.me/${finalPhone}`, '_blank');
+                                        }}
+                                        className="w-full bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm flex items-center gap-5 active:scale-[0.98] transition-all group"
+                                    >
+                                        <div className="size-14 rounded-2xl bg-yellow-50 flex items-center justify-center border border-yellow-100 group-hover:bg-yellow-100 transition-colors">
+                                            <Icon name="chat" className="text-yellow-600 text-2xl" />
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <p className="text-sm font-black text-zinc-900">Chat com {activeCustomerName}</p>
+                                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Clique para abrir no WhatsApp</p>
+                                        </div>
+                                        <Icon name="chevron_right" className="text-zinc-200" />
+                                    </button>
+                                )}
+                                {activeMission.merchant_phone && (
+                                    <button 
+                                        onClick={() => {
+                                            const cleanPhone = String(activeMission.merchant_phone).replace(/\D/g, '');
+                                            const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+                                            window.open(`https://wa.me/${finalPhone}`, '_blank');
+                                        }}
+                                        className="w-full bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm flex items-center gap-5 active:scale-[0.98] transition-all group"
+                                    >
+                                        <div className="size-14 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+                                            <Icon name="storefront" className="text-blue-500 text-2xl" />
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <p className="text-sm font-black text-zinc-900">Suporte do Parceiro</p>
+                                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">{activeMission.merchant_name || 'Loja Parceira'}</p>
+                                        </div>
+                                        <Icon name="chevron_right" className="text-zinc-200" />
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-white/50 p-8 rounded-[40px] border border-zinc-100 border-dashed text-center space-y-3">
+                                <div className="size-16 rounded-[24px] bg-zinc-50 flex items-center justify-center mx-auto border border-zinc-100 opacity-50">
+                                    <Icon name="history" className="text-zinc-300" size={32} />
+                                </div>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] px-4">
+                                    Nenhuma missão ativa no momento.<br />Os contatos aparecerão aqui durante as entregas.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Central de Ajuda FAQ */}
+                    <div className="space-y-4">
+                         <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-2">Perguntas Frequentes</h4>
+                         <div className="bg-white rounded-[32px] border border-zinc-100 overflow-hidden divide-y divide-zinc-50 shadow-sm">
+                             {[
+                                 { q: 'Como recebo meus ganhos?', a: 'Os ganhos são creditados na sua conta Izi e podem ser sacados via PIX instantaneamente após a conclusão.' },
+                                 { q: 'Problemas na entrega?', a: 'Se não conseguir localizar o cliente ou encontrar o endereço, entre em contato com o suporte imediatamente.' },
+                                 { q: 'Mudança de veículo?', a: 'Para trocar de veículo, acesse "Veículo & Placa" e envie a solicitação de alteração.' }
+                             ].map((faq, i) => (
+                                 <div key={i} className="p-6 space-y-2">
+                                     <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">{faq.q}</p>
+                                     <p className="text-[11px] text-zinc-400 leading-relaxed font-bold">{faq.a}</p>
+                                 </div>
+                             ))}
+                         </div>
                     </div>
                 </div>
             </motion.div>
@@ -7418,8 +7407,21 @@ function App() {
                             </div>
 
                             {/* Paradas intermediárias (se houver) */}
-                            {activeMission.stops && Array.isArray(JSON.parse(activeMission.stops || '[]')) && JSON.parse(activeMission.stops || '[]').length > 0 && (
-                                JSON.parse(activeMission.stops).map((stop: any, i: number) => (
+                            {(() => {
+                                let stopsArr = [];
+                                try {
+                                    if (activeMission.stops) {
+                                        stopsArr = typeof activeMission.stops === 'string' 
+                                            ? JSON.parse(activeMission.stops) 
+                                            : activeMission.stops;
+                                    }
+                                } catch (e) {
+                                    console.warn("Erro ao parsear paradas:", e);
+                                }
+                                
+                                if (!Array.isArray(stopsArr) || stopsArr.length === 0) return null;
+
+                                return stopsArr.map((stop: any, i: number) => (
                                     <div key={i} className="flex items-start gap-4 px-5 py-3 border-b border-zinc-100 bg-zinc-50/50">
                                         <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
                                             <div className="size-8 rounded-xl bg-zinc-200 flex items-center justify-center">
@@ -7434,8 +7436,8 @@ function App() {
                                             </p>
                                         </div>
                                     </div>
-                                ))
-                            )}
+                                ));
+                            })()}
 
                             {/* Destino Final */}
                             <div className="flex items-start gap-4 px-5 py-4">
@@ -8165,6 +8167,10 @@ function App() {
                         <AnimatePresence>{showPlateModal && renderPlateEditView()}</AnimatePresence>
                         <AnimatePresence>{showPreferences && renderPreferencesView()}</AnimatePresence>
  
+                        <AnimatePresence>
+                            {selectedSlot && renderSlotDetailsBottomSheet()}
+                        </AnimatePresence>
+
                         {isProfileNotFound && renderProfileNotFoundView()}
 
                         {showSlotAppliedSuccess && (
@@ -8242,7 +8248,7 @@ function App() {
                                     {activeTab === 'history' && <div key="hist">{renderHistoryView()}</div>}
                                     {activeTab === 'earnings' && <div key="earn">{renderEarningsView()}</div>}
                                     {activeTab === 'profile' && <div key="prof">{renderProfileView()}</div>}
-                                    {activeTab === 'missions' && <div key="miss"><MissionsView driverId={driverId} /></div>}
+                                    {activeTab === 'missions' && <div key="miss" className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></div>}
                                     {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
                                     {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
                                 </AnimatePresence>
@@ -8756,6 +8762,7 @@ function App() {
             <AnimatePresence>
                 {showWithdrawHistory && renderWithdrawHistoryView()}
                 {showWithdrawDetail && renderWithdrawDetailView()}
+                {showHelpModal && renderHelpModal()}
             </AnimatePresence>
 
             {/* In-App Broadcast Popups */}
