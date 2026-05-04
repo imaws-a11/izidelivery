@@ -26,6 +26,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
   const [files, setFiles] = useState<{ cnh: File | null; vehicle: File | null }>({ cnh: null, vehicle: null });
   const [previews, setPreviews] = useState<{ cnh: string | null; vehicle: string | null }>({ cnh: null, vehicle: null });
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const checkStatus = async () => {
     if (!userId) return;
@@ -62,6 +63,18 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
   useEffect(() => { 
     checkStatus(); 
   }, [userId]);
+
+  useEffect(() => {
+    let timer: any;
+    if (loading && step === 'welcome') {
+      timer = setTimeout(() => {
+        setShowFeedback(true);
+      }, 3000);
+    } else {
+      setShowFeedback(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading, step]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'cnh' | 'vehicle') => {
     const file = e.target.files?.[0];
@@ -130,8 +143,12 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
         >
             <span className="material-symbols-outlined text-4xl text-black">moped</span>
         </motion.div>
-        <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Validando Cadastro...</h2>
-        <p className="text-zinc-400 font-bold text-xs mt-2 uppercase tracking-widest">Aguarde um momento</p>
+        <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">
+          {showFeedback ? "Cadastro ainda em análise" : "Validando Cadastro..."}
+        </h2>
+        <p className="text-zinc-400 font-bold text-xs mt-2 uppercase tracking-widest">
+          {showFeedback ? "Nossa equipe está revisando seus dados" : "Aguarde um momento"}
+        </p>
       </div>
     );
   }

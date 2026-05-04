@@ -1248,6 +1248,7 @@ function App() {
     const [myVehicleRequests, setMyVehicleRequests] = useState<any[]>([]);
     const [showPreferences, setShowPreferences] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
+    const [showPendingApprovalModal, setShowPendingApprovalModal] = useState(false);
 
     const [showReceipt, setShowReceipt] = useState(false);
     const [selectedReceiptUrl, setSelectedReceiptUrl] = useState('');
@@ -2123,7 +2124,7 @@ function App() {
 
     const handleToggleOnline = async () => {
         if (!isApproved) {
-            toastError("Seu cadastro está em análise. Você poderá ficar online assim que for aprovado pela administração.");
+            setShowPendingApprovalModal(true);
             return;
         }
 
@@ -6584,6 +6585,71 @@ function App() {
         );
     };
 
+    const renderPendingApprovalModal = () => (
+        <AnimatePresence>
+            {showPendingApprovalModal && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[20000] bg-zinc-900/60 backdrop-blur-xl flex items-center justify-center p-6"
+                    onClick={() => setShowPendingApprovalModal(false)}
+                >
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        className="w-full max-w-sm bg-white rounded-[48px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Background Decor */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl rounded-full -mr-16 -mt-16" />
+                        
+                        <div className="size-24 rounded-[40px] bg-yellow-400 flex items-center justify-center mb-8 shadow-xl shadow-yellow-400/20 relative">
+                            <motion.span 
+                                animate={{ rotate: [0, 10, -10, 0] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                                className="material-symbols-outlined text-5xl text-black"
+                            >
+                                hourglass_empty
+                            </motion.span>
+                            <div className="absolute -bottom-2 -right-2 size-10 rounded-2xl bg-white flex items-center justify-center shadow-lg border border-zinc-100">
+                                <span className="material-symbols-outlined text-zinc-900 text-xl font-black">verified_user</span>
+                            </div>
+                        </div>
+
+                        <h2 className="text-2xl font-black text-zinc-900 leading-tight mb-4 uppercase tracking-tighter">
+                            Cadastro em Análise
+                        </h2>
+                        
+                        <p className="text-zinc-500 font-bold text-sm leading-relaxed mb-10">
+                            Sua conta está sendo verificada pela nossa equipe. Você receberá uma notificação assim que for aprovado para realizar entregas.
+                        </p>
+
+                        <div className="w-full space-y-3">
+                            <button 
+                                onClick={() => setShowPendingApprovalModal(false)}
+                                className="w-full h-16 bg-yellow-400 rounded-3xl font-black text-sm uppercase tracking-widest text-black shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
+                            >
+                                Entendido
+                            </button>
+                            
+                            <button 
+                                onClick={() => {
+                                    setShowPendingApprovalModal(false);
+                                    setShowOnboarding(true);
+                                }}
+                                className="w-full h-16 bg-zinc-100 rounded-3xl font-black text-[10px] uppercase tracking-widest text-zinc-400 active:scale-95 transition-all"
+                            >
+                                Ver Detalhes
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+
     const renderBankDetailsView = () => {
         return (
             <motion.div
@@ -8373,6 +8439,8 @@ function App() {
                                 onClose={() => setShowOnboarding(false)}
                             />
                         )}
+
+                        {renderPendingApprovalModal()}
                     </>
                 )}
             </AnimatePresence>
