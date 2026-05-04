@@ -4733,11 +4733,12 @@ const navigateSubView = (target: string) => {
                        order={selectedItem} 
                        onBack={() => setSubView("none")} 
                        onSupport={() => setSubView("order_support")}
+                       onCancelOrder={handleCancelOrder}
                        toastSuccess={toastSuccess}
                        toastError={toastError}
                        onTrackOrder={(order) => {
                          setSelectedItem(order);
-                         setSubView("order_waiting");
+                         setSubView("active_order");
                        }}
                      />
                   </motion.div>

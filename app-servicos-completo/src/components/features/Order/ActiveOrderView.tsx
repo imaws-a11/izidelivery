@@ -113,11 +113,11 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   }
 
   return (
-    <div className="absolute inset-0 z-[100] bg-white text-zinc-900 flex flex-col overflow-hidden">
+    <div className="flex flex-col h-full bg-white text-zinc-900 relative">
       {/* Botão flutuante voltar (sempre visível no topo) */}
-      <div className="absolute top-8 left-6 z-50">
+      <div className="fixed top-8 left-6 z-[100]">
         <button
-          onClick={() => window.history.back()}
+          onClick={() => setSubView("none")}
           className="size-12 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center text-zinc-900 active:scale-90 transition-all shadow-xl shadow-zinc-200"
         >
           <Icon name="arrow_back" />
@@ -128,7 +128,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex-1 flex flex-col pt-24"
+        className="flex-1 flex flex-col pt-24 min-h-0"
       >
         {/* ÁREA DE CABEÇALHO (STATUS RÁPIDO - CLAY STYLE) */}
         <div className="shrink-0 px-6 pb-6 mt-4">
@@ -156,9 +156,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               </div>
             </div>
           </div>
-
-        {/* CONTEÚDO SCROLLABLE */}
-        <main className="flex-1 overflow-y-auto no-scrollbar px-6 py-8 space-y-12 pb-48">
+        <main className="flex-1 overflow-y-scroll overscroll-contain px-6 py-8 space-y-12 pb-48">
           {/* TRACKING TIMELINE */}
           <section className="space-y-8">
             <div className="flex items-center justify-between px-2">

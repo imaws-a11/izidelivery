@@ -9,6 +9,7 @@ interface OrderDetailViewProps {
   toastSuccess?: (msg: string) => void;
   toastError?: (msg: string) => void;
   onTrackOrder?: (order: any) => void;
+  onCancelOrder?: (id: string) => Promise<boolean>;
 }
 
 export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
@@ -17,10 +18,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   onSupport,
   toastSuccess,
   toastError,
-  onTrackOrder
+  onTrackOrder,
+  onCancelOrder
 }) => {
   const [merchantInfo, setMerchantInfo] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     const loadMerchant = async () => {
@@ -59,17 +62,36 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const isTransport = ['mototaxi', 'carro', 'van'].includes(order.service_type);
   const items = Array.isArray(order.items) ? order.items : [];
   
-  // Ajuste de cálculo para Izi Coins (não tem taxa de entrega ou serviço)
   const deliveryFee = isCoin ? 0 : (order.delivery_fee || 0);
   const serviceFee = isCoin ? 0 : 0.99;
   const subtotal = (order.total_price || 0) - deliveryFee + (order.discount || 0);
   const total = (order.total_price || 0) + serviceFee;
 
   const isPending = ['pendente_pagamento', 'pendente', 'novo'].includes(order.status) && order.payment_status !== 'paid';
-  const isActive = ['aceito', 'em_preparo', 'saiu_para_entrega', 'a_caminho', 'em_rota'].includes(order.status);
-  const isCompleted = ['entregue', 'concluido', 'finalizado'].includes(order.status);
-  const isCancelled = order.status === 'cancelado';
+  const isCompleted = ['entregue', 'concluido', 'finalizado', 'completed'].includes(order.status);
+  const isCancelled = ['cancelado', 'cancelled'].includes(order.status);
+  const isActive = !isPending && !isCompleted && !isCancelled;
   const canDelete = isCompleted || isCancelled;
+  const canCancelStatus = ['novo', 'pendente', 'waiting_driver', 'waiting_merchant', 'aceito', 'confirmado', 'a_caminho_coleta'].includes(order.status);
+
+  const handleCancel = async () => {
+    if (!onCancelOrder) return;
+    const confirm = await showConfirm({ message: 'Deseja realmente cancelar este pedido?', danger: true });
+    if (!confirm) return;
+
+    setIsCancelling(true);
+    try {
+      const success = await onCancelOrder(order.id);
+      if (success) {
+        if (toastSuccess) toastSuccess('Pedido cancelado com sucesso.');
+        onBack();
+      } else {
+        if (toastError) toastError('Erro ao cancelar pedido.');
+      }
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const handleDelete = async () => {
     const confirm = await showConfirm({ message: 'Excluir este pedido do histórico? Esta ação não pode ser desfeita.', danger: true });
@@ -91,7 +113,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
   };
 
-  // Unifica os dados do lojista (estado carregado ou objeto do pedido)
   const finalMerchant = merchantInfo || order.merchants_delivery || {};
   
   const merchantName = isCoin 
@@ -104,7 +125,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
   return (
     <div className="fixed inset-0 bg-white z-[500] flex flex-col overflow-y-auto no-scrollbar">
-      {/* Header */}
       <header className="sticky top-0 bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between z-50">
         <button onClick={onBack} className="size-10 flex items-center justify-center active:scale-90 transition-all">
           <span className="material-symbols-rounded text-zinc-900 text-2xl">arrow_back</span>
@@ -114,7 +134,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </header>
 
       <main className="px-6 py-4 space-y-8 pb-32">
-        {/* Info da Loja / Produto */}
         <section className="flex items-start gap-4">
            <div className="size-16 rounded-full bg-zinc-100 overflow-hidden border border-zinc-100 flex items-center justify-center shrink-0">
               {merchantLogo ? (
@@ -132,14 +151,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <div className="flex flex-col mt-0.5">
                  <p className="text-[11px] font-bold text-zinc-400">Pedido nº {String(order.id).slice(-4)} • {orderDate}</p>
                  <div className="flex items-center gap-2 mt-1">
-                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Acompanhando</span>
+                    <span className={`size-2 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : isCompleted ? 'bg-blue-400' : 'bg-red-400'}`} />
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-emerald-600' : isCompleted ? 'text-blue-600' : 'text-red-500'}`}>
+                      {isActive ? 'Em andamento' : isCompleted ? 'Concluído' : isCancelled ? 'Cancelado' : order.status}
+                    </span>
                  </div>
               </div>
            </div>
         </section>
 
-        {/* Action Buttons - Pendente */}
         {isPending && (
           <section className="space-y-3">
             <div className="bg-yellow-50 rounded-[32px] p-6 border border-yellow-200/50 space-y-4">
@@ -164,29 +184,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 Ir para o Pagamento
               </button>
             </div>
-            <button
-              onClick={async () => {
-                const confirm = await showConfirm({ message: 'Deseja realmente cancelar este pedido?', danger: true });
-                if (!confirm) return;
-                const { error } = await supabase
-                  .from('orders_delivery')
-                  .update({ status: 'cancelado' })
-                  .eq('id', order.id);
-                if (!error) {
-                  if (toastSuccess) toastSuccess('Pedido cancelado com sucesso!');
-                  onBack();
-                } else {
-                  if (toastError) toastError('Erro ao cancelar pedido.');
-                }
-              }}
-              className="w-full py-4 border-2 border-zinc-100 text-zinc-400 font-black text-xs uppercase tracking-widest rounded-2xl active:bg-zinc-50 transition-all"
-            >
-              Cancelar Pedido
-            </button>
           </section>
         )}
 
-        {/* Botão Acompanhar - Pedido ativo de objeto ou transporte */}
         {isActive && (isObjectDelivery || isTransport) && (
           <section>
             <button
@@ -199,7 +199,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </section>
         )}
 
-        {/* Botão Acompanhar - Pedido ativo de restaurante */}
         {isActive && !isObjectDelivery && !isTransport && !isCoin && (
           <section>
             <button
@@ -212,7 +211,22 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </section>
         )}
 
-        {/* Botão Excluir - Pedido finalizado ou cancelado */}
+        {canCancelStatus && !isCompleted && !isCancelled && (
+          <section>
+            <button
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className="w-full py-4 border-2 border-zinc-100 text-zinc-400 font-black text-xs uppercase tracking-widest rounded-2xl active:bg-zinc-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isCancelling ? (
+                <div className="size-4 border-2 border-zinc-300 border-t-zinc-500 rounded-full animate-spin" />
+              ) : (
+                'Cancelar Pedido'
+              )}
+            </button>
+          </section>
+        )}
+
         {canDelete && (
           <section>
             <button
@@ -230,7 +244,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </section>
         )}
 
-        {/* Lista de Itens */}
         {!isCoin && (
           <section className="space-y-6">
             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Itens do pedido</h3>

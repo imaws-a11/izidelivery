@@ -42,6 +42,12 @@ export const OrderSupportView: React.FC<OrderSupportViewProps> = ({ order, onBac
     if (!userId || !order?.id) return;
 
     const fetchMessages = async () => {
+      if (!receiverId) {
+        setMessages([]);
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       const { data, error } = await supabase
         .from('messages_delivery')
