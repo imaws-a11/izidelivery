@@ -3953,26 +3953,26 @@ const navigateSubView = (target: string) => {
             )}
 
             <div className="px-10 pb-12 pt-6 text-center space-y-6">
-               <div className="space-y-2">
-                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeBroadcast.title}</h3>
-                 <p className="text-[12px] text-zinc-400 leading-relaxed font-medium">{activeBroadcast.message}</p>
-               </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeBroadcast.title}</h3>
+                <p className="text-[12px] text-zinc-400 leading-relaxed font-medium">{activeBroadcast.message}</p>
+              </div>
 
-               <motion.button 
-                 whileTap={{ scale: 0.95 }}
-                 onClick={closeBroadcast}
-                 className="w-full bg-yellow-400 text-black font-black py-5 rounded-[22px] shadow-xl shadow-yellow-400/10 uppercase tracking-widest text-[10px]"
-               >
-                 Aproveitar
-               </motion.button>
-            </div>
+              <motion.button 
+                whileTap={{ scale: 0.95 }}
+                onClick={closeBroadcast}
+                className="w-full bg-yellow-400 text-black font-black py-5 rounded-[22px] shadow-xl shadow-yellow-400/10 uppercase tracking-widest text-[10px]"
+              >
+                Aproveitar
+              </motion.button>
+           </div>
 
-            <button 
-              onClick={closeBroadcast}
-              className="absolute top-6 right-6 size-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 active:scale-90 transition-all font-black"
-            >
-              <span className="material-symbols-outlined text-xl">close</span>
-            </button>
+           <button 
+             onClick={closeBroadcast}
+             className="absolute top-6 right-6 size-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 active:scale-90 transition-all font-black"
+           >
+             <span className="material-symbols-outlined text-xl">close</span>
+           </button>
           </motion.div>
         </motion.div>
       )}
@@ -4002,7 +4002,7 @@ const navigateSubView = (target: string) => {
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             <motion.div 
@@ -4010,20 +4010,17 @@ const navigateSubView = (target: string) => {
               initial={{ scale: 0.9, opacity: 0, y: 30 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
               exit={{ scale: 0.9, opacity: 0, y: 30 }} 
-              className="w-full max-w-lg bg-black border-2 border-white/10 rounded-[40px] shadow-2xl relative max-h-[95vh] flex flex-col overflow-hidden"
+              className="w-full max-w-lg bg-white rounded-[40px] shadow-2xl relative max-h-[95vh] flex flex-col overflow-hidden border border-zinc-100"
             >
-              {/* Glow Accent */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-yellow-400/5 blur-[100px] rounded-full pointer-events-none" />
-              
               <header className="shrink-0 px-8 pt-10 pb-6 flex items-center justify-between relative z-50">
                 <div className="flex flex-col">
-                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter">
-                    {isFinishingPayment ? "Pagar Pedido" : "Izi Store"}
+                  <h3 className="text-3xl font-black text-zinc-900 uppercase tracking-tighter">
+                    {isFinishingPayment ? "Pagar Pedido" : "Recarregar"}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="size-1.5 rounded-full bg-yellow-400" />
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">
-                      {isFinishingPayment ? "Escolha como pagar" : "Recarga InstantÃ¢nea"}
+                    <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em]">
+                      {isFinishingPayment ? "Escolha como pagar" : "Izi Pay Instantâneo"}
                     </p>
                   </div>
                 </div>
@@ -4034,29 +4031,29 @@ const navigateSubView = (target: string) => {
                     setShowDepositModal(false);
                     if (isFinishingPayment) setSelectedItem(null);
                   }}
-                  className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white"
+                  className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-900"
                 >
-                  <span className="material-symbols-outlined font-black text-xl">close</span>
+                  <span className="material-symbols-rounded font-black text-xl">close</span>
                 </motion.button>
               </header>
 
               <div className="flex-1 overflow-y-auto no-scrollbar px-8 pb-10 space-y-10 relative z-10">
                 {/* Visualizador de Saldo Final */}
-                <section className="relative py-12 rounded-[32px] bg-white/[0.03] border border-white/10 flex flex-col items-center justify-center overflow-hidden">
-                   <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] mb-4">ConversÃ£o Prevista</p>
+                <section className="relative py-12 rounded-[32px] bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center overflow-hidden">
+                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mb-4">Conversão Prevista</p>
                       <div className="flex items-baseline justify-center">
-                         <span className="text-7xl font-black text-white tracking-tighter tabular-nums">
+                         <span className="text-7xl font-black text-zinc-900 tracking-tighter tabular-nums">
                            {integerPart.toLocaleString('pt-BR')}
                          </span>
-                         <span className="text-2xl font-black text-yellow-400 tracking-tighter ml-1 tabular-nums">
+                         <span className="text-2xl font-black text-yellow-500 tracking-tighter ml-1 tabular-nums">
                            ,{fractionalPart.substring(0, 2)}
                          </span>
                          <div className="size-12 ml-4">
-                            <img src={iziCoinImg} alt="" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]" />
+                            <img src={iziCoinImg} alt="" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(250,204,21,0.2)]" />
                          </div>
                       </div>
                    <div className="mt-8 px-6 py-2 rounded-full bg-yellow-400/10 border border-yellow-400/20">
-                      <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">1 IZI = R$ {coinRate.toFixed(2).replace(".", ",")}</p>
+                      <p className="text-[9px] font-black text-yellow-600 uppercase tracking-widest">1 IZI = R$ {coinRate.toFixed(2).replace(".", ",")}</p>
                    </div>
                 </section>
 
@@ -4064,10 +4061,10 @@ const navigateSubView = (target: string) => {
                 {!isFinishingPayment && (
                   <section className="space-y-6">
                     <div className="flex justify-between items-end px-2">
-                      <label className="text-[11px] font-black text-white/40 uppercase tracking-[0.3em]">Escolha o valor</label>
+                      <label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.3em]">Escolha o valor</label>
                       <div className="text-right">
-                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Total a Pagar</p>
-                         <p className="text-2xl font-black text-yellow-400 tracking-tighter">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                         <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Total a Pagar</p>
+                         <p className="text-2xl font-black text-yellow-500 tracking-tighter">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                       </div>
                     </div>
 
@@ -4080,7 +4077,7 @@ const navigateSubView = (target: string) => {
                           className={`h-16 rounded-2xl border-2 font-black text-lg transition-all flex items-center justify-center
                             ${Number(depositAmount) === val 
                               ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/10' 
-                              : 'bg-white/5 border-white/5 text-white/60 hover:border-white/20 hover:text-white'}`}
+                              : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-300 hover:text-zinc-900'}`}
                         >
                           <span className="text-xs mr-1 opacity-60">R$</span>{val}
                         </button>
@@ -4089,17 +4086,17 @@ const navigateSubView = (target: string) => {
 
                     {/* Manual Input */}
                     <div className="relative mt-8">
-                      <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-3xl p-2 pl-8 focus-within:border-yellow-400/50 transition-all">
-                         <span className="text-white/20 font-black text-xl">R$</span>
+                      <div className="flex items-center gap-4 bg-zinc-50 border border-zinc-100 rounded-3xl p-2 pl-8 focus-within:border-yellow-400/50 transition-all">
+                         <span className="text-zinc-300 font-black text-xl">R$</span>
                          <input 
                           type="number"
                           value={depositAmount}
                           onChange={(e) => setDepositAmount(e.target.value)}
                           placeholder="Outro valor..."
-                          className="flex-1 bg-transparent border-none text-2xl font-black text-white outline-none py-6 tabular-nums placeholder:text-white/10"
+                          className="flex-1 bg-transparent border-none text-2xl font-black text-zinc-900 outline-none py-6 tabular-nums placeholder:text-zinc-200"
                         />
-                        <div className="size-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                          <span className="material-symbols-outlined text-white/40 text-2xl font-black">edit</span>
+                        <div className="size-14 rounded-2xl bg-white flex items-center justify-center border border-zinc-100">
+                          <span className="material-symbols-rounded text-zinc-400 text-2xl font-black">edit</span>
                         </div>
                       </div>
                     </div>
@@ -4108,30 +4105,30 @@ const navigateSubView = (target: string) => {
 
                 {isFinishingPayment && (
                   <div className="py-6 flex flex-col items-center text-center">
-                     <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Valor do Pedido</p>
-                     <p className="text-4xl font-black text-yellow-400 tracking-tighter">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                     <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">Valor do Pedido</p>
+                     <p className="text-4xl font-black text-yellow-500 tracking-tighter">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                   </div>
                 )}
 
                 {/* MÃ©todos de Pagamento */}
                 <section className="space-y-4">
-                   <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] px-2">Meio de Pagamento</h3>
+                   <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] px-2">Meio de Pagamento</h3>
                    <div className="grid grid-cols-3 gap-3">
                       {[
-                        { id: 'cartao', icon: 'credit_card', label: 'Cartão' },
+                        { id: 'lightning', icon: 'bolt', label: 'Lightning' },
                         { id: 'pix', icon: 'pix', label: 'Pix' },
-                        { id: 'lightning', icon: 'bolt', label: 'Lightning' }
+                        { id: 'cartao', icon: 'credit_card', label: 'Cartão' }
                       ].map((method) => (
                        <button
                          key={method.id}
                          onClick={() => setDepositPaymentMethod(method.id)}
                          className={`py-6 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2 active:scale-95
                            ${depositPaymentMethod === method.id 
-                             ? "bg-yellow-400 border-yellow-400 text-black shadow-lg" 
-                             : "bg-white/5 border-white/5 text-white/40 hover:border-white/10"
+                             ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/10" 
+                             : "bg-white border-zinc-100 text-zinc-400 hover:border-zinc-300"
                            }`}
                        >
-                         <span className="material-symbols-outlined text-2xl font-black">{method.icon}</span>
+                         <span className="material-symbols-rounded text-2xl font-black">{method.icon}</span>
                          <span className="text-[9px] font-black uppercase tracking-widest leading-none">{method.label}</span>
                        </button>
                      ))}
@@ -4139,27 +4136,27 @@ const navigateSubView = (target: string) => {
                 </section>
               </div>
 
-              <footer className="shrink-0 p-8 pt-4 bg-black border-t border-white/10 relative z-20">
+              <footer className="shrink-0 p-8 pt-4 bg-white border-t border-zinc-100 relative z-20">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={!depositAmount || Number(depositAmount) <= 0 || isLoading}
                   onClick={() => handlePurchaseCoins(Number(depositAmount), depositPaymentMethod, isFinishingPayment ? selectedItem?.id : undefined)}
-                  className="w-full bg-yellow-400 text-black font-black h-20 rounded-[28px] shadow-xl flex justify-center items-center gap-4 group relative overflow-hidden"
+                  className="w-full bg-zinc-900 text-white font-black h-20 rounded-[28px] shadow-xl shadow-zinc-900/10 flex justify-center items-center gap-4 group relative overflow-hidden"
                 >
                   {isLoading ? (
-                    <div className="size-6 border-4 border-black/20 border-t-black rounded-full animate-spin" />
+                    <div className="size-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
                       <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar Depósito</span>
-                      <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
+                      <span className="material-symbols-rounded text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
                     </>
                   )}
                 </motion.button>
-                <div className="flex items-center justify-center gap-3 mt-10 opacity-30">
-                   <div className="h-px w-8 bg-zinc-800" />
-                   <span className="text-[10px] font-black text-zinc-600 tracking-[0.8em] uppercase">Powered by Izi Pay</span>
-                   <div className="h-px w-8 bg-zinc-800" />
+                <div className="flex items-center justify-center gap-3 mt-10">
+                   <div className="h-px w-8 bg-zinc-100" />
+                   <span className="text-[10px] font-black text-zinc-300 tracking-[0.8em] uppercase">Powered by Izi Pay</span>
+                   <div className="h-px w-8 bg-zinc-100" />
                 </div>
               </footer>
             </motion.div>
@@ -4168,6 +4165,9 @@ const navigateSubView = (target: string) => {
       </AnimatePresence>
     );
   };
+
+  
+
 
 
 
@@ -4488,6 +4488,7 @@ const navigateSubView = (target: string) => {
                        walletBalance={walletBalance || 0}
                        iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 1.0}
                        onBack={() => setTab("home")}
+                       onDeposit={handlePurchaseCoins}
                      />
                   </motion.div>
                 )}

@@ -209,6 +209,7 @@ interface IziPayViewProps {
   onBack?: () => void;
   walletBalance?: number;
   iziCoinValue?: number;
+  onDeposit?: (amount: number, method: string) => void;
 }
 
 const QuickAction = ({ icon, label, onClick, color = "bg-zinc-50", active = false }: any) => (
@@ -220,7 +221,7 @@ const QuickAction = ({ icon, label, onClick, color = "bg-zinc-50", active = fals
     <div className={`size-16 ${active ? 'bg-zinc-900 shadow-xl scale-110' : color} rounded-[24px] flex items-center justify-center shadow-[10px_10px_20px_rgba(0,0,0,0.05),-5px_-5px_15px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(255,255,255,0.5)] group-active:shadow-inner transition-all border ${active ? 'border-zinc-800' : 'border-white/40'}`}>
       <span className={`material-symbols-rounded text-2xl font-black ${active ? 'text-yellow-400' : 'text-zinc-900'}`}>{icon}</span>
     </div>
-    <span className={`text-[10px] font-black uppercase tracking-[0.1em] ${active ? 'text-zinc-900' : 'text-zinc-400'} group-hover:text-black transition-colors`}>{label}</span>
+    <span className={`text-[10px] font-black uppercase tracking-[0.1em] ${active ? 'text-zinc-900' : 'text-zinc-500'} group-hover:text-black transition-colors`}>{label}</span>
   </motion.button>
 );
 
@@ -237,14 +238,14 @@ const TransactionItem = ({ title, date, amount, icon, color }: any) => {
         </div>
         <div>
           <p className="font-black text-[15px] text-zinc-900 tracking-tight">{displayTitle}</p>
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">{date}</p>
+          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-0.5">{date}</p>
         </div>
       </div>
       <div className="text-right">
         <p className={`font-black text-base tracking-tighter ${amount.startsWith('+') ? 'text-emerald-500' : 'text-zinc-900'}`}>
           {amount}
         </p>
-        <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest">Confirmado</span>
+        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Confirmado</span>
       </div>
     </div>
   );
@@ -257,9 +258,13 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
   userId,
   onBack,
   walletBalance = 0,
-  iziCoinValue = 1.0
+  iziCoinValue = 1.0,
+  onDeposit
 }) => {
   const [subView, setSubView] = useState<"main" | "send" | "my_qr" | "loan" | "deposit" | "scan" | "statement">("main");
+  const [depositAmount, setDepositAmount] = useState("50");
+  const [depositMethod, setDepositMethod] = useState("lightning");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [balance, setBalance] = useState(walletBalance);
   const [coins, setCoins] = useState(iziCoins);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
@@ -315,10 +320,10 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
             <div className="space-y-6">
                <div className="space-y-1">
                   <div className="flex items-center gap-2 ml-1">
-                     <p className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em]">Patrimônio Total (BRL)</p>
-                     <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="text-zinc-300">
-                        <span className="material-symbols-rounded text-sm">{isBalanceVisible ? 'visibility' : 'visibility_off'}</span>
-                     </button>
+                      <p className="text-zinc-500 font-black text-[10px] uppercase tracking-[0.2em]">Patrimônio Total (BRL)</p>
+                      <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="text-zinc-400">
+                         <span className="material-symbols-rounded text-sm">{isBalanceVisible ? 'visibility' : 'visibility_off'}</span>
+                      </button>
                   </div>
                   <h2 className="text-4xl font-black text-zinc-900 tracking-tighter">
                      {isBalanceVisible ? `R$ ${(balance + (coins * iziCoinValue)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••••"}
@@ -405,7 +410,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         <section>
           <div className="flex items-center justify-between mb-6 px-4">
             <h3 className="text-xl font-black text-zinc-900 tracking-tight uppercase">Atividades</h3>
-            <button className="text-zinc-400 font-black text-[10px] uppercase tracking-widest hover:text-black transition-colors">Ver histórico completo</button>
+            <button className="text-zinc-500 font-black text-[10px] uppercase tracking-widest hover:text-black transition-colors">Ver histórico completo</button>
           </div>
           <div className="bg-white rounded-[48px] p-3 shadow-xl border border-zinc-100 space-y-1">
             {walletTransactions.length > 0 ? (
@@ -424,7 +429,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                 <div className="size-20 rounded-[32px] bg-zinc-50 flex items-center justify-center mb-6 border border-zinc-100">
                   <span className="material-symbols-rounded text-4xl text-zinc-300">history</span>
                 </div>
-                <p className="text-[13px] font-black text-zinc-400 uppercase tracking-widest leading-relaxed">Você ainda não possui <br/> transações registradas</p>
+                <p className="text-[13px] font-black text-zinc-500 uppercase tracking-widest leading-relaxed">Você ainda não possui <br/> transações registradas</p>
               </div>
             )}
           </div>
@@ -461,7 +466,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
 
       <div className="flex-1 overflow-y-auto px-6 space-y-10 pt-6 pb-40">
         <div className="p-8 bg-zinc-50 rounded-[40px] border border-zinc-100 shadow-inner">
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-1">Destinatário</p>
+          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 ml-1">Destinatário</p>
           <div className="flex items-center gap-4">
              <div className="size-12 rounded-2xl bg-zinc-900 flex items-center justify-center shrink-0">
                 <span className="material-symbols-rounded text-yellow-400">person</span>
@@ -482,7 +487,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         </div>
 
         <div className="p-8 bg-zinc-50 rounded-[40px] border border-zinc-100 shadow-inner">
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-1">Valor da Transferência</p>
+          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 ml-1">Valor da Transferência</p>
           <div className="flex items-baseline gap-3">
             <span className="text-2xl font-black text-zinc-400">R$</span>
             <input 
@@ -495,7 +500,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
             />
           </div>
           <div className="mt-6 flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-             <span className="text-zinc-400">Saldo em Carteira</span>
+             <span className="text-zinc-500">Saldo em Carteira</span>
              <span className="text-zinc-900">R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
@@ -766,42 +771,99 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
            </motion.div>
         )}
         {subView === "deposit" && (
-           <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 bg-white z-[120] flex flex-col">
-              <header className="px-6 pt-20 pb-6 flex items-center gap-6 border-b border-zinc-100">
-                 <button onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-black font-black">
+           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed inset-0 bg-[#F7F7F7] z-[120] flex flex-col">
+              <header className="px-6 pt-20 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 relative z-10">
+                 <button onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-900 font-black">
                     <span className="material-symbols-rounded">arrow_back</span>
                  </button>
-                 <h2 className="text-xl font-black uppercase tracking-tighter">Recarregar Carteira</h2>
+                 <div className="flex flex-col">
+                    <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Recarregar Carteira</h2>
+                    <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">Depósito Instantâneo</p>
+                 </div>
               </header>
-              <div className="p-10 flex-1 flex flex-col items-center justify-center gap-10">
-                 <div className="size-32 rounded-[48px] bg-zinc-900 flex items-center justify-center shadow-2xl">
-                    <span className="material-symbols-rounded text-white text-5xl font-black">account_balance_wallet</span>
-                 </div>
-                 <div className="text-center">
-                    <h3 className="text-2xl font-black tracking-tight mb-2 uppercase">Escolha como recarregar</h3>
-                    <p className="text-zinc-400 font-bold text-xs uppercase tracking-widest">O saldo cai instantaneamente na conta</p>
-                 </div>
-                 <div className="w-full grid grid-cols-1 gap-4">
-                    <button className="h-20 bg-zinc-50 rounded-[28px] border border-zinc-100 flex items-center px-8 gap-6 active:scale-95 transition-all">
-                       <div className="size-12 rounded-2xl bg-emerald-100 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-rounded text-emerald-600 font-black">pix</span>
-                       </div>
-                       <div className="text-left">
-                          <p className="font-black text-base leading-none">PIX Copia e Cola</p>
-                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1.5">Liberação Imediata</p>
-                       </div>
-                    </button>
-                    <button className="h-20 bg-zinc-50 rounded-[28px] border border-zinc-100 flex items-center px-8 gap-6 active:scale-95 transition-all">
-                       <div className="size-12 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-rounded text-blue-600 font-black">credit_card</span>
-                       </div>
-                       <div className="text-left">
-                          <p className="font-black text-base leading-none">Cartão de Crédito</p>
-                          <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1.5">Em até 12x</p>
-                       </div>
-                    </button>
-                 </div>
+
+              <div className="flex-1 overflow-y-auto no-scrollbar p-8 space-y-12">
+                 {/* Valor Display */}
+                 <section className="flex flex-col items-center justify-center py-10 bg-white rounded-[40px] shadow-sm border border-zinc-100">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mb-6">Valor do Depósito</p>
+                    <div className="flex items-baseline gap-2">
+                       <span className="text-3xl font-black text-zinc-300">R$</span>
+                       <input 
+                         type="number"
+                         value={depositAmount}
+                         onChange={(e) => setDepositAmount(e.target.value)}
+                         className="bg-transparent text-7xl font-black text-zinc-900 outline-none w-48 text-center tracking-tighter tabular-nums"
+                       />
+                    </div>
+                 </section>
+
+                 {/* Chips de Valor */}
+                 <section className="grid grid-cols-4 gap-3">
+                    {[25, 50, 100, 200].map(val => (
+                       <button 
+                         key={val}
+                         onClick={() => setDepositAmount(val.toString())}
+                         className={`h-16 rounded-2xl border-2 font-black transition-all ${depositAmount === val.toString() ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-white border-zinc-100 text-zinc-500'}`}
+                       >
+                         {val}
+                       </button>
+                    ))}
+                 </section>
+
+                 {/* Meios de Pagamento */}
+                 <section className="space-y-6">
+                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] ml-2">Escolha o Método</h3>
+                    <div className="space-y-4">
+                       {[
+                         { id: 'lightning', label: 'Bitcoin Lightning', desc: 'Aprovação Instantânea • Cashback 1%', icon: 'bolt', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+                         { id: 'pix', label: 'PIX Copia e Cola', desc: 'Liberação em poucos segundos', icon: 'pix', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                         { id: 'cartao', label: 'Cartão de Crédito', desc: 'Em até 12x no App', icon: 'credit_card', color: 'text-blue-600', bg: 'bg-blue-50' }
+                       ].map((m) => (
+                         <button 
+                           key={m.id}
+                           onClick={() => setDepositMethod(m.id)}
+                           className={`w-full p-6 rounded-[32px] border-2 flex items-center gap-6 transition-all active:scale-[0.98] ${depositMethod === m.id ? 'bg-white border-yellow-400 shadow-xl shadow-yellow-400/5' : 'bg-white border-zinc-100'}`}
+                         >
+                            <div className={`size-14 rounded-2xl ${m.bg} flex items-center justify-center shrink-0`}>
+                               <span className={`material-symbols-rounded text-3xl font-black ${m.color}`}>{m.icon}</span>
+                            </div>
+                            <div className="text-left flex-1">
+                               <p className="font-black text-zinc-900 text-lg leading-none">{m.label}</p>
+                               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-2">{m.desc}</p>
+                            </div>
+                            {depositMethod === m.id && (
+                               <div className="size-6 rounded-full bg-yellow-400 flex items-center justify-center">
+                                  <span className="material-symbols-rounded text-black text-sm font-black">check</span>
+                               </div>
+                            )}
+                         </button>
+                       ))}
+                    </div>
+                 </section>
               </div>
+
+              <footer className="p-8 pb-12 bg-white border-t border-zinc-100 relative z-20">
+                 <motion.button 
+                   whileTap={{ scale: 0.98 }}
+                   disabled={isProcessing || !depositAmount || Number(depositAmount) <= 0}
+                   onClick={() => {
+                      if (onDeposit) {
+                         setIsProcessing(true);
+                         onDeposit(Number(depositAmount), depositMethod);
+                      }
+                   }}
+                   className="w-full h-20 bg-zinc-900 text-white rounded-[32px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-zinc-900/20 flex items-center justify-center gap-4 group"
+                 >
+                    {isProcessing ? (
+                       <div className="size-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                       <>
+                          <span>Confirmar Recarga</span>
+                          <span className="material-symbols-rounded font-black group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                       </>
+                    )}
+                 </motion.button>
+              </footer>
            </motion.div>
         )}
       </AnimatePresence>
