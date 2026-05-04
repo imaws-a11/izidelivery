@@ -675,8 +675,8 @@ function App() {
                 id: userId, 
                 name: name || 'Entregador Izi',
                 email: email, 
-                is_online: true, 
-                is_active: true, 
+                is_online: false, 
+                is_active: false, 
                 is_deleted: false,
                 vehicle_type: 'mototaxi'
             });
@@ -1188,6 +1188,7 @@ function App() {
     const [isSavingPix, setIsSavingPix] = useState(false);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [showPersonalDataModal, setShowPersonalDataModal] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const [isProfileNotFound, setIsProfileNotFound] = useState(false);
     const [editProfileData, setEditProfileData] = useState({
         name: '',
@@ -1872,6 +1873,7 @@ function App() {
                         console.error('[AUTH] Erro ao buscar perfil:', profileError);
                         if (profileError.code === 'PGRST116' || profileError.message.includes('JSON')) {
                             setIsProfileNotFound(true);
+                            setIsApproved(false);
                         }
                     }
 
@@ -1927,6 +1929,12 @@ function App() {
                                 setPrefServiceTypes(p.pref_services);
                                 localStorage.setItem('pref_services', JSON.stringify(p.pref_services));
                             }
+                        }
+                        const active = !!profile.is_active;
+                        setIsApproved(active);
+                        if (!active) {
+                            setIsOnline(false);
+                            localStorage.setItem('Izi_online', 'false');
                         }
                     } else {
                         const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
@@ -2078,6 +2086,10 @@ function App() {
                 // REMOVIDO: Sincronização de is_online do banco para cá.
                 // O localStorage é a autoridade absoluta sobre a intenção do motorista.
                 // A única forma de ser ejetado é via is_active (Remote Eject) ou Logout manual.
+                if (updated.is_active !== undefined) {
+                    setIsApproved(!!updated.is_active);
+                    if (!updated.is_active) setIsOnline(false);
+                }
                 
                 // Recarregar dados financeiros se o saldo mudou por outro dispositivo
                 refreshFinanceData();
@@ -2110,6 +2122,11 @@ function App() {
     }, [driverId, isAuthenticated, isOnline]);
 
     const handleToggleOnline = async () => {
+        if (!isApproved) {
+            toastError("Seu cadastro está em análise. Você poderá ficar online assim que for aprovado pela administração.");
+            return;
+        }
+
         const nextState = !isOnline;
 
         // SALVA NO LOCALSTORAGE IMEDIATAMENTE Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ antes de qualquer chamada ao banco
@@ -2858,6 +2875,9 @@ function App() {
                     
                     if (isOnlineRef.current && shouldSound) {
                         playIziSound('driver', true);
+                        if (Capacitor.getPlatform() === 'android') {
+                            ForegroundService.moveToForeground().catch(() => {});
+                        }
                         if (Notification.permission === 'granted') {
                             new Notification('ðŸš€ Nova Missão Izi!', { 
                                 body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
@@ -3946,6 +3966,31 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
+                    {!isApproved && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-rose-500 p-6 rounded-[32px] shadow-[0_20px_40px_rgba(244,63,94,0.2)] flex items-center gap-5 relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 size-24 bg-white/10 blur-2xl rounded-full translate-x-8 -translate-y-8" />
+                            <div className="size-14 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+                                <Icon name="warning" className="text-white" size={32} />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-white font-black text-sm uppercase tracking-tighter leading-tight">Cadastro Pendente</h3>
+                                <p className="text-white/80 text-[10px] font-bold leading-tight mt-1 uppercase tracking-widest">
+                                    Aguarde a aprovação do administrador para começar a trabalhar.
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setShowOnboarding(true)}
+                                className="h-10 px-4 rounded-xl bg-white text-rose-500 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+                            >
+                                Detalhes
+                            </button>
+                        </motion.div>
+                    )}
+
                     <header className="bg-yellow-400 rounded-[3rem] overflow-hidden relative p-7 flex flex-col items-center text-center gap-5 shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
                     {/* Elementos Decorativos de Fundo */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/40 rounded-full blur-[100px] pointer-events-none" />
@@ -6395,6 +6440,16 @@ function App() {
 
                 <div className="w-full space-y-4">
                     <button 
+                        onClick={() => {
+                            setIsProfileNotFound(false);
+                            setShowOnboarding(true);
+                        }}
+                        className="w-full h-16 rounded-[28px] bg-yellow-400 text-zinc-900 font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                    >
+                        <Icon name="verified" /> Concluir Cadastro
+                    </button>
+
+                    <button 
                         onClick={() => window.open('https://wa.me/5531995610728', '_blank')}
                         className="w-full h-16 rounded-[28px] bg-zinc-900 text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
                     >
@@ -8172,6 +8227,21 @@ function App() {
                         </AnimatePresence>
 
                         {isProfileNotFound && renderProfileNotFoundView()}
+
+                        {showOnboarding && driverId && (
+                            <OnboardingView 
+                                userId={driverId} 
+                                onApproved={() => {
+                                    setShowOnboarding(false);
+                                    setIsProfileNotFound(false);
+                                    if (driverId) checkApprovalStatus(driverId);
+                                }} 
+                                onLogout={() => {
+                                    setShowOnboarding(false);
+                                    handleLogout();
+                                }}
+                            />
+                        )}
 
                         {showSlotAppliedSuccess && (
                             <motion.div 

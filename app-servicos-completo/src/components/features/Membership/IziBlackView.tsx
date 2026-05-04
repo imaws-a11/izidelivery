@@ -19,7 +19,7 @@ export const IziBlackView = () => {
 
   // Benefícios para quem JÁ É membro
   const activePerks = [
-    { id: 'frete', label: 'Frete Grátis', icon: 'local_shipping', active: true, desc: `Frete grátis ilimitado em pedidos acima de R$ ${appSettings?.izi_black_min_order_free_shipping || '50,00'}.` },
+    { id: 'frete', label: 'Frete Grátis', icon: 'local_shipping', active: true, desc: `Frete grátis ilimitado em pedidos acima de R$ ${appSettings?.izi_black_min_order_free_shipping || '30,00'}.` },
     { id: 'cashback', label: 'Cashback ' + (appSettings?.izi_black_cashback || '1') + '%', icon: 'monetization_on', active: true, desc: `Receba ${appSettings?.izi_black_cashback || '1'}% de volta em IZI Coins em cada compra.` },
     { id: 'priority', label: 'Prioridade', icon: 'bolt', active: true, desc: "Seus pedidos são priorizados na fila de preparo e entrega." },
     { id: 'surprise', label: 'Izi Surprise', icon: 'card_giftcard', active: true, desc: "Mimos e brindes exclusivos enviados aleatoriamente." },
@@ -75,8 +75,8 @@ export const IziBlackView = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => setSubView("izi_black_purchase")}
             className="w-full py-6 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl relative overflow-hidden group"
-            style={{ 
-              background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", 
+            style={{
+              background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)",
               color: "#000"
             }}
           >
@@ -96,10 +96,10 @@ export const IziBlackView = () => {
 
             <div className="grid grid-cols-1 gap-4">
               {masterPerks.map((p, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 20 }} 
-                  animate={{ opacity: 1, y: 0 }} 
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                   className="bg-zinc-900/40 border border-white/[0.03] rounded-[32px] p-6 flex items-center gap-5 group hover:bg-zinc-900/60 transition-all"
                 >
@@ -161,22 +161,22 @@ export const IziBlackView = () => {
           <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12">
             <Icon name="monetization_on" size={150} />
           </div>
-          
+
           <div className="relative z-10 space-y-4">
             <div className="flex items-center justify-center gap-2">
               <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_15px_#fbbf24]" />
               <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.5em]">Saldo IziCoins</p>
             </div>
-            
+
             <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4">
               {iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString('pt-BR')}
             </h2>
-            
+
             <div className="flex flex-col items-center gap-3 pt-4">
               <div className="px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">
                 {globalSettings?.izi_coin_rate || 5} coins a cada R$ 1,00 gasto
               </div>
-              <motion.button 
+              <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSubView("wallet")}
                 className="text-[10px] font-black text-yellow-400 uppercase tracking-widest hover:underline"
@@ -211,8 +211,8 @@ export const IziBlackView = () => {
           <div className="flex items-center justify-between px-2">
             <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em]">Benefícios Ativos</h3>
             <span className="flex items-center gap-2">
-               <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-               <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Protocolo Seguro</span>
+              <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+              <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Protocolo Seguro</span>
             </span>
           </div>
 
@@ -224,11 +224,10 @@ export const IziBlackView = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 + i * 0.1 }}
                 onClick={() => setActivePerkDetail(activePerkDetail === perk.id ? null : perk.id)}
-                className={`flex flex-col rounded-[32px] border transition-all cursor-pointer overflow-hidden ${
-                  activePerkDetail === perk.id 
-                    ? 'bg-yellow-400/5 border-yellow-400/20' 
+                className={`flex flex-col rounded-[32px] border transition-all cursor-pointer overflow-hidden ${activePerkDetail === perk.id
+                    ? 'bg-yellow-400/5 border-yellow-400/20'
                     : 'bg-zinc-900/40 border-white/[0.03]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-5 p-6">
                   <div className={`size-12 rounded-2xl flex items-center justify-center ${activePerkDetail === perk.id ? 'bg-yellow-400 text-black' : 'bg-white/[0.03] text-yellow-400'}`}>
@@ -240,7 +239,7 @@ export const IziBlackView = () => {
                   </div>
                   <Icon name={activePerkDetail === perk.id ? 'expand_less' : 'expand_more'} size={20} className="text-white/20" />
                 </div>
-                
+
                 <AnimatePresence>
                   {activePerkDetail === perk.id && (
                     <motion.div
@@ -264,22 +263,22 @@ export const IziBlackView = () => {
 
         {/* Quick Actions / Integration */}
         <div className="pt-4 space-y-4">
-           <motion.button 
-             whileTap={{ scale: 0.98 }}
-             onClick={() => setSubView("quest_center")}
-             className="w-full py-6 rounded-[35px] bg-white/[0.03] border border-white/[0.05] flex items-center justify-between px-8 group hover:bg-white/[0.05] transition-all"
-           >
-              <div className="flex items-center gap-5">
-                 <div className="size-12 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
-                    <Icon name="military_tech" size={24} />
-                 </div>
-                 <div className="text-left">
-                    <p className="font-black text-sm text-white">Izi Battle Pass</p>
-                    <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Missões e Ranking Global</p>
-                 </div>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setSubView("quest_center")}
+            className="w-full py-6 rounded-[35px] bg-white/[0.03] border border-white/[0.05] flex items-center justify-between px-8 group hover:bg-white/[0.05] transition-all"
+          >
+            <div className="flex items-center gap-5">
+              <div className="size-12 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
+                <Icon name="military_tech" size={24} />
               </div>
-              <Icon name="chevron_right" size={20} className="text-white/20" />
-           </motion.button>
+              <div className="text-left">
+                <p className="font-black text-sm text-white">Izi Battle Pass</p>
+                <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Missões e Ranking Global</p>
+              </div>
+            </div>
+            <Icon name="chevron_right" size={20} className="text-white/20" />
+          </motion.button>
         </div>
 
         <div className="text-center pt-8 opacity-20">

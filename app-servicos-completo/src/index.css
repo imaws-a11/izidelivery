@@ -200,3 +200,6 @@ span, div, button, input, label {
 .font-black {
   font-weight: 900 !important;
 }
+/* SCANNER TRANSPARENCY */
+body.scanner-active { background: transparent !important; }
+body.scanner-active #root { background: transparent !important; }

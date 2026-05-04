@@ -124,7 +124,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     : (finalMerchant.logo_url || order.merchant_image || order.merchant_logo || order.logo_url || items[0]?.merchant_logo);
 
   return (
-    <div className="fixed inset-0 bg-white z-[500] flex flex-col overflow-y-auto no-scrollbar">
+    <div className="fixed inset-0 bg-white z-[500] flex flex-col overflow-y-auto">
       <header className="sticky top-0 bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between z-50">
         <button onClick={onBack} className="size-10 flex items-center justify-center active:scale-90 transition-all">
           <span className="material-symbols-rounded text-zinc-900 text-2xl">arrow_back</span>

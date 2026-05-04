@@ -50,6 +50,7 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
        // Lógica nativa simplificada para debug
        setStatus("ready");
        document.body.classList.add('scanner-active');
+       if (Capacitor.getPlatform() === 'android') BarcodeScanner.hideBackground();
        BarcodeScanner.scan().then(({ barcodes }) => {
           if (barcodes.length > 0) resultRef.current(barcodes[0].displayValue);
           else cancelRef.current();
@@ -67,7 +68,7 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center pointer-events-auto">
+    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center pointer-events-auto ${Capacitor.isNativePlatform() ? 'bg-transparent' : 'bg-black'}`}>
       <div id="reader" className="w-full h-full" />
       
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

@@ -25,6 +25,8 @@ interface HomeViewProps {
   setActiveService: (service: any) => void;
   flashOffers: any[];
   onRefresh?: () => Promise<void>;
+  myOrders?: any[];
+  setSelectedItem?: (item: any) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -41,6 +43,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   appSettings,
   flashOffers,
   onRefresh,
+  myOrders = [],
+  setSelectedItem,
 }) => {
     const [isExploreOpen, setIsExploreOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -267,6 +271,55 @@ export const HomeView: React.FC<HomeViewProps> = ({
            </div>
 
            <div id="home-scroll-container" className="flex-1 overflow-y-auto no-scrollbar pb-32 px-6">
+              
+              {/* PEDIDO EM ANDAMENTO (SMART BANNER) */}
+              {(() => {
+                const activeOrder = myOrders.find(o => o.status && !["concluido", "cancelado"].includes(o.status));
+                if (!activeOrder) return null;
+
+                const isTrackingAvailable = ["a_caminho_coleta", "saiu_para_coleta", "picked_up", "a_caminho", "em_rota", "saiu_para_entrega", "no_local"].includes(activeOrder.status);
+
+                return (
+                  <motion.section 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                  >
+                    <div 
+                      onClick={() => {
+                        if (setSelectedItem) setSelectedItem(activeOrder);
+                        setSubView("active_order");
+                      }}
+                      className="bg-yellow-400 p-5 rounded-[32px] flex items-center gap-4 shadow-[0_20px_40px_rgba(250,204,21,0.25)] border-none relative overflow-hidden active:scale-[0.98] transition-all group"
+                    >
+                      <div className="absolute top-0 right-0 size-24 bg-white/20 blur-2xl rounded-full translate-x-8 -translate-y-8" />
+                      
+                      <div className="size-14 rounded-2xl bg-black flex items-center justify-center shadow-lg shrink-0">
+                        <span className="material-symbols-rounded text-yellow-400 text-3xl animate-bounce">
+                          {isTrackingAvailable ? "local_shipping" : "restaurant"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[9px] font-black text-black/50 uppercase tracking-[0.2em] mb-0.5">Pedido em Andamento</p>
+                        <h3 className="text-sm font-black text-black truncate tracking-tight">
+                          {activeOrder.merchant_name || "Izi Delivery"}
+                        </h3>
+                        <p className="text-[10px] font-bold text-black/60 truncate">
+                          Status: {activeOrder.status?.replace("_", " ").toUpperCase()}
+                        </p>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[8px] font-black text-black/40 uppercase tracking-widest">Acompanhar</span>
+                        <div className="size-8 rounded-full bg-black/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                          <span className="material-symbols-rounded text-black">arrow_forward</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.section>
+                );
+              })()}
               
               {/* BARRA DE BUSCA FUNCIONAL */}
               <section className="mb-10">

@@ -156,7 +156,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               </div>
             </div>
           </div>
-        <main className="flex-1 overflow-y-scroll overscroll-contain px-6 py-8 space-y-12 pb-48">
+        <main className="flex-1 overflow-y-auto px-6 py-8 space-y-12 pb-48">
           {/* TRACKING TIMELINE */}
           <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
