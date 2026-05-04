@@ -4735,6 +4735,10 @@ const navigateSubView = (target: string) => {
                        onSupport={() => setSubView("order_support")}
                        toastSuccess={toastSuccess}
                        toastError={toastError}
+                       onTrackOrder={(order) => {
+                         setSelectedItem(order);
+                         setSubView("order_waiting");
+                       }}
                      />
                   </motion.div>
                 )}

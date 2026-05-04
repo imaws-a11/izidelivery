@@ -8,6 +8,7 @@ interface OrderDetailViewProps {
   onSupport: () => void;
   toastSuccess?: (msg: string) => void;
   toastError?: (msg: string) => void;
+  onTrackOrder?: (order: any) => void;
 }
 
 export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
@@ -15,9 +16,11 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   onBack,
   onSupport,
   toastSuccess,
-  toastError
+  toastError,
+  onTrackOrder
 }) => {
   const [merchantInfo, setMerchantInfo] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadMerchant = async () => {
@@ -52,6 +55,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     : "Agora";
 
   const isCoin = order.service_type === "coin_purchase" || order.merchant_name?.includes('Izi Coin') || (order.items?.[0]?.name && order.items[0].name.includes('Izi Coin'));
+  const isObjectDelivery = ['utilitario', 'package', 'frete', 'logistica'].includes(order.service_type);
+  const isTransport = ['mototaxi', 'carro', 'van'].includes(order.service_type);
   const items = Array.isArray(order.items) ? order.items : [];
   
   // Ajuste de cálculo para Izi Coins (não tem taxa de entrega ou serviço)
@@ -61,6 +66,30 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const total = (order.total_price || 0) + serviceFee;
 
   const isPending = ['pendente_pagamento', 'pendente', 'novo'].includes(order.status) && order.payment_status !== 'paid';
+  const isActive = ['aceito', 'em_preparo', 'saiu_para_entrega', 'a_caminho', 'em_rota'].includes(order.status);
+  const isCompleted = ['entregue', 'concluido', 'finalizado'].includes(order.status);
+  const isCancelled = order.status === 'cancelado';
+  const canDelete = isCompleted || isCancelled;
+
+  const handleDelete = async () => {
+    const confirm = await showConfirm({ message: 'Excluir este pedido do histórico? Esta ação não pode ser desfeita.', danger: true });
+    if (!confirm) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('orders_delivery')
+        .update({ is_deleted: true })
+        .eq('id', order.id);
+      if (!error) {
+        if (toastSuccess) toastSuccess('Pedido excluído do histórico.');
+        onBack();
+      } else {
+        if (toastError) toastError('Erro ao excluir pedido.');
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Unifica os dados do lojista (estado carregado ou objeto do pedido)
   const finalMerchant = merchantInfo || order.merchants_delivery || {};
@@ -110,7 +139,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
            </div>
         </section>
 
-        {/* Action Button - Se estiver pendente */}
+        {/* Action Buttons - Pendente */}
         {isPending && (
           <section className="space-y-3">
             <div className="bg-yellow-50 rounded-[32px] p-6 border border-yellow-200/50 space-y-4">
@@ -135,7 +164,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 Ir para o Pagamento
               </button>
             </div>
-
             <button
               onClick={async () => {
                 const confirm = await showConfirm({ message: 'Deseja realmente cancelar este pedido?', danger: true });
@@ -144,7 +172,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   .from('orders_delivery')
                   .update({ status: 'cancelado' })
                   .eq('id', order.id);
-                
                 if (!error) {
                   if (toastSuccess) toastSuccess('Pedido cancelado com sucesso!');
                   onBack();
@@ -155,6 +182,50 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               className="w-full py-4 border-2 border-zinc-100 text-zinc-400 font-black text-xs uppercase tracking-widest rounded-2xl active:bg-zinc-50 transition-all"
             >
               Cancelar Pedido
+            </button>
+          </section>
+        )}
+
+        {/* Botão Acompanhar - Pedido ativo de objeto ou transporte */}
+        {isActive && (isObjectDelivery || isTransport) && (
+          <section>
+            <button
+              onClick={() => onTrackOrder ? onTrackOrder(order) : null}
+              className="w-full py-4 bg-zinc-900 text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+            >
+              <span className="material-symbols-rounded text-lg">local_shipping</span>
+              Acompanhar Entrega
+            </button>
+          </section>
+        )}
+
+        {/* Botão Acompanhar - Pedido ativo de restaurante */}
+        {isActive && !isObjectDelivery && !isTransport && !isCoin && (
+          <section>
+            <button
+              onClick={() => onTrackOrder ? onTrackOrder(order) : null}
+              className="w-full py-4 bg-zinc-900 text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+            >
+              <span className="material-symbols-rounded text-lg">delivery_dining</span>
+              Acompanhar Pedido
+            </button>
+          </section>
+        )}
+
+        {/* Botão Excluir - Pedido finalizado ou cancelado */}
+        {canDelete && (
+          <section>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="w-full py-4 border-2 border-rose-100 text-rose-400 font-black text-xs uppercase tracking-widest rounded-2xl active:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <div className="size-4 border-2 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
+              ) : (
+                <span className="material-symbols-rounded text-base">delete</span>
+              )}
+              Excluir Pedido
             </button>
           </section>
         )}
