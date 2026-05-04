@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useApp } from "../../../hooks/useApp";
 import { supabase } from "../../../lib/supabase";
 import { showConfirm } from "../../../lib/useToast";
@@ -12,7 +12,10 @@ export const LightningPaymentView: React.FC = () => {
     appSettings,
     lightningData,
     toastSuccess,
-    toastError
+    toastError,
+    userId,
+    userName,
+    userLocation
   } = useApp();
 
   const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
@@ -35,8 +38,75 @@ export const LightningPaymentView: React.FC = () => {
     finalSatoshis = Math.floor((amountBrl / btcPrice) * 100_000_000);
   }
   
-  if (amountBrl <= 0 && finalSatoshis > 0 && btcPrice > 0) {
-    amountBrl = (finalSatoshis * btcPrice) / 100_000_000;
+  const [localInvoice, setLocalInvoice] = useState(invoice);
+  const [localSatoshis, setLocalSatoshis] = useState(finalSatoshis);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    if (localInvoice || isGenerating || !amountBrl) return;
+
+    const generateInvoice = async () => {
+      setIsGenerating(true);
+      try {
+        let orderId = selectedItem?.id;
+        const isSubscription = paymentsOrigin === "izi_black";
+
+        if (!orderId || orderId === "temp") {
+          const orderBase = {
+              user_id: userId,
+              merchant_id: isSubscription ? null : selectedItem?.merchant_id,
+              status: "pendente_pagamento",
+              total_price: Number(amountBrl.toFixed(2)),
+              pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedItem?.pickup_address || "Endereço do Estabelecimento"),
+              delivery_address: isSubscription ? "Serviço Digital" : (selectedItem?.delivery_address || userLocation?.address || "Endereço não informado"),
+              items: selectedItem?.items || [],
+              payment_method: "bitcoin_lightning",
+              service_type: isSubscription ? "subscription" : (selectedItem?.service_type || "restaurant"),
+              delivery_fee: selectedItem?.delivery_fee || 0,
+              notes: selectedItem?.notes || "",
+          };
+
+          const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+          if (insertError) throw insertError;
+          orderId = order.id;
+        }
+
+        const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+          body: { amount: amountBrl, orderId: orderId, customerName: userName, memo: `IziDelivery #${orderId.slice(0,8).toUpperCase()}` }
+        });
+
+        if (lnErr || !lnData?.payment_request) {
+          throw new Error("Erro ao gerar fatura Bitcoin");
+        }
+
+        await supabase.from("orders_delivery").update({ 
+          lightning_invoice: lnData.payment_request,
+          satoshis: lnData.satoshis,
+          btc_price_brl: lnData.btc_price_brl
+        }).eq("id", orderId);
+
+        setLocalInvoice(lnData.payment_request);
+        setLocalSatoshis(lnData.satoshis);
+        setSelectedItem({ ...selectedItem, id: orderId, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
+        
+      } catch (e: any) {
+        toastError("Erro ao iniciar Lightning: " + e.message);
+        setSubView("none");
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    generateInvoice();
+  }, [localInvoice, isGenerating, amountBrl]);
+
+  if (!localInvoice) {
+    return (
+      <div className="absolute inset-0 z-[200] bg-white text-zinc-900 flex flex-col items-center justify-center">
+        <div className="size-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">Gerando Fatura Lightning...</p>
+      </div>
+    );
   }
 
   const handleCancel = async () => {
@@ -88,9 +158,9 @@ export const LightningPaymentView: React.FC = () => {
         <div className="mb-6 relative">
            <div className="absolute -inset-10 bg-yellow-400/5 blur-[50px] rounded-full animate-pulse" />
            <div className="relative group p-4 border-2 border-dashed border-yellow-400/20 rounded-[40px] bg-zinc-50">
-             <div className="bg-white p-6 rounded-[32px] shadow-2xl transition-all duration-700 shadow-yellow-100 border border-white">
+              <div className="bg-white p-6 rounded-[32px] shadow-2xl transition-all duration-700 shadow-yellow-100 border border-white">
               <img
-                src={"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(invoice)}
+                src={"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(localInvoice)}
                 alt="Lightning QR"
                 className="size-[220px] rounded-xl"
               />
@@ -100,7 +170,7 @@ export const LightningPaymentView: React.FC = () => {
 
         <div className="space-y-2 mb-8 w-full max-w-xs">
           <h3 className="text-3xl font-black text-zinc-900 tracking-tighter flex flex-col items-center justify-center gap-1 leading-none italic">
-            <span className="tabular-nums">{(finalSatoshis / 100_000_000).toFixed(8)}</span>
+            <span className="tabular-nums">{(localSatoshis / 100_000_000).toFixed(8)}</span>
             <span className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em] mt-1">Bitcoin (BTC)</span>
           </h3>
           {amountBrl > 0 && (
@@ -113,7 +183,7 @@ export const LightningPaymentView: React.FC = () => {
         <div className="w-full space-y-4 max-w-xs">
            <button 
              onClick={() => {
-               navigator.clipboard.writeText(invoice);
+               navigator.clipboard.writeText(localInvoice);
                toastSuccess("Fatura copiada!");
              }}
              className="w-full h-16 rounded-[24px] bg-zinc-900 text-white font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-zinc-200"
@@ -124,7 +194,7 @@ export const LightningPaymentView: React.FC = () => {
            
            <button 
              onClick={() => {
-               window.open(`lightning:${invoice}`);
+               window.open(`lightning:${localInvoice}`);
              }}
              className="w-full h-16 rounded-[24px] bg-white border border-zinc-100 text-zinc-900 font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm"
            >

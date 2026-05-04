@@ -90,6 +90,30 @@ serve(async (req) => {
             payment_status: 'approved'
           })
           .eq('id', orderId)
+      } else if (order?.service_type === 'subscription') {
+        // Ativação da assinatura Izi Black
+        await supabaseAdmin
+          .from('orders_delivery')
+          .update({ 
+            status: 'concluido',
+            paid_at: new Date().toISOString(),
+            payment_status: 'approved'
+          })
+          .eq('id', orderId);
+
+        // Marca o usuário como Izi Black
+        const { data: orderData } = await supabaseAdmin
+          .from('orders_delivery')
+          .select('user_id')
+          .eq('id', orderId)
+          .single();
+
+        if (orderData?.user_id) {
+          await supabaseAdmin
+            .from('users_delivery')
+            .update({ is_izi_black: true })
+            .eq('id', orderData.user_id);
+        }
       } else {
         // Fluxo normal de pedido de delivery
         await supabaseAdmin

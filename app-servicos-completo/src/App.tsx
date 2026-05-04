@@ -59,6 +59,8 @@ import { NotificationsCenterView } from "./components/features/Notifications/Not
 import { QuestCenterView } from "./components/features/Gamification/QuestCenterView";
 import { ShippingDetailsView } from "./components/features/Shipping/ShippingDetailsView";
 import { IziBlackView } from "./components/features/Membership/IziBlackView";
+import { IziBlackPurchaseView } from "./components/features/Membership/IziBlackPurchaseView";
+import { IziBlackWelcomeView } from "./components/features/Membership/IziBlackWelcomeView";
 import { ExploreEnviosView } from "./components/features/Shipping/ExploreEnviosView";
 import { ExploreEnviosUberView } from "./components/features/Shipping/ExploreEnviosUberView";
 import { ExploreTurboFlashView } from "./components/features/Shipping/Explores/ExploreTurboFlashView";
@@ -418,54 +420,10 @@ function App() {
 
     setupPush();
 
-    // Listener para o botÃ£o de voltar do Android (Capacitor)
-    const backButtonHandler = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      console.log("[BACK] BotÃ£o fÃ­sico detectado. canGoBack:", canGoBack);
-      
-      // Se houver uma subview aberta, voltamos para 'none'
-      if (navigationSubViewRef.current !== "none") {
-        console.log("[BACK] Fechando subView:", navigationSubViewRef.current);
-        window.history.back();
-        return;
-      }
-      
-      // Se estivermos em uma aba diferente de 'home', voltamos para 'home'
-      if (tabRef.current !== "home") {
-        console.log("[BACK] Voltando para aba Home");
-        window.history.back();
-        return;
-      }
-
-      // Se nÃ£o houver histÃ³rico para voltar no navegador, podemos deixar o Capacitor fechar o app
-      // ou apenas registrar. Se canGoBack for false, o app geralmente fecha.
-      if (!canGoBack) {
-        CapacitorApp.exitApp();
-      } else {
-        window.history.back();
-      }
-    });
-
-    // Listener para mudanÃ§as no histÃ³rico (popstate) do navegador
-    const handlePopState = (event: PopStateEvent) => {
-      console.log("[POPSTATE] MudanÃ§a detetada:", event.state);
-      if (event.state) {
-        if (event.state.subView) setSubView(event.state.subView);
-        if (event.state.tab) setTab(event.state.tab);
-      } else {
-        // Se voltarmos ao estado inicial (sem state)
-        setSubView("none");
-        setTab("home");
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
     return () => {
       if (Capacitor.isNativePlatform()) {
         PushNotifications.removeAllListeners();
-        backButtonHandler.then(h => h.remove());
       }
-      window.removeEventListener("popstate", handlePopState);
     };
   }, [userId, user]);
 
@@ -934,8 +892,8 @@ function App() {
             setSelectedItem(newOrder);
             setTimeout(() => {
               if (newOrder.service_type === 'subscription') {
-                setShowIziBlackWelcome(true);
-                setSubView("none");
+                setIsIziBlackMembership(true);
+                setSubView("izi_black_welcome");
               } else if (newOrder.service_type === 'coin_purchase') {
                 showToast("IZI COINS adicionados com sucesso!", "success");
                 setShowDepositModal(false);
@@ -1052,7 +1010,6 @@ function App() {
   
 
   const handleCancelOrder = async (orderId: string) => {
-    console.log("[DEBUG] Iniciando cancelamento do pedido:", orderId);
     if (!orderId) {
       toastError("ID do pedido nÃ£o encontrado.");
       return;
@@ -1071,11 +1028,9 @@ function App() {
       }
 
       if (error) {
-        console.error("[DEBUG] Erro Supabase no cancelamento:", error);
         throw error;
       }
 
-      console.log("[DEBUG] Pedido cancelado/excluÃ­do no banco com sucesso.");
       toastSuccess("Pedido cancelado com sucesso!");
       
       if (userId) fetchOrders();
@@ -1140,7 +1095,6 @@ function App() {
   };
 
   const fetchCoupons = async () => {
-    console.log("[DEBUG] Fetching coupons/banners...");
     const { data } = await supabase
       .from('promotions_delivery')
       .select('*')
@@ -1149,7 +1103,6 @@ function App() {
       .order('created_at', { ascending: false });
     
     if (data) {
-      console.log("[DEBUG] Available promotions found:", data.length, data);
       setAvailableCoupons(data);
     }
   };
@@ -2085,18 +2038,13 @@ function App() {
     window.history.replaceState({ view, tab, subView }, "");
 
     // [NOVO] Handler para o botÃ£o voltar fÃ­sico do dispositivo (Android)
-    const backHandler = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      console.log("[BACK] BotÃ£o voltar fÃ­sico pressionado. subView atual:", navigationSubViewRef.current);
-      
+    const backHandler = CapacitorApp.addListener('backButton', () => {
       if (navigationSubViewRef.current !== 'none') {
-        // Se houver uma subView (modal/overlay) aberta, volta no histÃ³rico do navegador
         window.history.back();
       } else if (tabRef.current !== 'home' && viewRef.current === 'app') {
-        // Se estiver em outra aba, volta para a home
         setTab('home');
         window.history.replaceState({ view: viewRef.current, tab: 'home', subView: 'none' }, "");
       } else {
-        // Caso contrÃ¡rio, sai do app
         CapacitorApp.exitApp();
       }
     });
@@ -4395,9 +4343,9 @@ const navigateSubView = (target: string) => {
                   <FloatingHeader 
                     userAddress={userLocation?.address || ""}
                     cartLength={cart.length}
-                    onAddressClick={() => setSubView("addresses")}
-                    onCartClick={() => setSubView("cart")}
-                    onNotificationsClick={() => setSubView("notifications_center")}
+                    onAddressClick={() => navigateSubView("addresses")}
+                    onCartClick={() => navigateSubView("cart")}
+                    onNotificationsClick={() => navigateSubView("notifications_center")}
                     hasUnreadNotifications={unreadCount > 0}
                   />
                 )}
@@ -4487,7 +4435,7 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "profile" && (
                   <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
+                     <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} setSubView={navigateSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
                   </motion.div>
                 )}
                 {tab === "busca" && (
@@ -4617,43 +4565,43 @@ const navigateSubView = (target: string) => {
 
                 {(subView === "explore_pharmacy" || subView === "pharmacy_list") && (
                   <motion.div key="explore-pharmacy" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <PharmacyExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <PharmacyExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_beverages" || subView === "beverages_list") && (
                   <motion.div key="explore-beverages" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <BeverageExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <BeverageExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_market" || subView === "market_list") && (
                   <motion.div key="explore-market" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <NewMarketExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <NewMarketExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_petshop" || subView === "pets_list") && (
                   <motion.div key="explore-petshop" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <PetshopExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <PetshopExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_gas" && (
                   <motion.div key="explore-gas" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <GasWaterExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <GasWaterExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_bakery" && (
                   <motion.div key="explore-bakery" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <BakeryExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <BakeryExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_fruit" && (
                   <motion.div key="explore-fruit" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <FruitExploreView onBack={() => setSubView("none")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <FruitExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
@@ -4909,9 +4857,21 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
 
-                {["izi_black_card", "izi_black_purchase"].includes(subView) && (
+                {subView === "izi_black_card" && (
                   <motion.div key="iziblackv" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[180]">
                     <IziBlackView />
+                  </motion.div>
+                )}
+
+                {subView === "izi_black_purchase" && (
+                  <motion.div key="iziblackp" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[180]">
+                    <IziBlackPurchaseView />
+                  </motion.div>
+                )}
+
+                {subView === "izi_black_welcome" && (
+                  <motion.div key="iziblackw" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="fixed inset-0 z-[200]">
+                    <IziBlackWelcomeView />
                   </motion.div>
                 )}
 

@@ -3,12 +3,7 @@ import { useApp } from "../../../hooks/useApp";
 import { Icon } from "../../common/Icon";
 
 export const IziBlackWelcomeView = () => {
-  const { 
-    setSubView, 
-    userId, 
-    fetchWalletBalance, 
-    fetchMyOrders 
-  } = useApp();
+  const { setSubView } = useApp();
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 sm:p-12">
@@ -76,13 +71,7 @@ export const IziBlackWelcomeView = () => {
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => {
-              setSubView("none");
-              if (userId) {
-                fetchWalletBalance(userId);
-                fetchMyOrders(userId);
-              }
-            }}
+            onClick={() => setSubView("none")}
             className="w-full bg-white text-black font-black py-7 rounded-[32px] text-xs uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 transition-all"
           >
             Começar Experiência Elite

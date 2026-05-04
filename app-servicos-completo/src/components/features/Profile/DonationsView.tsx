@@ -9,7 +9,7 @@ export const DonationsView = ({ onBack }: { onBack: () => void }) => {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F7F7F7] pb-20">
+    <div className="flex flex-col min-h-screen h-full bg-[#F7F7F7] pb-20">
       <header className="bg-white px-6 pt-20 pb-6 flex items-center justify-between border-b border-zinc-100 sticky top-0 z-50">
         <button onClick={onBack} className="size-10 flex items-center justify-center rounded-full bg-zinc-50 active:bg-zinc-100 transition-colors">
           <span className="material-symbols-rounded text-zinc-900">arrow_back</span>

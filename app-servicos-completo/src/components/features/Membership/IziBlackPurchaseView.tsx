@@ -1,25 +1,29 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useApp } from "../../../hooks/useApp";
+import { useAuth } from "../../../hooks/useAuth";
+import { supabase } from "../../../lib/supabase";
 import { Icon } from "../../common/Icon";
 
 export const IziBlackPurchaseView = () => {
   const { 
     setSubView, 
     isIziBlackMembership, 
-    userId,
-    supabase,
+    setIsIziBlackMembership,
     toastSuccess,
     toastError,
-    fetchWalletBalance,
-    fetchMyOrders
+    appSettings,
+    setPaymentsOrigin,
+    setSelectedItem
   } = useApp();
+  const { userId } = useAuth();
 
   const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment">("info");
   const [cpf, setCpf] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cartao");
 
-  const handleClose = () => setSubView("none");
+  const handleClose = () => window.history.back();
 
   const handleSubscribeReal = async () => {
     if (!userId) return;
@@ -30,18 +34,26 @@ export const IziBlackPurchaseView = () => {
 
     setIsLoading(true);
     try {
-      // Simulação de assinatura - no App.tsx original parecia ser uma simulação ou chamada simples
-      const { error } = await supabase
-        .from("users_delivery")
-        .update({ is_izi_black: true, cpf: cpf })
-        .eq("id", userId);
+      // Configura o contexto para o fluxo de pagamento
+      setPaymentsOrigin("izi_black");
+      setSelectedItem({
+        service_type: 'subscription',
+        total_price: Number(appSettings?.izi_black_fee || 19.90),
+        cpf: cpf // Passamos o CPF via selectedItem para uso no webhook ou callback
+      });
 
-      if (error) throw error;
-
-      toastSuccess("Parabéns! Você agora é um membro Izi Black.");
-      setSubView("izi_black_welcome");
+      // Redireciona para o fluxo correto
+      if (paymentMethod === "pix") {
+        setSubView("pix_payment");
+      } else if (paymentMethod === "credit_card" || paymentMethod === "cartao") {
+        setSubView("card_payment");
+      } else if (paymentMethod === "lightning" || paymentMethod === "bitcoin_lightning") {
+        setSubView("lightning_payment");
+      } else {
+        toastError("Selecione Pix, Cartão ou Bitcoin.");
+      }
     } catch (e: any) {
-      toastError("Erro ao processar assinatura: " + e.message);
+      toastError("Erro ao iniciar pagamento: " + e.message);
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +82,32 @@ export const IziBlackPurchaseView = () => {
                 <p className="font-black text-white">Izi Black Individual</p>
                 <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Renovação automática</p>
               </div>
-              <p className="font-black text-yellow-400">R$ 19,90/mês</p>
+              <p className="font-black text-yellow-400">R$ {appSettings?.izi_black_fee || '19,90'}/mês</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Forma de Pagamento</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: "cartao", label: "Cartão", icon: "credit_card" },
+                { id: "pix", label: "PIX", icon: "qr_code_2" },
+                { id: "lightning", label: "Bitcoin", icon: "bolt" }
+              ].map(opt => {
+                const isActive = paymentMethod === opt.id || (paymentMethod === 'credit_card' && opt.id === 'cartao') || (paymentMethod === 'bitcoin_lightning' && opt.id === 'lightning');
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => setPaymentMethod(opt.id)}
+                    className={`flex flex-col items-center justify-center p-4 rounded-[24px] border-2 transition-all duration-300 ${isActive ? 'border-yellow-400 bg-white shadow-lg shadow-yellow-400/20' : 'border-white/5 bg-zinc-900/50 opacity-60'}`}
+                  >
+                    <div className={`size-10 rounded-2xl ${isActive ? 'bg-zinc-900 text-yellow-400' : 'bg-zinc-800 text-zinc-400'} flex items-center justify-center shadow-sm mb-3`}>
+                       <Icon name={opt.icon} size={24} />
+                    </div>
+                    <p className={`text-[10px] font-black uppercase tracking-tighter leading-tight ${isActive ? 'text-zinc-900' : 'text-zinc-400'}`}>{opt.label}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -102,7 +139,7 @@ export const IziBlackPurchaseView = () => {
   const perks = [
     { id: 1, icon: "delivery_dining", title: "Taxa Zero Izi", desc: "Entrega gratuita em estabelecimentos selecionados.", yellow: true },
     { id: 2, icon: "confirmation_number", title: "Cupons Black", desc: "Acesso a cupons exclusivos de alto valor.", yellow: false },
-    { id: 3, icon: "stars", title: "Cashback 5%", desc: "Receba parte do valor de volta em todos os pedidos.", yellow: false },
+    { id: 3, icon: "stars", title: "Cashback " + (appSettings?.izi_black_cashback || '1') + "%", desc: "Receba parte do valor de volta em todos os pedidos.", yellow: false },
     { id: 4, icon: "bolt", title: "Prioridade Izi", desc: "Seus pedidos são preparados e entregues primeiro.", yellow: true },
   ];
 
@@ -128,7 +165,7 @@ export const IziBlackPurchaseView = () => {
                  <span className="text-xl font-black text-yellow-400 mb-4">R$</span>
                  <h2 className="font-black text-yellow-400 text-6xl tracking-tighter">76,50</h2>
               </div>
-              <p className="text-zinc-400 text-[11px] px-4 font-medium leading-relaxed">Usuários que assinam o Clube economizam em média R$ 120 por mês.</p>
+              <p className="text-zinc-400 text-[11px] px-4 font-medium leading-relaxed">Assine por apenas R$ {appSettings?.izi_black_fee || '19,90'} e economize em média R$ 120 por mês.</p>
             </div>
 
             {!isIziBlackMembership ? (

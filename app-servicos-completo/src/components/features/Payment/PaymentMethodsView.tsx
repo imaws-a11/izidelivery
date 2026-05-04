@@ -15,11 +15,14 @@ export const PaymentMethodsView = () => {
     setPaymentMethod,
     globalSettings,
     savedCards = [], 
-    handleDeleteCard, 
+    handleDeleteCard,
     walletBalance, 
     iziCoins,
-    userId
+    userId,
+    fetchSavedCards
   } = useApp();
+
+    // Log de cartões removido para limpeza de console
 
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [cardNumber, setCardNumber] = useState("");
@@ -77,6 +80,7 @@ export const PaymentMethodsView = () => {
         setCardName("");
         setCardExpiry("");
         setCardCvv("");
+        fetchSavedCards();
       }
     } catch (err: any) {
       console.error("[PAYMENT] Erro interno:", err);

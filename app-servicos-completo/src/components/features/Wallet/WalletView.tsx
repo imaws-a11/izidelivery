@@ -17,25 +17,19 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   const [status, setStatus] = useState<"initializing" | "ready" | "error">("initializing");
   
   useEffect(() => {
-    console.log("[SCANNER] COMPONENTE MONTADO!");
-    resultRef.current = onResult;
-    cancelRef.current = onCancel;
-    
-    return () => console.log("[SCANNER] COMPONENTE DESMONTADO!");
+    return () => {};
   }, [onResult, onCancel]);
 
   useEffect(() => {
     let isMounted = true;
     
     const startWebCamera = async () => {
-      console.log("[SCANNER] startWebCamera chamada");
       await new Promise(r => setTimeout(r, 800));
       if (!isMounted) return;
 
       try {
         const scanner = new Html5Qrcode("reader");
         scannerRef.current = scanner;
-        console.log("[SCANNER] Html5Qrcode instanciado");
 
         await scanner.start(
           { facingMode: "environment" }, 
@@ -43,7 +37,6 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           (text) => resultRef.current(text), 
           () => {}
         );
-        console.log("[SCANNER] Câmera iniciada com sucesso");
         setStatus("ready");
       } catch (err: any) {
         console.error("[SCANNER] Erro na câmera:", err);
@@ -112,50 +105,32 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   );
 };
 
-interface WalletViewProps {
-  walletTransactions: any[];
-  myOrders: any[];
-  userXP: number;
-  iziCoins: number;
-  iziCashback: number;
-  savedCards: any[];
-  paymentMethod: string;
-  setPaymentsOrigin: (origin: 'checkout' | 'profile' | 'izi_black') => void;
-  setSubView: (view: string) => void;
-  userId: string | null;
-  userName: string;
-  showToast?: (msg: string, type: 'success' | 'error' | 'warning') => void;
-  setShowDepositModal: (show: boolean) => void;
-  iziCoinValue?: number;
-  iziCoinRate?: number;
-  iziBlackRate?: number;
-  setIziCoins?: React.Dispatch<React.SetStateAction<number>>;
-  isIziBlack?: boolean;
-}
-
-export const WalletView: React.FC<WalletViewProps> = ({
-  walletTransactions = [],
-  myOrders = [],
-  iziCoins = 0,
-  setIziCoins,
-  iziCashback = 0,
-  userXP = 0,
-  savedCards = [],
-  userId,
-  userName,
-    iziCoinValue = 1.0,
-    iziCoinRate = 1.0,
-    iziBlackRate = 5.0,
+export const WalletView: React.FC = () => {
+  const {
+    walletTransactions = [],
+    iziCoins = 0,
+    setIziCoins,
+    iziCashbackEarned: iziCashback = 0,
+    userXP = 0,
+    savedCards = [],
+    userId,
+    userName,
+    globalSettings,
     paymentMethod,
-    setShowDepositModal,
-    showToast,
-    setPaymentsOrigin,
+    setPaymentMethod,
     setSubView,
-    mercadopagoPublicKey,
-    isIziBlack: initialIsIziBlack = false,
-  }) => {
+    isIziBlackMembership,
+    walletBalance = 0,
+    fetchSavedCards,
+    handleDeleteCard,
+    selectedCard,
+    setSelectedCard,
+    toastSuccess,
+    toastError,
+    mercadopagoPublicKey
+  } = useApp();
+
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card" | "loans">("main");
-  console.log("[WALLET] Current Mode:", walletMode);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<"all" | "cashback">("all");
   const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "" });
@@ -185,8 +160,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [isGeneratingPix, setIsGeneratingPix] = useState(false);
   const [preApprovedLimit, setPreApprovedLimit] = useState(1000); // Default fallback
   const [loanInterestRate, setLoanInterestRate] = useState(10); // Default 10%
-  const [isIziBlack, setIsIziBlack] = useState(initialIsIziBlack);
-  const [blackCashbackRate, setBlackCashbackRate] = useState(iziBlackRate || 5);
+  const [isIziBlack, setIsIziBlack] = useState(isIziBlackMembership);
+  const [blackCashbackRate, setBlackCashbackRate] = useState(5);
 
   // Estados de Animação Real-time
   const [showAnimation, setShowAnimation] = useState(false);
@@ -291,11 +266,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   };
 
 
-  const walletBalance = walletTransactions.reduce(
-    (acc: number, t: any) =>
-      ["deposito", "reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount),
-    0
-  );
+  // Usamos o walletBalance que vem do contexto (useApp)
 
   const txIcon: Record<string, { icon: string; color: string }> = {
     deposito: { icon: "add_circle", color: "text-emerald-400" },
@@ -1280,14 +1251,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
                
                if (error) throw error;
                
-               showToast?.("Cartão salvo com sucesso!", "success");
+               toastSuccess("Cartão salvo com sucesso!");
                setWalletMode("main");
                // Recarregar os cartões salvos no contexto do WalletView
                if (userId) {
-                 setTimeout(() => window.location.reload(), 1000);
+                 fetchSavedCards();
                }
              } catch (err: any) {
-               showToast?.("Erro ao salvar: " + err.message, "error");
+               toastError("Erro ao salvar: " + err.message);
              } finally {
                setIsSavingCard(false);
              }
@@ -1422,6 +1393,60 @@ export const WalletView: React.FC<WalletViewProps> = ({
             </div>
           ))}
         </div>
+
+        {/* CARTÕES SALVOS - LUXURY SLIDER */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="font-black text-lg text-white uppercase tracking-tighter">Cartões</h2>
+            <button 
+              onClick={() => setWalletMode("add_card")}
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[9px] font-black text-yellow-400 uppercase tracking-widest active:scale-95 transition-all"
+            >
+              + Adicionar
+            </button>
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-2 px-2">
+            {(!savedCards || savedCards.length === 0) ? (
+              <div className="w-full bg-[#0a0a0a] rounded-[40px] p-10 border-2 border-dashed border-white/5 text-center">
+                <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.2em] leading-relaxed">Nenhum cartão<br/>armazenado com segurança.</p>
+              </div>
+            ) : savedCards.map((card: any, i: number) => (
+              <motion.div 
+                key={card.id || i}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="min-w-[280px] bg-[#0d0d0d] rounded-[40px] p-6 border-2 border-white/5 shadow-xl relative group overflow-hidden"
+              >
+                {/* Efeito de brilho no fundo do card */}
+                <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-yellow-400/10 transition-all duration-700" />
+                
+                <div className="flex justify-between items-start mb-10">
+                  <div className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-zinc-400 text-2xl">credit_card</span>
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }}
+                    className="size-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-zinc-600 hover:text-red-400 transition-all active:scale-90"
+                  >
+                    <span className="material-symbols-outlined text-lg">delete</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-white font-black text-xl tracking-tight">•••• •••• •••• {card.last4 || card.last_four}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{card.brand || 'Cartão'}</p>
+                    {card.is_default && (
+                      <span className="px-2 py-0.5 bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 text-[7px] font-black uppercase rounded-full">Padrão</span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
         {/* HISTÓRICO - CLAYMOL DESIGN */}
         <section ref={historyRef} className="space-y-6">

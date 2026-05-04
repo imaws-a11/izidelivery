@@ -107,7 +107,7 @@ export const DriverRegistrationView: React.FC<DriverRegistrationViewProps> = ({
   const labelClass = "text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 ml-2 block";
 
   return (
-    <div className="flex flex-col min-h-screen bg-white text-zinc-900 pb-32">
+    <div className="flex flex-col min-h-screen h-full bg-white text-zinc-900 pb-32">
       {/* HEADER */}
       <header className="px-6 pt-12 pb-6 flex items-center gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-50">
         <button 

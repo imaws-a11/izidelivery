@@ -68,7 +68,7 @@ export const useAuth = () => {
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[AUTH] Evento detectado:", event);
+      // Log de evento removido para limpeza de console
       
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
         setUser(null);
