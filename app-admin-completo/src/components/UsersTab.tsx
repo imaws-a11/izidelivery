@@ -171,7 +171,7 @@ export default function UsersTab() {
       };
 
       if (finalUserId) userData.id = finalUserId;
-      if (editForm.password) userData.password = editForm.password;
+      // if (editForm.password) userData.password = editForm.password;
 
       const { error } = await supabase
         .from('users_delivery')

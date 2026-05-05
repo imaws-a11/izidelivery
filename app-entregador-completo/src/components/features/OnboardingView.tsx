@@ -29,7 +29,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
   const [showFeedback, setShowFeedback] = useState(false);
 
   const checkStatus = async () => {
-    if (!userId) return;
+    if (!userId || userId === '') {
+      console.log("[DEBUG] userId ausente ou vazio, pulando checkStatus");
+      return;
+    }
     setLoading(true);
     try {
       console.log("[DEBUG] Verificando status para:", userId);
@@ -96,7 +99,12 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!files.cnh || !files.vehicle) {
-      toastError("Anexe todos os documentos.");
+      toastError("Anexe todos os documentos (CNH e Documento do Veículo).");
+      return;
+    }
+
+    if (!formData.full_name || !formData.email || !formData.phone || !formData.address || !formData.vehicle_model || !formData.vehicle_plate) {
+      toastError("Preencha todos os campos do formulário.");
       return;
     }
 

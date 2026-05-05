@@ -71,7 +71,7 @@ function Icon({ name, className = "", size = 20 }: any) {
   const icons: Record<string, any> = {
     'grid_view': BespokeIcons.Home,
     'stars': BespokeIcons.Star,
-    'event': BespokeIcons.Clock,
+    'event': BespokeIcons.Calendar,
     'history': BespokeIcons.History,
     'payments': BespokeIcons.Wallet,
     'person': BespokeIcons.User,
@@ -111,7 +111,8 @@ function Icon({ name, className = "", size = 20 }: any) {
     'badge': BespokeIcons.User,
     'settings': BespokeIcons.Menu,
     'volume_up': BespokeIcons.Notifications,
-    'visibility': BespokeIcons.History,
+    'visibility': BespokeIcons.Eye,
+    'visibility_off': BespokeIcons.EyeOff,
     'arrow_back': BespokeIcons.ChevronLeft,
     'arrow_forward': BespokeIcons.ChevronRight,
     'sync': BespokeIcons.History,
@@ -126,6 +127,10 @@ function Icon({ name, className = "", size = 20 }: any) {
     'layers': BespokeIcons.Layers,
     'admin_panel_settings': BespokeIcons.Shield,
     'package': BespokeIcons.Bag,
+    'restaurant': BespokeIcons.Restaurant,
+    'shopping_cart': BespokeIcons.ShoppingBag,
+    'local_pharmacy': BespokeIcons.Pharmacy,
+    'local_bar': BespokeIcons.Beverage,
     'description': BespokeIcons.FileText,
     'call': BespokeIcons.Phone,
     'history_toggle_off': BespokeIcons.History,
@@ -188,17 +193,25 @@ interface Order {
     order_notes?: string;
     service_type?: string;
 }
+const validateCPF = (cpf: string) => {
+    cpf = cpf.replace(/[^\d]+/g, '');
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    let soma = 0, resto;
+    for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.substring(9, 10))) return false;
+    soma = 0;
+    for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    return resto === parseInt(cpf.substring(10, 11));
+};
+
 const isValidCoord = (c: any) => c && typeof c.lat === 'number' && Math.abs(c.lat) > 0.01;
 
-function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, driverCoords, missionPhase = 'to_pickup', onRouteInfo }: { pickup: any, delivery: any, pickupAddress?: string, deliveryAddress?: string, driverCoords?: any, missionPhase?: 'to_pickup' | 'to_delivery', onRouteInfo?: (info: any) => void }) {
+function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, driverCoords, missionPhase = 'to_pickup', onRouteInfo, isLoaded = false }: { pickup: any, delivery: any, pickupAddress?: string, deliveryAddress?: string, driverCoords?: any, missionPhase?: 'to_pickup' | 'to_delivery', onRouteInfo?: (info: any) => void, isLoaded?: boolean }) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const { isLoaded } = useJsApiLoader({ 
-    id: GOOGLE_MAPS_ID, 
-    googleMapsApiKey: mapsKey, 
-    libraries: GOOGLE_MAPS_LIBRARIES, 
-    language: 'pt-BR', 
-    region: 'BR' 
-  });
   const [routePolyline, setRoutePolyline] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<{start: any, end: any} | null>(null);
 
@@ -585,6 +598,14 @@ const getServicePresentation = (order: any) => {
         headline = 'Envio express';
     }
 
+    let icon = 'package';
+    if (detectedType === 'restaurant' || detectedType === 'food') icon = 'restaurant';
+    else if (detectedType === 'market') icon = 'shopping_cart';
+    else if (detectedType === 'pharmacy') icon = 'local_pharmacy';
+    else if (detectedType === 'beverage') icon = 'local_bar';
+    else if (isMobility) icon = 'directions_car';
+    else if (isFreight) icon = 'local_shipping';
+
     const badges: string[] = [];
     if (merchantName && !isMobility) badges.push(merchantName);
     if (itemCount > 0) badges.push(`${itemCount} ${itemCount === 1 ? 'item' : 'itens'}`);
@@ -626,6 +647,7 @@ const getServicePresentation = (order: any) => {
         pickupText,
         destinationText,
         title: headline,
+        icon,
     };
 };
 
@@ -646,15 +668,17 @@ function App() {
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const [isApproved, setIsApproved] = useState(false);
+    const [isProfileLoaded, setIsProfileLoaded] = useState(false);
     const [authEmail, setAuthEmail] = useState('');
     const [authPassword, setAuthPassword] = useState('');
     const [showAuthPassword, setShowAuthPassword] = useState(false);
     const [rememberLogin, setRememberLogin] = useState(() => localStorage.getItem('izi_driver_remember') === 'true');
     const [authError, setAuthError] = useState('');
     const [authName, setAuthName] = useState('');
-    const [authVehicle, setAuthVehicle] = useState<'mototaxi' | 'carro' | 'bicicleta'>('mototaxi');
+    const [authCpf, setAuthCpf] = useState('');
+    const [authVehicle, setAuthVehicle] = useState<'moto' | 'carro' | 'utilitario'>('moto');
     const [authPhone, setAuthPhone] = useState('');
-    const [driverVehicle, setDriverVehicle] = useState<string>(() => localStorage.getItem('izi_driver_vehicle') || 'mototaxi');
+    const [driverVehicle, setDriverVehicle] = useState<string>(() => localStorage.getItem('izi_driver_vehicle') || 'moto');
     const [authLoading, setAuthLoading] = useState(false);
     const [authInitLoading, setAuthInitLoading] = useState(true);
 
@@ -824,6 +848,11 @@ function App() {
         console.log('[DEBUG] handleUpdateProfile iniciado. DriverId:', driverId);
         if (!driverId) {
             console.error('[DEBUG] Tentativa de salvar sem DriverId!');
+            return;
+        }
+
+        if (editProfileData.cpf && !validateCPF(editProfileData.cpf)) {
+            alert('O CPF informado é inválido. Por favor, verifique.');
             return;
         }
         
@@ -1494,7 +1523,7 @@ function App() {
         // Mapeamento comum
         const map: Record<string, string> = {
             'dinheiro': 'Dinheiro (Local)',
-            'pix': 'PIX (Local)',
+            'pix': 'Pix',
             'cartao_credito': 'Cartão de Crédito',
             'cartao_debito': 'Cartão de Débito',
             'maquininha': 'Cartão (Maquininha)',
@@ -1868,17 +1897,17 @@ function App() {
                         .from('drivers_delivery')
                         .select('name, phone, email, vehicle_type, license_plate, document_number, bank_info, avatar_url, preferences, is_active')
                         .eq('id', user.id)
-                        .single();
+                        .maybeSingle();
  
                     if (profileError) {
                         console.error('[AUTH] Erro ao buscar perfil:', profileError);
-                        if (profileError.code === 'PGRST116' || profileError.message.includes('JSON')) {
-                            setIsProfileNotFound(true);
-                            setIsApproved(false);
-                        }
                     }
 
-                    if (profile) {
+                    if (!profile && !profileError) {
+                        setIsProfileNotFound(true);
+                        setIsApproved(false);
+                        setIsProfileLoaded(true);
+                    } else if (profile) {
                         setDriverName(profile.name || 'Entregador');
                         setPixKey(profile.bank_info?.pix_key || '');
                         setDriverPlate(profile.license_plate || '');
@@ -1933,9 +1962,11 @@ function App() {
                         }
                         const active = !!profile.is_active;
                         setIsApproved(active);
+                        setIsProfileLoaded(true);
                         if (!active) {
                             setIsOnline(false);
                             localStorage.setItem('Izi_online', 'false');
+                            setShowOnboarding(true);
                         }
                     } else {
                         const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
@@ -1998,6 +2029,8 @@ function App() {
     const handleAuthRegister = async () => {
         setAuthLoading(true); setAuthError('');
         if (!authName.trim()) { setAuthError('Informe seu nome completo.'); setAuthLoading(false); return; }
+        if (!authCpf.trim()) { setAuthError('Informe seu CPF.'); setAuthLoading(false); return; }
+        if (!validateCPF(authCpf)) { setAuthError('O CPF informado é inválido.'); setAuthLoading(false); return; }
         if (authPassword.length < 6) { setAuthError('A senha deve ter no mínimo 6 caracteres.'); setAuthLoading(false); return; }
         try {
             const { data, error } = await supabase.auth.signUp({
@@ -2021,8 +2054,9 @@ function App() {
                     is_online: false, 
                     vehicle_type: authVehicle, 
                     phone: authPhone || null, 
+                    document_number: authCpf.trim(),
                     rating: 5.0, 
-                    is_active: true 
+                    is_active: false 
                 });
                 setDriverName(authName.trim());
                 setDriverVehicle(authVehicle);
@@ -2123,7 +2157,9 @@ function App() {
     }, [driverId, isAuthenticated, isOnline]);
 
     const handleToggleOnline = async () => {
-        if (!isApproved) {
+        // Só bloqueia ao tentar ir ONLINE se o perfil já carregou e o cadastro ainda não foi aprovado
+        // Ficar offline sempre deve funcionar sem restrição
+        if (isProfileLoaded && !isApproved && !isOnline) {
             setShowPendingApprovalModal(true);
             return;
         }
@@ -2950,7 +2986,7 @@ function App() {
                         .from('admin_users')
                         .select('latitude, longitude')
                         .eq('id', activeMission.merchant_id)
-                        .single();
+                        .maybeSingle();
                     if (data?.latitude && data?.longitude) {
                         setMerchantCoords({ lat: Number(data.latitude), lng: Number(data.longitude) });
                     } else {
@@ -3967,7 +4003,7 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
-                    {!isApproved && (
+                    {isProfileLoaded && !isApproved && (
                         <motion.div 
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -7397,6 +7433,7 @@ function App() {
                         driverCoords={driverCoords}
                         missionPhase={['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega', 'no_local'].includes(activeMission.status) ? 'to_delivery' : 'to_pickup'}
                         onRouteInfo={(info) => setRealTimeRoute(info)}
+                        isLoaded={isLoaded}
                     />
                 </div>
 
@@ -7777,38 +7814,41 @@ function App() {
             </div>
         );
         return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-screen w-full flex flex-col items-center justify-center px-7 relative overflow-hidden bg-white">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(250,204,21,0.05)_0%,transparent_60%)]" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-screen w-full flex flex-col items-center justify-center px-7 relative overflow-hidden bg-[#FAFAFA]">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,0,0,0.05)_0%,transparent_60%)]" />
                 <div className="w-full max-w-md space-y-8 relative z-10">
                     <div className="text-center space-y-3">
-                        <div className="inline-flex items-center justify-center size-16 bg-primary/10 border border-primary/20 rounded-[24px] mb-2"><Icon name="two_wheeler" className="text-primary text-3xl" /></div>
-                        <h1 className="text-4xl font-black text-zinc-900 tracking-tight uppercase">Terminal <span className="text-primary">Izi</span></h1>
-                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.5em]">{authMode === 'login' ? 'Autenticação do Entregador' : 'Cadastro de Novo Piloto'}</p>
+                        <div className="inline-flex items-center justify-center size-20 bg-black rounded-[32px] mb-2 shadow-2xl shadow-black/20">
+                            <Icon name="moped" className="text-primary text-5xl" />
+                        </div>
+                        <h1 className="text-4xl font-black text-black tracking-tight uppercase">Izi <span className="text-primary">Entregador</span></h1>
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.5em]">{authMode === 'login' ? 'Autenticação do Entregador' : 'Cadastro de Novo Piloto'}</p>
                     </div>
-                    {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-rose-50 border border-rose-100 rounded-2xl px-5 py-3 text-rose-500 text-xs font-bold text-center">{authError}</motion.div>}
+                    {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-rose-50 border border-rose-100 rounded-2xl px-5 py-3 text-rose-500 text-xs font-black text-center uppercase tracking-widest">{authError}</motion.div>}
                     <div className="space-y-4">
                         {authMode === 'register' && (
                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-300"><Icon name="badge" className="text-xl" /></div><input type="text" value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Nome completo" className="w-full h-14 pl-14 pr-5 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
-                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-300"><Icon name="phone" className="text-xl" /></div><input type="tel" value={authPhone} onChange={e => setAuthPhone(e.target.value)} placeholder="Telefone (WhatsApp)" className="w-full h-14 pl-14 pr-5 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
+                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-400"><Icon name="badge" className="text-xl" /></div><input type="text" value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Nome completo" className="w-full h-14 pl-14 pr-5 bg-white border border-zinc-200 rounded-[20px] text-black font-black placeholder:text-zinc-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all text-sm shadow-sm" /></div>
+                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-400"><Icon name="pin" className="text-xl" /></div><input type="text" value={authCpf} onChange={e => setAuthCpf(e.target.value)} placeholder="CPF" className="w-full h-14 pl-14 pr-5 bg-white border border-zinc-200 rounded-[20px] text-black font-black placeholder:text-zinc-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all text-sm shadow-sm" /></div>
+                                <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-400"><Icon name="phone" className="text-xl" /></div><input type="tel" value={authPhone} onChange={e => setAuthPhone(e.target.value)} placeholder="Telefone (WhatsApp)" className="w-full h-14 pl-14 pr-5 bg-white border border-zinc-200 rounded-[20px] text-black font-black placeholder:text-zinc-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all text-sm shadow-sm" /></div>
                                 <div className="flex gap-2">
-                                    {(['mototaxi', 'carro', 'bicicleta'] as const).map(v => (
+                                    {(['moto', 'carro', 'utilitario'] as const).map(v => (
                                         <button 
                                             key={v} 
                                             type="button" 
                                             onClick={() => setAuthVehicle(v)} 
-                                            className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 border transition-all text-[9px] font-black uppercase tracking-widest ${authVehicle === v ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-zinc-50 border-zinc-100 text-zinc-300'}`}
+                                            className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 border-2 transition-all text-[9px] font-black uppercase tracking-widest ${authVehicle === v ? 'bg-black border-black text-primary shadow-xl' : 'bg-white border-zinc-200 text-zinc-400'}`}
                                         >
-                                            <Icon name={v === 'mototaxi' ? 'two_wheeler' : v === 'carro' ? 'directions_car' : 'pedal_bike'} size={18} />
+                                            <Icon name={v === 'moto' ? 'two_wheeler' : v === 'carro' ? 'directions_car' : 'local_shipping'} size={18} />
                                             <span>{v}</span>
                                         </button>
                                     ))}
                                 </div>
                             </motion.div>
                         )}
-                        <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-300"><Icon name="alternate_email" className="text-xl" /></div><input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="E-mail" className="w-full h-14 pl-14 pr-5 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" /></div>
+                        <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-400"><Icon name="alternate_email" className="text-xl" /></div><input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="E-mail" className="w-full h-14 pl-14 pr-5 bg-white border border-zinc-200 rounded-[20px] text-black font-black placeholder:text-zinc-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all text-sm shadow-sm" /></div>
                         <div className="relative">
-                            <div className="absolute inset-y-0 left-5 flex items-center text-zinc-300">
+                            <div className="absolute inset-y-0 left-5 flex items-center text-zinc-400">
                                 <Icon name="lock" className="text-xl" />
                             </div>
                             <input 
@@ -7816,13 +7856,13 @@ function App() {
                                 value={authPassword} 
                                 onChange={e => setAuthPassword(e.target.value)} 
                                 placeholder="Senha"  
-                                className="w-full h-14 pl-14 pr-14 bg-zinc-50 border border-zinc-100 rounded-[20px] text-zinc-900 font-bold placeholder:text-zinc-300 focus:outline-none focus:border-primary/30 transition-all text-sm" 
+                                className="w-full h-14 pl-14 pr-14 bg-white border border-zinc-200 rounded-[20px] text-black font-black placeholder:text-zinc-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all text-sm shadow-sm" 
                                 onKeyDown={e => e.key === 'Enter' && authMode === 'login' && handleAuthLogin()} 
                             />
                             <button 
                                 type="button"
                                 onClick={() => setShowAuthPassword(!showAuthPassword)}
-                                className="absolute inset-y-0 right-5 flex items-center text-zinc-300 hover:text-zinc-500 transition-colors"
+                                className="absolute inset-y-0 right-5 flex items-center text-zinc-400 hover:text-zinc-600 transition-colors"
                             >
                                 <Icon name={showAuthPassword ? "visibility_off" : "visibility"} size={20} />
                             </button>
@@ -7858,10 +7898,10 @@ function App() {
                     </div>
 
                     <div className="space-y-3">
-                        <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-primary text-zinc-950 font-black text-sm uppercase tracking-widest rounded-[20px] shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
-                            {authLoading ? <div className="size-5 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
+                        <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-black text-white font-black text-sm uppercase tracking-widest rounded-[20px] shadow-2xl shadow-black/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+                            {authLoading ? <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
                         </button>
-                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-zinc-50 border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-zinc-600 transition-all">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
+                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white border border-zinc-200 text-zinc-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-black transition-all shadow-sm">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
                     </div>
                 </div>
                 <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
@@ -7904,9 +7944,7 @@ function App() {
                         <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
                     <h1 className="text-zinc-900 font-bold tracking-tight text-xl">Detalhes do Pedido</h1>
-                    <button className="active:scale-95 transition-transform duration-200 hover:bg-zinc-100 p-2 rounded-full flex items-center justify-center">
-                        <Icon name="more_vert" className="text-zinc-900" />
-                    </button>
+                    <div className="size-10" />
                 </header>
 
                 <main className="pt-24 px-4 space-y-6">
@@ -7966,8 +8004,8 @@ function App() {
                                 if (items.length === 0) {
                                     return (
                                         <div className={`bg-white ${clayCardDark} rounded-xl p-5 flex items-center gap-4 border border-zinc-100`}>
-                                            <div className="w-14 h-14 rounded-full bg-yellow-400/10 flex items-center justify-center">
-                                                <Icon name="package" className="text-yellow-600" />
+                                            <div className="w-14 h-14 rounded-full bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                                                <Icon name={presentation.icon} className="text-yellow-600" size={24} />
                                             </div>
                                             <div>
                                                 <span className="text-zinc-900 font-bold text-sm block">{presentation.title}</span>
@@ -8019,7 +8057,6 @@ function App() {
                             <div className="flex justify-between items-center relative z-10 bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
                                 <div className="flex flex-col">
                                     <span className="text-zinc-900 font-black text-xs uppercase tracking-tight">Saldo da Missão</span>
-                                    <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Impacto Final na Carteira</p>
                                 </div>
                                 <div className="text-right">
                                     {(() => {
@@ -8072,6 +8109,21 @@ function App() {
                                         <Icon name="verified" className="text-emerald-500" />
                                         <p className="text-emerald-600 text-[10px] font-black uppercase tracking-tight">Pedido Pago via App. Não cobrar nada.</p>
                                     </div>
+                                ) : selectedOrder.payment_method === 'pix' ? (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-center justify-between shadow-sm group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="size-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                                                <Icon name="qr_code_scanner" className="text-white" size={24} />
+                                            </div>
+                                            <div>
+                                                <p className="text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] leading-none">Receber via Pix</p>
+                                                <p className="text-zinc-900 font-black text-lg mt-1 tracking-tighter">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20">
+                                            <span className="text-[9px] font-black text-blue-600 uppercase">Aguardando</span>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-center gap-3 shadow-sm">
                                         <Icon name="payments" className="text-rose-500" />
@@ -8106,12 +8158,12 @@ function App() {
                                     <div>
                                         <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Coleta em</p>
                                         <p className="text-zinc-900 font-bold text-sm mt-1">{selectedOrder.merchant_name || 'Parceiro Izi'}</p>
-                                        <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">{selectedOrder.merchant_address || 'Endereço de coleta disponível na missão'}</p>
+                                        <p className="text-zinc-500 text-xs mt-0.5">{selectedOrder.pickup_address || 'Endereço de coleta disponível na missão'}</p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Entregar para</p>
-                                        <p className="text-zinc-900 font-bold text-sm mt-1">{selectedOrder.customer_name || 'Cliente Izi'}</p>
-                                        <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">{selectedOrder.address || selectedOrder.customer_address || 'Endereço de entrega'}</p>
+                                        <p className="text-zinc-900 font-bold text-sm mt-1">{selectedOrder.user_name || 'Cliente Izi'}</p>
+                                        <p className="text-zinc-500 text-xs mt-0.5">{selectedOrder.delivery_address || 'Endereço de entrega'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -8136,17 +8188,13 @@ function App() {
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="grid grid-cols-2 border-t border-zinc-100">
-                            <button className="py-5 text-zinc-900 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-zinc-50 active:scale-95 transition-all">
-                                <Icon name="chat" className="text-yellow-600" />
-                                Chat
-                            </button>
+                        <div className="border-t border-zinc-100">
                             <button 
-                                onClick={() => window.open(`tel:${selectedOrder.customer_phone || selectedOrder.phone || ''}`)}
-                                className="py-5 text-zinc-900 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 border-l border-zinc-100 hover:bg-zinc-50 active:scale-95 transition-all"
+                                onClick={() => { setShowOrderModal(false); setShowHelpModal(true); }}
+                                className="w-full py-5 text-zinc-900 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-zinc-50 active:scale-95 transition-all"
                             >
-                                <Icon name="call" className="text-yellow-600" />
-                                Central
+                                <Icon name="chat" className="text-yellow-600" />
+                                Chat com o Cliente
                             </button>
                         </div>
                     </section>
