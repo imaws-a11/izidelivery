@@ -222,9 +222,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         {/* BOTTOM SHEET ULTRA PROFISSIONAL */}
         <motion.div 
-          animate={{ y: sheetMode === 'expanded' ? -380 : 0 }}
+          initial={false}
+          animate={{ 
+            y: subView !== 'none' ? 1000 : (sheetMode === 'expanded' ? -380 : 0),
+            opacity: subView !== 'none' ? 0 : 1
+          }}
           transition={{ type: "spring", damping: 35, stiffness: 350 }}
-          drag="y"
+          drag={subView === 'none' ? "y" : false}
           dragElastic={0.05}
           dragConstraints={{ top: -380, bottom: 0 }}
           onDragEnd={(e, info) => {
