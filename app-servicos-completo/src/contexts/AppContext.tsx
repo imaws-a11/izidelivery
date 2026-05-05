@@ -129,9 +129,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("preferredPaymentMethod") || "cartao" : "cartao"));
 
-  // Salvar método preferido quando mudar
+  // Salvar método preferido quando mudar (Sincronizado via CartSync)
   useEffect(() => {
-    localStorage.setItem("preferredPaymentMethod", paymentMethod);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("preferredPaymentMethod", paymentMethod);
+    }
   }, [paymentMethod]);
 
   // Estados de Orquestração (Movidos do App.tsx)
@@ -166,6 +168,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Carrinho e Checkout
   const [cart, setCart] = useState<any[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [useCoins, setUseCoins] = useState(false);
 
@@ -495,6 +498,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsLoading(false);
     }
   };
+
+  // Sincronização do Carrinho
+  useEffect(() => {
+    if (!userId) {
+      setCart([]);
+      return;
+    }
+
+    const syncCart = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('cart_sync_delivery')
+          .select('items')
+          .eq('user_id', userId)
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        if (data?.items) {
+          const { 
+            cart: savedCart, 
+            appliedCoupon: savedCoupon, 
+            useCoins: savedUseCoins,
+            paymentMethod: savedMethod
+          } = data.items;
+          
+          if (savedCart) setCart(savedCart);
+          if (savedCoupon) setAppliedCoupon(savedCoupon);
+          if (savedUseCoins !== undefined) setUseCoins(savedUseCoins);
+          if (savedMethod) setPaymentMethod(savedMethod);
+        }
+        setIsInitialLoad(false);
+      } catch (e) {
+        console.error("Erro ao sincronizar carrinho:", e);
+        setIsInitialLoad(false);
+      }
+    };
+
+    syncCart();
+
+    const cartSub = supabase
+      .channel(`cart_sync_${userId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'cart_sync_delivery',
+        filter: `user_id=eq.${userId}`
+      }, (payload) => {
+        const newItems = (payload.new as any)?.items;
+        if (newItems) {
+           // Só atualiza se for diferente do atual para evitar loops
+           setCart(prev => {
+             const prevStr = JSON.stringify(prev);
+             const nextStr = JSON.stringify(newItems);
+             return prevStr === nextStr ? prev : newItems;
+           });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(cartSub);
+    };
+  }, [userId]);
+
+  // Salvar alterações do carrinho no DB
+  useEffect(() => {
+    if (!userId || isInitialLoad) return;
+
+    const saveCart = async () => {
+      try {
+        await supabase
+          .from('cart_sync_delivery')
+          .upsert({ 
+            user_id: userId, 
+            items: { 
+              cart, 
+              appliedCoupon, 
+              useCoins,
+              paymentMethod
+            }, 
+            updated_at: new Date().toISOString() 
+          });
+      } catch (e) {
+        console.error("Erro ao salvar carrinho:", e);
+      }
+    };
+
+    const timer = setTimeout(saveCart, 1000); // Debounce
+    return () => clearTimeout(timer);
+  }, [cart, userId, isInitialLoad]);
 
   // Orquestrador de Inicialização
   useEffect(() => {
