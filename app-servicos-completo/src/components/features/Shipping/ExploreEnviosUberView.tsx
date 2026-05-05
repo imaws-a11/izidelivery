@@ -4,6 +4,7 @@ import { GoogleMap, Marker } from "@react-google-maps/api";
 import { useApp } from "../../../contexts/AppContext";
 import { supabase } from "../../../lib/supabase";
 import { useGoogleMapsLoader } from "../../../hooks/useGoogleMapsLoader";
+import { IziTrackingMap } from "../Map/IziTrackingMap";
 
 // Estilos de Mapa Silver Otimizados
 const MAP_STYLES = [
@@ -30,7 +31,7 @@ const MAP_OPTIONS: google.maps.MapOptions = {
 };
 
 export const ExploreEnviosUberView: React.FC = () => {
-  const { setSubView, setTransitData, transitData, userLocation } = useApp();
+  const { setSubView, setTransitData, transitData, userLocation, updateLocation, setMobilityStep, calculateDistancePrices, routePolyline, routeDistance, driverLocation, paymentMethod } = useApp();
   const { isLoaded } = useGoogleMapsLoader();
   const [view, setView] = useState<"explore" | "plan_trip" | "select_priority" | "izi_pay">("plan_trip");
   const [iziPaySubView, setIziPaySubView] = useState<"main" | "send" | "my_qr" | "scan" | "loan">("main");
@@ -39,11 +40,18 @@ export const ExploreEnviosUberView: React.FC = () => {
   
   const [sheetPos, setSheetPos] = useState(42);
 
-  const [originQuery, setOriginQuery] = useState("Minha localização");
+  const [originQuery, setOriginQuery] = useState("");
   const [destQuery, setDestQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<"origin" | "dest" | null>(null);
   const [dynamicVehicles, setDynamicVehicles] = useState<any[]>([]);
+
+  // Sincroniza endereço de origem com a localização real do usuário ao carregar
+  useEffect(() => {
+    if (userLocation.address && !originQuery) {
+      setOriginQuery(userLocation.address);
+    }
+  }, [userLocation.address]);
 
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const distanceMatrixService = useRef<google.maps.DistanceMatrixService | null>(null);
@@ -135,12 +143,19 @@ export const ExploreEnviosUberView: React.FC = () => {
   }, [destQuery, originQuery, isSearching, fetchSuggestions]);
 
   const handleSelectLocation = (loc: any) => {
+    const originStr = originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery;
+    const destStr = `${loc.title}, ${loc.subtitle}`;
+
     setTransitData((prev: any) => ({
       ...prev,
-      destination: `${loc.title}, ${loc.subtitle}`,
-      origin: originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery,
+      destination: destStr,
+      origin: originStr,
       destinationCoords: { lat: center.lat, lng: center.lng }
     }));
+    
+    // Dispara o cálculo da rota imediatamente para o mapa mostrar a rota
+    calculateDistancePrices(originStr, destStr);
+    
     setView("select_priority");
     setSheetPos(42);
   };
@@ -239,62 +254,198 @@ export const ExploreEnviosUberView: React.FC = () => {
     if (view === "select_priority") {
       return (
         <div className="relative h-screen w-full bg-white overflow-hidden font-sans">
-          <div className="absolute inset-0 z-0">{isLoaded && (<GoogleMap mapContainerStyle={{ width: '100%', height: '100%', position: 'absolute' }} center={center} zoom={17} options={MAP_OPTIONS}><Marker position={center} /></GoogleMap>)}<motion.button whileTap={{ scale: 0.9 }} onClick={() => setView("plan_trip")} className="absolute top-12 left-5 w-11 h-11 bg-white rounded-full flex items-center justify-center shadow-2xl z-50"><span className="material-symbols-rounded text-black font-bold text-[28px]">arrow_back</span></motion.button></div>
-          <motion.div drag="y" dragConstraints={{ top: 0, bottom: 650 }} dragElastic={0.02} onDragEnd={(e, info) => { const v = info.velocity.y; const o = info.offset.y; if (o < -100 || v < -500) setSheetPos(0); else if (o > 150 || v > 500) setSheetPos(84); else setSheetPos(42); }} initial={{ y: "100%" }} animate={{ y: `${sheetPos}%` }} transition={{ type: "spring", damping: 35, stiffness: 350 }} className="absolute bottom-0 left-0 w-full bg-white rounded-t-[40px] shadow-[0_-30px_100px_rgba(0,0,0,0.3)] z-[100]" style={{ height: '95vh', touchAction: 'none' }}>
-            <div className="pt-4 pb-2 flex flex-col items-center cursor-grab active:cursor-grabbing"><div className="w-14 h-1.5 bg-neutral-200 rounded-full mb-3" /><h2 className="text-[19px] font-bold text-neutral-800">Escolher uma viagem</h2></div>
-            <div className="px-6 pb-20 overflow-y-auto no-scrollbar h-full space-y-7 pt-4">
+          {/* Mapa com Rota */}
+          <div className="absolute inset-0 z-0">
+            {isLoaded && (
+              <IziTrackingMap
+                routePolyline={routePolyline}
+                userLoc={{ lat: center.lat, lng: center.lng }}
+                originLoc={transitData.originCoords}
+                destLoc={transitData.destinationCoords}
+                driverLoc={null}
+                boxed={false}
+              />
+            )}
+            
+            <motion.button 
+              whileTap={{ scale: 0.9 }} 
+              onClick={() => setView("plan_trip")} 
+              className="absolute top-12 left-5 w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-2xl z-50 border border-zinc-100"
+            >
+              <span className="material-symbols-rounded text-black font-black text-[24px]">arrow_back</span>
+            </motion.button>
+
+            {/* Overlay de Rota (Info rápida no topo) */}
+            <motion.div 
+              initial={{ y: -100 }}
+              animate={{ y: 0 }}
+              className="absolute top-12 left-20 right-6 z-50"
+            >
+               <div className="bg-black/90 backdrop-blur-xl p-4 rounded-2xl border border-white/10 flex justify-between items-center shadow-2xl">
+                  <div className="flex flex-col">
+                     <span className="text-[8px] text-yellow-400 font-black uppercase tracking-[0.3em] mb-1">Trajeto Identificado</span>
+                     <span className="text-white font-black text-xs truncate max-w-[150px]">{transitData.destination}</span>
+                  </div>
+                  <div className="text-right">
+                     <span className="text-yellow-400 font-black text-lg tracking-tighter leading-none block">{routeDistance || "-- km"}</span>
+                     <span className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Estimado</span>
+                  </div>
+               </div>
+            </motion.div>
+          </div>
+
+          <motion.div 
+            drag="y" 
+            dragConstraints={{ top: 0, bottom: 650 }} 
+            dragElastic={0.05} 
+            onDragEnd={(e, info) => { 
+              const v = info.velocity.y; 
+              const o = info.offset.y; 
+              if (o < -100 || v < -500) setSheetPos(0); 
+              else if (o > 150 || v > 500) setSheetPos(60); 
+              else setSheetPos(35); 
+            }} 
+            initial={{ y: "100%" }} 
+            animate={{ y: `${sheetPos}%` }} 
+            transition={{ type: "spring", damping: 32, stiffness: 300 }} 
+            className="absolute bottom-0 left-0 w-full bg-[#F8F9FA] rounded-t-[48px] shadow-[0_-30px_80px_rgba(0,0,0,0.2)] z-[100] border-t border-white" 
+            style={{ height: '95vh', touchAction: 'none' }}
+          >
+            <div className="pt-4 pb-2 flex flex-col items-center cursor-grab active:cursor-grabbing">
+              <div className="w-14 h-1.5 bg-neutral-200 rounded-full mb-3" />
+              <div className="flex items-center gap-3">
+                 <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+                 <h2 className="text-[13px] font-black text-neutral-800 uppercase tracking-[0.2em]">Escolha o seu IZI</h2>
+              </div>
+            </div>
+            
+            <div className="px-6 pb-40 overflow-y-auto no-scrollbar h-full space-y-6 pt-4">
+              
+              {/* Seção de Veículos com Riqueza de Detalhes */}
               <div className="space-y-3">
-                <VehicleOption id="moto" title="Moto-táxi" icon="🏍️" img="https://mobile-content.uber.com/launch-experience/moto.png" time="02:40 · 10 min" price="R$ 8,50" badge="Econômico" passengers={1} selected={selectedType === "moto"} onClick={() => setSelectedType("moto")} />
-                <VehicleOption id="carro" title="Motorista Particular" icon="🚗" img="https://mobile-content.uber.com/launch-experience/ride.png" time="02:41 · 11 min" price="R$ 14,90" passengers={4} selected={selectedType === "carro"} onClick={() => setSelectedType("carro")} />
-                <VehicleOption id="frete" title="Logística (Fretes e Mudanças)" icon="📦" img="https://mobile-content.uber.com/launch-experience/teens.png" time="A Combinar" price="Sob Consulta" hasClock selected={selectedType === "frete"} onClick={() => setSelectedType("frete")} />
+                <VehicleOption 
+                  id="moto" 
+                  title="Izi Moto" 
+                  icon="🏍️" 
+                  img="https://mobile-content.uber.com/launch-experience/moto.png" 
+                  time="⚡ Chega em 3 min" 
+                  price="R$ 8,50" 
+                  badge="Econômico" 
+                  details="Ideal para envios rápidos e documentos. Máximo 5kg."
+                  passengers={1} 
+                  selected={selectedType === "moto"} 
+                  onClick={() => setSelectedType("moto")} 
+                />
+                
+                <VehicleOption 
+                  id="carro" 
+                  title="Izi Particular" 
+                  icon="🚗" 
+                  img="https://mobile-content.uber.com/launch-experience/ride.png" 
+                  time="🛡️ Seguro & Confortável" 
+                  price="R$ 14,90" 
+                  details="Viagens urbanas com ar-condicionado e porta-malas livre."
+                  passengers={4} 
+                  selected={selectedType === "carro"} 
+                  onClick={() => setSelectedType("carro")} 
+                />
+
+                <VehicleOption 
+                  id="frete" 
+                  title="Izi Logistics" 
+                  icon="📦" 
+                  img="https://mobile-content.uber.com/launch-experience/teens.png" 
+                  time="🚛 Fretes & Mudanças" 
+                  price="Sob Consulta" 
+                  details="Frotas especializadas para transporte de carga pesada."
+                  hasClock 
+                  selected={selectedType === "frete"} 
+                  onClick={() => setSelectedType("frete")} 
+                />
                 
                 <AnimatePresence>
                   {selectedType === "frete" && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="pl-4 space-y-2 overflow-hidden border-l-2 border-[#FFC107] ml-2">
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }} 
+                      animate={{ height: "auto", opacity: 1 }} 
+                      exit={{ height: 0, opacity: 0 }} 
+                      className="pl-4 space-y-2 overflow-hidden border-l-4 border-yellow-400 ml-3 py-2"
+                    >
                        {dynamicVehicles.length > 0 ? dynamicVehicles.map(v => (
                          <VehicleOption 
                            key={v.id}
                            id={v.id} 
-                           title={`${v.title} (${v.capacity})`} 
+                           title={v.title} 
                            icon={v.icon} 
                            img={v.img} 
                            time={v.capacity} 
                            price={`R$ ${v.price.toFixed(2).replace('.', ',')}`} 
+                           details="Transporte especializado com suporte IZI."
                            selected={selectedFreteType === v.id} 
                            onClick={() => setSelectedFreteType(v.id as any)} 
                            isSubOption 
                          />
                        )) : (
-                         <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-center gap-3">
-                           <div className="size-2 rounded-full bg-zinc-200 animate-pulse" />
-                           <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Carregando frotas...</span>
+                         <div className="p-4 bg-zinc-100 rounded-3xl flex items-center gap-3 border border-zinc-200">
+                           <div className="size-2 rounded-full bg-yellow-400 animate-ping" />
+                           <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Sincronizando frotas disponíveis...</span>
                          </div>
                        )}
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
-              <div className="border-t border-neutral-100 pt-5">
-                <div onClick={() => { setView("izi_pay"); setIziPaySubView("main"); }} className="flex items-center justify-between py-3 mb-4 cursor-pointer active:opacity-60 bg-neutral-50 px-4 rounded-2xl">
-                  <div className="flex items-center gap-3"><div className="w-8 h-6 bg-[#FFC107] rounded-sm flex items-center justify-center"><span className="material-symbols-rounded text-black text-lg">payments</span></div><span className="font-bold text-[15px]">Izi Pay</span></div>
-                  <div className="flex items-center gap-1 text-zinc-400"><span className="text-[10px] font-black uppercase tracking-widest text-[#FFC107]">R$ 482,90</span><span className="material-symbols-rounded">chevron_right</span></div>
-                </div>
-                <motion.button 
-                  whileTap={{ scale: 0.98 }} 
-                  onClick={() => {
-                    if (selectedType === 'frete') {
-                      setTransitData((prev: any) => ({ ...prev, type: 'freight', vehicleCategory: selectedFreteType }));
-                      setSubView("freight_wizard" as any);
-                    } else {
-                      setTransitData((prev: any) => ({ ...prev, type: selectedType === 'moto' ? 'mototaxi' : 'taxi' }));
-                      setSubView("taxi_wizard" as any);
-                    }
-                  }} 
-                  className="w-full bg-black text-white h-[64px] rounded-2xl font-bold text-lg shadow-2xl"
-                >
-                  Escolher {selectedType === 'moto' ? 'Moto-táxi' : selectedType === 'carro' ? 'Motorista Particular' : selectedType === 'frete' ? (dynamicVehicles.find(v => v.id === selectedFreteType)?.title || 'Frete') : ''}
-                </motion.button>
+
+              {/* Informações de Pagamento e Saldo */}
+              <div className="bg-white rounded-[32px] p-6 shadow-sm border border-neutral-100 space-y-4">
+                 <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                       <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center">
+                          <span className="material-symbols-rounded text-black font-black">wallet</span>
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Izi Pay</p>
+                          <p className="text-sm font-black text-black">Saldo Disponível</p>
+                       </div>
+                    </div>
+                    <span className="text-lg font-black text-black tracking-tighter">R$ 482,90</span>
+                 </div>
+                 <div className="h-px bg-zinc-50 w-full" />
+                 <button onClick={() => { setView("izi_pay"); setIziPaySubView("main"); }} className="w-full py-2 flex justify-between items-center">
+                    <span className="text-xs font-bold text-zinc-500">Alterar forma de pagamento</span>
+                    <span className="material-symbols-rounded text-zinc-400">chevron_right</span>
+                 </button>
               </div>
+
+            </div>
+
+            {/* Rodapé Fixo de Ação */}
+            <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-white/80 backdrop-blur-xl border-t border-neutral-100 z-[110]">
+              <motion.button 
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }} 
+                onClick={() => {
+                  const origin = originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery;
+                  const destination = transitData.destination;
+                  
+                  if (selectedType === 'frete') {
+                    setTransitData((prev: any) => ({ ...prev, type: 'freight', vehicleCategory: selectedFreteType, origin, destination }));
+                    setMobilityStep(2);
+                    calculateDistancePrices(origin, destination);
+                    setSubView("freight_wizard" as any);
+                  } else {
+                    const finalType = selectedType === 'moto' ? 'mototaxi' : 'taxi';
+                    setTransitData((prev: any) => ({ ...prev, type: finalType, origin, destination }));
+                    setMobilityStep(2);
+                    calculateDistancePrices(origin, destination);
+                    setSubView("taxi_wizard" as any);
+                  }
+                }} 
+                className="w-full bg-black text-white h-[74px] rounded-[32px] font-black text-xl shadow-2xl flex items-center justify-center gap-4 group"
+              >
+                <span className="uppercase tracking-widest text-sm">Confirmar {selectedType === 'moto' ? 'Izi Moto' : selectedType === 'carro' ? 'Particular' : 'Logística'}</span>
+                <span className="material-symbols-rounded group-hover:translate-x-2 transition-transform">arrow_forward</span>
+              </motion.button>
             </div>
           </motion.div>
         </div>
@@ -310,10 +461,74 @@ export const ExploreEnviosUberView: React.FC = () => {
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
           className="fixed inset-0 bg-white z-[200] font-sans text-black pb-32 overflow-y-auto select-none"
         >
-          <header className="px-5 pt-12 pb-4 flex items-center gap-6 sticky top-0 bg-white z-50"><motion.button whileTap={{ scale: 0.9 }} onClick={() => window.history.back()} className="material-symbols-rounded font-bold text-2xl">arrow_back</motion.button><h1 className="text-[20px] font-bold">Planeje sua viagem</h1></header>
+          <header className="px-5 pt-12 pb-4 flex items-center gap-6 sticky top-0 bg-white z-50">
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setView("explore")} className="material-symbols-rounded font-bold text-2xl">arrow_back</motion.button>
+            <h1 className="text-[20px] font-black uppercase tracking-tighter">Planeje sua viagem</h1>
+          </header>
           <main className="px-5 space-y-6">
-            <section className="flex items-center gap-3"><div className="flex-1 border-[2.5px] border-black rounded-xl p-3 flex flex-col gap-4 relative bg-white"><div className="flex items-center gap-4"><div className="w-2.5 h-2.5 rounded-full border-[2.5px] border-black shrink-0" /><input type="text" value={originQuery} onChange={(e) => { setOriginQuery(e.target.value); setIsSearching("origin"); }} onFocus={() => setIsSearching("origin")} className="w-full bg-transparent outline-none text-zinc-900 font-medium text-[15px]" /></div><div className="h-[1px] bg-neutral-100 ml-6" /><div className="flex items-center gap-4"><div className="w-2.5 h-2.5 bg-black shrink-0" /><input autoFocus placeholder="Para onde?" value={destQuery} onChange={(e) => { setDestQuery(e.target.value); setIsSearching("dest"); }} onFocus={() => setIsSearching("dest")} className="w-full bg-transparent outline-none text-zinc-900 font-medium text-[15px] placeholder:text-zinc-400" /></div><div className="absolute left-[16px] top-[25px] bottom-[25px] w-[2px] bg-black" /></div></section>
-            <section className="space-y-6 pt-2 pb-20"><AnimatePresence mode="popLayout">{suggestions.map((loc, i) => (<motion.div key={loc.placeId || i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ delay: i * 0.02 }}><DestinationItem {...loc} onClick={() => handleSelectLocation(loc)} /></motion.div>))}</AnimatePresence></section>
+            <section className="flex flex-col gap-5">
+              <div className="flex-1 border-[2.5px] border-black rounded-[24px] p-5 flex flex-col gap-5 relative bg-white shadow-xl">
+                <div className="flex items-center gap-4">
+                  <div className="w-3 h-3 rounded-full border-[3px] border-black shrink-0" />
+                  <input 
+                    type="text" 
+                    placeholder="De onde você vai sair?"
+                    value={originQuery} 
+                    onChange={(e) => { setOriginQuery(e.target.value); setIsSearching("origin"); }} 
+                    onFocus={() => setIsSearching("origin")} 
+                    className="w-full bg-transparent outline-none text-zinc-900 font-black text-[14px] uppercase tracking-tighter placeholder:text-zinc-300" 
+                  />
+                </div>
+                <div className="h-[1px] bg-neutral-100 ml-6" />
+                <div className="flex items-center gap-4">
+                  <div className="w-3 h-3 bg-black shrink-0" />
+                  <input 
+                    autoFocus 
+                    placeholder="Para onde?" 
+                    value={destQuery} 
+                    onChange={(e) => { setDestQuery(e.target.value); setIsSearching("dest"); }} 
+                    onFocus={() => setIsSearching("dest")} 
+                    className="w-full bg-transparent outline-none text-zinc-900 font-black text-[14px] uppercase tracking-tighter placeholder:text-zinc-300" 
+                  />
+                </div>
+                <div className="absolute left-[24px] top-[40px] bottom-[40px] w-[2px] bg-black" />
+              </div>
+
+              {/* Botão de Localização Atual */}
+              <motion.button 
+                whileTap={{ scale: 0.95 }}
+                disabled={userLocation.loading}
+                onClick={async () => {
+                  setIsSearching("origin");
+                  const newLoc = await updateLocation(true);
+                  if (newLoc && newLoc.address) {
+                    setOriginQuery(newLoc.address);
+                    setSuggestions([]); // Limpa as sugestões após encontrar
+                  }
+                }}
+                className={`flex items-center gap-3 px-5 py-3 rounded-2xl border self-start transition-all
+                  ${userLocation.loading ? 'bg-zinc-100 border-zinc-200' : 'bg-zinc-50 border-zinc-100 active:bg-zinc-100'}
+                `}
+              >
+                <div className={`size-8 rounded-full flex items-center justify-center ${userLocation.loading ? 'bg-zinc-200 animate-spin' : 'bg-blue-500/10'}`}>
+                  <span className={`material-symbols-rounded ${userLocation.loading ? 'text-zinc-400' : 'text-blue-600'} text-xl font-black`}>
+                    {userLocation.loading ? 'sync' : 'my_location'}
+                  </span>
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-widest text-zinc-600">
+                  {userLocation.loading ? 'Obtendo precisão...' : 'Usar minha localização atual'}
+                </span>
+              </motion.button>
+            </section>
+            <section className="space-y-6 pt-2 pb-20">
+              <AnimatePresence mode="popLayout">
+                {suggestions.map((loc, i) => (
+                  <motion.div key={loc.placeId || i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ delay: i * 0.02 }}>
+                    <DestinationItem {...loc} onClick={() => handleSelectLocation(loc)} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </section>
           </main>
         </motion.div>
       );
@@ -321,11 +536,53 @@ export const ExploreEnviosUberView: React.FC = () => {
 
     return (
       <div className="min-h-screen bg-white font-sans text-black pb-32 overflow-y-auto select-none overflow-x-hidden">
-        <header className="px-5 pt-12 pb-6 bg-white sticky top-0 z-50 flex items-center gap-6"><motion.button whileTap={{ scale: 0.8 }} onClick={() => window.history.back()} className="material-symbols-rounded font-bold text-[28px]">arrow_back</motion.button><h1 className="text-[36px] font-bold tracking-tight leading-none">Izi</h1></header>
+        <header className="px-5 pt-12 pb-6 bg-white sticky top-0 z-50 flex items-center gap-6">
+          <motion.button whileTap={{ scale: 0.8 }} onClick={() => window.history.back()} className="material-symbols-rounded font-bold text-[28px]">arrow_back</motion.button>
+          <h1 className="text-[36px] font-black tracking-tight leading-none uppercase">Izi</h1>
+        </header>
         <main className="px-5 space-y-7">
-          <section onClick={() => setView("plan_trip")} className="flex items-center bg-[#EEEEEE] rounded-full h-[54px] px-4 gap-2 cursor-pointer active:scale-[0.98] transition-transform"><div className="flex flex-1 items-center gap-3"><span className="material-symbols-rounded font-bold text-[24px]">search</span><span className="text-black font-semibold text-lg opacity-90">Para onde?</span></div><div className="h-[38px] bg-white rounded-full flex items-center px-4 gap-2 shadow-sm"><span className="material-symbols-rounded font-bold text-[18px]">calendar_month</span><span className="text-black font-bold text-[13px]">Mais tarde</span></div></section>
-          <section className="flex items-center gap-4 py-1"><div className="w-9 h-9 rounded-lg bg-[#EEEEEE] flex items-center justify-center shrink-0"><span className="material-symbols-rounded text-xl opacity-80">schedule</span></div><div className="flex-1 min-w-0 border-b border-neutral-100/50 pb-4"><p className="font-semibold text-[16px] leading-tight truncate">Rua Presidente Vargas, 367</p><p className="text-zinc-500 text-[14px] font-medium truncate">Brumadinho - MG</p></div></section>
-          <section><div className="flex justify-between items-center mb-5"><h2 className="text-xl font-bold">Mobilidade e transporte</h2></div><div className="flex gap-3 overflow-x-auto no-scrollbar pb-2"><UberServiceCard name="Viagem" img="https://mobile-content.uber.com/launch-experience/ride.png" onClick={() => setView("plan_trip")} /><UberServiceCard name="Logística" img="https://mobile-content.uber.com/launch-experience/teens.png" /><UberServiceCard name="Excursões" img="https://mobile-content.uber.com/launch-experience/eats.png" badge="Novo" /><UberServiceCard name="Moto" img="https://mobile-content.uber.com/launch-experience/moto.png" /></div></section>
+          <section 
+            onClick={() => setView("plan_trip")} 
+            className="flex items-center bg-[#EEEEEE] rounded-[24px] h-[74px] px-6 gap-4 cursor-pointer active:scale-[0.98] transition-all hover:bg-neutral-200 border-2 border-transparent hover:border-black"
+          >
+            <div className="flex flex-1 items-center gap-4 overflow-hidden">
+              <div className="size-10 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                <span className="material-symbols-rounded font-black text-black text-[24px]">location_on</span>
+              </div>
+              <div className="flex flex-col min-w-0">
+                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Seu Local</span>
+                 <span className="text-black font-black text-sm uppercase tracking-tighter truncate opacity-90">
+                   {userLocation.address || "Para onde?"}
+                 </span>
+              </div>
+            </div>
+            <div className="h-[44px] bg-black rounded-xl flex items-center px-4 gap-2 shadow-xl shrink-0">
+              <span className="material-symbols-rounded font-black text-white text-[18px]">calendar_month</span>
+              <span className="text-white font-black text-[11px] uppercase tracking-widest">Agendar</span>
+            </div>
+          </section>
+
+          <section className="flex items-center gap-4 py-1">
+            <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 border border-zinc-200">
+              <span className="material-symbols-rounded text-black text-xl opacity-80">history</span>
+            </div>
+            <div className="flex-1 min-w-0 border-b border-neutral-100/50 pb-4">
+              <p className="font-black text-[13px] leading-tight truncate uppercase tracking-tighter">Último destino pesquisado</p>
+              <p className="text-zinc-500 text-[12px] font-bold truncate uppercase tracking-widest mt-1">Rua Presidente Vargas, 367</p>
+            </div>
+          </section>
+
+          <section>
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-black uppercase tracking-tighter">Serviços Disponíveis</h2>
+            </div>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+              <UberServiceCard name="Viagem" img="https://mobile-content.uber.com/launch-experience/ride.png" onClick={() => setView("plan_trip")} />
+              <UberServiceCard name="Logística" img="https://mobile-content.uber.com/launch-experience/teens.png" />
+              <UberServiceCard name="Excursões" img="https://mobile-content.uber.com/launch-experience/eats.png" badge="Novo" />
+              <UberServiceCard name="Moto" img="https://mobile-content.uber.com/launch-experience/moto.png" />
+            </div>
+          </section>
         </main>
       </div>
     );
@@ -354,8 +611,61 @@ const TransactionItem = ({ title, date, amount, icon, color }: any) => (
   <div className="flex items-center gap-4 p-4 border-b border-neutral-50 last:border-none"><div className={`w-11 h-11 rounded-full ${color} flex items-center justify-center shrink-0`}><span className="material-symbols-rounded text-[22px]">{icon}</span></div><div className="flex-1 min-w-0"><p className="font-bold text-[15px] text-black">{title}</p><p className="text-[12px] text-zinc-400 font-medium">{date}</p></div><div className={`font-black text-[15px] ${amount.startsWith('+') ? 'text-green-600' : 'text-black'}`}>{amount}</div></div>
 );
 
-const VehicleOption = ({ title, icon, img, time, price, badge, passengers, selected, hasClock, isSubOption, onClick }: any) => (
-  <motion.div onClick={onClick} className={`flex items-center ${isSubOption ? 'p-2' : 'p-3'} rounded-2xl cursor-pointer transition-all border-[3px] ${selected ? "border-black bg-white shadow-md" : "border-transparent bg-transparent hover:bg-neutral-50"}`}><div className={`relative ${isSubOption ? 'w-12 h-12' : 'w-16 h-16'} shrink-0 flex items-center justify-center`}><img src={img} className="w-full h-full object-contain" />{hasClock && <div className="absolute top-0 right-0 w-5 h-5 bg-black rounded-full flex items-center justify-center border-2 border-white"><span className="material-symbols-rounded text-white text-[10px]">schedule</span></div>}</div><div className="flex-1 ml-4"><div className="flex items-center gap-1">{icon && <span className="text-[12px]">{icon}</span>}<h3 className={`font-bold ${isSubOption ? 'text-[14px]' : 'text-[16px]'}`}>{title}</h3>{passengers && <div className="flex items-center gap-0.5 opacity-60"><span className="material-symbols-rounded text-[14px]">person</span><span className="text-[12px] font-bold">{passengers}</span></div>}</div><p className="text-zinc-500 text-[13px] font-medium mt-1">{time}</p>{badge && <div className="mt-2 inline-flex items-center gap-1 bg-[#285A98] text-white px-2 py-0.5 rounded-full"><span className="material-symbols-rounded text-[12px] fill-1">bolt</span><span className="text-[10px] font-bold uppercase">{badge}</span></div>}</div><div className="text-right"><p className={`font-bold ${isSubOption ? 'text-[14px]' : 'text-[16px]'}`}>{price}</p></div></motion.div>
+const VehicleOption = ({ title, icon, img, time, price, badge, details, passengers, selected, hasClock, isSubOption, onClick }: any) => (
+  <motion.div 
+    onClick={onClick} 
+    className={`flex flex-col ${isSubOption ? 'p-3' : 'p-5'} rounded-[32px] cursor-pointer transition-all border-[3px] 
+      ${selected 
+        ? "border-black bg-white shadow-xl scale-[1.02]" 
+        : "border-transparent bg-white/40 hover:bg-white/60"
+      }`}
+  >
+    <div className="flex items-center">
+      <div className={`relative ${isSubOption ? 'w-14 h-14' : 'w-20 h-20'} shrink-0 flex items-center justify-center bg-zinc-100 rounded-[24px] p-2`}>
+        <img src={img} className="w-full h-full object-contain" />
+        {hasClock && (
+          <div className="absolute -top-2 -right-2 w-6 h-6 bg-black rounded-full flex items-center justify-center border-2 border-white">
+            <span className="material-symbols-rounded text-white text-[12px]">schedule</span>
+          </div>
+        )}
+      </div>
+      <div className="flex-1 ml-5">
+        <div className="flex items-center justify-between mb-1">
+           <div className="flex items-center gap-1.5">
+              <h3 className={`font-black ${isSubOption ? 'text-[15px]' : 'text-[18px]'} tracking-tighter uppercase`}>{title}</h3>
+              {passengers && (
+                <div className="flex items-center gap-0.5 bg-zinc-100 px-2 py-0.5 rounded-full">
+                  <span className="material-symbols-rounded text-[12px] font-black">person</span>
+                  <span className="text-[10px] font-black">{passengers}</span>
+                </div>
+              )}
+           </div>
+           <p className={`font-black ${isSubOption ? 'text-[15px]' : 'text-[18px]'} tracking-tighter text-black`}>{price}</p>
+        </div>
+        <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest">{time}</p>
+        {badge && (
+          <div className="mt-2 inline-flex items-center gap-1.5 bg-yellow-400 text-black px-3 py-1 rounded-full">
+            <span className="material-symbols-rounded text-[12px] font-black fill-1">bolt</span>
+            <span className="text-[9px] font-black uppercase tracking-widest">{badge}</span>
+          </div>
+        )}
+      </div>
+    </div>
+    
+    <AnimatePresence>
+      {selected && details && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          className="overflow-hidden mt-4 pt-4 border-t border-zinc-100"
+        >
+           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-relaxed">
+             {details}
+           </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </motion.div>
 );
 
 const UberServiceCard = ({ name, img, badge, onClick }: any) => (

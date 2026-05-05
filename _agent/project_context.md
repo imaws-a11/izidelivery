@@ -20,8 +20,12 @@ Atualizado: 2026-05-05
 - **Banco:** Criada tabela `cart_sync_delivery` para persistência global.
 - **Escopo:** Sincronização em tempo real (Supabase Realtime) de:
   - **Carrinho:** Itens, Cupons e Metadados.
-  - **Financeiro:** Saldo da Carteira e Izi Coins.
-  - **Perfil:** Status de Membro Izi Black e Método de Pagamento preferido.
+- [x] Modernização do Fluxo de Mobilidade (Izi Logistics)
+    - [x] Remoção de inputs redundantes de endereço nos Wizards (Taxi, Van, Frete).
+    - [x] Migração do estado `mobilityStep` para o `AppContext` (Centralização).
+    - [x] Unificação dos extras do FreightWizard na tela de resumo.
+    - [x] Gatilho automático de cálculo de preços no ExploreEnviosUberView.
+    - [x] Design Premium Claymorphic aplicado em todos os Wizards e telas de Checkout.
 - **Sincronia:** Consistência instantânea entre todos os dispositivos do usuário ao realizar ações ou logar.
 
 ### 📂 Arquivos Modificados

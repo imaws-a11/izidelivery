@@ -552,6 +552,8 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
   const [balance, setBalance] = useState(walletBalance);
   const [coins, setCoins] = useState(iziCoins);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const [sendAmount, setSendAmount] = useState("");
+  const [manualRecipient, setManualRecipient] = useState("");
 
   // --- Estados do Izi Crédito ---
   const [loanAmount, setLoanAmount] = useState("");
@@ -1554,8 +1556,6 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
     setSubView("send");
   };
 
-  const [sendAmount, setSendAmount] = useState("");
-  const [manualRecipient, setManualRecipient] = useState("");
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans selection:bg-yellow-200 overflow-x-hidden">

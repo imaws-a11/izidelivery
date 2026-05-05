@@ -48,7 +48,7 @@ interface AppContextData {
   
   // Localização
   userLocation: { lat: number | null; lng: number | null; loading: boolean; error: string | null; address?: string };
-  updateLocation: (highAccuracy?: boolean) => Promise<void>;
+  updateLocation: (highAccuracy?: boolean) => Promise<{ lat: number; lng: number; address: string } | null>;
   setUserLocation: (loc: any) => void;
 
   // Carrinho e Checkout
@@ -108,7 +108,9 @@ interface AppContextData {
   paymentMethod: string;
   setPaymentMethod: (method: string) => void;
   triggerCartAnimation: (e: any, img: string) => void;
-  cartAnimations: any[];
+  // Mobilidade e Etapas
+  mobilityStep: number;
+  setMobilityStep: (step: number) => void;
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -204,6 +206,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [routePolyline, setRoutePolyline] = useState<any[]>([]);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
   const [nearbyDriversCount, setNearbyDriversCount] = useState(0);
+  const [mobilityStep, setMobilityStep] = useState(1);
 
   const [marketConditions, setMarketConditions] = useState({
     demand: 1.0,
@@ -248,13 +251,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) { console.error("Error refreshing settings:", e); }
   };
 
-  const updateLocation = async (highAccuracy = false) => {
+  const updateLocation = async (highAccuracy = false): Promise<{ lat: number; lng: number; address: string } | null> => {
     setUserLocation(prev => ({ ...prev, loading: true }));
-    try {
-      setUserLocation({ lat: -23.55052, lng: -46.633308, address: "Praça da Sé, São Paulo", loading: false, error: null });
-    } catch (err: any) {
-      setUserLocation(prev => ({ ...prev, loading: false, error: err.message }));
+    
+    if (!navigator.geolocation) {
+      setUserLocation(prev => ({ ...prev, loading: false, error: "Geolocalização não suportada" }));
+      return null;
     }
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: highAccuracy ? 0 : 30000
+    };
+
+    return new Promise((resolve) => {
+      // Timeout de segurança de 15 segundos
+      const timer = setTimeout(() => {
+        console.warn("[GPS] Timeout atingido");
+        setUserLocation(prev => ({ ...prev, loading: false, error: "Tempo limite excedido" }));
+        resolve(null);
+      }, 15000);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          clearTimeout(timer);
+          const { latitude: lat, longitude: lng } = position.coords;
+          console.log(`[GPS] Localização obtida: ${lat}, ${lng}`);
+          
+          if (window.google && window.google.maps) {
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+              let address = "Localização Identificada";
+              
+              if (status === "OK" && results && results[0]) {
+                address = results[0].formatted_address;
+              } else {
+                address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+              }
+              
+              const newData = { lat, lng, address, loading: false, error: null };
+              setUserLocation(newData);
+              resolve(newData);
+            });
+          } else {
+            const newData = { lat, lng, address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, loading: false, error: null };
+            setUserLocation(newData);
+            resolve(newData);
+          }
+        },
+        (err) => {
+          clearTimeout(timer);
+          console.error("[GPS] Erro:", err);
+          setUserLocation(prev => ({ ...prev, loading: false, error: "Falha ao obter GPS" }));
+          resolve(null);
+        },
+        options
+      );
+    });
   };
 
   const getCartSubtotal = () => cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -300,13 +354,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const calculateDistancePrices = async (origin: string, destination: string) => {
     setIsCalculatingPrice(true);
     try {
-      // Simulação de chamada à API de rotas
-      const distKm = 5.2;
-      const durationSeconds = 900;
-      const durationMin = Math.ceil(durationSeconds / 60);
+      if (!window.google || !window.google.maps) {
+        throw new Error("Google Maps não carregado");
+      }
+
+      const directionsService = new window.google.maps.DirectionsService();
+      
+      const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
+        directionsService.route({
+          origin,
+          destination,
+          travelMode: google.maps.TravelMode.DRIVING,
+        }, (res, status) => {
+          if (status === "OK" && res) resolve(res);
+          else reject(new Error(`Falha ao calcular rota: ${status}`));
+        });
+      });
+
+      const route = result.routes[0];
+      const leg = route.legs[0];
+      const distKm = (leg.distance?.value || 0) / 1000;
+      const durationMin = Math.ceil((leg.duration?.value || 0) / 60);
       
       setRouteDistance(`${distKm.toFixed(1).replace('.', ',')} km • ${durationMin} min`);
       setDistanceValueKm(distKm);
+      setRoutePolyline(route.overview_path);
 
       const bv = marketConditions.settings.baseValues;
       const newPrices = {
@@ -317,9 +389,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       setDistancePrices(newPrices);
-      setTransitData((prev: any) => ({ ...prev, estPrice: newPrices[prev.type as keyof typeof newPrices] || newPrices.utilitario }));
+      setTransitData((prev: any) => ({ 
+        ...prev, 
+        estPrice: newPrices[prev.type as keyof typeof newPrices] || newPrices.utilitario 
+      }));
     } catch (err) {
-      console.error("Error calculating routes:", err);
+      console.error("Erro ao calcular rota:", err);
+      toastError("Não foi possível calcular a rota. Verifique os endereços.");
     } finally {
       setIsCalculatingPrice(false);
     }
@@ -602,7 +678,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const { data, error } = await supabase
           .from('users_delivery')
-          .select('wallet_balance, izi_coins, is_black_member')
+          .select('wallet_balance, izi_coins, is_izi_black')
           .eq('id', userId)
           .single();
 
@@ -610,7 +686,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data) {
           setWalletBalance(data.wallet_balance || 0);
           setIziCoins(data.izi_coins || 0);
-          setIsIziBlackMembership(!!data.is_black_member);
+          setIsIziBlackMembership(!!data.is_izi_black);
         }
       } catch (e) {
         console.error("Erro ao carregar dados financeiros:", e);
@@ -627,10 +703,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         table: 'users_delivery',
         filter: `id=eq.${userId}`
       }, (payload) => {
-        const { wallet_balance, izi_coins, is_black_member } = payload.new as any;
+        const { wallet_balance, izi_coins, is_izi_black } = payload.new as any;
         if (wallet_balance !== undefined) setWalletBalance(wallet_balance);
         if (izi_coins !== undefined) setIziCoins(izi_coins);
-        if (is_black_member !== undefined) setIsIziBlackMembership(!!is_black_member);
+        if (is_izi_black !== undefined) setIsIziBlackMembership(!!is_izi_black);
       })
       .subscribe();
 
@@ -715,7 +791,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       marketConditions, fetchMarketData, routePolyline, setRoutePolyline, distanceValueKm, setDistanceValueKm,
       nearbyDrivers, setNearbyDrivers, nearbyDriversCount, setNearbyDriversCount,
       handleConfirmMobility, selectedCard, setSelectedCard, walletBalance, setWalletBalance, iziCoins, setIziCoins,
-      paymentMethod, setPaymentMethod, triggerCartAnimation, cartAnimations
+      paymentMethod, setPaymentMethod, triggerCartAnimation, cartAnimations,
+      mobilityStep, setMobilityStep
     }}>
       {children}
     </AppContext.Provider>

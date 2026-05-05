@@ -2607,7 +2607,6 @@ const navigateSubView = (target: string) => {
 
 
 
-  const [mobilityStep, setMobilityStep] = useState(1);
 
 
       // [Comentario Limpo pelo Sistema]
@@ -2632,7 +2631,9 @@ const navigateSubView = (target: string) => {
     ESTABLISHMENTS, 
     setESTABLISHMENTS, 
     establishmentTypes,
-    setEstablishmentTypes 
+    setEstablishmentTypes,
+    mobilityStep,
+    setMobilityStep
   } = useApp();
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: any, mode: string = 'auto') => {

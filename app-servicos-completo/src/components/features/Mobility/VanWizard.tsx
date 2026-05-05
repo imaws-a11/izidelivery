@@ -89,10 +89,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
       <header className="fixed top-12 left-0 right-0 z-[150] flex items-center justify-between px-6 pointer-events-none">
         <motion.button
           whileTap={{ scale: 0.88 }}
-          onClick={() => {
-            if (mobilityStep > 1) setMobilityStep(mobilityStep - 1);
-            else setSubView("none");
-          }}
+          onClick={() => setSubView("none")}
           className="size-12 rounded-2xl flex items-center justify-center text-blue-400 pointer-events-auto"
           style={{
             background: "rgba(9, 9, 11, 0.85)",
@@ -176,90 +173,10 @@ export const VanWizard: React.FC<VanWizardProps> = ({
       <IziBottomSheet snapPoints={["35vh", "65vh", "92vh"]} initialSnap={0}>
         <div className="p-8 pb-40 space-y-10">
           <AnimatePresence mode="wait">
-            {mobilityStep === 1 ? (
               <motion.section 
-                key="step1"
+                key="step-summary"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="space-y-10"
-              >
-                <div className="space-y-6">
-                  <h3 className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.3em] px-2 text-shadow-sm">Trajeto da Van</h3>
-                  <div className="space-y-5 relative">
-                    <div className="absolute left-9 top-1/2 -translate-y-1/2 w-[1px] h-12 bg-zinc-800" />
-                    
-                    <div className="clay-card-dark rounded-[35px] p-5 pl-6 flex items-center gap-4 border border-white/5">
-                      <div className="size-10 rounded-2xl bg-blue-500/20 flex items-center justify-center shrink-0 shadow-inner">
-                        <Icon name="inventory_2" size={20} className="text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0 flex items-center gap-2">
-                        <div className="flex-1 min-w-0 pr-1">
-                          <AddressSearchInput
-                            placeholder="Endereço de Coleta"
-                            onSelect={(addr) => setTransitData((p: any) => ({...(p || {}), origin: addr}))}
-                            initialValue={safeTransitData.origin?.address}
-                            className="bg-transparent text-white font-black text-[13px] w-full outline-none placeholder:text-zinc-700 tracking-tight"
-                          />
-                        </div>
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => updateLocation((addr, lat, lng) => {
-                            setTransitData((p: any) => ({
-                              ...(p || {}), 
-                              origin: { 
-                                address: addr,
-                                lat: lat,
-                                lng: lng
-                              }
-                            }));
-                            showToast("Localização!", "success");
-                          })}
-                          className="size-10 rounded-xl bg-zinc-800/80 border border-white/10 flex items-center justify-center text-blue-400 shrink-0 shadow-lg"
-                        >
-                          <span className="material-symbols-outlined text-xl">my_location</span>
-                        </motion.button>
-                      </div>
-                    </div>
-
-                    <div className="clay-card-dark rounded-[35px] p-5 pl-6 flex items-center gap-4 border border-white/5">
-                      <div className="size-10 rounded-2xl bg-blue-500/20 flex items-center justify-center shrink-0 shadow-inner">
-                        <Icon name="location_on" size={20} className="text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0 pr-4">
-                        <AddressSearchInput
-                          placeholder="Endereço de Entrega"
-                          onSelect={(addr) => setTransitData((p: any) => ({...(p || {}), destination: addr}))}
-                          initialValue={safeTransitData.destination?.address}
-                          className="bg-transparent text-white font-black text-xs w-full outline-none placeholder:text-zinc-700"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="clay-card-dark rounded-[35px] p-7 border border-white/5 flex flex-col gap-6">
-                   <div className="flex items-center justify-between">
-                      <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest leading-none">Tipo de Serviço</p>
-                      <span className="bg-blue-500/10 text-blue-400 text-[10px] font-black px-3 py-1 rounded-full border border-blue-500/20 uppercase">Profissional</span>
-                   </div>
-                   <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-black/20 p-4 rounded-3xl border border-white/5 flex flex-col gap-2 shadow-inner">
-                         <Icon name="local_shipping" size={20} className="text-blue-400" />
-                         <span className="text-white font-black text-xs uppercase">Mudança</span>
-                      </div>
-                      <div className="bg-black/20 p-4 rounded-3xl border border-white/5 flex flex-col gap-2 shadow-inner opacity-40">
-                         <Icon name="package_2" size={20} className="text-zinc-500" />
-                         <span className="text-zinc-500 font-black text-xs uppercase">Carga Lotação</span>
-                      </div>
-                   </div>
-                </div>
-              </motion.section>
-            ) : (
-              <motion.section 
-                key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
                 className="space-y-10"
               >
                  <div className="clay-card-dark rounded-[40px] p-8 border-l-4 border-blue-400 space-y-8">
@@ -288,8 +205,8 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                           className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5 hover:bg-white/10 transition-all active:scale-95 shadow-md"
                          >
                            <Icon name={paymentMethod === 'online' ? 'credit_card' : 'payments'} size={14} className="text-blue-400" />
-                           <span className="text-white font-black text-[10px] uppercase">
-                              {paymentMethod === 'online' ? 'Cartão Online' : 'Pagar na Coleta'}
+                           <span className="text-white font-black text-[11px] uppercase">
+                             {paymentMethod === 'saldo' ? 'Izi Pay (Saldo)' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'cartao' ? 'Cartão via App' : 'Pagar na Coleta'}
                            </span>
                          </button>
                       </div>
@@ -300,7 +217,6 @@ export const VanWizard: React.FC<VanWizardProps> = ({
                     </div>
                  </div>
               </motion.section>
-            )}
           </AnimatePresence>
         </div>
 
@@ -311,25 +227,17 @@ export const VanWizard: React.FC<VanWizardProps> = ({
               whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              if (mobilityStep === 1) {
-                if (!safeTransitData.origin || !safeTransitData.destination) {
-                  showToast("Defina a rota da van", "warning");
-                  return;
-                }
-                setMobilityStep(2);
-              } else {
-                setTransitData((prev: any) => ({ ...(prev || {}), estPrice: totalValue }));
-                setPaymentsOrigin("checkout");
-                navigateSubView("mobility_payment");
-              }
+              setTransitData((prev: any) => ({ ...(prev || {}), estPrice: totalValue }));
+              setPaymentsOrigin("checkout");
+              navigateSubView("mobility_payment");
             }}
             className="w-full h-20 bg-blue-500 clay-card-dark py-6 rounded-full flex items-center justify-center gap-4 shadow-[0_20px_60px_rgba(59,130,246,0.3)] active:grayscale transition-all relative overflow-hidden group"
           >
             <div className="absolute inset-0 bg-blue-500 opacity-90" />
             <span className="relative z-10 text-white font-black text-xl tracking-tighter uppercase">
-              {mobilityStep === 1 ? "Prosseguir" : "Contratar Van"}
+              Contratar Van
             </span>
-            <Icon name={mobilityStep === 1 ? "arrow_forward" : "local_shipping"} className="relative z-10 text-white font-black group-hover:translate-x-2 transition-transform" size={28} />
+            <Icon name="local_shipping" className="relative z-10 text-white font-black group-hover:translate-x-2 transition-transform" size={28} />
           </motion.button>
           </div>
         </div>
