@@ -129,7 +129,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
 
   return (
     <div
-      className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden"
+      className="absolute inset-0 z-[120] bg-white text-black flex flex-col overflow-hidden"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
 
@@ -151,262 +151,182 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
           onMyLocationClick={updateLocation}
           boxed={false}
         />
-        {/* Gradiente no topo para visibilidade dos botões */}
-        <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
+        {/* Gradiente sutil no topo */}
+        <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
       </div>
 
 
-      {/* ── HEADER FLUTUANTE (Dark Clay) ── */}
+      {/* ── HEADER FLUTUANTE PREMIUM ── */}
       <header className="fixed top-12 left-0 right-0 z-[150] flex items-center justify-between px-6 pointer-events-none">
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setSubView("none")}
-          className="size-12 rounded-2xl flex items-center justify-center text-yellow-500 pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.4), inset 1px 1px 1px rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
+          className="size-12 rounded-2xl bg-white/90 backdrop-blur-xl border border-zinc-100 flex items-center justify-center text-black shadow-2xl pointer-events-auto"
         >
           <Icon name="arrow_back" />
         </motion.button>
 
         <div
-          className="text-right px-6 py-4 rounded-[28px] pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.12)",
-          }}
+          className="text-right px-6 py-3 rounded-[28px] bg-white/90 backdrop-blur-xl border border-zinc-100 shadow-2xl pointer-events-auto"
         >
-          <h2 className="text-xl font-black text-white tracking-tighter leading-none uppercase">
+          <h2 className="text-lg font-black text-black tracking-tighter leading-none uppercase">
             Izi Logistics
           </h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-yellow-500 mt-1">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-500 mt-1">
             Frete & Mudanças
           </p>
         </div>
       </header>
 
-      {/* ── BOTTOM SHEET (mesmo estilo do TaxiWizard) ── */}
-      <IziBottomSheet snapPoints={["35vh", "60vh", "90vh"]} initialSnap={0}>
-        <div className="p-6 pb-40 space-y-8">
-          <AnimatePresence mode="wait">
-            <motion.section
-              key="step-summary"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="space-y-8"
-            >
-              {/* Grid de Info no Topo */}
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div
-                    className="p-4 rounded-[24px] flex flex-col gap-1 font-black relative overflow-hidden"
-                    style={{
-                      background: "linear-gradient(145deg, #facc15, #eab308)",
-                      boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                       <Icon name="route" size={14} className="text-black/70" />
-                       <span className="text-[8px] text-black/70 uppercase not-italic tracking-widest leading-none">Distância</span>
-                    </div>
-                    <span className="text-sm tracking-tight text-black drop-shadow-sm">{distancePart || "-- km"}</span>
-                  </div>
-
-                  <div
-                    className="p-4 rounded-[24px] flex flex-col gap-1 font-black relative overflow-hidden"
-                    style={{
-                      background: "linear-gradient(145deg, #facc15, #eab308)",
-                      boxShadow: "5px 5px 15px rgba(250,204,21,0.2), inset 2px 2px 5px rgba(255,255,255,0.4)",
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                       <Icon name="schedule" size={14} className="text-black/70" />
-                       <span className="text-[8px] text-black/70 uppercase not-italic tracking-widest leading-none">Tempo</span>
-                    </div>
-                    <span className="text-sm tracking-tight text-black drop-shadow-sm">{timePart || "Rápido ⚡"}</span>
-                  </div>
-                </div>
-
-                <div
-                  className="p-5 rounded-[28px] flex items-center justify-between font-black relative overflow-hidden"
-                  style={{
-                    background: "linear-gradient(145deg, #1c1c1e, #121214)",
-                    boxShadow: "10px 10px 20px rgba(0,0,0,0.4), inset 2px 2px 5px rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                     <div className="size-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
-                        <Icon name="payments" size={20} className="text-yellow-500" />
-                     </div>
-                     <span className="text-[10px] text-zinc-500 uppercase not-italic tracking-widest leading-none">Valor Total</span>
-                  </div>
-                  <span className="text-2xl tracking-tighter text-yellow-500 drop-shadow-lg">
-                     R$ {totalValue.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Opções de Logística (Extras) */}
-              <div
-                className="rounded-[40px] p-7 space-y-7 relative overflow-hidden"
-                style={{
-                  background: "linear-gradient(145deg, #1a1a1c, #121214)",
-                  boxShadow: "20px 20px 40px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(255,255,255,0.03), inset -3px -3px 8px rgba(0,0,0,0.6)",
-                  border: "1px solid rgba(255,255,255,0.05)",
-                }}
+      {/* ── BOTTOM SHEET PREMIUM ── */}
+      <IziBottomSheet snapPoints={["40vh", "65vh", "90vh"]} initialSnap={0}>
+          <div className="px-6 pb-48 pt-4 space-y-6">
+            <AnimatePresence mode="wait">
+              <motion.section
+                key="step-summary"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
               >
-                <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] relative z-10">Serviços Adicionais</p>
+                {/* Info Grid */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-5 rounded-[28px] bg-zinc-50/50 border border-zinc-100/50 flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                         <span className="material-symbols-rounded text-zinc-400 text-sm">route</span>
+                         <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Distância</span>
+                      </div>
+                      <span className="text-[13px] font-black text-black uppercase tracking-tighter">{distancePart || "-- km"}</span>
+                    </div>
 
-                {/* Toggle Escada */}
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="size-11 rounded-[18px] flex items-center justify-center"
-                      style={{
-                        background: freightData.hasStairs ? "rgba(250,204,21,0.15)" : "rgba(255,255,255,0.04)",
-                        boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.4)",
-                      }}
+                    <div className="p-5 rounded-[28px] bg-zinc-50/50 border border-zinc-100/50 flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                         <span className="material-symbols-rounded text-zinc-400 text-sm">schedule</span>
+                         <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Tempo</span>
+                      </div>
+                      <span className="text-[13px] font-black text-black uppercase tracking-tighter">{timePart || "Rápido ⚡"}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-[32px] bg-white border border-zinc-100 shadow-[0_15px_30px_rgba(0,0,0,0.03)] flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                       <div className="size-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                          <span className="material-symbols-rounded text-yellow-600 text-2xl">payments</span>
+                       </div>
+                       <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Valor Total</span>
+                    </div>
+                    <span className="text-3xl font-black text-black tracking-tighter">
+                       R$ {totalValue.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Serviços Adicionais */}
+                <div className="rounded-[40px] p-7 space-y-6 border border-zinc-100 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+                  <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.3em]">Serviços Adicionais</p>
+
+                  {/* Toggle Escada */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`size-12 rounded-2xl flex items-center justify-center transition-colors ${freightData.hasStairs ? 'bg-yellow-400/10' : 'bg-zinc-50'}`}>
+                        <span className={`material-symbols-rounded ${freightData.hasStairs ? 'text-yellow-600' : 'text-zinc-400'} text-2xl`}>stairs</span>
+                      </div>
+                      <div>
+                        <span className="text-black font-black text-sm uppercase">Escada</span>
+                        <p className="text-zinc-400 text-[9px] font-black uppercase tracking-wider mt-0.5">
+                          + R$ {(parseFloat(marketConditions?.settings?.baseValues?.logistica_stairs) || 30).toFixed(0)}
+                        </p>
+                      </div>
+                    </div>
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      onClick={() => updateFreight({ hasStairs: !freightData.hasStairs })}
+                      className={`relative w-14 h-7 rounded-full p-1 transition-colors duration-300 ${freightData.hasStairs ? 'bg-black' : 'bg-zinc-200'}`}
                     >
-                      <Icon name="stairs" size={20} className={freightData.hasStairs ? "text-yellow-400" : "text-zinc-600"} />
+                      <motion.div
+                        animate={{ x: freightData.hasStairs ? 28 : 0 }}
+                        className="size-5 rounded-full bg-white shadow-sm"
+                      />
+                    </motion.button>
+                  </div>
+
+                  <div className="h-px bg-zinc-50" />
+
+                  {/* Ajudantes */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`size-12 rounded-2xl flex items-center justify-center transition-colors ${freightData.helpers > 0 ? 'bg-yellow-400/10' : 'bg-zinc-50'}`}>
+                        <span className={`material-symbols-rounded ${freightData.helpers > 0 ? 'text-yellow-600' : 'text-zinc-400'} text-2xl`}>group</span>
+                      </div>
+                      <div>
+                        <span className="text-black font-black text-sm uppercase">Ajudantes</span>
+                        <p className="text-zinc-400 text-[9px] font-black uppercase tracking-wider mt-0.5">
+                          + R$ {(parseFloat(marketConditions?.settings?.baseValues?.logistica_helper) || 35).toFixed(0)} / cada
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-white font-black text-sm uppercase">Escada</span>
-                      <p className="text-zinc-600 text-[9px] font-black uppercase tracking-wider mt-0.5">
-                        + R$ {(parseFloat(marketConditions?.settings?.baseValues?.logistica_stairs) || 30).toFixed(0)}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <motion.button
+                        whileTap={{ scale: 0.88 }}
+                        onClick={() => updateFreight({ helpers: Math.max(0, freightData.helpers - 1) })}
+                        className="size-10 rounded-2xl bg-zinc-100 border border-zinc-200 flex items-center justify-center font-black text-lg text-black"
+                      >
+                        −
+                      </motion.button>
+                      <span className="text-black font-black text-lg w-6 text-center">{freightData.helpers}</span>
+                      <motion.button
+                        whileTap={{ scale: 0.88 }}
+                        onClick={() => updateFreight({ helpers: Math.min(4, freightData.helpers + 1) })}
+                        className="size-10 rounded-2xl bg-black flex items-center justify-center font-black text-lg text-white"
+                      >
+                        +
+                      </motion.button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Pagamento */}
+                <div className="flex justify-between items-center px-6 py-5 rounded-[32px] bg-zinc-50 border border-zinc-100">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Pagamento</span>
+                    <span className="text-[12px] font-black text-black uppercase tracking-tight">
+                      {paymentMethod === 'saldo' ? 'Izi Pay (Saldo)' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'cartao' ? 'Cartão via App' : 'Pagar na Coleta'}
+                    </span>
                   </div>
                   <motion.button
-                    whileTap={{ scale: 0.92 }}
-                    onClick={() => updateFreight({ hasStairs: !freightData.hasStairs })}
-                    className="relative w-14 h-7 rounded-full p-0.5 transition-all duration-300"
-                    style={{
-                      background: freightData.hasStairs
-                        ? "linear-gradient(145deg, #facc15, #eab308)"
-                        : "linear-gradient(145deg, #27272a, #1c1c1f)",
-                      boxShadow: freightData.hasStairs
-                        ? "inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.2), 0 4px 12px rgba(250,204,21,0.3)"
-                        : "inset 2px 2px 4px rgba(0,0,0,0.5), inset -2px -2px 4px rgba(255,255,255,0.03)",
-                    }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigateSubView("mobility_payment")}
+                    className="size-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center"
                   >
-                    <motion.div
-                      animate={{ x: freightData.hasStairs ? 26 : 0 }}
-                      transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                      className="size-6 rounded-full bg-white shadow-md"
-                    />
+                    <span className="material-symbols-rounded text-zinc-400 text-xl">edit</span>
                   </motion.button>
                 </div>
+              </motion.section>
+            </AnimatePresence>
+          </div>
 
-                <div className="h-px bg-white/5" />
-
-                {/* Ajudantes */}
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="size-11 rounded-[18px] flex items-center justify-center"
-                      style={{
-                        background: freightData.helpers > 0 ? "rgba(250,204,21,0.15)" : "rgba(255,255,255,0.04)",
-                        boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.4)",
-                      }}
-                    >
-                      <Icon name="group" size={20} className={freightData.helpers > 0 ? "text-yellow-400" : "text-zinc-600"} />
-                    </div>
-                    <div>
-                      <span className="text-white font-black text-sm uppercase">Ajudantes</span>
-                      <p className="text-zinc-600 text-[9px] font-black uppercase tracking-wider mt-0.5">
-                        + R$ {(parseFloat(marketConditions?.settings?.baseValues?.logistica_helper) || 35).toFixed(0)} / cada
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <motion.button
-                      whileTap={{ scale: 0.88 }}
-                      onClick={() => updateFreight({ helpers: Math.max(0, freightData.helpers - 1) })}
-                      className="size-9 rounded-2xl flex items-center justify-center font-black text-lg text-white"
-                      style={{
-                        background: "linear-gradient(145deg, #1a1a1c, #111113)",
-                        boxShadow: "6px 6px 12px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                      }}
-                    >
-                      −
-                    </motion.button>
-                    <span className="text-white font-black text-lg w-5 text-center">{freightData.helpers}</span>
-                    <motion.button
-                      whileTap={{ scale: 0.88 }}
-                      onClick={() => updateFreight({ helpers: Math.min(4, freightData.helpers + 1) })}
-                      className="size-9 rounded-2xl flex items-center justify-center font-black text-lg text-black"
-                      style={{
-                        background: "linear-gradient(145deg, #facc15, #eab308)",
-                        boxShadow: "inset 3px 3px 6px rgba(255,255,255,0.5), inset -3px -3px 6px rgba(0,0,0,0.15), 0 6px 14px rgba(250,204,21,0.25)",
-                      }}
-                    >
-                      +
-                    </motion.button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Forma de Pagamento */}
-              <div className="flex justify-between items-center px-6 py-4 rounded-[32px] bg-white/5 border border-white/5">
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Pagamento</span>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigateSubView("mobility_payment")}
-                  className="flex items-center gap-3 px-5 py-2.5 rounded-2xl border border-white/10 bg-black/40"
-                >
-                  <Icon
-                    name={paymentMethod === "online" ? "credit_card" : "payments"}
-                    size={16}
-                    className="text-yellow-400"
-                  />
-                  <span className="text-white font-black text-[11px] uppercase">
-                    {paymentMethod === 'saldo' ? 'Izi Pay (Saldo)' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'cartao' ? 'Cartão via App' : 'Pagar na Coleta'}
-                  </span>
-                </motion.button>
-              </div>
-            </motion.section>
-          </AnimatePresence>
-        </div>
-
-        {/* ── BOTÃO FIXO (mesmo estilo do TaxiWizard) ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-32 bg-gradient-to-t from-black via-black/95 to-transparent z-50 pointer-events-none">
-          <div className="pointer-events-auto">
+          {/* Botão de Ação Principal */}
+          <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-white/80 backdrop-blur-xl border-t border-zinc-50 z-50">
             <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
+              whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => {
                 setTransitData((prev: any) => ({ ...(prev || {}), estPrice: totalValue }));
                 setPaymentsOrigin("checkout");
                 navigateSubView("mobility_payment");
               }}
-              className="w-full h-[74px] rounded-[32px] flex items-center justify-center gap-4 relative overflow-hidden group"
-              style={{
-                background: "linear-gradient(135deg, #FFD700, #FBBF24)",
-                boxShadow: "0 15px 40px rgba(251, 191, 36, 0.4), inset 4px 4px 8px rgba(255,255,255,0.4)",
-              }}
+              className="w-full h-[74px] rounded-[32px] bg-black text-white flex items-center justify-center gap-4 relative overflow-hidden group shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
-              <span className="relative z-10 text-black font-black text-xl tracking-tighter uppercase drop-shadow-sm">
+              <span className="relative z-10 font-black text-lg tracking-[0.1em] uppercase">
                 Confirmar Izi Logistics
               </span>
-              <div className="relative z-10 size-10 rounded-2xl bg-black/10 flex items-center justify-center group-hover:translate-x-1.5 transition-transform duration-300 shadow-inner">
-                <Icon
-                  name="local_shipping"
-                  className="text-black font-black"
-                  size={24}
-                />
+              <div className="relative z-10 size-11 rounded-2xl bg-white/10 flex items-center justify-center group-hover:translate-x-1.5 transition-transform duration-300">
+                <span className="material-symbols-rounded text-white font-black text-2xl">local_shipping</span>
               </div>
             </motion.button>
           </div>
-        </div>
       </IziBottomSheet>
     </div>
   );

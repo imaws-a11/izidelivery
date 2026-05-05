@@ -61,10 +61,10 @@ export const VanWizard: React.FC<VanWizardProps> = ({
   }, []);
 
   return (
-    <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden"
+    <div className="absolute inset-0 z-[120] bg-white text-black flex flex-col overflow-hidden"
          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       
-      {/* ── MAPA FUNDO (Estilo Uber) ── */}
+      {/* ── MAPA FUNDO ── */}
       <div className="absolute inset-0 z-0">
         <IziTrackingMap 
           routePolyline={routePolyline} 
@@ -81,166 +81,146 @@ export const VanWizard: React.FC<VanWizardProps> = ({
           boxed={false}
           vehicleIcon="shuttle_taxi"
         />
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
       </div>
       
 
-      {/* ── HEADER FLUTUANTE (Dark Clay) ── */}
+      {/* ── HEADER FLUTUANTE PREMIUM ── */}
       <header className="fixed top-12 left-0 right-0 z-[150] flex items-center justify-between px-6 pointer-events-none">
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setSubView("none")}
-          className="size-12 rounded-2xl flex items-center justify-center text-blue-400 pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.4), inset 1px 1px 1px rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
+          className="size-12 rounded-2xl bg-white/90 backdrop-blur-xl border border-zinc-100 flex items-center justify-center text-black shadow-2xl pointer-events-auto"
         >
           <Icon name="arrow_back" />
         </motion.button>
 
         <div
-          className="text-right px-6 py-4 rounded-[28px] pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.12)",
-          }}
+          className="text-right px-6 py-3 rounded-[28px] bg-white/90 backdrop-blur-xl border border-zinc-100 shadow-2xl pointer-events-auto"
         >
-          <h2 className="text-xl font-black text-white tracking-tighter leading-none uppercase">
+          <h2 className="text-lg font-black text-black tracking-tighter leading-none uppercase">
             Van Logística
           </h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-400 mt-1">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 mt-1">
              Mudanças & Cargas
           </p>
         </div>
       </header>
 
-      {/* ── CHIPS FLUTUANTES (Dark Clay Design) ── */}
+      {/* ── CHIPS FLUTUANTES PREMIUM ── */}
       <div className="fixed top-40 right-6 z-[140] flex flex-col gap-4 items-end pointer-events-none">
         {/* Card de distância */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="px-6 py-4 rounded-[28px] flex items-center gap-4 font-black text-xs text-white pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            filter: routeDistance ? "none" : "grayscale(0.5)",
-          }}
+          className="px-6 py-4 rounded-[28px] bg-white/90 backdrop-blur-xl border border-zinc-100 shadow-2xl flex items-center gap-4 pointer-events-auto"
         >
-          <div className="size-9 rounded-2xl bg-zinc-800/80 flex items-center justify-center border border-white/5 shadow-inner">
-            <Icon name="route" size={20} className="text-blue-400" />
+          <div className="size-9 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100">
+            <Icon name="route" size={20} className="text-blue-500" />
           </div>
           <div className="flex flex-col">
-            <span className="text-[8px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Distância</span>
-            <span className="text-sm tracking-tight text-white">{routeDistance ?? "-- km"}</span>
+            <span className="text-[8px] text-zinc-400 uppercase font-black tracking-widest leading-none mb-1">Distância</span>
+            <span className="text-sm font-black tracking-tight text-black">{routeDistance ?? "-- km"}</span>
           </div>
         </motion.div>
 
-        {/* Card de valor da corrida em tempo real */}
+        {/* Card de valor */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="px-6 py-4 rounded-[32px] flex items-center gap-5 font-black text-xs text-white pointer-events-auto"
-          style={{
-            background: "rgba(9, 9, 11, 0.85)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 20px 45px rgba(0,0,0,0.6), inset 1px 1px 1px rgba(255,255,255,0.05), inset -2px -2px 5px rgba(0,0,0,0.4)",
-            border: "1.5px solid rgba(59,130,246,0.2)",
-            filter: totalValue > 0 ? "none" : "grayscale(0.5)",
-          }}
+          className="px-6 py-4 rounded-[32px] bg-white border border-blue-500/20 shadow-2xl flex items-center gap-5 pointer-events-auto"
         >
-          <div className="size-11 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/30 shadow-inner">
-            <Icon name="payments" size={24} className="text-blue-400" />
+          <div className="size-11 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100">
+            <Icon name="payments" size={24} className="text-blue-500" />
           </div>
           <div className="flex flex-col">
-            <span className="text-[9px] text-zinc-400 uppercase not-italic tracking-widest leading-none mb-1">Valor Estimado</span>
-            <span className="text-2xl tracking-tighter text-blue-400">
+            <span className="text-[9px] text-zinc-400 uppercase font-black tracking-widest leading-none mb-1">Valor Estimado</span>
+            <span className="text-2xl font-black tracking-tighter text-blue-600">
                {totalValue > 0 ? `R$ ${totalValue.toFixed(2).replace('.', ',')}` : "R$ --,--"}
             </span>
           </div>
         </motion.div>
       </div>
 
-      {/* ── BOTTOM SHEET ── */}
+      {/* ── BOTTOM SHEET PREMIUM ── */}
       <IziBottomSheet snapPoints={["35vh", "65vh", "92vh"]} initialSnap={0}>
-        <div className="p-8 pb-40 space-y-10">
-          <AnimatePresence mode="wait">
-              <motion.section 
-                key="step-summary"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="space-y-10"
-              >
-                 <div className="clay-card-dark rounded-[40px] p-8 border-l-4 border-blue-400 space-y-8">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-2xl bg-blue-400/10 flex items-center justify-center shadow-inner">
-                          <Icon name="payments" size={24} className="text-blue-400" />
+          <div className="p-8 pb-48 space-y-8">
+            <AnimatePresence mode="wait">
+                <motion.section 
+                  key="step-summary"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-8"
+                >
+                   <div className="rounded-[40px] p-8 border border-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)] bg-white space-y-8">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-5">
+                          <div className="size-14 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100">
+                            <span className="material-symbols-rounded text-blue-600 text-3xl font-black">payments</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-400 font-black text-[10px] uppercase tracking-widest block mb-1">Custo da Logística</span>
+                            <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">Baseado na distância</span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-white font-black text-[13px] uppercase block leading-none mb-1">Custo da Logística</span>
-                          <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">Baseado na distância</span>
+                        <div className="text-right">
+                           <span className="text-black text-3xl font-black tracking-tighter block">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                         <span className="text-blue-400 text-3xl font-black tracking-tighter block">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
+
+                      <div className="h-px bg-zinc-100 w-full" />
+
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-center px-2">
+                           <div className="flex flex-col">
+                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Pagamento</span>
+                             <span className="text-[12px] font-black text-black uppercase tracking-tight">
+                               {paymentMethod === 'saldo' ? 'Izi Pay (Saldo)' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'cartao' ? 'Cartão via App' : 'Pagar na Coleta'}
+                             </span>
+                           </div>
+                           <motion.button 
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => navigateSubView("mobility_payment")}
+                            className="size-10 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-sm"
+                           >
+                             <span className="material-symbols-rounded text-zinc-400 text-xl">edit</span>
+                           </motion.button>
+                        </div>
+
+                        <div className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100">
+                          <p className="text-blue-600/80 text-[10px] font-black uppercase tracking-tight text-center leading-relaxed">
+                            O motorista aguardará no local por até 15 minutos gratuitamente para carregamento.
+                          </p>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="h-px bg-white/5 w-full" />
-
-                    <div className="space-y-5">
-                      <div className="flex justify-between items-center px-2">
-                         <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest tracking-tight">Pagamento</span>
-                         <button 
-                          onClick={() => navigateSubView("mobility_payment")}
-                          className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5 hover:bg-white/10 transition-all active:scale-95 shadow-md"
-                         >
-                           <Icon name={paymentMethod === 'online' ? 'credit_card' : 'payments'} size={14} className="text-blue-400" />
-                           <span className="text-white font-black text-[11px] uppercase">
-                             {paymentMethod === 'saldo' ? 'Izi Pay (Saldo)' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'cartao' ? 'Cartão via App' : 'Pagar na Coleta'}
-                           </span>
-                         </button>
-                      </div>
-
-                      <p className="text-blue-400/60 text-[10px] font-bold uppercase tracking-tight text-center bg-blue-500/5 p-4 rounded-3xl border border-blue-500/10">
-                        O motorista aguardará no local por até 15 minutos gratuitamente para carregamento.
-                      </p>
-                    </div>
-                 </div>
-              </motion.section>
-          </AnimatePresence>
-        </div>
-
-        {/* ── BOTÃO FIXO (Dentro do Sheet) ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-32 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50 pointer-events-none">
-          <div className="pointer-events-auto">
-            <motion.button 
-              whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setTransitData((prev: any) => ({ ...(prev || {}), estPrice: totalValue }));
-              setPaymentsOrigin("checkout");
-              navigateSubView("mobility_payment");
-            }}
-            className="w-full h-20 bg-blue-500 clay-card-dark py-6 rounded-full flex items-center justify-center gap-4 shadow-[0_20px_60px_rgba(59,130,246,0.3)] active:grayscale transition-all relative overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-blue-500 opacity-90" />
-            <span className="relative z-10 text-white font-black text-xl tracking-tighter uppercase">
-              Contratar Van
-            </span>
-            <Icon name="local_shipping" className="relative z-10 text-white font-black group-hover:translate-x-2 transition-transform" size={28} />
-          </motion.button>
+                   </div>
+                </motion.section>
+            </AnimatePresence>
           </div>
-        </div>
+
+          {/* Botão de Ação Principal */}
+          <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-white/80 backdrop-blur-xl border-t border-zinc-50 z-50">
+            <motion.button 
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => {
+                setTransitData((prev: any) => ({ ...(prev || {}), estPrice: totalValue }));
+                setPaymentsOrigin("checkout");
+                navigateSubView("mobility_payment");
+              }}
+              className="w-full h-[74px] rounded-[32px] bg-black text-white flex items-center justify-center gap-4 relative overflow-hidden group shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              
+              <span className="relative z-10 font-black text-lg tracking-[0.1em] uppercase">
+                Contratar Van
+              </span>
+              <div className="relative z-10 size-11 rounded-2xl bg-white/10 flex items-center justify-center group-hover:translate-x-1.5 transition-transform duration-300">
+                <span className="material-symbols-rounded text-white font-black text-2xl">local_shipping</span>
+              </div>
+            </motion.button>
+          </div>
       </IziBottomSheet>
 
     </div>

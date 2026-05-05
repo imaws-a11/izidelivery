@@ -5,46 +5,50 @@ import { useApp } from "../../../contexts/AppContext";
 import { supabase } from "../../../lib/supabase";
 import { useGoogleMapsLoader } from "../../../hooks/useGoogleMapsLoader";
 import { IziTrackingMap } from "../Map/IziTrackingMap";
+import { IziBottomSheet } from "../../common/IziBottomSheet";
 
-// Estilos de Mapa Silver Otimizados
-const MAP_STYLES = [
-  { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
-  { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
-  { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
-  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
-  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
-  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c9c9c9" }] }
-];
 
-const MAP_OPTIONS: google.maps.MapOptions = {
-  disableDefaultUI: true,
-  styles: MAP_STYLES,
-  gestureHandling: 'greedy',
-  tilt: 45,
-  zoomControl: false,
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: false,
-  backgroundColor: '#f5f5f5'
-};
 
 export const ExploreEnviosUberView: React.FC = () => {
-  const { setSubView, setTransitData, transitData, userLocation, updateLocation, setMobilityStep, calculateDistancePrices, routePolyline, routeDistance, driverLocation, paymentMethod } = useApp();
+  const { 
+    calculateDistancePrices, 
+    setIsCalculatingPrice, 
+    setSubView, 
+    setTransitData,
+    transitData, 
+    userLocation, 
+    updateLocation, 
+    setMobilityStep, 
+    routePolyline, 
+    routeDistance,
+    driverLocation,
+    distanceValueKm,
+    distancePrices,
+    paymentMethod,
+    setPaymentMethod
+  } = useApp();
   const { isLoaded } = useGoogleMapsLoader();
   const [view, setView] = useState<"explore" | "plan_trip" | "select_priority" | "izi_pay">("plan_trip");
   const [iziPaySubView, setIziPaySubView] = useState<"main" | "send" | "my_qr" | "scan" | "loan">("main");
   const [selectedType, setSelectedType] = useState<"moto" | "carro" | "frete">("moto");
   const [selectedFreteType, setSelectedFreteType] = useState<"fiorino" | "caminhonete" | "bau">("fiorino");
   
+  const destInputRef = useRef<HTMLInputElement>(null);
   const [sheetPos, setSheetPos] = useState(42);
+
+  const [dynamicVehicles, setDynamicVehicles] = useState<any[]>([]);
+  
+  const activeVehicle = useMemo(() => {
+    if (selectedType === 'moto') return { title: 'Izi Moto', price: distancePrices.mototaxi || 8.5 };
+    if (selectedType === 'carro') return { title: 'Izi Particular', price: distancePrices.carro || 14.9 };
+    const freight = dynamicVehicles.find(v => v.id === selectedFreteType);
+    return freight || { title: 'Izi Logistics', price: 0 };
+  }, [selectedType, selectedFreteType, distancePrices, dynamicVehicles]);
 
   const [originQuery, setOriginQuery] = useState("");
   const [destQuery, setDestQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<"origin" | "dest" | null>(null);
-  const [dynamicVehicles, setDynamicVehicles] = useState<any[]>([]);
 
   // Sincroniza endereço de origem com a localização real do usuário ao carregar
   useEffect(() => {
@@ -81,10 +85,10 @@ export const ExploreEnviosUberView: React.FC = () => {
           const vehicles = [
             { id: 'fiorino', title: 'Fiorino', icon: '🚐', img: iconMap['fiorino'] || 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', price: meta.fiorino_min || 40, capacity: 'Até 500kg' },
             { id: 'caminhonete', title: 'Caminhonete', icon: '🛻', img: iconMap['caminhonete'] || 'https://cdn-icons-png.flaticon.com/512/3204/3204064.png', price: meta.caminhonete_min || 50, capacity: 'Até 1200kg' },
-            { id: 'van', title: 'Van Carga', icon: '🚐', img: iconMap['van'] || 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', price: meta.van_min || 50, capacity: 'Até 1500kg' },
+            { id: 'van', title: 'Van Carga', icon: '🚐', img: iconMap['van'] || 'https://cdn-icons-png.flaticon.com/512/2830/2830310.png', price: meta.van_min || 50, capacity: 'Até 1500kg' },
             { id: 'bau_p', title: 'Baú Pequeno', icon: '🚚', img: iconMap['bau_p'] || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png', price: meta.bau_p_min || 70, capacity: 'Até 2500kg' },
-            { id: 'bau_m', title: 'Baú Médio', icon: '🚚', img: iconMap['bau_m'] || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png', price: meta.bau_m_min || 80, capacity: 'Até 3500kg' },
-            { id: 'bau_g', title: 'Baú Grande', icon: '🚚', img: iconMap['bau_g'] || 'https://cdn-icons-png.flaticon.com/512/2766/2766258.png', price: meta.bau_g_min || 100, capacity: 'Até 5000kg' },
+            { id: 'bau_m', title: 'Baú Médio', icon: '🚚', img: iconMap['bau_m'] || 'https://cdn-icons-png.flaticon.com/512/2316/2316972.png', price: meta.bau_m_min || 80, capacity: 'Até 3500kg' },
+            { id: 'bau_g', title: 'Baú Grande', icon: '🚚', img: iconMap['bau_g'] || 'https://cdn-icons-png.flaticon.com/512/2766/2766144.png', price: meta.bau_g_min || 100, capacity: 'Até 5000kg' },
             { id: 'utilitario', title: 'Utilitário', icon: '🚐', img: iconMap['utilitario'] || 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', price: meta.utilitario_min || 12, capacity: 'Até 300kg' },
             { id: 'aberto', title: 'Caminhão Aberto', icon: '🚚', img: iconMap['aberto'] || 'https://cdn-icons-png.flaticon.com/512/3204/3204064.png', price: meta.aberto_min || 80, capacity: 'Médio porte' }
           ];
@@ -143,8 +147,21 @@ export const ExploreEnviosUberView: React.FC = () => {
   }, [destQuery, originQuery, isSearching, fetchSuggestions]);
 
   const handleSelectLocation = (loc: any) => {
-    const originStr = originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery;
-    const destStr = `${loc.title}, ${loc.subtitle}`;
+    const fullAddr = `${loc.title}, ${loc.subtitle}`;
+
+    if (isSearching === "origin") {
+      setOriginQuery(fullAddr);
+      setSuggestions([]);
+      setIsSearching("dest");
+      // Pequeno timeout para garantir que o input de destino esteja pronto para foco
+      setTimeout(() => destInputRef.current?.focus(), 100);
+      return;
+    }
+
+    const originStr = originQuery === "Minha localização" || !originQuery ? (userLocation.address || "") : originQuery;
+    const destStr = fullAddr;
+
+    setDestQuery(loc.title); // Mostra apenas o principal no input
 
     setTransitData((prev: any) => ({
       ...prev,
@@ -270,184 +287,197 @@ export const ExploreEnviosUberView: React.FC = () => {
             <motion.button 
               whileTap={{ scale: 0.9 }} 
               onClick={() => setView("plan_trip")} 
-              className="absolute top-12 left-5 w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-2xl z-50 border border-zinc-100"
+              className="absolute top-12 left-5 size-12 bg-white/90 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-2xl z-50 border border-zinc-100 text-black"
             >
-              <span className="material-symbols-rounded text-black font-black text-[24px]">arrow_back</span>
+              <span className="material-symbols-rounded font-black text-2xl">arrow_back</span>
             </motion.button>
 
-            {/* Overlay de Rota (Info rápida no topo) */}
+            {/* Overlay de Rota Premium */}
             <motion.div 
               initial={{ y: -100 }}
               animate={{ y: 0 }}
               className="absolute top-12 left-20 right-6 z-50"
             >
-               <div className="bg-black/90 backdrop-blur-xl p-4 rounded-2xl border border-white/10 flex justify-between items-center shadow-2xl">
+               <div className="bg-white/90 backdrop-blur-xl p-4 rounded-2xl border border-zinc-100 flex justify-between items-center shadow-2xl">
                   <div className="flex flex-col">
-                     <span className="text-[8px] text-yellow-400 font-black uppercase tracking-[0.3em] mb-1">Trajeto Identificado</span>
-                     <span className="text-white font-black text-xs truncate max-w-[150px]">{transitData.destination}</span>
-                  </div>
-                  <div className="text-right">
-                     <span className="text-yellow-400 font-black text-lg tracking-tighter leading-none block">{routeDistance || "-- km"}</span>
-                     <span className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Estimado</span>
+                     <span className="text-[8px] text-yellow-600 font-black uppercase tracking-[0.3em] mb-1">Trajeto Identificado</span>
+                     <span className="text-black font-black text-xs tracking-tighter truncate uppercase">{routeDistance || 'Calculando...'} • {transitData.destination?.split(',')[0]}</span>
                   </div>
                </div>
             </motion.div>
           </div>
 
-          <motion.div 
-            drag="y" 
-            dragConstraints={{ top: 0, bottom: 650 }} 
-            dragElastic={0.05} 
-            onDragEnd={(e, info) => { 
-              const v = info.velocity.y; 
-              const o = info.offset.y; 
-              if (o < -100 || v < -500) setSheetPos(0); 
-              else if (o > 150 || v > 500) setSheetPos(60); 
-              else setSheetPos(35); 
-            }} 
-            initial={{ y: "100%" }} 
-            animate={{ y: `${sheetPos}%` }} 
-            transition={{ type: "spring", damping: 32, stiffness: 300 }} 
-            className="absolute bottom-0 left-0 w-full bg-[#F8F9FA] rounded-t-[48px] shadow-[0_-30px_80px_rgba(0,0,0,0.2)] z-[100] border-t border-white" 
-            style={{ height: '95vh', touchAction: 'none' }}
-          >
-            <div className="pt-4 pb-2 flex flex-col items-center cursor-grab active:cursor-grabbing">
-              <div className="w-14 h-1.5 bg-neutral-200 rounded-full mb-3" />
-              <div className="flex items-center gap-3">
-                 <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
-                 <h2 className="text-[13px] font-black text-neutral-800 uppercase tracking-[0.2em]">Escolha o seu IZI</h2>
-              </div>
-            </div>
-            
-            <div className="px-6 pb-40 overflow-y-auto no-scrollbar h-full space-y-6 pt-4">
-              
-              {/* Seção de Veículos com Riqueza de Detalhes */}
-              <div className="space-y-3">
-                <VehicleOption 
-                  id="moto" 
-                  title="Izi Moto" 
-                  icon="🏍️" 
-                  img="https://mobile-content.uber.com/launch-experience/moto.png" 
-                  time="⚡ Chega em 3 min" 
-                  price="R$ 8,50" 
-                  badge="Econômico" 
-                  details="Ideal para envios rápidos e documentos. Máximo 5kg."
-                  passengers={1} 
-                  selected={selectedType === "moto"} 
-                  onClick={() => setSelectedType("moto")} 
-                />
-                
-                <VehicleOption 
-                  id="carro" 
-                  title="Izi Particular" 
-                  icon="🚗" 
-                  img="https://mobile-content.uber.com/launch-experience/ride.png" 
-                  time="🛡️ Seguro & Confortável" 
-                  price="R$ 14,90" 
-                  details="Viagens urbanas com ar-condicionado e porta-malas livre."
-                  passengers={4} 
-                  selected={selectedType === "carro"} 
-                  onClick={() => setSelectedType("carro")} 
-                />
-
-                <VehicleOption 
-                  id="frete" 
-                  title="Izi Logistics" 
-                  icon="📦" 
-                  img="https://mobile-content.uber.com/launch-experience/teens.png" 
-                  time="🚛 Fretes & Mudanças" 
-                  price="Sob Consulta" 
-                  details="Frotas especializadas para transporte de carga pesada."
-                  hasClock 
-                  selected={selectedType === "frete"} 
-                  onClick={() => setSelectedType("frete")} 
-                />
-                
-                <AnimatePresence>
-                  {selectedType === "frete" && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }} 
-                      animate={{ height: "auto", opacity: 1 }} 
-                      exit={{ height: 0, opacity: 0 }} 
-                      className="pl-4 space-y-2 overflow-hidden border-l-4 border-yellow-400 ml-3 py-2"
-                    >
-                       {dynamicVehicles.length > 0 ? dynamicVehicles.map(v => (
-                         <VehicleOption 
-                           key={v.id}
-                           id={v.id} 
-                           title={v.title} 
-                           icon={v.icon} 
-                           img={v.img} 
-                           time={v.capacity} 
-                           price={`R$ ${v.price.toFixed(2).replace('.', ',')}`} 
-                           details="Transporte especializado com suporte IZI."
-                           selected={selectedFreteType === v.id} 
-                           onClick={() => setSelectedFreteType(v.id as any)} 
-                           isSubOption 
-                         />
-                       )) : (
-                         <div className="p-4 bg-zinc-100 rounded-3xl flex items-center gap-3 border border-zinc-200">
-                           <div className="size-2 rounded-full bg-yellow-400 animate-ping" />
-                           <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Sincronizando frotas disponíveis...</span>
-                         </div>
-                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Informações de Pagamento e Saldo */}
-              <div className="bg-white rounded-[32px] p-6 shadow-sm border border-neutral-100 space-y-4">
-                 <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                       <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center">
-                          <span className="material-symbols-rounded text-black font-black">wallet</span>
-                       </div>
-                       <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Izi Pay</p>
-                          <p className="text-sm font-black text-black">Saldo Disponível</p>
-                       </div>
+          <IziBottomSheet snapPoints={["40vh", "65vh", "92vh"]} initialSnap={1}>
+              <div className="px-6 pb-48 pt-2 h-full">
+                {/* Resumo do Trajeto Clean */}
+                <div className="bg-zinc-50/50 rounded-[32px] p-5 mb-8 border border-zinc-100">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="size-2.5 rounded-full border-2 border-zinc-300 shrink-0" />
+                      <p className="text-[13px] font-black text-zinc-400 truncate uppercase">{originQuery || userLocation.address}</p>
                     </div>
-                    <span className="text-lg font-black text-black tracking-tighter">R$ 482,90</span>
-                 </div>
-                 <div className="h-px bg-zinc-50 w-full" />
-                 <button onClick={() => { setView("izi_pay"); setIziPaySubView("main"); }} className="w-full py-2 flex justify-between items-center">
-                    <span className="text-xs font-bold text-zinc-500">Alterar forma de pagamento</span>
-                    <span className="material-symbols-rounded text-zinc-400">chevron_right</span>
-                 </button>
+                    <div className="h-4 w-px bg-zinc-200 ml-[4px]" />
+                    <div className="flex items-center gap-4">
+                      <div className="size-2.5 bg-black shrink-0 rounded-sm" />
+                      <p className="text-[13px] font-black text-black truncate uppercase">{transitData.destination || "Destino não definido"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Opções de Veículos Premium */}
+                <div className="space-y-4">
+                  <VehicleOption 
+                    id="moto" 
+                    title="Izi Moto" 
+                    img="https://cdn-icons-png.flaticon.com/512/3721/3721619.png" 
+                    time="Chegue mais rápido" 
+                    price={distancePrices.mototaxi ? `R$ ${distancePrices.mototaxi.toFixed(2).replace('.', ',')}` : "R$ 8,50"}
+                    badge="Flash" 
+                    details="Ideal para fugir do trânsito com segurança."
+                    selected={selectedType === "moto"} 
+                    onClick={() => setSelectedType("moto")} 
+                  />
+                  
+                  <VehicleOption 
+                    id="carro" 
+                    title="Izi Particular" 
+                    img="https://cdn-icons-png.flaticon.com/512/3204/3204064.png" 
+                    time="Conforto & Ar" 
+                    price={distancePrices.carro ? `R$ ${distancePrices.carro.toFixed(2).replace('.', ',')}` : "R$ 14,90"}
+                    details="Carros novos selecionados pela nossa equipe."
+                    selected={selectedType === "carro"} 
+                    onClick={() => setSelectedType("carro")} 
+                  />
+
+                  <VehicleOption 
+                    id="frete" 
+                    title="Izi Logistics" 
+                    img="https://cdn-icons-png.flaticon.com/512/2830/2830305.png" 
+                    time="Cargas & Mudanças" 
+                    price={selectedType === 'frete' ? `R$ ${activeVehicle.price.toFixed(2).replace('.', ',')}` : "Ver Frotas"}
+                    details="Vans e Caminhões para o que você precisar."
+                    hasClock 
+                    selected={selectedType === "frete"} 
+                    onClick={() => setSelectedType("frete")} 
+                  />
+                  
+                  <AnimatePresence>
+                    {selectedType === "frete" && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }} 
+                        animate={{ height: "auto", opacity: 1 }} 
+                        exit={{ height: 0, opacity: 0 }} 
+                        className="pl-4 space-y-3 overflow-hidden border-l-4 border-yellow-400 ml-4 py-4"
+                      >
+                         {dynamicVehicles.length > 0 ? dynamicVehicles.map(v => (
+                           <VehicleOption 
+                             key={v.id}
+                             id={v.id} 
+                             title={v.title} 
+                             img={v.img} 
+                             time={v.capacity} 
+                             price={`R$ ${v.price.toFixed(2).replace('.', ',')}`} 
+                             details="Transporte logístico especializado."
+                             selected={selectedFreteType === v.id} 
+                             onClick={() => setSelectedFreteType(v.id as any)} 
+                             isSubOption 
+                           />
+                         )) : (
+                           <div className="p-6 bg-zinc-50 rounded-[28px] flex items-center gap-4 border border-zinc-100">
+                             <div className="size-2 rounded-full bg-yellow-400 animate-ping" />
+                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Localizando frotas disponíveis...</span>
+                           </div>
+                         )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Pagamento Premium */}
+                <div className="mt-10 pt-8 border-t border-zinc-50">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Método de Pagamento</h3>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-400/10 rounded-full">
+                      <span className="material-symbols-rounded text-[14px] text-yellow-600 font-black">verified_user</span>
+                      <span className="text-[9px] font-black text-yellow-700 uppercase tracking-widest">Seguro</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6">
+                    {[
+                      { id: 'cartao', label: 'Cartão', icon: 'credit_card' },
+                      { id: 'pix', label: 'PIX', icon: 'qr_code' },
+                      { id: 'dinheiro', label: 'Dinheiro', icon: 'payments' },
+                      { id: 'saldo', label: 'Saldo Izi', icon: 'account_balance_wallet' }
+                    ].map(method => (
+                      <motion.button
+                        key={method.id}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setPaymentMethod(method.id)}
+                        className={`flex flex-col items-center justify-center min-w-[100px] h-[100px] rounded-[32px] border transition-all gap-2 shadow-sm
+                          ${paymentMethod === method.id 
+                            ? 'border-black bg-black text-white shadow-xl shadow-black/10' 
+                            : 'border-zinc-100 bg-white text-zinc-400 hover:border-zinc-200'}
+                        `}
+                      >
+                        <span className="material-symbols-rounded text-[22px] font-black">{method.icon}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest">{method.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-            </div>
+              {/* Rodapé de Ação Fixo */}
+              <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-white/80 backdrop-blur-xl border-t border-zinc-50 z-[110]">
+                <div className="flex items-center justify-between mb-6 px-2">
+                   <div className="flex flex-col">
+                      <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Total da Viagem</span>
+                      <span className="text-3xl font-black text-black tracking-tighter">
+                        {selectedType === 'moto' 
+                          ? (distancePrices.mototaxi ? `R$ ${distancePrices.mototaxi.toFixed(2).replace('.', ',')}` : "R$ 8,50")
+                          : selectedType === 'carro'
+                            ? (distancePrices.carro ? `R$ ${distancePrices.carro.toFixed(2).replace('.', ',')}` : "R$ 14,90")
+                            : `R$ ${activeVehicle.price.toFixed(2).replace('.', ',')}`
+                        }
+                      </span>
+                   </div>
+                   <div className="text-right">
+                      <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Espera Média</span>
+                      <span className="text-[13px] font-black text-black uppercase tracking-tighter block">~ 5-8 min</span>
+                   </div>
+                </div>
 
-            {/* Rodapé Fixo de Ação */}
-            <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-white/80 backdrop-blur-xl border-t border-neutral-100 z-[110]">
-              <motion.button 
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }} 
-                onClick={() => {
-                  const origin = originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery;
-                  const destination = transitData.destination;
-                  
-                  if (selectedType === 'frete') {
-                    setTransitData((prev: any) => ({ ...prev, type: 'freight', vehicleCategory: selectedFreteType, origin, destination }));
-                    setMobilityStep(2);
-                    calculateDistancePrices(origin, destination);
-                    setSubView("freight_wizard" as any);
-                  } else {
-                    const finalType = selectedType === 'moto' ? 'mototaxi' : 'taxi';
-                    setTransitData((prev: any) => ({ ...prev, type: finalType, origin, destination }));
-                    setMobilityStep(2);
-                    calculateDistancePrices(origin, destination);
-                    setSubView("taxi_wizard" as any);
-                  }
-                }} 
-                className="w-full bg-black text-white h-[74px] rounded-[32px] font-black text-xl shadow-2xl flex items-center justify-center gap-4 group"
-              >
-                <span className="uppercase tracking-widest text-sm">Confirmar {selectedType === 'moto' ? 'Izi Moto' : selectedType === 'carro' ? 'Particular' : 'Logística'}</span>
-                <span className="material-symbols-rounded group-hover:translate-x-2 transition-transform">arrow_forward</span>
-              </motion.button>
-            </div>
-          </motion.div>
+                <motion.button 
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.96 }} 
+                  onClick={() => {
+                    const origin = originQuery === "Minha localização" || !originQuery ? (userLocation.address || "") : originQuery;
+                    const destination = transitData.destination;
+                    
+                    if (selectedType === 'frete') {
+                      setTransitData((prev: any) => ({ ...prev, type: 'freight', vehicleCategory: selectedFreteType, origin, destination }));
+                      setMobilityStep(2);
+                      calculateDistancePrices(origin, destination);
+                      setSubView("freight_wizard" as any);
+                    } else {
+                      const finalType = selectedType === 'moto' ? 'mototaxi' : 'taxi';
+                      setTransitData((prev: any) => ({ ...prev, type: finalType, origin, destination }));
+                      setMobilityStep(2);
+                      calculateDistancePrices(origin, destination);
+                      setSubView("taxi_wizard" as any);
+                    }
+                  }} 
+                  className="w-full bg-black text-white h-[74px] rounded-[32px] font-black text-lg shadow-[0_20px_40px_rgba(0,0,0,0.15)] flex items-center justify-center gap-4 group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  <span className="relative z-10 uppercase tracking-[0.1em] text-[14px]">Solicitar {activeVehicle.title}</span>
+                  <div className="relative z-10 size-11 rounded-2xl bg-white/10 flex items-center justify-center group-hover:translate-x-1.5 transition-transform duration-300">
+                    <span className="material-symbols-rounded text-white font-black text-2xl">bolt</span>
+                  </div>
+                </motion.button>
+              </div>
+          </IziBottomSheet>
         </div>
       );
     }
@@ -459,75 +489,96 @@ export const ExploreEnviosUberView: React.FC = () => {
           animate={{ x: 0 }} 
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="fixed inset-0 bg-white z-[200] font-sans text-black pb-32 overflow-y-auto select-none"
+          className="fixed inset-0 bg-white z-[200] font-sans text-black overflow-y-auto select-none no-scrollbar"
         >
-          <header className="px-5 pt-12 pb-4 flex items-center gap-6 sticky top-0 bg-white z-50">
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setView("explore")} className="material-symbols-rounded font-bold text-2xl">arrow_back</motion.button>
-            <h1 className="text-[20px] font-black uppercase tracking-tighter">Planeje sua viagem</h1>
+          <header className="px-6 pt-14 pb-6 flex items-center gap-6 sticky top-0 bg-white z-50 border-b border-zinc-50">
+            <motion.button 
+              whileTap={{ scale: 0.9 }} 
+              onClick={() => setView("explore")} 
+              className="size-11 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-black"
+            >
+              <span className="material-symbols-rounded font-black text-2xl">arrow_back</span>
+            </motion.button>
+            <h1 className="text-xl font-black uppercase tracking-tighter">Planeje sua viagem</h1>
           </header>
-          <main className="px-5 space-y-6">
-            <section className="flex flex-col gap-5">
-              <div className="flex-1 border-[2.5px] border-black rounded-[24px] p-5 flex flex-col gap-5 relative bg-white shadow-xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 rounded-full border-[3px] border-black shrink-0" />
-                  <input 
-                    type="text" 
-                    placeholder="De onde você vai sair?"
-                    value={originQuery} 
-                    onChange={(e) => { setOriginQuery(e.target.value); setIsSearching("origin"); }} 
-                    onFocus={() => setIsSearching("origin")} 
-                    className="w-full bg-transparent outline-none text-zinc-900 font-black text-[14px] uppercase tracking-tighter placeholder:text-zinc-300" 
-                  />
+
+          <main className="px-6 pt-8 space-y-8">
+            <section className="flex flex-col gap-6">
+              <div className="rounded-[40px] p-8 flex flex-col gap-8 relative bg-white border border-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+                {/* Linha de Conexão Lateral Premium */}
+                <div className="absolute left-[39px] top-[56px] bottom-[56px] w-0.5 bg-zinc-100" />
+
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className="size-4 rounded-full border-[3px] border-zinc-200 bg-white shrink-0" />
+                  <div className="flex-1 flex items-center gap-3">
+                    <input 
+                      type="text" 
+                      placeholder="De onde você vai sair?"
+                      value={originQuery} 
+                      onChange={(e) => { setOriginQuery(e.target.value); setIsSearching("origin"); }} 
+                      onFocus={() => setIsSearching("origin")} 
+                      className="flex-1 bg-transparent outline-none text-black font-black text-[16px] uppercase tracking-tighter placeholder:text-zinc-300" 
+                    />
+                    
+                    <motion.button 
+                      whileTap={{ scale: 0.9 }}
+                      disabled={userLocation.loading}
+                      onClick={async () => {
+                        setIsSearching("origin");
+                        const newLoc = await updateLocation(true);
+                        if (newLoc && newLoc.address) {
+                          setOriginQuery(newLoc.address);
+                          setSuggestions([]);
+                          setIsSearching("dest");
+                          setTimeout(() => destInputRef.current?.focus(), 100);
+                        }
+                      }}
+                      className={`size-11 rounded-2xl flex items-center justify-center transition-all shrink-0 border
+                        ${userLocation.loading ? 'bg-zinc-50 border-zinc-100' : 'bg-blue-50 border-blue-100'}
+                      `}
+                    >
+                      <span className={`material-symbols-rounded ${userLocation.loading ? 'text-zinc-400 animate-spin' : 'text-blue-600'} text-xl font-black`}>
+                        {userLocation.loading ? 'sync' : 'my_location'}
+                      </span>
+                    </motion.button>
+                  </div>
                 </div>
-                <div className="h-[1px] bg-neutral-100 ml-6" />
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 bg-black shrink-0" />
+
+                <div className="h-px bg-zinc-50 ml-10" />
+
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className="size-4 bg-black shrink-0 rounded-sm" />
                   <input 
-                    autoFocus 
+                    ref={destInputRef}
                     placeholder="Para onde?" 
                     value={destQuery} 
                     onChange={(e) => { setDestQuery(e.target.value); setIsSearching("dest"); }} 
                     onFocus={() => setIsSearching("dest")} 
-                    className="w-full bg-transparent outline-none text-zinc-900 font-black text-[14px] uppercase tracking-tighter placeholder:text-zinc-300" 
+                    className="w-full bg-transparent outline-none text-black font-black text-[16px] uppercase tracking-tighter placeholder:text-zinc-300" 
                   />
                 </div>
-                <div className="absolute left-[24px] top-[40px] bottom-[40px] w-[2px] bg-black" />
               </div>
-
-              {/* Botão de Localização Atual */}
-              <motion.button 
-                whileTap={{ scale: 0.95 }}
-                disabled={userLocation.loading}
-                onClick={async () => {
-                  setIsSearching("origin");
-                  const newLoc = await updateLocation(true);
-                  if (newLoc && newLoc.address) {
-                    setOriginQuery(newLoc.address);
-                    setSuggestions([]); // Limpa as sugestões após encontrar
-                  }
-                }}
-                className={`flex items-center gap-3 px-5 py-3 rounded-2xl border self-start transition-all
-                  ${userLocation.loading ? 'bg-zinc-100 border-zinc-200' : 'bg-zinc-50 border-zinc-100 active:bg-zinc-100'}
-                `}
-              >
-                <div className={`size-8 rounded-full flex items-center justify-center ${userLocation.loading ? 'bg-zinc-200 animate-spin' : 'bg-blue-500/10'}`}>
-                  <span className={`material-symbols-rounded ${userLocation.loading ? 'text-zinc-400' : 'text-blue-600'} text-xl font-black`}>
-                    {userLocation.loading ? 'sync' : 'my_location'}
-                  </span>
-                </div>
-                <span className="text-[11px] font-black uppercase tracking-widest text-zinc-600">
-                  {userLocation.loading ? 'Obtendo precisão...' : 'Usar minha localização atual'}
-                </span>
-              </motion.button>
             </section>
-            <section className="space-y-6 pt-2 pb-20">
+
+            <section className="space-y-6 pt-4 pb-32">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] px-2">Sugestões de Destino</p>
               <AnimatePresence mode="popLayout">
                 {suggestions.map((loc, i) => (
-                  <motion.div key={loc.placeId || i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ delay: i * 0.02 }}>
+                  <motion.div key={loc.placeId || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ delay: i * 0.03 }}>
                     <DestinationItem {...loc} onClick={() => handleSelectLocation(loc)} />
                   </motion.div>
                 ))}
               </AnimatePresence>
+              
+              {suggestions.length === 0 && !originQuery && !destQuery && (
+                <div className="py-10 flex flex-col items-center text-center px-10">
+                   <div className="size-20 rounded-full bg-zinc-50 flex items-center justify-center mb-6">
+                      <span className="material-symbols-rounded text-zinc-200 text-4xl">travel_explore</span>
+                   </div>
+                   <h3 className="text-black font-black text-lg uppercase tracking-tighter mb-2">Explore sua cidade</h3>
+                   <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest leading-relaxed">Insira um endereço para ver as opções de viagem disponíveis agora.</p>
+                </div>
+              )}
             </section>
           </main>
         </motion.div>
@@ -535,52 +586,76 @@ export const ExploreEnviosUberView: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen bg-white font-sans text-black pb-32 overflow-y-auto select-none overflow-x-hidden">
-        <header className="px-5 pt-12 pb-6 bg-white sticky top-0 z-50 flex items-center gap-6">
-          <motion.button whileTap={{ scale: 0.8 }} onClick={() => window.history.back()} className="material-symbols-rounded font-bold text-[28px]">arrow_back</motion.button>
-          <h1 className="text-[36px] font-black tracking-tight leading-none uppercase">Izi</h1>
+      <div className="min-h-screen bg-white font-sans text-black pb-32 overflow-y-auto select-none overflow-x-hidden no-scrollbar">
+        <header className="px-6 pt-14 pb-8 bg-white sticky top-0 z-50 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <motion.button 
+              whileTap={{ scale: 0.8 }} 
+              onClick={() => window.history.back()} 
+              className="size-11 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center"
+            >
+              <span className="material-symbols-rounded font-black text-black text-2xl">arrow_back</span>
+            </motion.button>
+            <h1 className="text-[32px] font-black tracking-tighter leading-none uppercase">Izi</h1>
+          </div>
+          
+          <div className="size-11 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
+             <span className="material-symbols-rounded text-black font-black">person</span>
+          </div>
         </header>
-        <main className="px-5 space-y-7">
+
+        <main className="px-6 space-y-10">
           <section 
             onClick={() => setView("plan_trip")} 
-            className="flex items-center bg-[#EEEEEE] rounded-[24px] h-[74px] px-6 gap-4 cursor-pointer active:scale-[0.98] transition-all hover:bg-neutral-200 border-2 border-transparent hover:border-black"
+            className="group flex items-center bg-zinc-50 rounded-[32px] h-[84px] px-8 gap-5 cursor-pointer active:scale-[0.98] transition-all hover:bg-zinc-100 border border-zinc-100 shadow-[0_15px_30px_rgba(0,0,0,0.02)]"
           >
-            <div className="flex flex-1 items-center gap-4 overflow-hidden">
-              <div className="size-10 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
-                <span className="material-symbols-rounded font-black text-black text-[24px]">location_on</span>
+            <div className="flex flex-1 items-center gap-5 overflow-hidden">
+              <div className="size-12 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center shadow-sm shrink-0 group-hover:scale-110 transition-transform">
+                <span className="material-symbols-rounded font-black text-black text-2xl">search</span>
               </div>
               <div className="flex flex-col min-w-0">
-                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Seu Local</span>
-                 <span className="text-black font-black text-sm uppercase tracking-tighter truncate opacity-90">
-                   {userLocation.address || "Para onde?"}
+                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1.5">Sua Localização</span>
+                 <span className="text-black font-black text-sm uppercase tracking-tighter truncate">
+                   {userLocation.address || "Para onde você vai?"}
                  </span>
               </div>
             </div>
-            <div className="h-[44px] bg-black rounded-xl flex items-center px-4 gap-2 shadow-xl shrink-0">
-              <span className="material-symbols-rounded font-black text-white text-[18px]">calendar_month</span>
+            <div className="h-[50px] bg-black rounded-2xl flex items-center px-5 gap-3 shadow-xl shrink-0 group-hover:bg-zinc-800 transition-colors">
+              <span className="material-symbols-rounded font-black text-white text-[20px]">calendar_month</span>
               <span className="text-white font-black text-[11px] uppercase tracking-widest">Agendar</span>
             </div>
           </section>
 
-          <section className="flex items-center gap-4 py-1">
-            <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 border border-zinc-200">
-              <span className="material-symbols-rounded text-black text-xl opacity-80">history</span>
+          <section className="space-y-6">
+            <div className="flex justify-between items-center px-2">
+              <h2 className="text-lg font-black uppercase tracking-tighter">Serviços Izi</h2>
+              <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Ver Todos</span>
             </div>
-            <div className="flex-1 min-w-0 border-b border-neutral-100/50 pb-4">
-              <p className="font-black text-[13px] leading-tight truncate uppercase tracking-tighter">Último destino pesquisado</p>
-              <p className="text-zinc-500 text-[12px] font-bold truncate uppercase tracking-widest mt-1">Rua Presidente Vargas, 367</p>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
+              <UberServiceCard name="Viagem" img="https://cdn-icons-png.flaticon.com/512/3204/3204064.png" onClick={() => setView("plan_trip")} />
+              <UberServiceCard name="Logística" img="https://cdn-icons-png.flaticon.com/512/2830/2830305.png" />
+              <UberServiceCard name="Excursões" img="https://cdn-icons-png.flaticon.com/512/2316/2316972.png" badge="Novo" />
+              <UberServiceCard name="Moto" img="https://cdn-icons-png.flaticon.com/512/3721/3721619.png" />
             </div>
           </section>
 
-          <section>
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-black uppercase tracking-tighter">Serviços Disponíveis</h2>
-            </div>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-              <UberServiceCard name="Viagem" img="https://mobile-content.uber.com/launch-experience/ride.png" onClick={() => setView("plan_trip")} />
-              <UberServiceCard name="Logística" img="https://mobile-content.uber.com/launch-experience/teens.png" />
-              <UberServiceCard name="Excursões" img="https://mobile-content.uber.com/launch-experience/eats.png" badge="Novo" />
-              <UberServiceCard name="Moto" img="https://mobile-content.uber.com/launch-experience/moto.png" />
+          <section className="bg-zinc-50 rounded-[40px] p-8 border border-zinc-100">
+            <h3 className="text-lg font-black uppercase tracking-tighter mb-6">Histórico Recente</h3>
+            <div className="space-y-6">
+              {[
+                { title: "Rua Presidente Vargas, 367", subtitle: "São Paulo, SP", icon: "history" },
+                { title: "Shopping Ibirapuera", subtitle: "Av. Ibirapuera, 3103", icon: "history" }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-5 cursor-pointer active:opacity-50">
+                  <div className="size-11 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-rounded text-zinc-400 text-xl">{item.icon}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-[14px] leading-tight truncate uppercase tracking-tighter">{item.title}</p>
+                    <p className="text-zinc-400 text-[10px] font-black truncate uppercase tracking-widest mt-1">{item.subtitle}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         </main>
@@ -598,84 +673,126 @@ export const ExploreEnviosUberView: React.FC = () => {
 // Componentes Auxiliares
 const QuickAction = ({ icon, label, onClick }: any) => (
   <div onClick={onClick} className="flex flex-col items-center gap-2 cursor-pointer active:scale-90 transition-transform">
-     <div className="w-14 h-14 bg-white rounded-2xl shadow-md border border-neutral-100 flex items-center justify-center relative"><span className="material-symbols-rounded text-black text-2xl">{icon}</span></div>
-     <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight text-center">{label}</span>
+     <div className="size-16 bg-white rounded-[24px] shadow-[0_10px_25px_rgba(0,0,0,0.05)] border border-zinc-100 flex items-center justify-center relative hover:border-zinc-200 transition-colors">
+       <span className="material-symbols-rounded text-black text-2xl font-black">{icon}</span>
+     </div>
+     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center mt-1">{label}</span>
   </div>
 );
 
 const CreditCardItem = ({ brand, last, color, text }: any) => (
-  <div className={`${color} w-44 h-28 shrink-0 rounded-[24px] p-5 flex flex-col justify-between shadow-lg relative overflow-hidden`}><div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" /><div className={`text-[12px] font-black ${text === 'black' ? 'text-black' : 'text-white'} uppercase`}>{brand}</div><div className={`text-[15px] font-bold ${text === 'black' ? 'text-black/60' : 'text-white/60'}`}>•••• {last}</div></div>
+  <div className={`${color} w-48 h-32 shrink-0 rounded-[32px] p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden active:scale-95 transition-transform cursor-pointer`}>
+    <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12" />
+    <div className={`text-[11px] font-black ${text === 'black' ? 'text-black' : 'text-white'} uppercase tracking-widest`}>{brand}</div>
+    <div className="flex flex-col gap-1">
+      <div className={`text-[14px] font-black ${text === 'black' ? 'text-black/40' : 'text-white/40'} tracking-widest`}>•••• •••• •••• {last}</div>
+      <div className={`text-[10px] font-black ${text === 'black' ? 'text-black' : 'text-white'} uppercase tracking-tighter`}>Exp 12/28</div>
+    </div>
+  </div>
 );
 
 const TransactionItem = ({ title, date, amount, icon, color }: any) => (
-  <div className="flex items-center gap-4 p-4 border-b border-neutral-50 last:border-none"><div className={`w-11 h-11 rounded-full ${color} flex items-center justify-center shrink-0`}><span className="material-symbols-rounded text-[22px]">{icon}</span></div><div className="flex-1 min-w-0"><p className="font-bold text-[15px] text-black">{title}</p><p className="text-[12px] text-zinc-400 font-medium">{date}</p></div><div className={`font-black text-[15px] ${amount.startsWith('+') ? 'text-green-600' : 'text-black'}`}>{amount}</div></div>
+  <div className="flex items-center gap-5 p-5 border-b border-zinc-50 last:border-none hover:bg-zinc-50/50 transition-colors cursor-pointer first:rounded-t-[32px] last:rounded-b-[32px]">
+    <div className={`size-12 rounded-2xl ${color} flex items-center justify-center shrink-0 shadow-sm`}>
+      <span className="material-symbols-rounded text-[22px] font-black">{icon}</span>
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="font-black text-[15px] text-black uppercase tracking-tighter leading-tight">{title}</p>
+      <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mt-1">{date}</p>
+    </div>
+    <div className={`font-black text-[15px] tracking-tighter ${amount.startsWith('+') ? 'text-green-600' : 'text-black'}`}>{amount}</div>
+  </div>
 );
 
-const VehicleOption = ({ title, icon, img, time, price, badge, details, passengers, selected, hasClock, isSubOption, onClick }: any) => (
+const VehicleOption = ({ title, img, time, price, badge, details, selected, hasClock, isSubOption, onClick }: any) => (
   <motion.div 
     onClick={onClick} 
-    className={`flex flex-col ${isSubOption ? 'p-3' : 'p-5'} rounded-[32px] cursor-pointer transition-all border-[3px] 
+    whileHover={{ scale: 1.01 }}
+    whileTap={{ scale: 0.98 }}
+    className={`flex flex-col ${isSubOption ? 'p-5' : 'p-6'} rounded-[36px] cursor-pointer transition-all border-2 relative
       ${selected 
-        ? "border-black bg-white shadow-xl scale-[1.02]" 
-        : "border-transparent bg-white/40 hover:bg-white/60"
+        ? "border-black bg-white shadow-[0_25px_50px_rgba(0,0,0,0.12)] z-10" 
+        : "border-zinc-100 bg-zinc-50/40 hover:bg-white hover:border-zinc-200"
       }`}
   >
     <div className="flex items-center">
-      <div className={`relative ${isSubOption ? 'w-14 h-14' : 'w-20 h-20'} shrink-0 flex items-center justify-center bg-zinc-100 rounded-[24px] p-2`}>
-        <img src={img} className="w-full h-full object-contain" />
+      <div className={`relative ${isSubOption ? 'w-18 h-18' : 'w-24 h-24'} shrink-0 flex items-center justify-center rounded-[28px] bg-white border border-zinc-50 shadow-sm overflow-hidden`}>
+        <img src={img} className="w-full h-full object-contain transform hover:scale-110 transition-transform duration-500" />
         {hasClock && (
-          <div className="absolute -top-2 -right-2 w-6 h-6 bg-black rounded-full flex items-center justify-center border-2 border-white">
-            <span className="material-symbols-rounded text-white text-[12px]">schedule</span>
+          <div className="absolute top-2 right-2 size-7 bg-black rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+            <span className="material-symbols-rounded text-white text-[14px] font-black">schedule</span>
           </div>
         )}
       </div>
-      <div className="flex-1 ml-5">
+      <div className="flex-1 ml-6">
         <div className="flex items-center justify-between mb-1">
-           <div className="flex items-center gap-1.5">
-              <h3 className={`font-black ${isSubOption ? 'text-[15px]' : 'text-[18px]'} tracking-tighter uppercase`}>{title}</h3>
-              {passengers && (
-                <div className="flex items-center gap-0.5 bg-zinc-100 px-2 py-0.5 rounded-full">
-                  <span className="material-symbols-rounded text-[12px] font-black">person</span>
-                  <span className="text-[10px] font-black">{passengers}</span>
-                </div>
-              )}
-           </div>
-           <p className={`font-black ${isSubOption ? 'text-[15px]' : 'text-[18px]'} tracking-tighter text-black`}>{price}</p>
+            <h3 className={`font-black ${isSubOption ? 'text-[15px]' : 'text-[19px]'} tracking-tighter uppercase text-black`}>{title}</h3>
+            <p className={`font-black ${isSubOption ? 'text-[16px]' : 'text-[21px]'} tracking-tighter text-black`}>{price}</p>
         </div>
-        <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest">{time}</p>
-        {badge && (
-          <div className="mt-2 inline-flex items-center gap-1.5 bg-yellow-400 text-black px-3 py-1 rounded-full">
-            <span className="material-symbols-rounded text-[12px] font-black fill-1">bolt</span>
-            <span className="text-[9px] font-black uppercase tracking-widest">{badge}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em]">{time}</span>
+          {badge && (
+            <div className="bg-yellow-400 text-black px-2 py-0.5 rounded-lg shadow-sm">
+              <span className="text-[9px] font-black uppercase tracking-widest">{badge}</span>
+            </div>
+          )}
+        </div>
+        
+        <AnimatePresence>
+          {selected && details && (
+            <motion.p 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mt-3 leading-relaxed border-t border-zinc-50 pt-3"
+            >
+              {details}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
     </div>
-    
-    <AnimatePresence>
-      {selected && details && (
-        <motion.div 
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          className="overflow-hidden mt-4 pt-4 border-t border-zinc-100"
-        >
-           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-relaxed">
-             {details}
-           </p>
-        </motion.div>
-      )}
-    </AnimatePresence>
   </motion.div>
 );
 
 const UberServiceCard = ({ name, img, badge, onClick }: any) => (
-  <motion.div whileTap={{ scale: 0.94 }} onClick={onClick} className="flex flex-col items-center gap-2 shrink-0 cursor-pointer"><div className="w-[88px] h-[88px] bg-[#EEEEEE] rounded-xl flex items-center justify-center relative p-3 border border-neutral-100 shadow-sm">{badge && <span className="absolute -top-1 right-1 bg-[#E9202E] text-white text-[10px] px-2 py-0.5 rounded-full font-bold z-10 border-2 border-white">{badge}</span>}<img src={img} className="w-full h-full object-contain" /></div><span className="text-[13px] font-semibold text-zinc-900">{name}</span></motion.div>
+  <motion.div 
+    whileTap={{ scale: 0.94 }} 
+    onClick={onClick} 
+    className="flex flex-col items-center gap-3 shrink-0 cursor-pointer group"
+  >
+    <div className="w-[100px] h-[100px] bg-white rounded-[28px] flex items-center justify-center relative p-4 border border-zinc-100 shadow-[0_15px_35px_rgba(0,0,0,0.03)] group-hover:border-zinc-300 group-hover:shadow-lg transition-all">
+      {badge && (
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] px-3 py-1 rounded-full font-black z-10 border-2 border-white shadow-lg uppercase tracking-widest">
+          {badge}
+        </span>
+      )}
+      <img src={img} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
+    </div>
+    <span className="text-[12px] font-black text-black uppercase tracking-widest">{name}</span>
+  </motion.div>
 );
 
 const DestinationItem = ({ title, subtitle, dist, isPlace, onClick }: any) => (
-  <div onClick={onClick} className="flex items-center gap-4 cursor-pointer active:opacity-60 group"><div className="w-9 h-9 rounded-full bg-[#EEEEEE] flex items-center justify-center shrink-0 group-hover:bg-neutral-200 transition-colors"><span className="material-symbols-rounded text-black text-[20px]">{isPlace ? "location_on" : "schedule"}</span></div><div className="flex-1 min-w-0 border-b border-neutral-50 pb-4"><div className="flex items-center justify-between"><p className="font-bold text-[15px] truncate">{title}</p><span className="text-[12px] text-zinc-400 font-bold whitespace-nowrap ml-2">{dist}</span></div><p className="text-zinc-500 text-[13px] truncate">{subtitle}</p></div></div>
+  <div 
+    onClick={onClick} 
+    className="flex items-center gap-5 cursor-pointer active:opacity-60 group p-2 hover:bg-zinc-50 rounded-[24px] transition-colors"
+  >
+    <div className="size-11 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 group-hover:bg-black group-hover:text-white transition-all">
+      <span className="material-symbols-rounded text-[22px] font-black">{isPlace ? "location_on" : "schedule"}</span>
+    </div>
+    <div className="flex-1 min-w-0 border-b border-zinc-50 group-last:border-none pb-4 pt-2">
+      <div className="flex items-center justify-between gap-4">
+        <p className="font-black text-[16px] truncate uppercase tracking-tighter text-black">{title}</p>
+        <span className="text-[11px] text-zinc-400 font-black uppercase tracking-widest whitespace-nowrap ml-2">{dist}</span>
+      </div>
+      <p className="text-zinc-400 text-[11px] font-black uppercase tracking-widest truncate mt-1">{subtitle}</p>
+    </div>
+  </div>
 );
 
 const NavItem = ({ icon, label, active, onClick }: any) => (
-  <div onClick={onClick} className={`flex flex-col items-center gap-1 cursor-pointer ${active ? "text-black" : "text-zinc-400"}`}><span className="material-symbols-rounded text-[28px]" style={{ fontVariationSettings: active ? "'FILL' 1" : "" }}>{icon}</span><span className="text-[11px] font-semibold">{label}</span></div>
+  <div onClick={onClick} className={`flex flex-col items-center gap-1.5 cursor-pointer transition-all ${active ? "text-black scale-110" : "text-zinc-300 hover:text-zinc-400"}`}>
+    <span className="material-symbols-rounded text-[30px] font-black" style={{ fontVariationSettings: active ? "'FILL' 1" : "" }}>{icon}</span>
+    <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+  </div>
 );

@@ -166,7 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Localização
-  const [userLocation, setUserLocation] = useState<any>({ lat: null, lng: null, loading: true, error: null, address: "" });
+  const [userLocation, setUserLocation] = useState<any>({ lat: null, lng: null, loading: false, error: null, address: "" });
 
   // Carrinho e Checkout
   const [cart, setCart] = useState<any[]>([]);
@@ -251,43 +251,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) { console.error("Error refreshing settings:", e); }
   };
 
-  const updateLocation = async (highAccuracy = false): Promise<{ lat: number; lng: number; address: string } | null> => {
-    setUserLocation(prev => ({ ...prev, loading: true }));
+  const updateLocation = async (highAccuracy = true): Promise<{ lat: number; lng: number; address: string } | null> => {
+    console.log("[GPS] Iniciando busca de localização...");
+    setUserLocation(prev => ({ ...prev, loading: true, error: null }));
     
     if (!navigator.geolocation) {
-      setUserLocation(prev => ({ ...prev, loading: false, error: "Geolocalização não suportada" }));
+      const msg = "Geolocalização não suportada";
+      setUserLocation(prev => ({ ...prev, loading: false, error: msg }));
+      toastError(msg);
       return null;
     }
 
     const options = {
       enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: highAccuracy ? 0 : 30000
+      timeout: 12000,
+      maximumAge: 0 // Força o GPS a buscar uma posição nova, não do cache
     };
 
     return new Promise((resolve) => {
-      // Timeout de segurança de 15 segundos
       const timer = setTimeout(() => {
-        console.warn("[GPS] Timeout atingido");
+        console.warn("[GPS] Timeout de 12s atingido");
         setUserLocation(prev => ({ ...prev, loading: false, error: "Tempo limite excedido" }));
+        toastWarning("O GPS demorou a responder. Tente novamente em um local aberto.");
         resolve(null);
       }, 15000);
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
           clearTimeout(timer);
-          const { latitude: lat, longitude: lng } = position.coords;
-          console.log(`[GPS] Localização obtida: ${lat}, ${lng}`);
+          const { latitude: lat, longitude: lng, accuracy } = position.coords;
+          console.log(`[GPS] Coordenadas obtidas: ${lat}, ${lng} (Precisão: ${accuracy}m)`);
           
           if (window.google && window.google.maps) {
             const geocoder = new window.google.maps.Geocoder();
-            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-              let address = "Localização Identificada";
+            geocoder.geocode({ 
+              location: { lat, lng },
+              region: 'BR',
+              language: 'pt-BR'
+            }, (results, status) => {
+              let address = "";
               
               if (status === "OK" && results && results[0]) {
+                // Filtra para remover códigos postais ou partes genéricas se desejar, 
+                // mas formatted_address costuma ser o melhor
                 address = results[0].formatted_address;
+                console.log("[GPS] Endereço geocodificado:", address);
               } else {
                 address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                console.warn("[GPS] Geocoder falhou ou não retornou resultados precisos");
               }
               
               const newData = { lat, lng, address, loading: false, error: null };
@@ -302,8 +313,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         (err) => {
           clearTimeout(timer);
+          let errorMsg = "Falha ao obter GPS";
+          if (err.code === 1) errorMsg = "Permissão de localização negada";
+          else if (err.code === 2) errorMsg = "Posição indisponível";
+          
           console.error("[GPS] Erro:", err);
-          setUserLocation(prev => ({ ...prev, loading: false, error: "Falha ao obter GPS" }));
+          setUserLocation(prev => ({ ...prev, loading: false, error: errorMsg }));
+          toastError(errorMsg);
           resolve(null);
         },
         options
