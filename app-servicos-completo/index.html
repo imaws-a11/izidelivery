@@ -102,6 +102,12 @@
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap');
 
+            :root {
+                --izi-yellow: #FFD400;
+                --izi-black: #121212;
+                --spring-bounce: cubic-bezier(0.5, -0.6, 0.2, 1.5);
+            }
+
             .splash-body {
                 position: fixed;
                 inset: 0;
@@ -111,7 +117,7 @@
                 width: 100%;
                 height: 100%;
                 overflow: hidden;
-                background-color: #FFD400;
+                background-color: var(--izi-yellow);
                 font-family: 'Fredoka', sans-serif;
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
@@ -127,7 +133,7 @@
                 perspective: 2000px;
             }
 
-            /* LOGOTIPO ESTABILIZADO - Correção de trepidação */
+            /* LOGOTIPO ESTABILIZADO - Nitidez absoluta e movimento fluido */
             .logo-section {
                 z-index: 100;
                 text-align: center;
@@ -135,7 +141,7 @@
                 backface-visibility: hidden;
                 transform-style: preserve-3d;
                 animation: 
-                    logo-entrance 1.2s cubic-bezier(0.5, -0.6, 0.2, 1.5) both,
+                    logo-entrance 1.2s var(--spring-bounce) both,
                     logo-float-smooth 4s ease-in-out infinite alternate;
             }
 
@@ -151,24 +157,23 @@
 
             .izi-text {
                 font-size: 9rem;
-                color: #121212;
+                color: var(--izi-black);
                 font-weight: 700;
                 line-height: 0.75;
                 margin: 0;
                 letter-spacing: -4px;
                 filter: drop-shadow(0 10px 8px rgba(0,0,0,0.08));
-                -webkit-text-stroke: 1px #121212;
+                -webkit-text-stroke: 1px var(--izi-black);
             }
 
             .delivery-tag {
                 font-size: 1.4rem;
-                color: #121212;
+                color: var(--izi-black);
                 font-weight: 700;
                 letter-spacing: 8px;
                 margin-top: 10px;
                 text-transform: uppercase;
                 opacity: 0.95;
-                will-change: transform;
             }
 
             /* ÍCONES CINEMATOGRÁFICOS */
@@ -179,7 +184,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: #121212;
+                background: var(--izi-black);
                 border-radius: 28px;
                 opacity: 0;
                 will-change: transform, opacity;
@@ -195,7 +200,7 @@
             .icon-item svg {
                 width: 38px;
                 height: 38px;
-                fill: #FFD400;
+                fill: var(--izi-yellow);
             }
 
             @keyframes cinematic-motion {
@@ -208,6 +213,7 @@
                 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(0.5); }
             }
 
+            /* Coordenadas */
             .icon-1 { --x: -160%; --y: -280%; animation-delay: 0.1s; }
             .icon-2 { --x: 180%; --y: -240%; animation-delay: 1.2s; }
             .icon-3 { --x: -240%; --y: 20%;  animation-delay: 2.3s; }
