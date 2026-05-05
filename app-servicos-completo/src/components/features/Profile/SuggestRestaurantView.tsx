@@ -1,7 +1,44 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { supabase } from "../../../lib/supabase";
+import { toastSuccess, toastError } from "../../../lib/useToast";
 
 export const SuggestRestaurantView = ({ onBack }: { onBack: () => void }) => {
+  const [storeName, setStoreName] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!storeName.trim()) {
+      toastError("Por favor, informe o nome da loja.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from("store_suggestions")
+        .insert({
+          user_id: user?.id,
+          store_name: storeName,
+          instagram_handle: instagram,
+          reason: reason
+        });
+
+      if (error) throw error;
+
+      toastSuccess("Sugestão enviada com sucesso! Obrigado.");
+      onBack();
+    } catch (err: any) {
+      toastError(err.message || "Erro ao enviar sugestão.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen h-full bg-zinc-50 pb-20">
       <header className="bg-white px-6 pt-20 pb-6 flex items-center justify-between border-b border-zinc-100 sticky top-0 z-50">
@@ -20,6 +57,8 @@ export const SuggestRestaurantView = ({ onBack }: { onBack: () => void }) => {
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Nome do Estabelecimento</label>
             <input 
               type="text" 
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
               placeholder="Ex: Pizzaria do Zé"
               className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
             />
@@ -29,6 +68,8 @@ export const SuggestRestaurantView = ({ onBack }: { onBack: () => void }) => {
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Instagram ou Link (Opcional)</label>
             <input 
               type="text" 
+              value={instagram}
+              onChange={(e) => setInstagram(e.target.value)}
               placeholder="@pizzariadoze"
               className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
             />
@@ -38,6 +79,8 @@ export const SuggestRestaurantView = ({ onBack }: { onBack: () => void }) => {
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Por que devemos chamá-los?</label>
             <textarea 
               rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
               placeholder="A melhor pizza da cidade!"
               className="w-full bg-zinc-50 rounded-2xl p-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200 resize-none"
             />
@@ -46,9 +89,11 @@ export const SuggestRestaurantView = ({ onBack }: { onBack: () => void }) => {
 
         <motion.button 
           whileTap={{ scale: 0.98 }}
-          className="w-full bg-yellow-400 text-black h-16 rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:translate-y-1 transition-all"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className={`w-full h-16 rounded-3xl font-black uppercase tracking-widest shadow-xl transition-all ${isSubmitting ? 'bg-zinc-200 text-zinc-400' : 'bg-yellow-400 text-black shadow-yellow-400/20 active:translate-y-1'}`}
         >
-          Enviar Sugestão
+          {isSubmitting ? "Enviando..." : "Enviar Sugestão"}
         </motion.button>
       </main>
     </div>

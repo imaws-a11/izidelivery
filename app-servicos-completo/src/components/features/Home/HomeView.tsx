@@ -236,12 +236,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
               if (internalSearch) setInternalSearch('');
             }
           }}
-          className="fixed top-[420px] inset-x-0 bottom-0 bg-white rounded-t-[48px] shadow-[0_-20px_50px_rgba(0,0,0,0.4)] z-20 flex flex-col overflow-hidden"
-          style={{ height: 'calc(100vh - 40px)', touchAction: 'pan-y' }}
+          className="fixed top-[420px] inset-x-0 bottom-0 bg-white rounded-t-[48px] shadow-[0_-40px_80px_rgba(0,0,0,0.3)] z-[400] flex flex-col overflow-hidden border-t border-zinc-100"
+          style={{ height: 'calc(100vh - 40px)', touchAction: 'none' }}
         >
-           {/* Handle de Arrasto */}
-           <div className="w-full flex justify-center py-5 shrink-0">
-              <div className="w-12 h-1.5 bg-zinc-200 rounded-full" />
+           {/* Handle de Arrasto - Área de Toque Ampliada */}
+           <div 
+             onPointerDown={(e) => dragControls.start(e)}
+             className="w-full flex justify-center py-6 shrink-0 cursor-grab active:cursor-grabbing"
+           >
+              <div className="w-16 h-1.5 bg-zinc-200 rounded-full shadow-inner" />
            </div>
 
            <div id="home-scroll-container" className="flex-1 overflow-y-auto no-scrollbar pb-32 px-6">

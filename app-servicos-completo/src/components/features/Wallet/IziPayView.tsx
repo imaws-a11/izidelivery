@@ -1307,7 +1307,14 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
   );
   };
 
-  const [recipientData, setRecipientData] = useState<{ id: string, name: string, isMerchant?: boolean } | null>(null);
+  const [recipientData, setRecipientData] = useState<{ 
+    id: string, 
+    name: string, 
+    isMerchant?: boolean, 
+    avatar?: string,
+    category?: string,
+    disabled?: boolean
+  } | null>(null);
   const [showScanModal, setShowScanModal] = useState(false);
   const [isSearchingRecipient, setIsSearchingRecipient] = useState(false);
 
@@ -1319,28 +1326,46 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       // 1. Tenta buscar em users_delivery (Cliente)
       const { data: userData } = await supabase
         .from('users_delivery')
-        .select('id, name, email')
+        .select('id, name, email, avatar_url')
         .or(`id.eq.${term},email.eq.${term},phone.eq.${term}`)
         .maybeSingle();
 
       if (userData) {
-        setRecipientData({ id: userData.id, name: userData.name || userData.email || "Usuário Izi" });
+        setRecipientData({ 
+          id: userData.id, 
+          name: userData.name || userData.email || "Usuário Izi",
+          avatar: userData.avatar_url,
+          category: "Usuário Izi Pay"
+        });
         return;
       }
 
       // 2. Se não encontrou, tenta em admin_users (Lojista)
       const { data: merchantData } = await supabase
         .from('admin_users')
-        .select('id, store_name, email, payment_enabled')
+        .select('id, store_name, email, payment_enabled, store_logo, store_type')
         .eq('id', term)
         .eq('role', 'merchant')
         .maybeSingle();
 
       if (merchantData) {
         if (merchantData.payment_enabled === false) {
-          setRecipientData({ id: merchantData.id, name: "Lojista com Pagamentos Desativados", isMerchant: true, disabled: true } as any);
+          setRecipientData({ 
+            id: merchantData.id, 
+            name: "Lojista com Pagamentos Desativados", 
+            isMerchant: true, 
+            disabled: true,
+            avatar: merchantData.store_logo,
+            category: merchantData.store_type || "Lojista"
+          });
         } else {
-          setRecipientData({ id: merchantData.id, name: merchantData.store_name || "Lojista Izi", isMerchant: true });
+          setRecipientData({ 
+            id: merchantData.id, 
+            name: merchantData.store_name || "Lojista Izi", 
+            isMerchant: true,
+            avatar: merchantData.store_logo,
+            category: merchantData.store_type || "Lojista"
+          });
         }
         return;
       }
@@ -1701,59 +1726,108 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 inset-x-0 bg-white rounded-t-[50px] z-[2101] p-8 pb-12 shadow-[0_-20px_40px_rgba(0,0,0,0.1)]"
+              transition={{ type: "spring", damping: 28, stiffness: 220 }}
+              className="fixed bottom-0 inset-x-0 bg-white rounded-t-[56px] z-[2101] overflow-hidden shadow-[0_-30px_60px_rgba(0,0,0,0.25)]"
             >
-              <div className="w-12 h-1.5 bg-zinc-100 rounded-full mx-auto mb-10" />
-              
-              <div className="flex flex-col items-center text-center space-y-6">
-                <div className="size-24 rounded-[40px] bg-yellow-400 flex items-center justify-center shadow-2xl shadow-yellow-200">
-                   <span className="material-symbols-rounded text-4xl text-black font-black">person_check</span>
-                </div>
-                
-                <div className="space-y-2">
-                   <h3 className="text-2xl font-black tracking-tighter uppercase">
-                     {isSearchingRecipient ? "Buscando Perfil..." : "Destinatário Identificado"}
-                   </h3>
-                   <p className="text-zinc-500 text-sm font-medium px-4">
-                     {isSearchingRecipient 
-                       ? "Aguarde enquanto validamos as informações no servidor..." 
-                       : `Você está prestes a enviar saldo para ${recipientData?.name}.`}
-                   </p>
-                </div>
+              {/* Header do Modal com Gradiente */}
+              <div className="h-32 bg-gradient-to-br from-zinc-900 to-zinc-800 relative flex items-end justify-center pb-8">
+                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full" />
+                 <h3 className="text-white text-xs font-black uppercase tracking-[0.3em] opacity-60">Confirmação de Pagamento</h3>
+              </div>
 
-                <div className="w-full bg-zinc-50 p-6 rounded-[32px] border border-zinc-100 flex items-center gap-4">
-                   <div className="size-12 rounded-2xl bg-zinc-900 flex items-center justify-center">
-                      <span className="material-symbols-rounded text-yellow-400">
-                        {isSearchingRecipient ? "sync" : "verified"}
-                      </span>
-                   </div>
-                   <div className="text-left">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                        {isSearchingRecipient ? "ID Detectado" : "Confirmar Destinatário"}
-                      </p>
-                      <p className="text-base font-black text-zinc-900 tracking-tight">
-                        {recipientData?.name}
-                      </p>
-                   </div>
-                </div>
+              <div className="px-8 pb-12 -mt-10 relative z-10">
+                 {/* Avatar Centralizado */}
+                 <div className="flex justify-center mb-6">
+                    <div className="size-24 rounded-[40px] bg-white p-1.5 shadow-2xl relative">
+                       <div className="size-full rounded-[34px] bg-zinc-100 overflow-hidden flex items-center justify-center border-2 border-zinc-50">
+                          {isSearchingRecipient ? (
+                             <div className="size-8 border-4 border-zinc-200 border-t-yellow-400 rounded-full animate-spin" />
+                          ) : recipientData?.avatar ? (
+                             <img src={recipientData.avatar} className="size-full object-cover" alt="Recipient" />
+                          ) : (
+                             <span className="material-symbols-rounded text-4xl text-zinc-300">
+                                {recipientData?.isMerchant ? "storefront" : "person"}
+                             </span>
+                          )}
+                       </div>
+                       {!isSearchingRecipient && !recipientData?.disabled && (
+                          <div className="absolute -bottom-1 -right-1 size-8 bg-yellow-400 rounded-2xl flex items-center justify-center border-4 border-white text-black shadow-lg">
+                             <span className="material-symbols-rounded text-sm font-black">verified</span>
+                          </div>
+                       )}
+                    </div>
+                 </div>
 
-                <div className="w-full grid grid-cols-1 gap-4 pt-4">
-                  <motion.button 
-                    whileTap={{ scale: 0.96 }}
-                    disabled={isSearchingRecipient || (recipientData as any)?.disabled}
-                    onClick={proceedToTransfer}
-                    className={`w-full h-20 rounded-[32px] font-black uppercase tracking-widest shadow-2xl transition-all ${isSearchingRecipient || (recipientData as any)?.disabled ? 'bg-zinc-200 text-zinc-400 shadow-none' : 'bg-zinc-900 text-white shadow-zinc-900/20'}`}
-                  >
-                    {isSearchingRecipient ? "Aguarde..." : (recipientData as any)?.disabled ? "Pagamento Indisponível" : "Confirmar e Enviar"}
-                  </motion.button>
-                  <button 
-                    onClick={() => setShowScanModal(false)}
-                    className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em] pt-2"
-                  >
-                    Cancelar e Voltar
-                  </button>
-                </div>
+                 <div className="text-center space-y-2 mb-10">
+                    <h4 className="text-2xl font-black tracking-tighter text-zinc-900 leading-none">
+                       {isSearchingRecipient ? "Identificando..." : recipientData?.name}
+                    </h4>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                       {isSearchingRecipient ? "Aguarde um momento" : recipientData?.category}
+                    </p>
+                 </div>
+
+                 {/* Card de Detalhes da Transação */}
+                 <div className="bg-zinc-50 rounded-[40px] border border-zinc-100 p-8 space-y-6 mb-10">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-2xl bg-zinc-900 flex items-center justify-center">
+                             <span className="material-symbols-rounded text-yellow-400 text-xl">payments</span>
+                          </div>
+                          <div>
+                             <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Transação</p>
+                             <p className="text-xs font-bold text-zinc-900">{recipientData?.isMerchant ? "Pagamento em Loja" : "Transferência P2P"}</p>
+                          </div>
+                       </div>
+                       <div className="text-right">
+                          <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Método</p>
+                          <p className="text-xs font-bold text-zinc-900">Izi Coins</p>
+                       </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-200/60 w-full" />
+
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                             <span className="material-symbols-rounded text-emerald-600 text-xl">verified_user</span>
+                          </div>
+                          <div>
+                             <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Segurança</p>
+                             <p className="text-xs font-bold text-emerald-600">Conexão Criptografada</p>
+                          </div>
+                       </div>
+                       <span className="material-symbols-rounded text-emerald-400">shield</span>
+                    </div>
+                 </div>
+
+                 {/* Ações */}
+                 <div className="space-y-4">
+                    <motion.button 
+                      whileTap={{ scale: 0.96 }}
+                      disabled={isSearchingRecipient || recipientData?.disabled}
+                      onClick={proceedToTransfer}
+                      className={`w-full h-20 rounded-[32px] font-black uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 ${isSearchingRecipient || recipientData?.disabled ? 'bg-zinc-200 text-zinc-400 shadow-none' : 'bg-zinc-900 text-white shadow-zinc-900/20'}`}
+                    >
+                      {isSearchingRecipient ? (
+                         <div className="size-6 border-4 border-zinc-400/20 border-t-zinc-400 rounded-full animate-spin" />
+                      ) : recipientData?.disabled ? (
+                         "Indisponível"
+                      ) : (
+                         <>
+                            <span>Prosseguir</span>
+                            <span className="material-symbols-rounded">arrow_forward</span>
+                         </>
+                      )}
+                    </motion.button>
+                    
+                    <button 
+                      onClick={() => setShowScanModal(false)}
+                      className="w-full h-14 text-zinc-400 font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center"
+                    >
+                      Cancelar e Voltar
+                    </button>
+                 </div>
               </div>
             </motion.div>
           </>

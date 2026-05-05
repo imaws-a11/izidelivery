@@ -137,28 +137,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </section>
 
-      {/* PROMO BANNER (Decolar Style) */}
-      <section className="px-4 mt-4">
-         <motion.div 
-           whileTap={{ scale: 0.98 }}
-           onClick={handleDecolarClick}
-           className="w-full h-32 rounded-[24px] bg-gradient-to-r from-zinc-900 to-zinc-800 p-6 relative overflow-hidden shadow-lg cursor-pointer"
-         >
-            <div className="flex items-center gap-2 mb-3">
-               <div className="size-8 rounded-full bg-white flex items-center justify-center p-1.5">
-                  <img src="https://cdn.icon-icons.com/icons2/2699/PNG/512/decolar_logo_icon_170362.png" alt="Decolar" className="w-full object-contain" />
-               </div>
-               <span className="text-white text-xs font-bold uppercase tracking-widest opacity-80">decolar</span>
-            </div>
-            <h3 className="text-white text-lg font-black leading-tight">R$1 = 1 ponto Decolar</h3>
-            <p className="text-white/70 text-[10px] font-medium mt-1">Acumule pontos em cada real gasto no Izi!</p>
-            
-            <div className="absolute right-6 top-1/2 -translate-y-1/2">
-               <span className="material-symbols-outlined text-white text-2xl opacity-50">chevron_right</span>
-            </div>
-         </motion.div>
-      </section>
-
       {/* MENU LIST */}
       <section className="mt-4 bg-white border-y border-zinc-100">
          {menuItems.map((item, i) => (
