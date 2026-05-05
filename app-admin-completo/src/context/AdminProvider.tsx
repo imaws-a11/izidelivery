@@ -193,7 +193,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     withdrawal_day: 'Quarta-feira',
     loan_interest_rate: 12.0,
     mercadopago_public_key: '',
-    paymentmethodsactive: { pix: true, card: true, lightning: false, wallet: true }
+    paymentmethodsactive: { pix: true, card: true, lightning: false, wallet: true },
+    izi_pay_merchant_commission: 10,
+    p2p_transfer_fee: 0,
+    maintenance_mode: false,
+    global_announcement: ''
   });
   const [globalSettings, setGlobalSettings] = useState<any>({
     izi_coin_value: 0.01,
@@ -243,6 +247,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           withdrawal_period_h:               Number(appSettings.withdrawal_period_h ?? 24),
           withdrawal_day:                    String(appSettings.withdrawal_day || 'Quarta-feira'),
           mercadopago_public_key:            String(appSettings.mercadopago_public_key || ''),
+          izi_pay_merchant_commission:       Number(appSettings.izi_pay_merchant_commission ?? 10),
+          p2p_transfer_fee:                  Number(appSettings.p2p_transfer_fee ?? 0),
+          maintenance_mode:                  Boolean(appSettings.maintenance_mode ?? false),
+          global_announcement:               String(appSettings.global_announcement || ''),
           updated_at:                        new Date().toISOString()
         };
 
@@ -1474,6 +1482,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           withdrawal_period_h: data.withdrawal_period_h !== undefined ? Number(data.withdrawal_period_h) : appSettings.withdrawal_period_h,
           withdrawal_day: data.withdrawal_day || appSettings.withdrawal_day,
           mercadopago_public_key: data.mercadopago_public_key || appSettings.mercadopago_public_key,
+          izi_pay_merchant_commission: data.izi_pay_merchant_commission !== undefined ? Number(data.izi_pay_merchant_commission) : appSettings.izi_pay_merchant_commission,
+          p2p_transfer_fee: data.p2p_transfer_fee !== undefined ? Number(data.p2p_transfer_fee) : appSettings.p2p_transfer_fee,
+          maintenance_mode: data.maintenance_mode ?? appSettings.maintenance_mode,
+          global_announcement: data.global_announcement || appSettings.global_announcement,
         };
         setAppSettings(mergedSettings);
         setLastSavedHash(JSON.stringify(mergedSettings));

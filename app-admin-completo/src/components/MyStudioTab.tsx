@@ -541,9 +541,9 @@ export default function MyStudioTab() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-1 bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group border-b-4 border-b-primary">
                     <div className="flex flex-col items-center text-center">
-                      <div className="p-4 bg-primary/10 rounded-3xl mb-6 ring-8 ring-primary/5">
+                      <div className={`p-4 rounded-3xl mb-6 ring-8 transition-all ${merchantProfile?.payment_enabled ? 'bg-primary/10 ring-primary/5 opacity-100' : 'bg-slate-100 ring-slate-100/5 opacity-30 grayscale'}`}>
                         <QRCodeSVG 
-                          value={`izipay:merchant:${merchantProfile?.merchant_id}`}
+                          value={merchantProfile?.payment_enabled ? `izipay:merchant:${merchantProfile?.merchant_id}` : 'izipay:disabled'}
                           size={180}
                           level="H"
                           includeMargin={false}
@@ -551,11 +551,41 @@ export default function MyStudioTab() {
                         />
                       </div>
                       <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">Seu QR Code IZI</h4>
-                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-4">
-                        Apresente este código para que o cliente realize o pagamento instantâneo via App IZI Customer.
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-4 mb-6">
+                        {merchantProfile?.payment_enabled 
+                          ? "Apresente este código para que o cliente realize o pagamento instantâneo via App IZI."
+                          : "Recebimentos via Izi Pay estão desativados no momento."}
                       </p>
+
+                      <div className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 rounded-3xl flex items-center justify-between mb-8">
+                         <div className="flex items-center gap-3">
+                            <div className={`size-10 rounded-xl flex items-center justify-center ${merchantProfile?.payment_enabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                               <span className="material-symbols-outlined text-sm font-black">{merchantProfile?.payment_enabled ? 'check' : 'close'}</span>
+                            </div>
+                            <div className="text-left">
+                               <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tight">Receber Izi Pay</p>
+                               <p className="text-[8px] font-bold text-slate-400 uppercase">{merchantProfile?.payment_enabled ? 'Habilitado' : 'Desabilitado'}</p>
+                            </div>
+                         </div>
+                         <button 
+                           onClick={async () => {
+                             const newVal = !merchantProfile?.payment_enabled;
+                             try {
+                               const { error } = await supabase.from('admin_users').update({ payment_enabled: newVal }).eq('id', merchantProfile?.merchant_id);
+                               if (error) throw error;
+                               setMerchantProfile({...merchantProfile!, payment_enabled: newVal});
+                               toastSuccess(newVal ? "Pagamentos habilitados!" : "Pagamentos desabilitados.");
+                             } catch (err: any) {
+                               toastError("Erro ao atualizar: " + err.message);
+                             }
+                           }}
+                           className={`w-12 h-6 rounded-full relative transition-all ${merchantProfile?.payment_enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                         >
+                            <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${merchantProfile?.payment_enabled ? 'left-7' : 'left-1'}`} />
+                         </button>
+                      </div>
                       
-                      <div className="mt-8 grid grid-cols-2 gap-3 w-full">
+                      <div className="grid grid-cols-2 gap-3 w-full">
                         <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-center">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Taxa</p>
                           <p className="text-sm font-black text-emerald-500">0%</p>

@@ -159,237 +159,281 @@ export default function SettingsTab() {
         </div>
       </section>
 
-      {/* Mercado Pago */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-          <span className="material-symbols-outlined text-[120px]">payments</span>
-        </div>
+      {/* Operacional & Manutenção */}
+      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-500/20">
-            <span className="material-symbols-outlined">api</span>
+          <div className="p-3 rounded-2xl bg-rose-50 text-rose-500 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20">
+            <span className="material-symbols-outlined">construction</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Integração Mercado Pago</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configurações para processamento de cartões</p>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Manutenção & Alertas</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle global de disponibilidade</p>
           </div>
         </div>
+
         <div className="grid grid-cols-1 gap-6">
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chave Pública (Public Key)</label>
-            <input
-              className="px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-yellow-400 text-sm font-bold dark:text-white transition-all font-mono"
-              type="text"
-              placeholder="APP_USR-..."
-              value={appSettings.mercadopago_public_key || ''}
-              onChange={(e) => setAppSettings({ ...appSettings, mercadopago_public_key: e.target.value })}
-            />
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mt-1">
-              Necessária para tokenização segura do cartão no frontend.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Operacional: Plataforma Global */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-3 rounded-2xl bg-blue-50 text-blue-500 border border-blue-100 dark:bg-blue-500/10 dark:border-blue-500/20">
-            <span className="material-symbols-outlined">schedule</span>
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Horário Global da Plataforma</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controla quando o app inteiro aceita pedidos</p>
-          </div>
-        </div>
-
-        <div className="mb-8 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl">
-          <span className="material-symbols-outlined text-amber-500 text-lg mt-0.5">warning</span>
-          <div>
-            <p className="text-xs font-black text-amber-700 dark:text-amber-400">Este é o teto global da plataforma</p>
-            <p className="text-[11px] font-bold text-amber-600/80 dark:text-amber-400/70 mt-0.5">
-              Fora deste horário, <strong>nenhum cliente consegue fazer pedidos</strong>.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 mb-6">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Janela de Atendimento da Plataforma</label>
-          <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-blue-400 text-lg">wb_sunny</span>
-              <input
-                className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-blue-300 text-sm font-bold dark:text-white"
-                type="time"
-                value={appSettings.openingTime}
-                onChange={(e) => setAppSettings({ ...appSettings, openingTime: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[11px] font-black text-slate-300 uppercase">até</span>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
-            </div>
-            <div className="flex-1 relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 text-lg">bedtime</span>
-              <input
-                className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-blue-300 text-sm font-bold dark:text-white"
-                type="time"
-                value={appSettings.closingTime}
-                onChange={(e) => setAppSettings({ ...appSettings, closingTime: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Raio Global de Entrega */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-3 rounded-2xl bg-violet-50 text-violet-500 border border-violet-100 dark:bg-violet-500/10 dark:border-violet-500/20">
-            <span className="material-symbols-outlined">delivery_dining</span>
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Raio Global de Entrega</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Limite máximo para qualquer entrega na plataforma</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="flex items-end gap-6">
-            <div className="flex-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">Raio Máximo (KM)</label>
-              <div className="relative">
-                <input
-                  className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white pr-14"
-                  type="number"
-                  min="0.1"
-                  max="100"
-                  step="0.1"
-                  value={appSettings.radius}
-                  onChange={(e) => setAppSettings({ ...appSettings, radius: parseFloat(e.target.value) || 1 })}
-                />
-                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">km</span>
+          <div className={`flex items-center justify-between p-6 rounded-[28px] border transition-all ${appSettings.maintenance_mode ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-2xl ${appSettings.maintenance_mode ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                <span className="material-symbols-outlined text-lg">emergency_home</span>
+              </div>
+              <div>
+                <span className="text-sm font-black text-slate-900 dark:text-white block">Modo Manutenção Global</span>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Se ativado, o app ficará indisponível para pedidos.</p>
               </div>
             </div>
-            <div className="flex flex-col items-center justify-center bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20 rounded-2xl px-8 py-4 min-w-[120px] text-center">
-              <span className="text-3xl font-black text-violet-500">{appSettings.radius}</span>
-              <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">km máx.</span>
+            <button
+              onClick={() => setAppSettings({ ...appSettings, maintenance_mode: !appSettings.maintenance_mode })}
+              className={`w-14 h-8 rounded-full relative transition-all ${appSettings.maintenance_mode ? 'bg-rose-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+            >
+              <div className={`absolute top-1.5 size-5 bg-white rounded-full shadow-md transition-all ${appSettings.maintenance_mode ? 'right-1.5' : 'left-1.5'}`}></div>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Anúncio Global (Banner Superior)</label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-lg">campaign</span>
+              <input
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary text-sm font-bold dark:text-white"
+                type="text"
+                placeholder="Ex: Cupom IZI10 ativo em todo o app!"
+                value={appSettings.global_announcement || ''}
+                onChange={(e) => setAppSettings({ ...appSettings, global_announcement: e.target.value })}
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Regras Financeiras */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
+      {/* Regras Financeiras IZI Pay */}
+      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+          <span className="material-symbols-outlined text-[150px]">payments</span>
+        </div>
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-500 border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20">
-            <span className="material-symbols-outlined">payments</span>
+          <div className="p-3 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20">
+            <span className="material-symbols-outlined">qr_code_2</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Regras Financeiras Globais</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Taxas padrão da plataforma</p>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Ecossistema Financeiro IZI Pay</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Taxas de QR Code e Transferências</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
-          <div className="bg-primary/5 border border-primary/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-primary/80 uppercase tracking-widest mb-1">Comissão App (%)</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-amber-50/50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-1">Comissão IZI Pay (Lojistas %)</label>
             <div className="relative">
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-primary focus:ring-2 focus:ring-primary/30 shadow-inner"
-                type="number" min="0" max="50" step="0.01"
-                value={appSettings.appCommission}
-                onChange={(e) => setAppSettings({ ...appSettings, appCommission: parseFloat(e.target.value) || 0 })}
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-amber-600 focus:ring-2 focus:ring-amber-300 shadow-inner"
+                type="number" min="0" max="50" step="0.1"
+                value={appSettings.izi_pay_merchant_commission}
+                onChange={(e) => setAppSettings({ ...appSettings, izi_pay_merchant_commission: parseFloat(e.target.value) || 0 })}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 font-black text-sm">%</span>
+            </div>
+            <p className="text-[9px] font-bold text-amber-700/60 uppercase tracking-widest leading-tight">Retido automaticamente em pagamentos via QR Code/Carteira no balcão.</p>
+          </div>
+
+          <div className="bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/20 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest mb-1">Taxa Transferência P2P (R$)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-sm">R$</span>
+              <input
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-2xl text-blue-600 focus:ring-2 focus:ring-blue-300 shadow-inner"
+                type="number" min="0" step="0.01"
+                value={appSettings.p2p_transfer_fee}
+                onChange={(e) => setAppSettings({ ...appSettings, p2p_transfer_fee: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <p className="text-[9px] font-bold text-blue-700/60 uppercase tracking-widest leading-tight">Valor fixo cobrado por transferência entre usuários comuns.</p>
+          </div>
+
+          <div className="bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/20 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-1">Taxa de Serviço Global (%)</label>
+            <div className="relative">
+              <input
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-emerald-600 focus:ring-2 focus:ring-emerald-300 shadow-inner"
+                type="number" min="0" max="20" step="0.1"
+                value={appSettings.serviceFee}
+                onChange={(e) => setAppSettings({ ...appSettings, serviceFee: parseFloat(e.target.value) || 0 })}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 font-black text-sm">%</span>
+            </div>
+            <p className="text-[9px] font-bold text-emerald-700/60 uppercase tracking-widest leading-tight">Taxa operacional cobrada do cliente final em cada pedido.</p>
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { key: 'pix', label: 'PIX', icon: 'account_balance' },
+            { key: 'card', label: 'Cartão', icon: 'credit_card' },
+            { key: 'wallet', label: 'Carteira IZI', icon: 'wallet' },
+            { key: 'lightning', label: 'Lightning', icon: 'bolt' }
+          ].map((method) => {
+            const isActive = appSettings.paymentmethodsactive?.[method.key as keyof typeof appSettings.paymentmethodsactive];
+            return (
+              <button
+                key={method.key}
+                onClick={() => {
+                  const current = appSettings.paymentmethodsactive || { pix: true, card: true, lightning: false, wallet: true };
+                  setAppSettings({
+                    ...appSettings,
+                    paymentmethodsactive: { ...current, [method.key]: !isActive }
+                  });
+                }}
+                className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${isActive ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-400 grayscale'}`}
+              >
+                <span className="material-symbols-outlined text-lg">{method.icon}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">{method.label}</span>
+                <div className={`ml-auto size-2 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Regras IZI Black & Gamificação */}
+      <section className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <span className="material-symbols-outlined text-[150px] text-primary">workspace_premium</span>
+        </div>
+        <div className="flex items-center gap-3 mb-8 relative z-10">
+          <div className="p-3 rounded-2xl bg-primary text-slate-900 border border-primary/20">
+            <span className="material-symbols-outlined">stars</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-white tracking-tight">Fidelidade IZI Black</h2>
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Configurações do clube de benefícios</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Preço Assinatura (R$)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">R$</span>
+              <input
+                className="w-full bg-slate-800 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                type="number" step="0.01"
+                value={appSettings.iziBlackFee}
+                onChange={(e) => setAppSettings({ ...appSettings, iziBlackFee: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cashback Base (%)</label>
+            <div className="relative">
+              <input
+                className="w-full bg-slate-800 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                type="number" step="0.1"
+                value={appSettings.iziBlackCashback}
+                onChange={(e) => setAppSettings({ ...appSettings, iziBlackCashback: parseFloat(e.target.value) || 0 })}
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">%</span>
             </div>
           </div>
 
-          <div className="bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-100 dark:border-cyan-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">Comissão Entregador sobre Frete (%)</label>
+          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mult. Cashback Black</label>
             <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">x</span>
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-cyan-600 focus:ring-2 focus:ring-cyan-300 shadow-inner"
-                type="number" min="0" max="50" step="0.01"
-                value={appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0}
-                onChange={(e) => setAppSettings({ ...appSettings, driverFreightCommission: parseFloat(e.target.value) || 0 })}
+                className="w-full bg-slate-800 border-none rounded-2xl pl-8 pr-4 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                type="number" step="0.1"
+                value={appSettings.izi_black_cashback_multiplier}
+                onChange={(e) => setAppSettings({ ...appSettings, izi_black_cashback_multiplier: parseFloat(e.target.value) || 1 })}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-cyan-500 font-black text-sm">%</span>
-            </div>
-            <p className="text-[9px] font-bold text-cyan-700/70 uppercase tracking-widest">Aplicada sobre o valor do frete do entregador</p>
-          </div>
-
-          <div className="bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-100 dark:border-fuchsia-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-fuchsia-600 uppercase tracking-widest mb-1">Comissão Motorista Particular (%)</label>
-            <div className="relative">
-              <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-fuchsia-600 focus:ring-2 focus:ring-fuchsia-300 shadow-inner"
-                type="number" min="0" max="50" step="0.01"
-                value={appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0}
-                onChange={(e) => setAppSettings({ ...appSettings, privateDriverCommission: parseFloat(e.target.value) || 0 })}
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-fuchsia-500 font-black text-sm">%</span>
-            </div>
-            <p className="text-[9px] font-bold text-fuchsia-700/70 uppercase tracking-widest">Aplicada sobre o valor do frete/corrida do motorista</p>
-          </div>
-
-          <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Taxa de Serviço (%)</label>
-            <div className="relative">
-              <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-blue-600 focus:ring-2 focus:ring-blue-300 shadow-inner"
-                type="number" min="0" max="20" step="0.01"
-                value={globalSettings?.service_fee_percent || 0}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 0;
-                  handleUpdateGlobalFinance('service_fee_percent', val);
-                }}
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-sm">%</span>
             </div>
           </div>
 
-          <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-[28px] p-6 space-y-3 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none transition-transform group-hover:scale-110">
-              <span className="material-symbols-outlined text-6xl text-amber-500">toll</span>
+          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mult. XP Black</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">x</span>
+              <input
+                className="w-full bg-slate-800 border-none rounded-2xl pl-8 pr-4 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                type="number" step="0.1"
+                value={appSettings.izi_black_xp_multiplier}
+                onChange={(e) => setAppSettings({ ...appSettings, izi_black_xp_multiplier: parseFloat(e.target.value) || 1 })}
+              />
             </div>
-            <label className="block text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1 relative z-10">Cotação Izi Coin</label>
-            <div className="relative z-10 flex items-center justify-between gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500 font-bold text-xs uppercase">IZI</span>
-                <input
-                  className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-2 py-3.5 font-black text-xl text-amber-600 focus:ring-2 focus:ring-amber-300 shadow-inner text-center"
-                  type="number" value={1} disabled
-                />
-              </div>
-              <span className="text-amber-500 font-black text-lg">=</span>
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 font-bold text-xs">R$</span>
-                <input
-                  className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-9 pr-2 py-3.5 font-black text-xl text-emerald-600 focus:ring-2 focus:ring-amber-300 shadow-inner transition-all hover:bg-amber-50/50 dark:hover:bg-slate-800"
-                  type="number" min="0.001" step="0.001"
-                  value={globalSettings?.izi_coin_value ?? appSettings.iziCoinRate}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0;
-                    setAppSettings({ ...appSettings, iziCoinRate: val });
-                    handleUpdateGlobalFinance('izi_coin_value', val);
-                  }}
-                />
-              </div>
-            </div>
-            <p className="text-[9px] text-amber-600/70 font-bold tracking-widest uppercase mt-4 text-center">DEFINE O VALOR DE MERCADO DA MOEDA</p>
           </div>
         </div>
       </section>
-      
-      {/* Regras de Saque (Withdrawal Rules) */}
+
+      {/* Regras de Entrega & Logística */}
       <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-amber-50 text-amber-500 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20">
+          <div className="p-3 rounded-2xl bg-violet-50 text-violet-500 border border-violet-100 dark:bg-violet-500/10 dark:border-violet-500/20">
+            <span className="material-symbols-outlined">local_shipping</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Logística & Raio de Entrega</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parâmetros de cobertura global</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-end gap-6">
+              <div className="flex-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">Raio Máximo Global (KM)</label>
+                <div className="relative">
+                  <input
+                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white pr-14"
+                    type="number" min="0.1" max="100" step="0.1"
+                    value={appSettings.radius}
+                    onChange={(e) => setAppSettings({ ...appSettings, radius: parseFloat(e.target.value) || 1 })}
+                  />
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">km</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center justify-center bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20 rounded-2xl px-8 py-4 min-w-[120px] text-center">
+                <span className="text-3xl font-black text-violet-500">{appSettings.radius}</span>
+                <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">km máx.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Janela de Funcionamento do App</label>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-amber-500 text-lg">wb_sunny</span>
+                <input
+                  className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white"
+                  type="time"
+                  value={appSettings.openingTime}
+                  onChange={(e) => setAppSettings({ ...appSettings, openingTime: e.target.value })}
+                />
+              </div>
+              <span className="text-[10px] font-black text-slate-300 uppercase">até</span>
+              <div className="flex-1 relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 text-lg">bedtime</span>
+                <input
+                  className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white"
+                  type="time"
+                  value={appSettings.closingTime}
+                  onChange={(e) => setAppSettings({ ...appSettings, closingTime: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Regras de Saque */}
+      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
             <span className="material-symbols-outlined">account_balance_wallet</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Regras de Saque da Plataforma</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controla como lojistas e entregadores recebem</p>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Regras de Saque (Withdrawal)</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Política de recebimento para parceiros</p>
           </div>
         </div>
 
@@ -399,9 +443,9 @@ export default function SettingsTab() {
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">R$</span>
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-xl text-slate-700 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
-                type="number" step="1"
-                value={appSettings.minwithdrawalamount ?? 0}
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-xl focus:ring-2 focus:ring-primary shadow-sm"
+                type="number"
+                value={appSettings.minwithdrawalamount}
                 onChange={(e) => setAppSettings({ ...appSettings, minwithdrawalamount: parseFloat(e.target.value) || 0 })}
               />
             </div>
@@ -411,67 +455,82 @@ export default function SettingsTab() {
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Taxa de Saque (%)</label>
             <div className="relative">
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-xl text-slate-700 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-xl focus:ring-2 focus:ring-primary shadow-sm"
                 type="number" step="0.1"
-                value={appSettings.withdrawalfeepercent || 0}
+                value={appSettings.withdrawalfeepercent}
                 onChange={(e) => setAppSettings({ ...appSettings, withdrawalfeepercent: parseFloat(e.target.value) || 0 })}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">%</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">%</span>
             </div>
           </div>
 
           <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Dia Oficial de Saque</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Dia Oficial</label>
             <select
-              className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-black text-xs uppercase tracking-widest text-slate-600 dark:text-white focus:ring-2 focus:ring-primary shadow-sm appearance-none"
-              value={appSettings.withdrawal_day || ''}
+              className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-black text-xs uppercase tracking-widest text-slate-600 focus:ring-2 focus:ring-primary shadow-sm"
+              value={appSettings.withdrawal_day}
               onChange={(e) => setAppSettings({ ...appSettings, withdrawal_day: e.target.value })}
             >
-              <option value="">Qualquer dia</option>
-              <option value="Segunda-feira">Segunda-feira</option>
-              <option value="Terça-feira">Terça-feira</option>
-              <option value="Quarta-feira">Quarta-feira</option>
-              <option value="Quinta-feira">Quinta-feira</option>
-              <option value="Sexta-feira">Sexta-feira</option>
-              <option value="Sábado">Sábado</option>
-              <option value="Domingo">Domingo</option>
+              {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(day => (
+                <option key={day} value={day}>{day}</option>
+              ))}
             </select>
           </div>
 
           <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Intervalo entre Saques (H)</label>
-            <div className="relative">
-              <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-xl text-slate-700 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
-                type="number" step="1"
-                value={appSettings.withdrawal_period_h || 0}
-                onChange={(e) => setAppSettings({ ...appSettings, withdrawal_period_h: parseInt(e.target.value) || 0 })}
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] font-black uppercase">hrs</span>
-            </div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Intervalo (Horas)</label>
+            <input
+              className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-3.5 font-black text-xl focus:ring-2 focus:ring-primary shadow-sm"
+              type="number"
+              value={appSettings.withdrawal_period_h}
+              onChange={(e) => setAppSettings({ ...appSettings, withdrawal_period_h: parseInt(e.target.value) || 0 })}
+            />
           </div>
         </div>
       </section>
 
-      {/* Configurações de Notificações */}
+      {/* Mercado Pago */}
+      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-500/20">
+            <span className="material-symbols-outlined">api</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Gateway Mercado Pago</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configuração das chaves de API</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chave Pública (Public Key)</label>
+          <input
+            className="px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-yellow-400 text-sm font-bold dark:text-white transition-all font-mono"
+            type="text"
+            placeholder="APP_USR-..."
+            value={appSettings.mercadopago_public_key || ''}
+            onChange={(e) => setAppSettings({ ...appSettings, mercadopago_public_key: e.target.value })}
+          />
+        </div>
+      </section>
+
+      {/* Canais de Notificação */}
       <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3 mb-8">
           <div className="p-3 rounded-2xl bg-purple-50 text-purple-500 border border-purple-100 dark:bg-purple-500/10 dark:border-purple-500/20">
             <span className="material-symbols-outlined">notifications_active</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Canais de Notificação</h2>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Canais de Notificação Externos</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ativar/Desativar SMS e E-mail</p>
           </div>
         </div>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { key: 'smsNotifications', label: 'SMS para Pedidos', icon: 'sms' },
-            { key: 'emailNotifications', label: 'E-mail para Faturas', icon: 'email' },
+            { key: 'smsNotifications', label: 'SMS Operacional (Pedidos)', icon: 'sms' },
+            { key: 'emailNotifications', label: 'E-mail Transacional (Faturas)', icon: 'email' },
           ].map(({ key, label, icon }) => {
             const isOn = (appSettings as any)[key];
             return (
-              <div key={key} className={`flex items-center justify-between p-6 rounded-[28px] border transition-all ${isOn ? 'bg-primary/[0.03] border-primary/20' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700'}`}>
+              <div key={key} className={`flex items-center justify-between p-6 rounded-[28px] border transition-all ${isOn ? 'bg-primary/[0.03] border-primary/20' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-2xl ${isOn ? 'bg-primary/10' : 'bg-slate-100 dark:bg-slate-700'}`}>
                     <span className={`material-symbols-outlined ${isOn ? 'text-primary' : 'text-slate-400'}`}>{icon}</span>
@@ -480,7 +539,7 @@ export default function SettingsTab() {
                 </div>
                 <button
                   onClick={() => setAppSettings({ ...appSettings, [key]: !isOn })}
-                  className={`w-14 h-8 rounded-full relative transition-all ${isOn ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  className={`w-14 h-8 rounded-full relative transition-all ${isOn ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`absolute top-1.5 size-5 bg-white rounded-full shadow-md transition-all ${isOn ? 'right-1.5' : 'left-1.5'}`}></div>
                 </button>

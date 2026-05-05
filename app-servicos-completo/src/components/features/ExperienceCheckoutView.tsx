@@ -33,6 +33,12 @@ export const ExperienceCheckoutView: React.FC<ExperienceCheckoutViewProps> = ({
 
   const handlePay = async () => {
     if (!userId) return;
+
+    if (globalSettings?.maintenance_mode) {
+      toastError("Plataforma em manutenção. Tente novamente mais tarde.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {

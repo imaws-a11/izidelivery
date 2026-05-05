@@ -2168,6 +2168,10 @@ function App() {
 
 
   const handlePlaceOrder = async (useCoins = false) => {
+    if (globalSettings?.maintenance_mode) {
+      toastError("Plataforma em manutenção. Tente novamente em instantes.");
+      return;
+    }
 
     if (!paymentMethod) { toastWarning("Selecione uma forma de pagamento."); return; }
     if (!userId) { toastWarning("Faça login para continuar."); return; }

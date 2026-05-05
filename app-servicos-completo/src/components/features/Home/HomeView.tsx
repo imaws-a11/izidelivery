@@ -246,6 +246,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
            <div id="home-scroll-container" className="flex-1 overflow-y-auto no-scrollbar pb-32 px-6">
               
+              {/* ANÚNCIO GLOBAL */}
+              {appSettings?.global_announcement && (
+                <motion.section 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-8"
+                >
+                  <div className="bg-zinc-900 p-6 rounded-[32px] border border-white/10 shadow-2xl relative overflow-hidden">
+                    <div className="absolute -top-4 -right-4 size-20 bg-yellow-400/20 blur-2xl rounded-full" />
+                    <div className="flex items-center gap-4 relative z-10">
+                      <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-rounded text-black text-xl">campaign</span>
+                      </div>
+                      <p className="text-white text-xs font-bold leading-relaxed">{appSettings.global_announcement}</p>
+                    </div>
+                  </div>
+                </motion.section>
+              )}
+
               {/* PEDIDO EM ANDAMENTO (SMART BANNER) */}
               {(() => {
                 const activeOrder = myOrders.find(o => o.status && !["concluido", "cancelado"].includes(o.status));

@@ -31,69 +31,66 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!; // ou SERVICE_ROLE_KEY dependendo das politicas RLS
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { driver_id, title, body, data } = await req.json()
+    const { driver_id, user_id, merchant_id, title, body, data } = await req.json()
 
-    if (!driver_id) throw new Error("driver_id é obrigatório");
+    if (!driver_id && !user_id && !merchant_id) {
+      throw new Error("Um identificador (driver_id, user_id ou merchant_id) é obrigatório");
+    }
 
     if (!admin.apps.length) {
         throw new Error("O Firebase Admin SDK não foi inicializado. Crie o secret FIREBASE_SERVICE_ACCOUNT na Dashboard.");
     }
 
-    if (driver_id === 'all') {
-      const { data: driversData, error: driversError } = await supabase
-        .from('drivers_delivery')
-        .select('push_token')
-        .not('push_token', 'is', null);
+    let targetToken = null;
 
-      if (driversError || !driversData || driversData.length === 0) {
-        throw new Error("Nenhum entregador com push_token encontrado.");
+    if (driver_id) {
+      if (driver_id === 'all') {
+        const { data: driversData, error: driversError } = await supabase
+          .from('drivers_delivery')
+          .select('push_token')
+          .not('push_token', 'is', null);
+
+        if (driversError || !driversData || driversData.length === 0) {
+          throw new Error("Nenhum entregador com push_token encontrado.");
+        }
+
+        const tokens = driversData.map((d: any) => d.push_token).filter(Boolean);
+        const message = {
+          notification: { title: title || 'Nova Missão Izi!', body: body || 'Temos uma nova entrega disponível.' },
+          data: data || { context: "geral" },
+          tokens: tokens,
+        };
+        const response = await admin.messaging().sendEachForMulticast(message);
+        return new Response(JSON.stringify({ success: true, message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const tokens = driversData.map((d: any) => d.push_token).filter(Boolean);
-      
-      const message = {
-        notification: {
-          title: title || 'Nova Missão Izi!',
-          body: body || 'Temos uma nova entrega disponível na região.'
-        },
-        data: data || { context: "geral" },
-        tokens: tokens,
-      };
-
-      const response = await admin.messaging().sendEachForMulticast(message);
-      
-      return new Response(
-        JSON.stringify({ success: true, messageId: response, message: 'Push disparado para todos com sucesso!' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+      const { data: dData } = await supabase.from('drivers_delivery').select('push_token').eq('id', driver_id).single();
+      targetToken = dData?.push_token;
+    } else if (user_id) {
+      const { data: uData } = await supabase.from('users_delivery').select('push_token').eq('id', user_id).single();
+      targetToken = uData?.push_token;
+    } else if (merchant_id) {
+      const { data: mData } = await supabase.from('admin_users').select('push_token').eq('id', merchant_id).single();
+      targetToken = mData?.push_token;
     }
 
-    // Procura o Token FCM do entregador no banco de dados (1 específico)
-    const { data: driverData, error: driverError } = await supabase
-      .from('drivers_delivery')
-      .select('push_token')
-      .eq('id', driver_id)
-      .single()
-
-    if (driverError || !driverData?.push_token) {
-      throw new Error(`Entregador id=${driver_id} não possui um push_token cadastrado no banco.`);
+    if (!targetToken) {
+      throw new Error(`Token não encontrado para o destinatário especificado.`);
     }
 
-    // Estrutura a mensagem para a nuvem da Google
     const message = {
       notification: {
-        title: title || 'Nova Missão Izi!',
-        body: body || 'Você tem um novo pedido aguardando.'
+        title: title || 'Izi Delivery',
+        body: body || 'Você tem uma nova atualização.'
       },
-      data: data || { context: "geral" }, // permite mandar dados ocultos
-      token: driverData.push_token,
+      data: data || { context: "geral" },
+      token: targetToken,
     };
 
-    // Dispara via Firebase Cloud Messaging
     const response = await admin.messaging().send(message);
 
     return new Response(
-      JSON.stringify({ success: true, messageId: response, message: 'Push disparado com sucesso!' }),
+      JSON.stringify({ success: true, messageId: response }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {

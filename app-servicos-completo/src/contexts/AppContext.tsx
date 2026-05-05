@@ -228,7 +228,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       : basePrice;
   };
 
-  const closeBroadcast = () => setActiveBroadcast(null);
+  const closeBroadcast = () => {
+    if (activeBroadcast?.id) {
+      localStorage.setItem('last_izi_broadcast_user', activeBroadcast.id);
+    }
+    setActiveBroadcast(null);
+  };
 
 
   const refreshSettings = async () => {
@@ -343,6 +348,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [transitData, setSubView]);
 
   const handleConfirmMobility = async (paymentMethod: string) => {
+    if (globalSettings?.maintenance_mode) {
+      toastError("Plataforma em manutenção. Tente novamente mais tarde.");
+      return;
+    }
+
     if (!userId) {
       toastWarning("Faça login para continuar");
       return;
@@ -498,6 +508,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const interval = setInterval(fetchMarketData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Escuta de Transmissões Administrativas (Popups)
+  useEffect(() => {
+    if (!userId) {
+      setActiveBroadcast(null);
+      return;
+    }
+
+    const initBroadcasts = async () => {
+      const { data } = await supabase
+        .from('broadcast_notifications')
+        .select('*')
+        .eq('status', 'sent')
+        .in('type', ['popup', 'both'])
+        .in('target_type', ['all', 'users'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (data && data[0]) {
+        const lastSeen = localStorage.getItem('last_izi_broadcast_user');
+        if (lastSeen !== data[0].id) {
+          setActiveBroadcast(data[0]);
+        }
+      }
+    };
+
+    initBroadcasts();
+
+    const broadcastSub = supabase
+      .channel(`broadcast-notifs-user-${userId}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'broadcast_notifications' 
+      }, (payload) => {
+        const notif = payload.new as any;
+        if ((notif.type === 'popup' || notif.type === 'both') && 
+            (notif.target_type === 'all' || notif.target_type === 'users')) {
+          setActiveBroadcast(notif);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(broadcastSub);
+    };
+  }, [userId]);
 
   return (
     <AppContext.Provider value={{

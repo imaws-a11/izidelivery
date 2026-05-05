@@ -164,6 +164,28 @@ const NotificationsTab = () => {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta transmissão do histórico?')) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('broadcast_notifications')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setHistory(prev => prev.filter(item => item.id !== id));
+      setMenuItem(null);
+      alert('Transmissão excluída com sucesso!');
+    } catch (err: any) {
+      alert('Erro ao excluir: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <header className="flex flex-col gap-2">
@@ -362,6 +384,13 @@ const NotificationsTab = () => {
                             >
                                <span className="material-symbols-outlined text-sm">replay</span>
                                Disparar Novamente
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(menuItem.id)}
+                              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest"
+                            >
+                               <span className="material-symbols-outlined text-sm">delete</span>
+                               Excluir Transmissão
                             </button>
                             <button 
                               onClick={() => setMenuItem(null)}

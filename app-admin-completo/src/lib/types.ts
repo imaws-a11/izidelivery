@@ -402,6 +402,10 @@ export interface AppSettings {
   mercadopago_public_key?: string;
   loan_interest_rate?: number;
   paymentmethodsactive?: { pix: boolean; card: boolean; lightning: boolean; wallet: boolean };
+  izi_pay_merchant_commission?: number;
+  p2p_transfer_fee?: number;
+  maintenance_mode?: boolean;
+  global_announcement?: string;
   created_at?: string;
   updated_at?: string;
 }

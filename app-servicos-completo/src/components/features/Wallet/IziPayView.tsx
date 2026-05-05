@@ -844,7 +844,11 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
 
         <div className="grid grid-cols-2 gap-4">
            {[10, 50, 100, 200].map(val => (
-             <button key={val} className="h-16 rounded-3xl bg-white border border-zinc-100 font-black text-zinc-600 text-sm shadow-sm active:scale-95 transition-all">
+             <button 
+               key={val} 
+               onClick={() => setSendAmount(val.toString())}
+               className={`h-16 rounded-3xl border font-black text-sm shadow-sm active:scale-95 transition-all ${sendAmount === val.toString() ? 'bg-yellow-400 border-yellow-400 text-black' : 'bg-white border-zinc-100 text-zinc-600'}`}
+             >
                + R$ {val}
              </button>
            ))}
@@ -854,9 +858,11 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       <div className="fixed bottom-0 inset-x-0 p-8 bg-white/80 backdrop-blur-xl border-t border-zinc-50">
         <motion.button 
           whileTap={{ scale: 0.98 }}
-          className="w-full h-20 bg-zinc-900 text-white rounded-[32px] font-black uppercase tracking-widest shadow-2xl shadow-zinc-900/20"
+          disabled={isProcessing || !recipientData || !sendAmount || parseFloat(sendAmount) <= 0}
+          onClick={handleTransfer}
+          className={`w-full h-20 rounded-[32px] font-black uppercase tracking-widest shadow-2xl transition-all ${isProcessing || !recipientData || !sendAmount ? 'bg-zinc-200 text-zinc-400' : 'bg-zinc-900 text-white shadow-zinc-900/20'}`}
         >
-          Confirmar Envio
+          {isProcessing ? "Processando..." : "Confirmar Envio"}
         </motion.button>
       </div>
     </motion.div>
@@ -1301,9 +1307,66 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
   );
   };
 
-  const [recipientData, setRecipientData] = useState<{ id: string, name: string } | null>(null);
+  const [recipientData, setRecipientData] = useState<{ id: string, name: string, isMerchant?: boolean } | null>(null);
   const [showScanModal, setShowScanModal] = useState(false);
   const [isSearchingRecipient, setIsSearchingRecipient] = useState(false);
+
+  const handleSearchRecipient = useCallback(async (term: string) => {
+    if (!term || term.length < 3) return;
+    setIsSearchingRecipient(true);
+    
+    try {
+      // 1. Tenta buscar em users_delivery (Cliente)
+      const { data: userData } = await supabase
+        .from('users_delivery')
+        .select('id, name, email')
+        .or(`id.eq.${term},email.eq.${term},phone.eq.${term}`)
+        .maybeSingle();
+
+      if (userData) {
+        setRecipientData({ id: userData.id, name: userData.name || userData.email || "Usuário Izi" });
+        return;
+      }
+
+      // 2. Se não encontrou, tenta em admin_users (Lojista)
+      const { data: merchantData } = await supabase
+        .from('admin_users')
+        .select('id, store_name, email, payment_enabled')
+        .eq('id', term)
+        .eq('role', 'merchant')
+        .maybeSingle();
+
+      if (merchantData) {
+        if (merchantData.payment_enabled === false) {
+          setRecipientData({ id: merchantData.id, name: "Lojista com Pagamentos Desativados", isMerchant: true, disabled: true } as any);
+        } else {
+          setRecipientData({ id: merchantData.id, name: merchantData.store_name || "Lojista Izi", isMerchant: true });
+        }
+        return;
+      }
+
+      // 3. Busca genérica por store_name ou name se não for UUID
+      if (term.length > 5 && !term.includes('-')) {
+         const { data: searchUser } = await supabase
+           .from('users_delivery')
+           .select('id, name')
+           .ilike('name', `%${term}%`)
+           .limit(1)
+           .maybeSingle();
+           
+         if (searchUser) {
+            setRecipientData({ id: searchUser.id, name: searchUser.name });
+            return;
+         }
+      }
+
+      setRecipientData(null);
+    } catch (err) {
+      console.error("Erro ao buscar destinatário:", err);
+    } finally {
+      setIsSearchingRecipient(false);
+    }
+  }, []);
 
   const handleScanResult = useCallback(async (text: string) => {
     const cleanId = text
@@ -1312,35 +1375,160 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       .replace("user:", "")
       .trim();
       
-    setIsSearchingRecipient(true);
     setShowScanModal(true);
-    setRecipientData({ id: cleanId, name: "Buscando..." });
+    await handleSearchRecipient(cleanId);
+  }, [handleSearchRecipient]);
 
+  // Debounce para busca manual
+  useEffect(() => {
+    if (subView === 'send' && manualRecipient.length >= 3 && !recipientData) {
+      const timer = setTimeout(() => handleSearchRecipient(manualRecipient), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [manualRecipient, subView, recipientData, handleSearchRecipient]);
+
+  const handleTransfer = async () => {
+    const amount = parseFloat(sendAmount);
+    if (!amount || amount <= 0 || !recipientData || !userId) return;
+    
+    // No ecossistema IZI, transferências usam prioritariamente Izi Coins
+    if (amount > coins) {
+      alert("Saldo de Izi Coins insuficiente para esta transferência.");
+      return;
+    }
+
+    setIsProcessing(true);
     try {
-      const { data, error } = await supabase
-        .from('users_delivery')
-        .select('name, email')
-        .eq('id', cleanId)
+      let finalRecipientAmount = amount;
+      let merchantPushToken = null;
+
+      // 0. Buscar configurações globais de taxas
+      const { data: globalSettings } = await supabase
+        .from('app_settings_delivery')
+        .select('izi_pay_merchant_commission, p2p_transfer_fee, maintenance_mode')
         .single();
 
-      if (data) {
-        setRecipientData({ id: cleanId, name: data.name || data.email || "Usuário Izi" });
-      } else {
-        setRecipientData({ id: cleanId, name: "Usuário Não Encontrado" });
+      if (globalSettings?.maintenance_mode) {
+        alert("O ecossistema IZI Pay está em manutenção. Tente novamente mais tarde.");
+        setIsProcessing(false);
+        return;
       }
+
+      const globalP2PFee = globalSettings?.p2p_transfer_fee || 0;
+      const globalMerchantCommission = globalSettings?.izi_pay_merchant_commission || 10;
+
+      // 1. Se for lojista, calcular comissão e buscar token de push
+      if (recipientData.isMerchant) {
+        const { data: merchantInfo } = await supabase
+          .from('admin_users')
+          .select('commission_percent, push_token')
+          .eq('id', recipientData.id)
+          .single();
+
+        const commissionPercent = merchantInfo?.commission_percent || globalMerchantCommission;
+        finalRecipientAmount = amount * (1 - commissionPercent / 100);
+        merchantPushToken = merchantInfo?.push_token;
+      } else {
+        // Se for usuário comum, aplicar taxa P2P se houver
+        if (globalP2PFee > 0) {
+          if (amount < globalP2PFee) {
+            alert(`O valor da transferência deve ser maior que a taxa de R$ ${globalP2PFee.toFixed(2)}.`);
+            setIsProcessing(false);
+            return;
+          }
+          finalRecipientAmount = amount - globalP2PFee;
+        }
+      }
+
+      // 2. Debitar do remetente (valor BRUTO)
+      const { error: debitTxError } = await supabase.from('wallet_transactions_delivery').insert({
+        user_id: userId,
+        amount: amount,
+        type: 'transferencia_envio',
+        description: `Envio para ${recipientData.name}`,
+        status: 'completed'
+      });
+
+      if (debitTxError) throw debitTxError;
+
+      // 3. Atualizar saldo do remetente
+      await supabase.from('users_delivery')
+        .update({ izi_coins: coins - amount })
+        .eq('id', userId);
+
+      // 4. Creditar no destinatário (valor LÍQUIDO se for lojista)
+      if (recipientData.isMerchant) {
+         await supabase.from('wallet_transactions_delivery').insert({
+           user_id: recipientData.id,
+           amount: finalRecipientAmount,
+           type: 'venda',
+           description: `Recebimento IziPay de ${userName} (Bruto: R$ ${amount.toFixed(2)})`,
+           status: 'completed'
+         });
+
+         // Disparar Notificação Push para o Lojista
+         if (merchantPushToken) {
+           supabase.functions.invoke('send-push-notification', {
+             body: { 
+               merchant_id: recipientData.id, 
+               title: 'Pagamento Recebido! 💰', 
+               body: `Você recebeu R$ ${finalRecipientAmount.toFixed(2)} de ${userName}.`,
+               data: { type: 'payment_received', amount: finalRecipientAmount } 
+             }
+           }).catch(e => console.error("Erro ao enviar push:", e));
+         }
+      } else {
+         await supabase.from('wallet_transactions_delivery').insert({
+           user_id: recipientData.id,
+           amount: finalRecipientAmount,
+           type: 'transferencia_recebimento',
+           description: `Recebimento de ${userName}${globalP2PFee > 0 ? ` (Taxa de R$ ${globalP2PFee.toFixed(2)} deduzida)` : ''}`,
+           status: 'completed'
+         });
+         
+         const { data: destUser } = await supabase
+           .from('users_delivery')
+           .select('izi_coins, push_token')
+           .eq('id', recipientData.id)
+           .single();
+           
+         await supabase.from('users_delivery')
+           .update({ izi_coins: (destUser?.izi_coins || 0) + finalRecipientAmount })
+           .eq('id', recipientData.id);
+
+         // Notificação para Usuário
+         if (destUser?.push_token) {
+           supabase.functions.invoke('send-push-notification', {
+             body: { 
+               user_id: recipientData.id, 
+               title: 'Saldo Recebido! ⚡', 
+               body: `${userName} te enviou R$ ${finalRecipientAmount.toFixed(2)} Izi Coins.`,
+               data: { type: 'transfer_received', amount: finalRecipientAmount } 
+             }
+           }).catch(e => console.error("Erro ao enviar push:", e));
+         }
+      }
+
+      alert("Transferência realizada com sucesso!");
+      setSubView("main");
+      setSendAmount("");
+      setRecipientData(null);
+      setManualRecipient("");
+      
+      setCoins(prev => prev - amount);
     } catch (err) {
-      setRecipientData({ id: cleanId, name: "Erro ao buscar" });
+      console.error("Erro na transferência:", err);
+      alert("Erro ao realizar transferência. Tente novamente.");
     } finally {
-      setIsSearchingRecipient(false);
+      setIsProcessing(false);
     }
-  }, []);
+  };
 
   const proceedToTransfer = () => {
     setShowScanModal(false);
     setSubView("send");
   };
 
-  // Atualizando o renderSend para usar recipientData
   const [sendAmount, setSendAmount] = useState("");
   const [manualRecipient, setManualRecipient] = useState("");
 
@@ -1553,11 +1741,11 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                 <div className="w-full grid grid-cols-1 gap-4 pt-4">
                   <motion.button 
                     whileTap={{ scale: 0.96 }}
-                    disabled={isSearchingRecipient}
+                    disabled={isSearchingRecipient || (recipientData as any)?.disabled}
                     onClick={proceedToTransfer}
-                    className={`w-full h-20 rounded-[32px] font-black uppercase tracking-widest shadow-2xl transition-all ${isSearchingRecipient ? 'bg-zinc-200 text-zinc-400 shadow-none' : 'bg-zinc-900 text-white shadow-zinc-900/20'}`}
+                    className={`w-full h-20 rounded-[32px] font-black uppercase tracking-widest shadow-2xl transition-all ${isSearchingRecipient || (recipientData as any)?.disabled ? 'bg-zinc-200 text-zinc-400 shadow-none' : 'bg-zinc-900 text-white shadow-zinc-900/20'}`}
                   >
-                    {isSearchingRecipient ? "Aguarde..." : "Confirmar e Enviar"}
+                    {isSearchingRecipient ? "Aguarde..." : (recipientData as any)?.disabled ? "Pagamento Indisponível" : "Confirmar e Enviar"}
                   </motion.button>
                   <button 
                     onClick={() => setShowScanModal(false)}
