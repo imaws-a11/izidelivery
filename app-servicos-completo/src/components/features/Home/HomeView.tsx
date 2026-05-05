@@ -34,6 +34,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   userName,
   navigateSubView,
   setSubView,
+  subView,
   setActiveService,
   ESTABLISHMENTS,
   handleShopClick,
