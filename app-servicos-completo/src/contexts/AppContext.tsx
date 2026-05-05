@@ -590,6 +590,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearTimeout(timer);
   }, [cart, userId, isInitialLoad]);
 
+  // Sincronização de Saldo e Moedas
+  useEffect(() => {
+    if (!userId) {
+      setWalletBalance(0);
+      setIziCoins(0);
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users_delivery')
+          .select('wallet_balance, izi_coins, is_black_member')
+          .eq('id', userId)
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          setWalletBalance(data.wallet_balance || 0);
+          setIziCoins(data.izi_coins || 0);
+          setIsIziBlackMembership(!!data.is_black_member);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar dados financeiros:", e);
+      }
+    };
+
+    fetchUserData();
+
+    const userSub = supabase
+      .channel(`user_balance_${userId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'users_delivery',
+        filter: `id=eq.${userId}`
+      }, (payload) => {
+        const { wallet_balance, izi_coins, is_black_member } = payload.new as any;
+        if (wallet_balance !== undefined) setWalletBalance(wallet_balance);
+        if (izi_coins !== undefined) setIziCoins(izi_coins);
+        if (is_black_member !== undefined) setIsIziBlackMembership(!!is_black_member);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userSub);
+    };
+  }, [userId]);
+
   // Orquestrador de Inicialização
   useEffect(() => {
     const initializeApp = async () => {

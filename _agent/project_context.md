@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Compacto)
-Atualizado: 2026-05-04
+Atualizado: 2026-05-05
 
 ### ✅ Estabilização Onboarding (Entregador)
 - **UI/UX:** Design Claymorphic aplicado.
@@ -11,11 +11,22 @@ Atualizado: 2026-05-04
 - **Edge Functions:** `manage-user-auth`, `manage-driver-auth` e `create-admin-user` atualizadas com `action: 'delete'`.
 - **Lógica:** Remove do Auth -> Tenta remover da Tabela -> Fallback p/ `is_deleted` se houver pedidos.
 
-### ✅ Feedback Visual Online (Entregador)
-- **UI:** Modal Premium animado para cadastro pendente (substitui Toast).
-- **Navegação:** Botão "Ver Detalhes" integrado ao fluxo de onboarding.
+### ✅ Modernização Izi Flash (Cliente)
+- **UI:** Fluxo padronizado como Bottom Sheet (z-index: 500) para evitar sobreposição da Home.
+- **Visual:** Estilo "Flat" no ProductDetailView, removendo sombras e gradientes obstrutivos.
+- **Feedback:** Overlay premium de "Produto Adicionado" com AnimatePresence e ícones dinâmicos.
+
+### ✅ Sincronização Multidispositivos
+- **Banco:** Criada tabela `cart_sync_delivery` para persistência global.
+- **Escopo:** Sincronização em tempo real (Supabase Realtime) de:
+  - **Carrinho:** Itens, Cupons e Metadados.
+  - **Financeiro:** Saldo da Carteira e Izi Coins.
+  - **Perfil:** Status de Membro Izi Black e Método de Pagamento preferido.
+- **Sincronia:** Consistência instantânea entre todos os dispositivos do usuário ao realizar ações ou logar.
 
 ### 📂 Arquivos Modificados
+- `AppContext.tsx`, `ProductDetailView.tsx`, `App.tsx` (Serviços/Cliente)
 - `OnboardingView.tsx`, `App.tsx` (Entregador)
 - `AdminProvider.tsx` (Admin)
 - Edge Functions: `manage-user-auth`, `manage-driver-auth`, `create-admin-user`.
+- DB: Tabela `cart_sync_delivery`.
