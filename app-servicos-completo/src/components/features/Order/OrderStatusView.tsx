@@ -102,11 +102,9 @@ export const OrderStatusView = () => {
 
   return (
     <AnimatePresence mode="wait">
-      {subView === "active_order" && (
         <motion.div key="order-status" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="absolute inset-0 z-[100]">
           {renderActiveOrder()}
         </motion.div>
-      )}
     </AnimatePresence>
   );
 };

@@ -4162,14 +4162,17 @@ function App() {
                                         <div className="bg-white rounded-[3rem] p-8 relative flex flex-col items-center text-center border border-zinc-100 shadow-xl"
                                         >
                                             {/* Floating 3D Icon Overlay — Design Claymorphic */}
-                                            <div className="absolute -top-14 bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 w-28 h-28 rounded-[2.5rem] flex items-center justify-center shadow-lg transition-all transform hover:rotate-6 active:scale-95"
-                                            >
-                                                <Icon name={presentation.details.icon} className="text-zinc-900 text-[56px]" />
+                                            <div className={`absolute -top-14 w-28 h-28 rounded-[2.5rem] flex items-center justify-center shadow-lg transition-all transform hover:rotate-6 active:scale-95 ${
+                                                presentation.isMobility 
+                                                    ? 'bg-gradient-to-br from-indigo-400 via-indigo-500 to-blue-600 shadow-indigo-500/30' 
+                                                    : 'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 shadow-yellow-500/30'
+                                            }`}>
+                                                <Icon name={presentation.details.icon} className={`text-[56px] ${presentation.isMobility ? 'text-white' : 'text-zinc-900'}`} />
                                             </div>
 
                                             <div className="mt-8 w-full">
                                                 <div className={`inline-block px-4 py-1.5 rounded-full ${presentation.details.bg} ${presentation.details.color} text-[10px] font-bold uppercase tracking-widest mb-2`}>
-                                                    NOVA OPORTUNIDADE
+                                                    {presentation.isMobility ? 'NOVA CORRIDA' : 'NOVA OPORTUNIDADE'}
                                                 </div>
 
                                                 {/* Feedback de Preparo */}
@@ -4191,42 +4194,48 @@ function App() {
                                                 )}
 
                                                 <h1 className="text-xl sm:text-2xl font-black text-zinc-900 leading-tight tracking-tight mb-2 uppercase">
-                                                    Nova Entrega Disponível
+                                                    {presentation.isMobility ? 'Nova Corrida Disponível' : 'Nova Entrega Disponível'}
                                                 </h1>
                                                 <p className="text-zinc-400 text-[10px] sm:text-[11px] mb-6 sm:mb-8 px-2 leading-relaxed font-bold uppercase tracking-widest">
-                                                    Uma missão de entrega de alta prioridade disponível.
+                                                    {presentation.isMobility ? 'Um passageiro está aguardando por você.' : 'Uma missão de entrega de alta prioridade disponível.'}
                                                 </p>
 
                                                 {/* Payment Highlight Box */}
-                                                <div className="bg-zinc-50 rounded-2xl p-4 sm:p-6 border border-zinc-100 mb-6 sm:mb-8 shadow-inner">
+                                                <div className={`rounded-2xl p-4 sm:p-6 border mb-6 sm:mb-8 shadow-inner ${
+                                                    presentation.isMobility 
+                                                        ? 'bg-indigo-50/50 border-indigo-100/50' 
+                                                        : 'bg-zinc-50 border-zinc-100'
+                                                }`}>
                                                     <p className="text-zinc-400 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-yellow-600 text-3xl sm:text-4xl font-black">
+                                                        <span className={`${presentation.isMobility ? 'text-indigo-600' : 'text-yellow-600'} text-3xl sm:text-4xl font-black`}>
                                                             R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}
                                                         </span>
-                                                        <Icon name="local_fire_department" className="text-yellow-500 text-2xl sm:text-3xl" />
+                                                        <Icon name={presentation.isMobility ? 'electric_bolt' : 'local_fire_department'} className={`${presentation.isMobility ? 'text-indigo-500' : 'text-yellow-500'} text-2xl sm:text-3xl`} />
                                                     </div>
-                                                    <p className="text-zinc-300 text-[8px] sm:text-[9px] mt-2 font-bold uppercase tracking-tighter">+ Gorjeta do cliente</p>
+                                                    <p className="text-zinc-300 text-[8px] sm:text-[9px] mt-2 font-bold uppercase tracking-tighter">
+                                                        {presentation.isMobility ? '+ Adicionais da corrida' : '+ Gorjeta do cliente'}
+                                                    </p>
                                                 </div>
 
                                                 {/* Delivery Details Grid */}
                                                 <div className="grid grid-cols-2 gap-3 sm:gap-4 text-left w-full mb-6 sm:mb-8">
                                                     <div className="flex flex-col bg-zinc-50 p-3 rounded-xl border border-zinc-100 col-span-2">
-                                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-yellow-600/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
-                                                        <span className="text-yellow-600 text-xs sm:text-sm font-black leading-tight uppercase mb-1 truncate">
+                                                        <span className={`${presentation.isMobility ? 'text-indigo-600/80' : 'text-yellow-600/80'} text-[8px] sm:text-[9px] uppercase font-bold tracking-widest mb-1`}>{presentation.pickupLabel}</span>
+                                                        <span className={`${presentation.isMobility ? 'text-indigo-600' : 'text-yellow-600'} text-xs sm:text-sm font-black leading-tight uppercase mb-1 truncate`}>
                                                             {order.store_name || order.merchant_name || (() => {
                                                                const st = (order.service_type || '').toLowerCase();
-                                                               if (st === 'mototaxi') return 'MotoTaxi IZI';
-                                                               if (st === 'carro' || st === 'car_ride') return 'Carro Particular IZI';
-                                                               if (st === 'van') return 'Van IZI Express';
-                                                               if (st === 'utilitario') return 'Utilitario IZI';
-                                                               if (st === 'frete' || st === 'logistica') return 'Frete / Logistica IZI';
-                                                               if (st === 'motoboy' || st === 'package') return 'Motoboy / Envio IZI';
-                                                               if (st === 'restaurant') return 'Restaurante Parceiro';
-                                                               if (st === 'market') return 'Mercado Parceiro';
-                                                               if (st === 'pharmacy') return 'Farmacia Parceira';
-                                                               if (st === 'beverages') return 'Distribuidora de Bebidas';
-                                                               return presentation.headline || 'Servico IZI';
+                                                               if (st === 'mototaxi') return 'MotoTaxi';
+                                                               if (st === 'carro' || st === 'car_ride') return 'Viagem de Carro';
+                                                               if (st === 'van') return 'Van Express';
+                                                               if (st === 'utilitario') return 'Utilitário';
+                                                               if (st === 'frete' || st === 'logistica') return 'Serviço de Frete';
+                                                               if (st === 'motoboy' || st === 'package') return 'Serviço de Motoboy';
+                                                               if (st === 'restaurant') return 'Restaurante';
+                                                               if (st === 'market') return 'Mercado';
+                                                               if (st === 'pharmacy') return 'Farmácia';
+                                                               if (st === 'beverages') return 'Distribuidora';
+                                                               return presentation.headline || 'Serviço Local';
                                                              })()}
                                                         </span>
                                                         <span className="text-zinc-800 text-[11px] sm:text-xs font-bold leading-relaxed break-words">
@@ -4255,10 +4264,14 @@ function App() {
                                                             handleAccept(order);
                                                         }}
                                                         disabled={isAccepting}
-                                                        className="w-full py-4 sm:py-5 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-zinc-900 font-black uppercase text-xs sm:text-[13px] tracking-widest flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-lg shadow-yellow-500/20 disabled:opacity-50"
+                                                        className={`w-full py-4 sm:py-5 rounded-2xl font-black uppercase text-xs sm:text-[13px] tracking-widest flex items-center justify-center gap-2 active:scale-[0.97] transition-all disabled:opacity-50 shadow-lg ${
+                                                            presentation.isMobility
+                                                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'
+                                                                : 'bg-yellow-400 hover:bg-yellow-500 text-zinc-900 shadow-yellow-500/20'
+                                                        }`}
                                                     >
                                                         {isAcceptingThis ? (
-                                                            <div className="size-5 border-4 border-zinc-900/20 border-t-zinc-900 rounded-full animate-spin" />
+                                                            <div className={`size-5 border-4 border-t-transparent rounded-full animate-spin ${presentation.isMobility ? 'border-white/30 border-t-white' : 'border-zinc-900/20 border-t-zinc-900'}`} />
                                                         ) : (
                                                             <>
                                                                 <Icon name="check" className="text-lg" />
@@ -4311,9 +4324,11 @@ function App() {
                     </div>
                     <div className="grid gap-4">
                         {(() => {
-                            const todayStr = new Date().toLocaleDateString('en-CA');
-                            const todayDateNum = new Date().getDate();
-                            const currentDayEng = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+                            const d = new Date();
+                            const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                            const todayDateNum = d.getDate();
+                            const daysEng = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                            const currentDayEng = daysEng[d.getDay()];
 
                             const slotsArr = Array.isArray(dedicatedSlots) ? dedicatedSlots : [];
                             const appsArr = Array.isArray(myApplications) ? myApplications : [];
@@ -4324,25 +4339,68 @@ function App() {
                                     const isAccepted = application?.status === 'accepted';
                                     const meta = slot.metadata || {};
 
-                                    // 1. Vaga Confirmada: SEMPRE APARECE (Ignora filtros de atividade/data)
+                                    if (slot.slot_date) {
+                                        let cleanDateStr = String(slot.slot_date).split('T')[0];
+                                        if (cleanDateStr.includes('/')) {
+                                            const parts = cleanDateStr.split('/');
+                                            if (parts.length === 3) {
+                                                // Se for DD/MM/YYYY, inverte para YYYY-MM-DD
+                                                if (parts[2].length === 4) cleanDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                                // Se for YYYY/MM/DD, inverte as barras para traços
+                                                else if (parts[0].length === 4) cleanDateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+                                            }
+                                        }
+                                        const slotDateObj = new Date(cleanDateStr + 'T12:00:00');
+                                        const todayObj = new Date();
+                                        todayObj.setHours(0,0,0,0);
+                                        slotDateObj.setHours(0,0,0,0);
+                                        
+                                        // Se for Invalid Date (NaN), ou data no passado, expira
+                                        if (isNaN(slotDateObj.getTime()) || slotDateObj.getTime() < todayObj.getTime()) return false;
+                                    }
+                                    
+                                    if (meta.expires_at) {
+                                        let cleanExpStr = String(meta.expires_at).split('T')[0];
+                                        const expDateObj = new Date(cleanExpStr + 'T12:00:00');
+                                        const todayObj = new Date();
+                                        todayObj.setHours(0,0,0,0);
+                                        expDateObj.setHours(0,0,0,0);
+                                        if (!isNaN(expDateObj.getTime()) && expDateObj.getTime() < todayObj.getTime()) return false;
+                                    }
+                                    
+                                    let isToday = false;
+                                    if (slot.slot_date) {
+                                        let cleanDateStr = String(slot.slot_date).split('T')[0];
+                                        if (cleanDateStr.includes('/')) {
+                                            const parts = cleanDateStr.split('/');
+                                            if (parts.length === 3 && parts[2].length === 4) cleanDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                            else if (parts.length === 3 && parts[0].length === 4) cleanDateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+                                        }
+                                        if (cleanDateStr === todayStr) isToday = true;
+                                    } else {
+                                        if (meta.days_of_month && Array.isArray(meta.days_of_month) && meta.days_of_month.includes(todayDateNum)) isToday = true;
+                                        else if (slot.day_of_week === 'Daily') isToday = true;
+                                        else if (slot.day_of_week?.split(',').includes(currentDayEng)) isToday = true;
+                                    }
+
+                                    if (isToday && slot.working_hours) {
+                                        const match = slot.working_hours.match(/(?:as|às|ate|até|-)\s*(\d{1,2})(?:[:h]\d{2})?/i);
+                                        if (match) {
+                                            let endHour = parseInt(match[1], 10);
+                                            if (endHour <= 4) endHour += 24; // Madrugada
+                                            const currentHour = new Date().getHours();
+                                            // Expira e some se já passou +1h do horário final (ex: termina as 18h, some as 19h)
+                                            if (currentHour >= endHour + 1) return false;
+                                        }
+                                    }
+
+                                    // 1. Vaga Confirmada: SEMPRE APARECE se não estiver expirada
                                     if (isAccepted) return true;
 
                                     // 2. Vaga Normal: Filtra por status ativo e data/recorrência
-                                    if (slot.status !== 'active') return false;
+                                    if (slot.status !== 'active' && !slot.is_active) return false;
 
-                                    if (slot.slot_date) {
-                                        if (slot.slot_date === todayStr) return true;
-                                    }
-                                    
-                                    if (!slot.slot_date) {
-                                        // Recorrente: verifica se é hoje para não encher o dashboard com tudo
-                                        if (meta.days_of_month && Array.isArray(meta.days_of_month) && meta.days_of_month.includes(todayDateNum)) return true;
-                                        if (slot.day_of_week === 'Daily') return true;
-                                        const days = slot.day_of_week?.split(',') || [];
-                                        if (days.includes(currentDayEng)) return true;
-                                    }
-
-                                    return false;
+                                    return isToday;
                                 })
                                 .sort((a, b) => {
                                     const appA = appsArr.find(app => String(app.slot_id) === String(a.id));
@@ -4944,8 +5002,64 @@ function App() {
                     <div className="space-y-4">
                         {[...dedicatedSlots]
                             .filter(s => {
-                                const todayStr = new Date().toLocaleDateString('en-CA');
-                                if (s.slot_date && s.slot_date < todayStr) return false;
+                                const d = new Date();
+                                const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                const todayDateNum = d.getDate();
+                                const daysEng = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                                const currentDayEng = daysEng[d.getDay()];
+                                const meta = s.metadata || {};
+
+                                if (s.slot_date) {
+                                    let cleanDateStr = String(s.slot_date).split('T')[0];
+                                    if (cleanDateStr.includes('/')) {
+                                        const parts = cleanDateStr.split('/');
+                                        if (parts.length === 3) {
+                                            if (parts[2].length === 4) cleanDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                            else if (parts[0].length === 4) cleanDateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+                                        }
+                                    }
+                                    const slotDateObj = new Date(cleanDateStr + 'T12:00:00');
+                                    const todayObj = new Date();
+                                    todayObj.setHours(0,0,0,0);
+                                    slotDateObj.setHours(0,0,0,0);
+                                    
+                                    if (isNaN(slotDateObj.getTime()) || slotDateObj.getTime() < todayObj.getTime()) return false;
+                                }
+
+                                if (meta.expires_at) {
+                                    let cleanExpStr = String(meta.expires_at).split('T')[0];
+                                    const expDateObj = new Date(cleanExpStr + 'T12:00:00');
+                                    const todayObj = new Date();
+                                    todayObj.setHours(0,0,0,0);
+                                    expDateObj.setHours(0,0,0,0);
+                                    if (!isNaN(expDateObj.getTime()) && expDateObj.getTime() < todayObj.getTime()) return false;
+                                }
+                                
+                                let isToday = false;
+                                if (s.slot_date) {
+                                    let cleanDateStr = String(s.slot_date).split('T')[0];
+                                    if (cleanDateStr.includes('/')) {
+                                        const parts = cleanDateStr.split('/');
+                                        if (parts.length === 3 && parts[2].length === 4) cleanDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                        else if (parts.length === 3 && parts[0].length === 4) cleanDateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+                                    }
+                                    if (cleanDateStr === todayStr) isToday = true;
+                                } else {
+                                    if (meta.days_of_month && Array.isArray(meta.days_of_month) && meta.days_of_month.includes(todayDateNum)) isToday = true;
+                                    else if (s.day_of_week === 'Daily') isToday = true;
+                                    else if (s.day_of_week?.split(',').includes(currentDayEng)) isToday = true;
+                                }
+                                
+                                if (isToday && s.working_hours) {
+                                    const match = s.working_hours.match(/(?:as|às|ate|até|-)\s*(\d{1,2})(?:[:h]\d{2})?/i);
+                                    if (match) {
+                                        let endHour = parseInt(match[1], 10);
+                                        if (endHour <= 4) endHour += 24;
+                                        const currentHour = new Date().getHours();
+                                        if (currentHour >= endHour + 1) return false;
+                                    }
+                                }
+
                                 const myApp = myApplications.find(app => String(app.slot_id) === String(s.id));
                                 return s.is_active || myApp?.status === 'accepted';
                             })
@@ -5076,7 +5190,7 @@ function App() {
                     onClick={() => setSelectedSlot(null)}
                 />
                 
-                <IziBottomSheet snapPoints={["85vh", "95vh"]} initialSnap={0}>
+                <IziBottomSheet snapPoints={["85vh", "95vh"]} initialSnap={0} onClose={() => setSelectedSlot(null)}>
                         <div className="px-6 pb-20 space-y-8">
                             {/* Header do Slot */}
                             <div className="flex items-start gap-5">

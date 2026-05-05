@@ -195,7 +195,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                           animate={{ opacity: 1, x: 0 }}
                           className="text-yellow-600/60 text-[9px] uppercase font-black tracking-widest mt-0.5"
                         >
-                          {s.id === "em_rota" ? "Seu pedido está indo até você" : "Sendo processado agora"}
+                          {s.id === "em_rota" ? "Seu pedido está indo até você" : s.id === "em_curso" ? "Motorista a caminho do destino" : "Sendo processado agora"}
                         </motion.p>
                       )}
                     </div>
@@ -260,10 +260,10 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                       className="w-full py-5 rounded-[28px] bg-zinc-50 border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-[0.25em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-zinc-200 hover:text-zinc-600 shadow-sm"
                     >
                       <span className="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform">close</span>
-                      Cancelar este Pedido
+                      {isMobility ? "Cancelar Solicitação" : "Cancelar este Pedido"}
                     </button>
                     <p className="text-center text-zinc-600 text-[8px] font-black uppercase tracking-widest mt-3 opacity-60">
-                      Disponível enquanto o lojista não aceita
+                      {isMobility ? "Disponível antes do motorista aceitar" : "Disponível enquanto o lojista não aceita"}
                     </p>
                   </motion.div>
                 );
@@ -284,11 +284,11 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 <div className="space-y-0.5">
                   <h4 className="text-lg font-black text-zinc-900 uppercase tracking-tighter leading-none">
                     {selectedItem.driver_id
-                      ? selectedItem.driver_name || "Entregador Izi"
-                      : selectedItem.merchant_name || "Estabelecimento"}
+                      ? selectedItem.driver_name || (isMobility ? "Motorista Izi" : "Entregador Izi")
+                      : selectedItem.merchant_name || (isMobility ? "Buscando Motorista" : "Estabelecimento")}
                   </h4>
                   <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest opacity-80">
-                    {selectedItem.driver_id ? "Sua Entrega" : "Seu Pedido"}
+                    {isMobility ? (selectedItem.driver_id ? "Seu Motorista" : "Sua Viagem") : (selectedItem.driver_id ? "Sua Entrega" : "Seu Pedido")}
                   </p>
                 </div>
               </div>
@@ -345,13 +345,13 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 <Icon name="location_on" className="text-orange-500" size={18} />
               </div>
               <div>
-                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Receber em</p>
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">{isMobility ? "Destino" : "Receber em"}</p>
                 <p className="text-xs font-bold text-zinc-900 leading-tight">
                   {selectedItem.delivery_address?.split('|')[0].trim()}
                 </p>
                 {selectedItem.delivery_address?.includes('|') && (
                   <div className="mt-2 p-3 bg-white rounded-xl border border-zinc-100">
-                    <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest mb-1">Nota da Entrega</p>
+                    <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest mb-1">{isMobility ? "Instruções do Destino" : "Nota da Entrega"}</p>
                     <p className="text-[10px] font-bold text-zinc-400 leading-tight">
                       {selectedItem.delivery_address.split('|')[1]?.replace(/^\s*OBS:\s*/i, '').trim()}
                     </p>
@@ -361,45 +361,47 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
             </div>
           </section>
 
-          {/* ITENS DO PEDIDO */}
-          <section className="px-2 space-y-4">
-            <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em]">Itens do Pedido</h2>
-            <div className="bg-zinc-50 p-7 rounded-[40px] space-y-4 border border-zinc-100">
-              {selectedItem.items && Array.isArray(selectedItem.items) && selectedItem.items.length > 0 ? (
-                selectedItem.items.map((it: any, idx: number) => (
-                  <div key={idx} className="flex justify-between items-start pb-4 border-b border-white/5 last:pb-0 last:border-0">
-                    <div className="flex items-start gap-4">
-                      <div className="size-8 rounded-lg bg-yellow-400/20 flex items-center justify-center text-[10px] font-black text-yellow-500 border border-yellow-400/10 shrink-0">
-                        {it.quantity || 1}x
+          {/* ITENS DO PEDIDO (ESCONDIDO PARA MOBILIDADE) */}
+          {(!isMobility || (selectedItem.items && selectedItem.items.length > 0)) && (
+            <section className="px-2 space-y-4">
+              <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em]">{isMobility ? "Detalhes da Viagem" : "Itens do Pedido"}</h2>
+              <div className="bg-zinc-50 p-7 rounded-[40px] space-y-4 border border-zinc-100">
+                {selectedItem.items && Array.isArray(selectedItem.items) && selectedItem.items.length > 0 ? (
+                  selectedItem.items.map((it: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-start pb-4 border-b border-white/5 last:pb-0 last:border-0">
+                      <div className="flex items-start gap-4">
+                        <div className="size-8 rounded-lg bg-yellow-400/20 flex items-center justify-center text-[10px] font-black text-yellow-500 border border-yellow-400/10 shrink-0">
+                          {it.quantity || 1}x
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-zinc-900 leading-tight">{it.name || it.product_name || 'Produto'}</p>
+                          {it.options && it.options.length > 0 && (
+                            <p className="text-[10px] text-zinc-500 font-medium mt-1">
+                              + {it.options.map((opt: any) => opt.name).join(', ')}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-zinc-900 leading-tight">{it.name || it.product_name || 'Produto'}</p>
-                        {it.options && it.options.length > 0 && (
-                          <p className="text-[10px] text-zinc-500 font-medium mt-1">
-                            + {it.options.map((opt: any) => opt.name).join(', ')}
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black text-white">
+                          R$ {Number((it.price || 0) * (it.quantity || 1)).toFixed(2).replace('.', ',')}
+                        </p>
+                        {it.quantity > 1 && (
+                          <p className="text-[9px] font-bold text-zinc-500 uppercase mt-0.5">
+                            Un: R$ {Number(it.price || 0).toFixed(2).replace('.', ',')}
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-black text-white">
-                        R$ {Number((it.price || 0) * (it.quantity || 1)).toFixed(2).replace('.', ',')}
-                      </p>
-                      {it.quantity > 1 && (
-                        <p className="text-[9px] font-bold text-zinc-500 uppercase mt-0.5">
-                          Un: R$ {Number(it.price || 0).toFixed(2).replace('.', ',')}
-                        </p>
-                      )}
-                    </div>
+                  ))
+                ) : (
+                  <div className="opacity-60 text-center py-2">
+                    <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Sem itens registrados</p>
                   </div>
-                ))
-              ) : (
-                <div className="opacity-60 text-center py-2">
-                  <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Sem itens registrados</p>
-                </div>
-              )}
-            </div>
-          </section>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* RESUMO FINANCEIRO */}
           <section className="px-2 space-y-4">

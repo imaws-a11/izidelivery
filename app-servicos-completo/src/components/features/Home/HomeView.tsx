@@ -1,3 +1,4 @@
+// Force HMR reload
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { MerchantCard } from "../Establishment/MerchantCard";
@@ -280,6 +281,71 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
                 const isTrackingAvailable = ["a_caminho_coleta", "saiu_para_coleta", "picked_up", "a_caminho", "em_rota", "saiu_para_entrega", "no_local"].includes(activeOrder.status);
 
+                const isMobility = activeOrder.service_type && ["mototaxi", "carro", "van", "utilitario"].includes(activeOrder.service_type);
+                const isEnvios = activeOrder.service_type && ["logistica", "frete", "izi_envios"].includes(activeOrder.service_type);
+
+                let bannerTitle = "Pedido em Andamento";
+                let bannerName = activeOrder.merchant_name || "Izi Delivery";
+                let bannerIcon = isTrackingAvailable ? "local_shipping" : "restaurant";
+
+                if (isMobility) {
+                  bannerTitle = "Viagem em Andamento";
+                  bannerName = "Sua corrida Izi";
+                  bannerIcon = activeOrder.service_type === "mototaxi" ? "two_wheeler" : "directions_car";
+                } else if (isEnvios) {
+                  bannerTitle = "Entrega em Andamento";
+                  bannerName = "Izi Envios";
+                  bannerIcon = "local_shipping";
+                }
+
+                const baseStatusMap: Record<string, string> = {
+                  "pendente": "Aguardando",
+                  "novo": "Aguardando",
+                  "pendente_pagamento": "Aguardando Pagto",
+                  "waiting_merchant": "Aguardando Loja",
+                  "waiting_driver": "Buscando Parceiro",
+                  "atribuindo": "Buscando Parceiro",
+                  "aceito": "Aceito",
+                  "confirmado": "Confirmado",
+                  "preparando": "Preparando",
+                  "no_preparo": "Preparando",
+                  "pronto": "Pronto",
+                  "a_caminho_coleta": "A Caminho da Coleta",
+                  "saiu_para_coleta": "A Caminho da Coleta",
+                  "chegou_coleta": "Na Coleta",
+                  "no_local_coleta": "Na Coleta",
+                  "picked_up": "Em Andamento",
+                  "em_rota": "Em Andamento",
+                  "saiu_para_entrega": "A Caminho",
+                  "a_caminho": "A Caminho",
+                  "no_local": "No Destino",
+                  "concluido": "Concluído",
+                  "delivered": "Entregue",
+                  "finalizado": "Finalizado",
+                  "cancelado": "Cancelado"
+                };
+
+                const mobilityStatusMap: Record<string, string> = {
+                  ...baseStatusMap,
+                  "pendente": "Buscando Parceiro",
+                  "novo": "Buscando Parceiro",
+                  "waiting_driver": "Buscando Parceiro",
+                  "atribuindo": "Buscando Parceiro",
+                  "aceito": "Motorista a Caminho",
+                  "a_caminho_coleta": "Motorista a Caminho",
+                  "saiu_para_coleta": "Motorista a Caminho",
+                  "chegou_coleta": "Chegou ao Endereço",
+                  "no_local_coleta": "Chegou ao Endereço",
+                  "picked_up": "A Caminho",
+                  "em_rota": "A Caminho",
+                  "a_caminho": "A Caminho",
+                  "saiu_para_entrega": "A Caminho",
+                  "no_local": "No Destino",
+                };
+                
+                const statusMap = isMobility ? mobilityStatusMap : baseStatusMap;
+                const displayStatus = statusMap[activeOrder.status] || activeOrder.status?.replace("_", " ");
+
                 return (
                   <motion.section 
                     initial={{ opacity: 0, y: 20 }}
@@ -297,17 +363,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       
                       <div className="size-14 rounded-2xl bg-black flex items-center justify-center shadow-lg shrink-0">
                         <span className="material-symbols-rounded text-yellow-400 text-3xl animate-bounce">
-                          {isTrackingAvailable ? "local_shipping" : "restaurant"}
+                          {bannerIcon}
                         </span>
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-black text-black/50 uppercase tracking-[0.2em] mb-0.5">Pedido em Andamento</p>
+                        <p className="text-[9px] font-black text-black/50 uppercase tracking-[0.2em] mb-0.5">{bannerTitle}</p>
                         <h3 className="text-sm font-black text-black truncate tracking-tight">
-                          {activeOrder.merchant_name || "Izi Delivery"}
+                          {bannerName}
                         </h3>
                         <p className="text-[10px] font-bold text-black/60 truncate">
-                          Status: {activeOrder.status?.replace("_", " ").toUpperCase()}
+                          Status: {displayStatus?.toUpperCase()}
                         </p>
                       </div>
                       

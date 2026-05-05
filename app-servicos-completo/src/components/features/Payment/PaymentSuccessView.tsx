@@ -26,7 +26,7 @@ export const PaymentSuccessView: React.FC = () => {
         <button 
           onClick={() => {
             if (isMobility) {
-              setSubView("waiting_driver");
+              setSubView("active_order");
             } else {
               setTab("orders");
               setSubView("none");
