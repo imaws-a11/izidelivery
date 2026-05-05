@@ -35,15 +35,33 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
         }
 
         setStatus("ready");
+        
+        // Tornar o webview transparente para a câmera nativa aparecer por baixo
+        document.body.style.background = 'transparent';
+        document.body.style.backgroundColor = 'transparent';
+        document.documentElement.style.background = 'transparent';
+        document.documentElement.style.backgroundColor = 'transparent';
+        
+        const rootEl = document.getElementById('root');
+        if (rootEl) {
+          rootEl.style.background = 'transparent';
+          rootEl.style.backgroundColor = 'transparent';
+        }
+        
         await BarcodeScanner.hideBackground();
-        document.body.classList.add('scanner-active');
-        document.documentElement.classList.add('scanner-active');
 
         const { barcodes } = await BarcodeScanner.scan();
         
+        // Restaurar backgrounds
         await BarcodeScanner.showBackground();
-        document.body.classList.remove('scanner-active');
-        document.documentElement.classList.remove('scanner-active');
+        document.body.style.background = '';
+        document.body.style.backgroundColor = '';
+        document.documentElement.style.background = '';
+        document.documentElement.style.backgroundColor = '';
+        if (rootEl) {
+          rootEl.style.background = '';
+          rootEl.style.backgroundColor = '';
+        }
 
         if (barcodes.length > 0 && isMounted) {
           resultRef.current(barcodes[0].displayValue);
@@ -52,8 +70,16 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
         }
       } catch (err) {
         console.error("[SCANNER] Erro no scanner nativo:", err);
-        await BarcodeScanner.showBackground();
-        document.body.classList.remove('scanner-active');
+        try { await BarcodeScanner.showBackground(); } catch (_) {}
+        document.body.style.background = '';
+        document.body.style.backgroundColor = '';
+        document.documentElement.style.background = '';
+        document.documentElement.style.backgroundColor = '';
+        const rootEl = document.getElementById('root');
+        if (rootEl) {
+          rootEl.style.background = '';
+          rootEl.style.backgroundColor = '';
+        }
         cancelRef.current();
       }
     };
@@ -97,29 +123,57 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
       }
       if (Capacitor.isNativePlatform()) {
         BarcodeScanner.showBackground().catch(() => {});
-        document.body.classList.remove('scanner-active');
+        document.body.style.background = '';
+        document.body.style.backgroundColor = '';
+        document.documentElement.style.background = '';
+        document.documentElement.style.backgroundColor = '';
+        const rootEl = document.getElementById('root');
+        if (rootEl) {
+          rootEl.style.background = '';
+          rootEl.style.backgroundColor = '';
+        }
       }
     };
   }, []);
 
+  // --- Renderização NATIVA ---
   if (Capacitor.isNativePlatform()) {
     return (
-      <div className="fixed inset-0 z-[2000] bg-transparent flex flex-col items-center justify-between p-12 pb-32 pointer-events-none">
-         <div className="w-full flex justify-end pointer-events-auto">
-            <button 
-              onClick={onCancel}
-              className="size-14 rounded-2xl bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
-            >
-              <span className="material-symbols-outlined text-3xl">close</span>
-            </button>
-         </div>
+      <div 
+        id="scanner-overlay"
+        className="fixed inset-0 flex flex-col items-center justify-center"
+        style={{ zIndex: 99999, background: 'transparent' }}
+      >
+         {/* Botão Fechar - posição fixa no topo com safe area */}
+         <button 
+           onClick={async () => {
+             try { await BarcodeScanner.stopScan(); } catch(_) {}
+             try { await BarcodeScanner.showBackground(); } catch(_) {}
+             document.body.style.background = '';
+             document.body.style.backgroundColor = '';
+             document.documentElement.style.background = '';
+             document.documentElement.style.backgroundColor = '';
+             const rootEl = document.getElementById('root');
+             if (rootEl) {
+               rootEl.style.background = '';
+               rootEl.style.backgroundColor = '';
+             }
+             onCancel();
+           }}
+           className="absolute right-6 size-14 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
+           style={{ top: 'max(24px, env(safe-area-inset-top, 24px))' }}
+         >
+           <span className="material-symbols-outlined text-3xl">close</span>
+         </button>
          
+         {/* Viewfinder central */}
          <div className="w-64 h-64 border-2 border-yellow-400 rounded-[40px] relative">
             <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-[38px] animate-pulse" />
             <div className="absolute top-1/2 left-0 w-full h-1 bg-yellow-400/50 blur-sm animate-scan" />
          </div>
 
-         <div className="bg-black/60 backdrop-blur-xl px-8 py-5 rounded-[30px] border border-white/10 pointer-events-auto text-center space-y-2">
+         {/* Label inferior */}
+         <div className="absolute bottom-32 bg-black/60 backdrop-blur-xl px-8 py-5 rounded-[30px] border border-white/10 text-center space-y-2">
             <p className="font-black text-white uppercase tracking-widest text-[10px]">Escanear QR Code</p>
             <p className="text-zinc-400 text-[8px] font-bold uppercase tracking-tight">Posicione o código no centro do quadro</p>
          </div>
@@ -127,31 +181,12 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
          <style>{`
             @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
             .animate-scan { animation: scan 2s linear infinite; }
-            
-            body.scanner-active { 
-              background: transparent !important; 
-            }
-            
-            html.scanner-active, 
-            body.scanner-active #root, 
-            body.scanner-active .app-container { 
-              background: transparent !important; 
-              background-color: transparent !important;
-              opacity: 0 !important; 
-              visibility: hidden !important; 
-            }
-
-            body.scanner-active *:not(.pointer-events-auto):not(.fixed.inset-0.z-\\[2000\\]) {
-              background-color: transparent !important;
-              background: transparent !important;
-              border-color: transparent !important;
-              box-shadow: none !important;
-            }
          `}</style>
       </div>
     );
   }
 
+  // --- Renderização WEB ---
   return (
     <div className="fixed inset-0 z-[2000] bg-black flex flex-col items-center justify-center">
       <div id="reader" className="w-full h-full bg-black" />
@@ -179,14 +214,13 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
         </div>
       )}
 
-      <div className="absolute top-10 right-10 z-[2001]">
-        <button 
-          onClick={onCancel}
-          className="size-14 rounded-full bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
-        >
-           <span className="material-symbols-outlined text-3xl">close</span>
-        </button>
-      </div>
+      <button 
+        onClick={onCancel}
+        className="absolute z-[2001] right-6 size-14 rounded-full bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
+        style={{ top: 'max(24px, env(safe-area-inset-top, 24px))' }}
+      >
+         <span className="material-symbols-outlined text-3xl">close</span>
+      </button>
 
       <style>{`
         #reader video {
@@ -252,6 +286,255 @@ const TransactionItem = ({ title, date, amount, icon, color }: any) => {
   );
 };
 
+// ========== COMPONENTE: Tela de Detalhes do Empréstimo + Pagamento ==========
+type PayStep = 'details' | 'select' | 'method' | 'confirm';
+function LoanDetailScreen({ loan, amt, rate, inst, pmt, totalDue, totalInterest, cetAnual, isOverdue, daysOverdue, multa, mora, onClose, userId, onPaymentSuccess }: {
+  loan: any; amt: number; rate: number; inst: number; pmt: number; totalDue: number; totalInterest: number; cetAnual: number;
+  isOverdue: boolean; daysOverdue: number; multa: number; mora: number; onClose: () => void; userId: string; onPaymentSuccess: () => void;
+}) {
+  const [step, setStep] = React.useState<PayStep>('details');
+  const [payQty, setPayQty] = React.useState(1); // quantas parcelas pagar
+  const [payAll, setPayAll] = React.useState(false);
+  const [payMethod, setPayMethod] = React.useState<'pix' | 'card' | 'lightning' | null>(null);
+  const [processing, setProcessing] = React.useState(false);
+  const [done, setDone] = React.useState(false);
+
+  const parcelaComEncargos = isOverdue ? pmt + multa + mora : pmt;
+  const payValue = payAll ? totalDue : parcelaComEncargos * payQty;
+
+  // Calcular desconto para quitação antecipada (abate juros futuros proporcionalmente)
+  const quitacaoTotal = (() => {
+    let saldo = amt;
+    for (let i = 1; i <= inst; i++) {
+      const j = saldo * rate;
+      const a = pmt - j;
+      saldo = Math.max(saldo - a, 0);
+    }
+    // desconto = juros remanescentes de parcelas futuras (~5% off)
+    return totalDue * 0.95;
+  })();
+
+  const handlePay = async () => {
+    setProcessing(true);
+    try {
+      // Simular pagamento — registrar transação
+      await supabase.from('wallet_transactions_delivery').insert({
+        user_id: userId,
+        type: 'loan_payment',
+        amount: -(payAll ? quitacaoTotal : payValue),
+        status: 'completed',
+        description: payAll
+          ? `Quitação total - Empréstimo #${loan.id.slice(0,5)}`
+          : `Pagamento ${payQty}x parcela(s) - #${loan.id.slice(0,5)} via ${payMethod?.toUpperCase()}`,
+        balance_after: 0
+      });
+
+      // Se pagou tudo, marcar como liquidado
+      if (payAll) {
+        await supabase.from('loans_delivery').update({ status: 'paid' }).eq('id', loan.id);
+      }
+
+      setDone(true);
+      setTimeout(() => onPaymentSuccess(), 2000);
+    } catch (e) {
+      console.error('[LOAN PAY]', e);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const statusLabel = loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Em Análise' : loan.status === 'rejected' ? 'Recusado' : 'Ativo';
+  const statusColor = loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+    loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' :
+    loan.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+    'bg-yellow-500/10 text-yellow-600 border-yellow-500/20';
+
+  return (
+    <motion.div key="loan-detail-fullscreen" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+      transition={{ type: "spring", damping: 28, stiffness: 280 }}
+      className="fixed inset-0 bg-white z-[200] overflow-y-auto"
+    >
+      {/* Header */}
+      <header className="px-6 pt-14 pb-4 flex items-center gap-4 bg-white sticky top-0 z-20 border-b border-zinc-100">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => step === 'details' ? onClose() : setStep('details')} className="size-11 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
+          <span className="material-symbols-rounded text-black">arrow_back</span>
+        </motion.button>
+        <div className="flex-1">
+          <h2 className="text-lg font-black uppercase tracking-tight">{step === 'details' ? 'Meu Crédito' : step === 'select' ? 'Pagar Parcelas' : step === 'method' ? 'Pagamento' : 'Confirmação'}</h2>
+          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">#{loan.id.slice(0,8)}</p>
+        </div>
+        <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${statusColor}`}>{statusLabel}</span>
+      </header>
+
+      <div className="p-6 pb-32 space-y-5">
+        {done ? (
+          /* === TELA: Sucesso === */
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center justify-center py-20 gap-6 text-center">
+            <div className="size-24 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <span className="material-symbols-rounded text-emerald-500 text-5xl">check_circle</span>
+            </div>
+            <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Pagamento Registrado!</h3>
+            <p className="text-zinc-500 text-sm font-bold max-w-xs">Seu pagamento foi processado com sucesso. O saldo será atualizado em instantes.</p>
+          </motion.div>
+
+        ) : step === 'confirm' ? (
+          /* === TELA: Confirmação === */
+          <div className="space-y-6">
+            <div className="bg-zinc-900 text-white p-8 rounded-[32px] text-center space-y-4">
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Valor a Pagar</p>
+              <p className="text-4xl font-black tracking-tighter">R$ {(payAll ? quitacaoTotal : payValue).toFixed(2).replace('.', ',')}</p>
+              <div className="flex items-center justify-center gap-2">
+                <span className="material-symbols-rounded text-yellow-400 text-lg">{payMethod === 'pix' ? 'qr_code_2' : payMethod === 'lightning' ? 'bolt' : 'credit_card'}</span>
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{payMethod === 'pix' ? 'PIX' : payMethod === 'lightning' ? 'Bitcoin Lightning' : 'Cartão de Crédito'}</span>
+              </div>
+              {payAll && <p className="text-[9px] font-bold text-emerald-400">Quitação com 5% de desconto nos juros futuros</p>}
+            </div>
+            <div className="bg-zinc-50 p-5 rounded-[24px] space-y-2">
+              <div className="flex justify-between text-xs"><span className="text-zinc-400 font-bold">Parcelas</span><span className="font-black text-zinc-900">{payAll ? `Quitação Total (${inst}x)` : `${payQty}x parcela(s)`}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-zinc-400 font-bold">Método</span><span className="font-black text-zinc-900">{payMethod === 'pix' ? 'PIX' : payMethod === 'lightning' ? 'BTC Lightning' : 'Cartão'}</span></div>
+              {isOverdue && <div className="flex justify-between text-xs"><span className="text-red-400 font-bold">Encargos inclusos</span><span className="font-black text-red-500">R$ {(multa + mora).toFixed(2)}</span></div>}
+            </div>
+            <motion.button whileTap={{ scale: 0.97 }} onClick={handlePay} disabled={processing}
+              className="w-full h-16 bg-emerald-400 text-black rounded-full font-black text-sm uppercase tracking-widest shadow-xl shadow-emerald-400/30 disabled:opacity-50"
+            >{processing ? 'Processando...' : 'Confirmar Pagamento'}</motion.button>
+          </div>
+
+        ) : step === 'method' ? (
+          /* === TELA: Método de Pagamento === */
+          <div className="space-y-5">
+            <div className="bg-zinc-50 p-6 rounded-[28px] text-center">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Valor Total</p>
+              <p className="text-3xl font-black text-zinc-900 tracking-tighter">R$ {(payAll ? quitacaoTotal : payValue).toFixed(2).replace('.', ',')}</p>
+            </div>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Escolha o Método</p>
+            {([
+              { id: 'pix' as const, icon: 'qr_code_2', name: 'PIX', desc: 'Instantâneo • Sem taxas', color: 'bg-teal-50 text-teal-600' },
+              { id: 'card' as const, icon: 'credit_card', name: 'Cartão de Crédito', desc: 'Visa, Master, Elo', color: 'bg-indigo-50 text-indigo-600' },
+              { id: 'lightning' as const, icon: 'bolt', name: 'Bitcoin Lightning', desc: 'Satoshis • Instantâneo', color: 'bg-amber-50 text-amber-600' },
+            ]).map(m => (
+              <motion.button key={m.id} whileTap={{ scale: 0.97 }}
+                onClick={() => { setPayMethod(m.id); setStep('confirm'); }}
+                className={`w-full p-5 rounded-[24px] border flex items-center gap-4 text-left transition-all ${payMethod === m.id ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-100 bg-white'}`}
+              >
+                <div className={`size-12 rounded-2xl ${payMethod === m.id ? 'bg-white/10' : m.color} flex items-center justify-center`}>
+                  <span className="material-symbols-rounded text-xl">{m.icon}</span>
+                </div>
+                <div>
+                  <p className="font-black text-sm">{m.name}</p>
+                  <p className={`text-[10px] font-bold ${payMethod === m.id ? 'text-white/60' : 'text-zinc-400'}`}>{m.desc}</p>
+                </div>
+                <span className="material-symbols-rounded ml-auto text-lg opacity-30">chevron_right</span>
+              </motion.button>
+            ))}
+          </div>
+
+        ) : step === 'select' ? (
+          /* === TELA: Selecionar Parcelas === */
+          <div className="space-y-5">
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Quantas parcelas deseja pagar?</p>
+            {/* Parcela única */}
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => { setPayQty(1); setPayAll(false); setStep('method'); }}
+              className="w-full p-6 rounded-[28px] bg-white border border-zinc-100 shadow-sm text-left flex items-center gap-4"
+            >
+              <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center"><span className="material-symbols-rounded text-xl">receipt</span></div>
+              <div className="flex-1">
+                <p className="font-black text-sm text-zinc-900">Próxima Parcela</p>
+                <p className="text-[10px] font-bold text-zinc-400">{isOverdue ? 'Com multa e mora' : 'Parcela mensal'}</p>
+              </div>
+              <p className="text-lg font-black text-zinc-900">R$ {parcelaComEncargos.toFixed(2).replace('.', ',')}</p>
+            </motion.button>
+            {/* Antecipar múltiplas */}
+            {inst > 1 && (
+              <div className="bg-white p-6 rounded-[28px] border border-zinc-100 shadow-sm space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center"><span className="material-symbols-rounded text-xl">fast_forward</span></div>
+                  <div>
+                    <p className="font-black text-sm text-zinc-900">Antecipar Parcelas</p>
+                    <p className="text-[10px] font-bold text-zinc-400">Selecione a quantidade</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {Array.from({ length: Math.min(inst, 6) }, (_, i) => i + 1).map(q => (
+                    <button key={q} onClick={() => setPayQty(q)}
+                      className={`h-11 px-5 rounded-2xl font-black text-xs transition-all ${payQty === q && !payAll ? 'bg-zinc-900 text-white shadow-lg' : 'bg-zinc-50 text-zinc-500 border border-zinc-100'}`}
+                    >{q}x</button>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-zinc-50">
+                  <span className="text-[10px] font-bold text-zinc-400">Total:</span>
+                  <span className="text-lg font-black text-zinc-900">R$ {(pmt * payQty).toFixed(2).replace('.', ',')}</span>
+                </div>
+                <motion.button whileTap={{ scale: 0.97 }} onClick={() => { setPayAll(false); setStep('method'); }}
+                  className="w-full h-12 bg-indigo-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20"
+                >Pagar {payQty} parcela{payQty > 1 ? 's' : ''}</motion.button>
+              </div>
+            )}
+            {/* Quitar tudo */}
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => { setPayAll(true); setStep('method'); }}
+              className="w-full p-6 rounded-[28px] bg-zinc-900 text-white text-left flex items-center gap-4"
+            >
+              <div className="size-12 rounded-2xl bg-white/10 flex items-center justify-center"><span className="material-symbols-rounded text-xl text-emerald-400">paid</span></div>
+              <div className="flex-1">
+                <p className="font-black text-sm">Quitar Tudo</p>
+                <p className="text-[10px] font-bold text-zinc-500">5% de desconto nos juros futuros</p>
+              </div>
+              <p className="text-lg font-black text-emerald-400">R$ {quitacaoTotal.toFixed(2).replace('.', ',')}</p>
+            </motion.button>
+          </div>
+
+        ) : (
+          /* === TELA: Detalhes === */
+          <>
+            {/* Card principal */}
+            <div className="bg-zinc-900 text-white p-6 rounded-[28px] grid grid-cols-3 gap-3">
+              <div><p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-1">Valor</p><p className="text-xl font-black">R$ {amt.toFixed(2).replace('.', ',')}</p></div>
+              <div className="text-center"><p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Parcela</p><p className="text-xl font-black text-emerald-400">{inst}x {pmt.toFixed(2)}</p></div>
+              <div className="text-right"><p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Total</p><p className="text-xl font-black text-white">R$ {totalDue.toFixed(2).replace('.', ',')}</p></div>
+            </div>
+            {/* Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-zinc-50 p-4 rounded-[20px]"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Solicitado em</p><p className="text-xs font-black text-zinc-900">{new Date(loan.created_at).toLocaleDateString('pt-BR')}</p></div>
+              <div className={`p-4 rounded-[20px] ${isOverdue ? 'bg-red-50' : 'bg-zinc-50'}`}><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">1º Vencimento</p><p className={`text-xs font-black ${isOverdue ? 'text-red-500' : 'text-zinc-900'}`}>{new Date(loan.due_date).toLocaleDateString('pt-BR')}</p></div>
+              <div className="bg-zinc-50 p-4 rounded-[20px]"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total Juros</p><p className="text-xs font-black text-red-500">R$ {totalInterest.toFixed(2).replace('.', ',')}</p></div>
+              <div className="bg-zinc-50 p-4 rounded-[20px]"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">CET Anual</p><p className="text-xs font-black text-zinc-900">{cetAnual.toFixed(1).replace('.', ',')}%</p></div>
+            </div>
+            {/* Amortização */}
+            {(loan.status === 'active' || loan.status === 'paid') && (
+              <div className="bg-zinc-50 p-5 rounded-[24px] space-y-3">
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Amortização (Tabela Price)</p>
+                <div className="grid grid-cols-5 gap-1 text-[9px] font-black text-zinc-400 uppercase border-b border-zinc-200 pb-2"><span>Nº</span><span>Venc.</span><span>Juros</span><span>Amort.</span><span className="text-right">Saldo</span></div>
+                {(() => { let s = amt; const r: React.ReactNode[] = []; for (let i = 1; i <= inst; i++) { const j = s * rate; const a = pmt - j; s = Math.max(s - a, 0); const v = new Date(loan.due_date); v.setMonth(v.getMonth() + (i - 1)); r.push(<div key={i} className="grid grid-cols-5 gap-1 text-[10px] py-2 border-b border-zinc-100 last:border-0"><span className="font-black text-zinc-800">{i}ª</span><span className="text-zinc-500 font-bold">{v.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'})}</span><span className="text-red-400 font-bold">{j.toFixed(2)}</span><span className="text-emerald-500 font-bold">{a.toFixed(2)}</span><span className="font-black text-zinc-700 text-right">{s.toFixed(2)}</span></div>); } return r; })()}
+              </div>
+            )}
+            {/* Atraso */}
+            {isOverdue && (
+              <div className="bg-red-50 p-5 rounded-[24px] border border-red-200 space-y-3">
+                <div className="flex items-center gap-2"><span className="material-symbols-rounded text-red-500 text-xl">warning</span><p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Atraso: {daysOverdue} dias</p></div>
+                <div className="grid grid-cols-2 gap-3"><div><p className="text-[9px] font-bold text-red-400 uppercase">Multa (2%)</p><p className="text-sm font-black text-red-600">R$ {multa.toFixed(2)}</p></div><div><p className="text-[9px] font-bold text-red-400 uppercase">Mora (1% a.m.)</p><p className="text-sm font-black text-red-600">R$ {mora.toFixed(2)}</p></div></div>
+              </div>
+            )}
+            {/* Info legal */}
+            <div className="bg-zinc-50 p-4 rounded-[20px] space-y-1">
+              <p className="text-[8px] font-bold text-zinc-400">• Taxa: {(rate*100).toFixed(1)}% a.m. (juros compostos - Tabela Price)</p>
+              <p className="text-[8px] font-bold text-zinc-400">• Multa por atraso: 2% sobre parcela vencida (CDC Art. 52)</p>
+              <p className="text-[8px] font-bold text-zinc-400">• Juros de mora: 1% a.m. pro-rata (CC Art. 406)</p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Botão fixo de pagamento (só na tela de detalhes, se ativo) */}
+      {step === 'details' && loan.status === 'active' && (
+        <div className="fixed bottom-8 inset-x-0 px-6 z-50 pointer-events-none">
+          <motion.button whileTap={{ scale: 0.97 }} onClick={() => setStep('select')}
+            className="w-full h-16 bg-emerald-400 text-black rounded-full font-black text-sm uppercase tracking-widest shadow-2xl shadow-emerald-400/40 pointer-events-auto"
+          >Pagar Parcelas</motion.button>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export const IziPayView: React.FC<IziPayViewProps> = ({ 
   walletTransactions = [], 
   iziCoins = 0, 
@@ -269,6 +552,59 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
   const [balance, setBalance] = useState(walletBalance);
   const [coins, setCoins] = useState(iziCoins);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+
+  // --- Estados do Izi Crédito ---
+  const [loanAmount, setLoanAmount] = useState("");
+  const [loanInstallments, setLoanInstallments] = useState(6);
+  const [loanInterestRate, setLoanInterestRate] = useState(12);
+  const [preApprovedLimit, setPreApprovedLimit] = useState(0);
+  const [existingLoans, setExistingLoans] = useState<any[]>([]);
+  const [loanLoading, setLoanLoading] = useState(false);
+  const [loanSubmitting, setLoanSubmitting] = useState(false);
+  const [loanSuccess, setLoanSuccess] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<any | null>(null);
+
+  // Fetch dados de crédito ao abrir a tela de empréstimo
+  useEffect(() => {
+    if (subView !== 'loan' || !userId) return;
+    const fetchLoanData = async () => {
+      setLoanLoading(true);
+      setLoanSuccess(false);
+      try {
+        // 1. Buscar limite individual do usuário
+        const { data: userData } = await supabase
+          .from('users_delivery')
+          .select('pre_approved_limit')
+          .eq('id', userId)
+          .single();
+
+        // 2. Buscar configurações globais (limite base + taxa de juros)
+        const { data: settings } = await supabase
+          .from('app_settings_delivery')
+          .select('global_pre_approved_limit, loan_interest_rate')
+          .single();
+
+        // Limite: individual se existir, senão global
+        const individualLimit = userData?.pre_approved_limit;
+        const globalLimit = settings?.global_pre_approved_limit || 0;
+        setPreApprovedLimit(individualLimit && individualLimit > 0 ? individualLimit : globalLimit);
+        setLoanInterestRate(settings?.loan_interest_rate || 12);
+
+        // 3. Buscar empréstimos existentes do usuário
+        const { data: loans } = await supabase
+          .from('loans_delivery')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        setExistingLoans(loans || []);
+      } catch (err) {
+        console.error('[LOAN] Erro ao buscar dados:', err);
+      } finally {
+        setLoanLoading(false);
+      }
+    };
+    fetchLoanData();
+  }, [subView, userId]);
 
   useEffect(() => {
     if (userId) {
@@ -599,7 +935,73 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
     </motion.div>
   );
 
-  const renderLoan = () => (
+  const handleSubmitLoan = async () => {
+    const amount = parseFloat(loanAmount);
+    if (!amount || amount <= 0) return;
+    if (amount > preApprovedLimit) return;
+    if (!userId) return;
+
+    // Verificar se já tem empréstimo pendente ou ativo
+    const hasActive = existingLoans.some(l => l.status === 'pending' || l.status === 'active');
+    if (hasActive) return;
+
+    setLoanSubmitting(true);
+    try {
+      const mRate = loanInterestRate / 100;
+      const pmtN = loanInstallments;
+      const pmt = amount * (mRate * Math.pow(1 + mRate, pmtN)) / (Math.pow(1 + mRate, pmtN) - 1);
+      const totalPay = pmt * pmtN;
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30); // 1ª parcela em 30 dias
+
+      const { error } = await supabase.from('loans_delivery').insert({
+        user_id: userId,
+        amount: amount,
+        installments: loanInstallments,
+        installment_value: parseFloat(pmt.toFixed(2)),
+        interest_rate: loanInterestRate,
+        status: 'pending',
+        reason: `Tabela Price - ${loanInstallments}x R$ ${pmt.toFixed(2)} | Total: R$ ${totalPay.toFixed(2)} | CET: ${((Math.pow(1 + mRate, 12) - 1) * 100).toFixed(1)}% a.a.`,
+        due_date: dueDate.toISOString()
+      });
+
+      if (error) throw error;
+      setLoanSuccess(true);
+      // Refresh lista
+      const { data: loans } = await supabase
+        .from('loans_delivery')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      setExistingLoans(loans || []);
+    } catch (err: any) {
+      console.error('[LOAN] Erro ao solicitar:', err);
+      alert('Erro ao solicitar crédito: ' + (err.message || 'Tente novamente'));
+    } finally {
+      setLoanSubmitting(false);
+    }
+  };
+
+  const renderLoan = () => {
+    const amount = parseFloat(loanAmount) || 0;
+    // Juros compostos - Tabela Price: PMT = PV * [i(1+i)^n / ((1+i)^n - 1)]
+    const monthlyRate = (loanInterestRate || 12) / 100; // taxa mensal
+    const n = loanInstallments || 1;
+    const installmentValue = amount > 0 && monthlyRate > 0
+      ? amount * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1)
+      : amount / n;
+    const totalPayable = installmentValue * n;
+    const totalInterest = totalPayable - amount;
+    const cetAnual = amount > 0 ? ((Math.pow(1 + monthlyRate, 12) - 1) * 100) : 0;
+    // Data do 1º vencimento (30 dias)
+    const firstDueDate = new Date();
+    firstDueDate.setDate(firstDueDate.getDate() + 30);
+    const lastDueDate = new Date();
+    lastDueDate.setMonth(lastDueDate.getMonth() + n);
+    const hasActiveLoan = existingLoans.some(l => l.status === 'pending' || l.status === 'active');
+    const canSubmit = amount > 0 && amount <= preApprovedLimit && !hasActiveLoan && !loanSubmitting;
+
+    return (
     <motion.div 
       initial={{ y: "100%" }} 
       animate={{ y: 0 }} 
@@ -607,74 +1009,297 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       className="fixed inset-0 bg-zinc-50 z-[100] overflow-y-auto"
     >
       <header className="px-6 pt-20 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 sticky top-0 z-20">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setSubView("main"); setLoanSuccess(false); setLoanAmount(""); }} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
           <span className="material-symbols-rounded text-black font-black">arrow_back</span>
         </motion.button>
         <h2 className="text-xl font-black uppercase tracking-tighter">Izi Crédito</h2>
       </header>
 
-      <div className="p-6 space-y-12 pt-8 pb-32">
-        <div className="bg-zinc-900 text-white p-10 rounded-[60px] shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 size-64 bg-blue-500/20 blur-[100px] rounded-full" />
-          <div className="relative z-10">
-            <p className="text-zinc-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4">Crédito Pré-Aprovado</p>
-            <h3 className="text-5xl font-black tracking-tighter mb-10">R$ 2.500,00</h3>
-            <div className="flex items-center gap-3 bg-white/5 px-4 py-3 rounded-2xl border border-white/10 w-fit">
-               <span className="material-symbols-rounded text-yellow-400 text-xl fill-1">verified_user</span>
-               <span className="text-[10px] font-black text-white uppercase tracking-widest">Aprovação 100% Digital</span>
-            </div>
+      <div className="p-6 space-y-8 pt-8 pb-40">
+        {loanLoading ? (
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <div className="size-12 border-4 border-yellow-400 border-t-transparent animate-spin rounded-full" />
+            <p className="text-zinc-400 font-black text-[10px] uppercase tracking-widest">Carregando dados de crédito...</p>
           </div>
-        </div>
-
-        <div className="space-y-8">
-          <h4 className="text-xl font-black tracking-tight uppercase ml-2">Configurar Empréstimo</h4>
-          <div className="space-y-4">
-            <div className="p-8 bg-white rounded-[40px] shadow-xl border border-zinc-100">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-1">Valor do Empréstimo</p>
-              <div className="flex items-baseline gap-3">
-                <span className="text-2xl font-black text-zinc-300">R$</span>
-                <input type="number" defaultValue="1000" className="w-full bg-transparent text-4xl font-black outline-none tracking-tighter text-zinc-900" />
+        ) : loanSuccess ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-6 text-center">
+            <div className="size-24 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <span className="material-symbols-rounded text-emerald-500 text-5xl">check_circle</span>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Solicitação Enviada!</h3>
+              <p className="text-zinc-500 text-sm font-bold max-w-xs">Sua solicitação de crédito está em análise. Você receberá uma notificação quando for aprovada.</p>
+            </div>
+            <button onClick={() => { setSubView("main"); setLoanSuccess(false); setLoanAmount(""); }} className="px-10 py-4 bg-zinc-900 text-white rounded-full font-black text-[10px] uppercase tracking-widest mt-4">
+              Voltar para Carteira
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Card do Limite Pré-Aprovado */}
+            <div className="bg-zinc-900 text-white p-10 rounded-[60px] shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 size-64 bg-blue-500/20 blur-[100px] rounded-full" />
+              <div className="relative z-10">
+                <p className="text-zinc-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4">Crédito Pré-Aprovado</p>
+                <h3 className="text-5xl font-black tracking-tighter mb-4">
+                  R$ {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </h3>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/10">
+                    <span className="material-symbols-rounded text-yellow-400 text-lg fill-1">verified_user</span>
+                    <span className="text-[9px] font-black text-white uppercase tracking-widest">Aprovação Digital</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/10">
+                    <span className="material-symbols-rounded text-emerald-400 text-lg">percent</span>
+                    <span className="text-[9px] font-black text-white uppercase tracking-widest">Taxa: {loanInterestRate}%</span>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div className="p-8 bg-white rounded-[40px] shadow-xl border border-zinc-100">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6 ml-1">Plano de Pagamento</p>
-              <div className="grid grid-cols-4 gap-3">
-                {['3x', '6x', '12x', '24x'].map(p => (
-                  <button 
-                    key={p} 
-                    className={`h-16 rounded-[22px] font-black uppercase tracking-widest transition-all ${p === '6x' ? 'bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 scale-105' : 'bg-zinc-50 text-zinc-400 border border-zinc-100'}`}
+
+            {/* Empréstimos existentes */}
+            {existingLoans.length > 0 && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-black text-zinc-400 uppercase tracking-widest ml-2">Seus Empréstimos</h4>
+                {existingLoans.map((loan) => (
+                  <motion.div 
+                    key={loan.id} 
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setSelectedLoan(loan)}
+                    className="bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm cursor-pointer active:bg-zinc-50 transition-colors"
                   >
-                    {p}
-                  </button>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`size-10 rounded-2xl flex items-center justify-center ${
+                          loan.status === 'paid' ? 'bg-emerald-50 text-emerald-500' :
+                          loan.status === 'pending' ? 'bg-indigo-50 text-indigo-500' :
+                          loan.status === 'rejected' ? 'bg-red-50 text-red-500' :
+                          'bg-yellow-50 text-yellow-600'
+                        }`}>
+                          <span className="material-symbols-rounded text-lg">
+                            {loan.status === 'paid' ? 'check_circle' : loan.status === 'pending' ? 'hourglass_top' : loan.status === 'rejected' ? 'cancel' : 'account_balance'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-zinc-900">R$ {parseFloat(loan.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          <p className="text-[9px] font-bold text-zinc-400 uppercase">{new Date(loan.created_at).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                          loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                          loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' :
+                          loan.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                          'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
+                        }`}>
+                          {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Em Análise' : loan.status === 'rejected' ? 'Recusado' : 'Ativo'}
+                        </span>
+                        <span className="material-symbols-rounded text-zinc-300 text-lg">chevron_right</span>
+                      </div>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
-            </div>
+            )}
+
+            {/* Tela Fullscreen - Detalhes do Empréstimo + Pagamento */}
+            <AnimatePresence>
+              {selectedLoan && (() => {
+                const sl = selectedLoan;
+                const amt = parseFloat(sl.amount || 0);
+                const rate = (parseFloat(sl.interest_rate) || 12) / 100;
+                const inst = sl.installments || 1;
+                const pmt = rate > 0 ? amt * (rate * Math.pow(1+rate, inst)) / (Math.pow(1+rate, inst) - 1) : amt / inst;
+                const totalDue = pmt * inst;
+                const totalInterest = totalDue - amt;
+                const cetAnual = ((Math.pow(1 + rate, 12) - 1) * 100);
+                const isOverdue = sl.status === 'active' && new Date(sl.due_date) < new Date();
+                const daysOverdue = isOverdue ? Math.floor((Date.now() - new Date(sl.due_date).getTime()) / 86400000) : 0;
+                const multa = isOverdue ? pmt * 0.02 : 0;
+                const mora = isOverdue ? pmt * (0.01 / 30) * daysOverdue : 0;
+
+                return (
+                  <LoanDetailScreen
+                    loan={sl}
+                    amt={amt} rate={rate} inst={inst} pmt={pmt}
+                    totalDue={totalDue} totalInterest={totalInterest} cetAnual={cetAnual}
+                    isOverdue={isOverdue} daysOverdue={daysOverdue} multa={multa} mora={mora}
+                    onClose={() => setSelectedLoan(null)}
+                    userId={userId}
+                    onPaymentSuccess={async () => {
+                      const { data: loans } = await supabase
+                        .from('loans_delivery')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false });
+                      setExistingLoans(loans || []);
+                      setSelectedLoan(null);
+                    }}
+                  />
+                );
+              })()}
+            </AnimatePresence>
+
+            {/* Formulário de Solicitação */}
+            {hasActiveLoan ? (
+              <div className="bg-amber-50 p-6 rounded-[32px] border border-amber-200 flex items-center gap-4">
+                <span className="material-symbols-rounded text-amber-500 text-2xl">info</span>
+                <p className="text-amber-700 text-sm font-bold">Você já possui uma solicitação {existingLoans.find(l => l.status === 'pending') ? 'em análise' : 'ativa'}. Aguarde a conclusão antes de solicitar um novo crédito.</p>
+              </div>
+            ) : preApprovedLimit <= 0 ? (
+              <div className="bg-zinc-100 p-8 rounded-[32px] flex flex-col items-center text-center gap-4">
+                <span className="material-symbols-rounded text-zinc-300 text-5xl">lock</span>
+                <p className="text-zinc-500 font-black text-sm uppercase tracking-tight">Crédito não disponível</p>
+                <p className="text-zinc-400 text-xs font-bold">Você ainda não possui um limite pré-aprovado. Continue usando a plataforma para liberar esta funcionalidade.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <h4 className="text-xl font-black tracking-tight uppercase ml-2">Solicitar Crédito</h4>
+                
+                {/* Valor */}
+                <div className="p-8 bg-white rounded-[40px] shadow-xl border border-zinc-100">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-1">Valor do Empréstimo</p>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-2xl font-black text-zinc-300">R$</span>
+                    <input 
+                      type="number" 
+                      value={loanAmount}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!e.target.value) { setLoanAmount(""); return; }
+                        if (val <= preApprovedLimit) setLoanAmount(e.target.value);
+                      }}
+                      placeholder="0"
+                      max={preApprovedLimit}
+                      className="w-full bg-transparent text-4xl font-black outline-none tracking-tighter text-zinc-900 placeholder:text-zinc-200" 
+                    />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex gap-2">
+                      {[50, 100, 200].filter(v => v <= preApprovedLimit).map(val => (
+                        <button key={val} onClick={() => setLoanAmount(String(val))} className="px-4 py-2 rounded-xl bg-zinc-50 border border-zinc-100 text-xs font-black text-zinc-600 active:scale-95 transition-all">
+                          R$ {val}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[9px] font-black text-zinc-400 uppercase">Máx: R$ {preApprovedLimit.toLocaleString('pt-BR')}</span>
+                  </div>
+                </div>
+
+                {/* Parcelas */}
+                <div className="p-8 bg-white rounded-[40px] shadow-xl border border-zinc-100">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6 ml-1">Plano de Pagamento</p>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[3, 6, 12, 24].map(p => (
+                      <button 
+                        key={p}
+                        onClick={() => setLoanInstallments(p)}
+                        className={`h-16 rounded-[22px] font-black uppercase tracking-widest transition-all ${loanInstallments === p ? 'bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 scale-105' : 'bg-zinc-50 text-zinc-400 border border-zinc-100'}`}
+                      >
+                        {p}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resumo dinâmico detalhado */}
+                {amount > 0 && (
+                  <div className="space-y-4">
+                    {/* Card principal */}
+                    <div className="bg-emerald-50 p-7 rounded-[32px] border border-emerald-100 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Parcela Mensal</p>
+                          <p className="text-3xl font-black text-zinc-900 tracking-tighter">{n}x R$ {installmentValue.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Montante Total</p>
+                          <p className="text-xl font-black text-zinc-900 tracking-tight">R$ {totalPayable.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Grid de detalhes */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white p-5 rounded-[24px] border border-zinc-100">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">1º Vencimento</p>
+                        <p className="text-sm font-black text-zinc-900">{firstDueDate.toLocaleDateString('pt-BR')}</p>
+                      </div>
+                      <div className="bg-white p-5 rounded-[24px] border border-zinc-100">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Último Vencimento</p>
+                        <p className="text-sm font-black text-zinc-900">{lastDueDate.toLocaleDateString('pt-BR')}</p>
+                      </div>
+                      <div className="bg-white p-5 rounded-[24px] border border-zinc-100">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total de Juros</p>
+                        <p className="text-sm font-black text-red-500">R$ {totalInterest.toFixed(2).replace('.', ',')}</p>
+                      </div>
+                      <div className="bg-white p-5 rounded-[24px] border border-zinc-100">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">CET Anual</p>
+                        <p className="text-sm font-black text-zinc-900">{cetAnual.toFixed(1).replace('.', ',')}%</p>
+                      </div>
+                    </div>
+
+                    {/* Mini tabela de amortização */}
+                    <div className="bg-white p-5 rounded-[24px] border border-zinc-100 space-y-3">
+                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Prévia da Amortização (Price)</p>
+                      {(() => {
+                        let saldo = amount;
+                        const rows: {parc: number, juros: number, amort: number, saldoF: number, venc: string}[] = [];
+                        for (let i = 1; i <= Math.min(n, 3); i++) {
+                          const jurosMes = saldo * monthlyRate;
+                          const amortMes = installmentValue - jurosMes;
+                          saldo -= amortMes;
+                          const venc = new Date();
+                          venc.setDate(venc.getDate() + 30 * i);
+                          rows.push({ parc: i, juros: jurosMes, amort: amortMes, saldoF: Math.max(saldo, 0), venc: venc.toLocaleDateString('pt-BR') });
+                        }
+                        return rows.map(r => (
+                          <div key={r.parc} className="flex items-center justify-between text-[10px] py-2 border-b border-zinc-50 last:border-0">
+                            <span className="font-black text-zinc-900 w-8">{r.parc}ª</span>
+                            <span className="text-zinc-400 font-bold">{r.venc}</span>
+                            <span className="text-red-400 font-bold">J: {r.juros.toFixed(2)}</span>
+                            <span className="text-emerald-500 font-bold">A: {r.amort.toFixed(2)}</span>
+                            <span className="font-black text-zinc-600">Saldo: {r.saldoF.toFixed(2)}</span>
+                          </div>
+                        ));
+                      })()}
+                      {n > 3 && <p className="text-[9px] text-zinc-300 font-bold text-center">+ {n - 3} parcelas restantes</p>}
+                    </div>
+
+                    {/* Informações legais */}
+                    <div className="bg-zinc-50 p-4 rounded-[20px] border border-zinc-100 space-y-1">
+                      <p className="text-[9px] font-bold text-zinc-400">• Taxa mensal: <span className="text-zinc-600">{loanInterestRate}% a.m.</span> (juros compostos)</p>
+                      <p className="text-[9px] font-bold text-zinc-400">• Multa por atraso: <span className="text-zinc-600">2% sobre parcela vencida</span></p>
+                      <p className="text-[9px] font-bold text-zinc-400">• Juros de mora: <span className="text-zinc-600">1% a.m. pro-rata</span></p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Botão de envio fixo flutuante */}
+        {!loanLoading && !loanSuccess && !hasActiveLoan && preApprovedLimit > 0 && (
+          <div className="fixed bottom-10 inset-x-0 px-6 z-50 pointer-events-none">
+            <motion.button 
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSubmitLoan}
+              disabled={!canSubmit}
+              className={`w-full h-16 font-black text-sm uppercase tracking-widest rounded-full shadow-2xl transition-all pointer-events-auto ${
+                canSubmit 
+                  ? 'bg-emerald-400 text-black shadow-emerald-400/40 active:scale-[0.98]' 
+                  : 'bg-zinc-900 text-zinc-500 shadow-xl shadow-zinc-900/20'
+              }`}
+            >
+              {loanSubmitting ? 'Enviando...' : amount > 0 ? `Solicitar R$ ${amount.toFixed(2).replace('.', ',')}` : 'Informe um valor'}
+            </motion.button>
           </div>
-        </div>
-
-        <div className="bg-emerald-50 p-8 rounded-[40px] border border-emerald-100 flex items-center justify-between">
-           <div>
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Mensalidade Estimada</p>
-              <p className="text-3xl font-black text-zinc-900 tracking-tighter">6x R$ 184,80</p>
-           </div>
-           <div className="text-right">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Custo Total</p>
-              <p className="font-black text-zinc-900 tracking-tight">R$ 1.108,80</p>
-           </div>
-        </div>
-
-        <div className="fixed bottom-0 inset-x-0 p-8 bg-white/80 backdrop-blur-xl border-t border-zinc-100 z-30">
-           <motion.button 
-             whileTap={{ scale: 0.98 }}
-             className="w-full h-20 bg-emerald-500 text-black font-black uppercase tracking-widest rounded-[32px] shadow-2xl shadow-emerald-200"
-           >
-             Contratar Agora
-           </motion.button>
-        </div>
+        )}
       </div>
     </motion.div>
   );
+  };
 
   const [recipientData, setRecipientData] = useState<{ id: string, name: string } | null>(null);
   const [showScanModal, setShowScanModal] = useState(false);

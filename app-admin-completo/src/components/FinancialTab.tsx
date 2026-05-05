@@ -332,24 +332,52 @@ function ManageLoansSection() {
     fetchLoans();
   }, [fetchLoans]);
 
+  const totalEmprestado = loans.filter(l => l.status === 'active' || l.status === 'paid').reduce((a, l) => a + parseFloat(l.amount || 0), 0);
+  const totalAReceber = loans.filter(l => l.status === 'active').reduce((a, l) => {
+    const amt = parseFloat(l.amount || 0); const rate = parseFloat(l.interest_rate || 10) / 100; const inst = l.installments || 1;
+    return a + (rate > 0 ? amt * (rate * Math.pow(1+rate,inst)) / (Math.pow(1+rate,inst)-1) * inst : amt);
+  }, 0);
+  const inadimplentes = loans.filter(l => l.status === 'active' && new Date(l.due_date) < new Date()).length;
+  const pendentes = loans.filter(l => l.status === 'pending').length;
+
   if (loading && loans.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-10">
-      <div className="p-8 border-b border-slate-50 dark:border-slate-800 bg-emerald-50/10 dark:bg-emerald-900/10 flex justify-between items-center">
-         <div>
-          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-            <span className="material-symbols-outlined text-emerald-500 font-fill">account_balance</span>
-            Gestão de Empréstimos (Izi Coins)
-          </h4>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {loans.filter(l => l.status === 'active').length} empréstimos ativos â€¢ Taxa Global: 10% am
-          </p>
-         </div>
-         <button onClick={fetchLoans} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
-            <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
-         </button>
+    <div className="space-y-6 mb-10">
+      {/* KPI Dashboard */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Emprestado', val: `Z ${totalEmprestado.toLocaleString('pt-BR')}`, icon: 'account_balance', color: 'text-emerald-500 bg-emerald-50' },
+          { label: 'Montante a Receber', val: `Z ${totalAReceber.toLocaleString('pt-BR', {maximumFractionDigits:0})}`, icon: 'savings', color: 'text-primary bg-primary/10' },
+          { label: 'Inadimplentes', val: inadimplentes, icon: 'warning', color: inadimplentes > 0 ? 'text-red-500 bg-red-50' : 'text-slate-400 bg-slate-50' },
+          { label: 'Aguardando Análise', val: pendentes, icon: 'hourglass_top', color: pendentes > 0 ? 'text-indigo-500 bg-indigo-50 animate-pulse' : 'text-slate-400 bg-slate-50' },
+        ].map((k, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[28px] border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className={`size-10 rounded-xl ${k.color} flex items-center justify-center mb-3`}>
+              <span className="material-symbols-outlined text-lg">{k.icon}</span>
+            </div>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{k.label}</p>
+            <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight mt-1">{k.val}</p>
+          </div>
+        ))}
       </div>
+
+      {/* Tabela */}
+      <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-slate-50 dark:border-slate-800 bg-emerald-50/10 dark:bg-emerald-900/10 flex justify-between items-center">
+          <div>
+            <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+              <span className="material-symbols-outlined text-emerald-500 font-fill">account_balance</span>
+              Estúdio de Empréstimos
+            </h4>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              {loans.length} registros • Juros compostos (Price) • Mora: 1% a.m. • Multa: 2%
+            </p>
+          </div>
+          <button onClick={fetchLoans} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
+            <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
+          </button>
+        </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -381,10 +409,10 @@ function ManageLoansSection() {
                   <p className="text-sm font-black text-emerald-500">Z {parseFloat(l.amount).toLocaleString('pt-BR')}</p>
                 </td>
                 <td className="px-8 py-6">
-                  <p className="text-sm font-black text-slate-900 dark:text-white">Z {parseFloat(l.total_payable).toLocaleString('pt-BR')}</p>
+                  <p className="text-sm font-black text-slate-900 dark:text-white">Z {(parseFloat(l.amount) * (1 + (parseFloat(l.interest_rate) || 10) / 100)).toLocaleString('pt-BR')}</p>
                 </td>
                 <td className="px-8 py-6">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{l.installments_count || l.requested_installments || 1}x</p>
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{l.installments || 1}x</p>
                 </td>
                 <td className="px-8 py-6">
                   <p className={`text-xs font-bold ${l.status === 'active' && new Date(l.due_date) < new Date() ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'}`}>
@@ -424,14 +452,15 @@ function ManageLoansSection() {
           onUpdate={fetchLoans}
         />
       )}
+      </div>
     </div>
   );
 }
 
 function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () => void, onUpdate: () => void }) {
   const [isProcessing, setIsProcessing] = React.useState(false);
-  const [approvedAmount, setApprovedAmount] = React.useState(loan.requested_amount || loan.amount || 0);
-  const [approvedInstallments, setApprovedInstallments] = React.useState(loan.requested_installments || loan.installments_count || 1);
+  const [approvedAmount, setApprovedAmount] = React.useState(loan.amount || 0);
+  const [approvedInstallments, setApprovedInstallments] = React.useState(loan.installments || 1);
   const [interestRate, setInterestRate] = React.useState(10);
   const [approvedDueDate, setApprovedDueDate] = React.useState(() => {
     const d = new Date();
@@ -447,22 +476,53 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
     
     setIsProcessing(true);
     try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('approve_loan_v4', {
-        p_loan_id: loan.id,
-        p_admin_id: 'admin',
-        p_amount: finalAmount,
-        p_total_payable: finalAmount * (1 + (interestRate / 100)),
-        p_interest_rate: interestRate,
-        p_installments: approvedInstallments,
-        p_due_date: new Date(approvedDueDate).toISOString()
-      });
+      // Juros compostos - Tabela Price
+      const mRate = interestRate / 100;
+      const pmtVal = mRate > 0 
+        ? finalAmount * (mRate * Math.pow(1+mRate, approvedInstallments)) / (Math.pow(1+mRate, approvedInstallments) - 1)
+        : finalAmount / approvedInstallments;
 
-      if (rpcError) throw rpcError;
-      
-      const result = rpcData as { success: boolean, error?: string };
-      if (result && !result.success) {
-        throw new Error(result.error || 'Erro desconhecido na execução da RPC');
-      }
+      // 1. Atualizar o status e valores do empréstimo
+      const { error: loanError } = await supabase
+        .from('loans_delivery')
+        .update({
+          status: 'active',
+          amount: finalAmount,
+          interest_rate: interestRate,
+          installments: approvedInstallments,
+          installment_value: parseFloat(pmtVal.toFixed(2)),
+          due_date: new Date(approvedDueDate).toISOString(),
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', loan.id);
+
+      if (loanError) throw loanError;
+
+      // 2. Buscar saldo atual do usuário e creditar as Izi Coins
+      const { data: userData } = await supabase
+        .from('users_delivery')
+        .select('izi_coins')
+        .eq('id', loan.user_id)
+        .single();
+        
+      const newBalance = (userData?.izi_coins || 0) + finalAmount;
+
+      const { error: userError } = await supabase
+        .from('users_delivery')
+        .update({ izi_coins: newBalance })
+        .eq('id', loan.user_id);
+
+      if (userError) throw userError;
+
+      // 3. Registrar a transação na carteira
+      await supabase.from('wallet_transactions_delivery').insert({
+        user_id: loan.user_id,
+        type: 'loan_deposit',
+        amount: finalAmount,
+        status: 'completed',
+        description: `Crédito Izi Liberado (Ref: #${loan.id.slice(0, 5)})`,
+        balance_after: newBalance
+      });
 
       toastSuccess("Empréstimo configurado e creditado!");
       onUpdate();
@@ -518,45 +578,47 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[40px] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-[32px] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden"
       >
-        <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
-          <div className="flex items-center gap-4">
-            <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-              <span className="material-symbols-outlined font-fill">account_balance</span>
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <span className="material-symbols-outlined">account_balance</span>
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Detalhamento do Crédito</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: #{loan.id.slice(0,8)}</p>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Estúdio do Crédito</h2>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">#{loan.id.slice(0,8)}</p>
             </div>
           </div>
-          <button onClick={onClose} className="size-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors">
+          <button onClick={onClose} className="size-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div className="p-10 space-y-8">
-          <div className="grid grid-cols-2 gap-8">
-             <div className="space-y-1">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cliente</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white">{loan.user?.name}</p>
-                <p className="text-xs font-bold text-slate-500">{loan.user?.phone}</p>
-             </div>
-             <div className="space-y-1">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status Atual</p>
-                <span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                  loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
-                  loan.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                  'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                }`}>
-                  {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Pendente' : loan.status === 'rejected' ? 'Recusado' : 'Ativo / Em curso'}
-                </span>
-             </div>
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
+          {/* Info do cliente + status */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cliente</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">{loan.user?.name}</p>
+              <p className="text-xs font-bold text-slate-500">{loan.user?.phone}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status Atual</p>
+              <span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
+                loan.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+              }`}>
+                {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Pendente' : loan.status === 'rejected' ? 'Recusado' : 'Ativo'}
+              </span>
+            </div>
           </div>
 
           {loan.status === 'pending' ? (
@@ -607,48 +669,127 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-white/5 flex justify-between items-center px-2">
-                     <p className="text-[10px] font-black text-slate-400 uppercase">Projeção de Dívida:</p>
-                     <p className="text-xl font-black text-emerald-400 italic">Z {(Number(approvedAmount) * (1 + (interestRate / 100))).toLocaleString('pt-BR')}</p>
+                  <div className="pt-4 border-t border-white/5 space-y-2 px-2">
+                     <div className="flex justify-between items-center">
+                       <p className="text-[10px] font-black text-slate-400 uppercase">Parcela (Price):</p>
+                       <p className="text-lg font-black text-white">
+                         {approvedInstallments}x Z {(interestRate > 0 ? Number(approvedAmount) * ((interestRate/100) * Math.pow(1+interestRate/100, approvedInstallments)) / (Math.pow(1+interestRate/100, approvedInstallments) - 1) : Number(approvedAmount) / approvedInstallments).toFixed(2)}
+                       </p>
+                     </div>
+                     <div className="flex justify-between items-center">
+                       <p className="text-[10px] font-black text-slate-400 uppercase">Montante Total:</p>
+                       <p className="text-xl font-black text-emerald-400 italic">
+                         Z {(interestRate > 0 ? Number(approvedAmount) * ((interestRate/100) * Math.pow(1+interestRate/100, approvedInstallments)) / (Math.pow(1+interestRate/100, approvedInstallments) - 1) * approvedInstallments : Number(approvedAmount)).toLocaleString('pt-BR', {maximumFractionDigits: 0})}
+                       </p>
+                     </div>
                   </div>
                </div>
             </section>
           ) : (
             <>
-              <div className="p-8 rounded-[32px] bg-slate-900 text-white relative overflow-hidden">
-                <div className="relative z-10 grid grid-cols-2 gap-6">
-                   <div>
-                      <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Valor Concedido</p>
-                      <p className="text-3xl font-black italic">Z {parseFloat(loan.amount).toLocaleString('pt-BR')}</p>
-                   </div>
-                   <div className="text-right">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Montante Devido ({loan.interest_rate || 10}%)</p>
-                      <p className="text-3xl font-black italic text-emerald-400">Z {parseFloat(loan.total_payable).toLocaleString('pt-BR')}</p>
-                   </div>
-                </div>
-                <div className="absolute top-0 right-1/2 w-px h-full bg-white/5" />
-              </div>
+              {(() => {
+                const amt = parseFloat(loan.amount || 0);
+                const rate = (parseFloat(loan.interest_rate) || 10) / 100;
+                const inst = loan.installments || 1;
+                const pmt = rate > 0 ? amt * (rate * Math.pow(1+rate, inst)) / (Math.pow(1+rate, inst) - 1) : amt / inst;
+                const totalDue = pmt * inst;
+                const isOverdue = loan.status === 'active' && new Date(loan.due_date) < new Date();
+                const daysOverdue = isOverdue ? Math.floor((Date.now() - new Date(loan.due_date).getTime()) / 86400000) : 0;
+                const multaAtraso = isOverdue ? pmt * 0.02 : 0; // 2% sobre parcela
+                const moraTotal = isOverdue ? pmt * (0.01 / 30) * daysOverdue : 0; // 1% a.m. pro-rata
+                return (
+                  <div className="space-y-4">
+                    {/* Valores principais */}
+                    <div className="p-6 rounded-[24px] bg-slate-900 text-white grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Concedido</p>
+                        <p className="text-2xl font-black">Z {amt.toLocaleString('pt-BR')}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Parcela (Price)</p>
+                        <p className="text-2xl font-black text-emerald-400">{inst}x {pmt.toFixed(2)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Montante</p>
+                        <p className="text-2xl font-black text-emerald-400">Z {totalDue.toFixed(0)}</p>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-50 dark:border-slate-800">
-                 <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                      <span className="material-symbols-outlined text-lg">calendar_today</span>
+                    {/* Grid de datas */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+                        <span className="material-symbols-outlined text-slate-400 text-lg">calendar_today</span>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase">Contratação</p>
+                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(loan.created_at).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-3 p-4 rounded-2xl ${isOverdue ? 'bg-red-50' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
+                        <span className={`material-symbols-outlined text-lg ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>event_busy</span>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase">Vencimento 1ª</p>
+                          <p className={`text-xs font-bold ${isOverdue ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}>{new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contratação</p>
-                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(loan.created_at).toLocaleString('pt-BR')}</p>
+
+                    {/* Amortização resumida */}
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/30 space-y-2">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Amortização (Tabela Price)</p>
+                      <div className="grid grid-cols-5 gap-2 text-[9px] font-black text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 pb-2">
+                        <span>Nº</span><span>Juros</span><span>Amort.</span><span>Parcela</span><span className="text-right">Saldo</span>
+                      </div>
+                      {(() => {
+                        let saldo = amt;
+                        const rows: React.ReactNode[] = [];
+                        for (let i = 1; i <= Math.min(inst, 3); i++) {
+                          const j = saldo * rate;
+                          const a = pmt - j;
+                          saldo = Math.max(saldo - a, 0);
+                          rows.push(
+                            <div key={i} className="grid grid-cols-5 gap-2 text-[10px] py-1.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                              <span className="font-black text-slate-700 dark:text-slate-300">{i}ª</span>
+                              <span className="text-red-400 font-bold">{j.toFixed(2)}</span>
+                              <span className="text-emerald-500 font-bold">{a.toFixed(2)}</span>
+                              <span className="font-bold text-slate-600">{pmt.toFixed(2)}</span>
+                              <span className="font-black text-slate-700 dark:text-slate-300 text-right">{saldo.toFixed(2)}</span>
+                            </div>
+                          );
+                        }
+                        return rows;
+                      })()}
+                      {inst > 3 && <p className="text-[9px] text-slate-300 text-center font-bold">+ {inst - 3} parcelas restantes</p>}
                     </div>
-                 </div>
-                 <div className="flex items-center gap-3">
-                    <div className={`size-10 rounded-xl flex items-center justify-center ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'bg-red-50 text-red-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                      <span className="material-symbols-outlined text-lg">event_busy</span>
+
+                    {/* Multa e Mora */}
+                    {isOverdue && (
+                      <div className="p-4 rounded-2xl bg-red-50 border border-red-200 space-y-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="material-symbols-outlined text-red-500 text-lg">gpp_maybe</span>
+                          <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Atraso Detectado ({daysOverdue} dias)</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <p className="text-[9px] font-bold text-red-400 uppercase">Multa (2%)</p>
+                            <p className="font-black text-red-600">R$ {multaAtraso.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold text-red-400 uppercase">Mora (1% a.m. pro-rata)</p>
+                            <p className="font-black text-red-600">R$ {moraTotal.toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <p className="text-[9px] font-bold text-red-400 mt-2">Total com encargos: <span className="text-red-700 font-black">R$ {(pmt + multaAtraso + moraTotal).toFixed(2)}</span></p>
+                      </div>
+                    )}
+
+                    {/* Regras legais */}
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/20 space-y-0.5">
+                      <p className="text-[8px] font-bold text-slate-400">• Juros compostos (Tabela Price) • CET: {((Math.pow(1+rate,12)-1)*100).toFixed(1)}% a.a.</p>
+                      <p className="text-[8px] font-bold text-slate-400">• Multa: 2% sobre parcela vencida (CDC Art. 52) • Mora: 1% a.m. pro-rata (CC Art. 406)</p>
                     </div>
-                    <div>
-                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vencimento</p>
-                       <p className={`text-xs font-bold ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}>{new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                 </div>
-              </div>
+                  </div>
+                );
+              })()}
             </>
           )}
 
