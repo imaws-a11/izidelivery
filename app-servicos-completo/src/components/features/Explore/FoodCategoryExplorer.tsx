@@ -8,12 +8,12 @@ interface FoodCategoryExplorerProps {
 
 export const FoodCategoryExplorer: React.FC<FoodCategoryExplorerProps> = (props) => {
   const categories = [
-    { label: "Lanches", img: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=100&h=100&fit=crop" },
-    { label: "Pizza", img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=100&h=100&fit=crop" },
-    { label: "Açaí", img: "https://images.unsplash.com/photo-1590301157890-4810ed352733?w=100&h=100&fit=crop" },
-    { label: "Promoções", img: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=100&h=100&fit=crop" },
-    { label: "Brasil", img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=100&h=100&fit=crop" },
-    { label: "Japonesa", img: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=100&h=100&fit=crop" },
+    { label: "Lanches", icon: "lunch_dining" },
+    { label: "Pizza", icon: "local_pizza" },
+    { label: "Açaí", icon: "icecream" },
+    { label: "Promoções", icon: "local_offer" },
+    { label: "Brasil", icon: "stew" },
+    { label: "Japonesa", icon: "set_meal" },
   ];
 
   return (

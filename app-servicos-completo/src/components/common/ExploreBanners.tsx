@@ -7,6 +7,7 @@ interface Banner {
   description: string;
   image_url: string;
   service_type: string;
+  type?: string;
 }
 
 interface ExploreBannersProps {
@@ -15,28 +16,36 @@ interface ExploreBannersProps {
 }
 
 export const ExploreBanners: React.FC<ExploreBannersProps> = ({ banners, serviceType }) => {
-  const filteredBanners = banners.filter(b => 
-    !serviceType || 
-    !b.service_type || 
-    b.service_type.toLowerCase() === serviceType.toLowerCase() ||
-    (serviceType.toLowerCase() === 'restaurante' && b.service_type.toLowerCase() === 'food')
-  );
+  const filteredBanners = banners.filter(b => {
+    const isExploreType = b.type === 'explore';
+    const sType = (serviceType || '').toLowerCase();
+    
+    // Se for tipo explore, o admin salva a categoria no título (ex: "Restaurantes,Lanches")
+    if (isExploreType) {
+      const categories = (b.title || '').toLowerCase().split(',');
+      
+      // Mapeamento de sinônimos para garantir que o banner apareça independente de plural/espaços
+      const synonyms: Record<string, string[]> = {
+        'restaurante': ['restaurantes', 'restaurante', 'food'],
+        'mercados': ['mercado', 'mercados', 'market'],
+        'farmácias': ['farmácia', 'farmacias', 'pharmacy', 'farmacia'],
+        'petshop': ['pet shop', 'petshop', 'pet'],
+        'bebidas': ['bebida', 'bebidas', 'beverages']
+      };
+
+      const possibleMatches = synonyms[sType] || [sType];
+      return categories.some(c => possibleMatches.includes(c.trim()));
+    }
+
+    // Filtro padrão para outros tipos de banners
+    return !serviceType || 
+           !b.service_type || 
+           b.service_type.toLowerCase() === sType ||
+           (sType === 'restaurante' && b.service_type.toLowerCase() === 'food');
+  });
 
   if (filteredBanners.length === 0) {
-    return (
-      <section className="mb-10 px-6">
-        <motion.div
-          whileTap={{ scale: 0.98 }}
-          className="w-full h-[160px] rounded-[32px] bg-zinc-900 relative overflow-hidden shadow-xl shadow-zinc-200 group"
-        >
-           <img 
-             src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800" 
-             className="size-full object-cover" 
-             alt="Banner Fallback" 
-           />
-        </motion.div>
-      </section>
-    );
+    return null;
   }
 
   return (

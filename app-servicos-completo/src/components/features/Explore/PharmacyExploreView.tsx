@@ -19,15 +19,16 @@ export const PharmacyExploreView: React.FC<PharmacyExploreViewProps> = (props) =
       label: t.name, 
       img: t.icon && (t.icon.startsWith('http') || t.icon.startsWith('/')) 
         ? t.icon 
-        : `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop` 
+        : undefined,
+      icon: "vaccines"
     }));
 
   const categories = dynamicCategories.length > 0 ? dynamicCategories : [
-    { label: "Remédios", img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop" },
-    { label: "Higiene", img: "https://images.unsplash.com/photo-1603507864264-325290f671b5?w=100&h=100&fit=crop" },
-    { label: "Beleza", img: "https://images.unsplash.com/photo-1596462502278-27bfdc4033c8?w=100&h=100&fit=crop" },
-    { label: "Bebês", img: "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=100&h=100&fit=crop" },
-    { label: "Suplementos", img: "https://images.unsplash.com/photo-1584017945366-b97f0482aef2?w=100&h=100&fit=crop" },
+    { label: "Remédios", icon: "medication" },
+    { label: "Higiene", icon: "clean_hands" },
+    { label: "Beleza", icon: "face_retouching_natural" },
+    { label: "Bebês", icon: "child_care" },
+    { label: "Suplementos", icon: "fitness_center" },
   ];
 
   return (

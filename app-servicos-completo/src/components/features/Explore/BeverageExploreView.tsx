@@ -19,15 +19,16 @@ export const BeverageExploreView: React.FC<BeverageExploreViewProps> = (props) =
       label: t.name, 
       img: t.icon && (t.icon.startsWith('http') || t.icon.startsWith('/')) 
         ? t.icon 
-        : `https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=100&h=100&fit=crop` 
+        : undefined,
+      icon: "sports_bar"
     }));
 
   const categories = dynamicCategories.length > 0 ? dynamicCategories : [
-    { label: "Cervejas", img: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=100&h=100&fit=crop" },
-    { label: "Vinhos", img: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=100&h=100&fit=crop" },
-    { label: "Destilados", img: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=100&h=100&fit=crop" },
-    { label: "Gelo", img: "https://images.unsplash.com/photo-1551326806-2d01f5e824eb?w=100&h=100&fit=crop" },
-    { label: "Refrigerantes", img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=100&h=100&fit=crop" },
+    { label: "Cervejas", icon: "sports_bar" },
+    { label: "Vinhos", icon: "wine_bar" },
+    { label: "Destilados", icon: "liquor" },
+    { label: "Gelo", icon: "ac_unit" },
+    { label: "Refrigerantes", icon: "local_drink" },
   ];
 
   return (

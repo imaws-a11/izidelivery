@@ -3240,6 +3240,7 @@ const navigateSubView = (target: string) => {
         setCopiedCoupon={setCopiedCoupon}
         initialCategory={restaurantInitialCategory}
         isIziBlackMembership={isIziBlackMembership}
+        exploreBanners={exploreBanners}
       />
     );
   };
@@ -4537,13 +4538,13 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {subView === "explore_bars" && (
-                  <motion.div key="explore-bars" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-bars" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <ExploreBarsView onBack={() => setSubView("none")} onBarClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_restaurants" && (
-                  <motion.div key="explore-restaurants" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-restaurants" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <ExploreRestaurantsView 
                       setSubView={setSubView}
                       searchQuery={searchQuery}
@@ -4559,30 +4560,31 @@ const navigateSubView = (target: string) => {
                       initialCategory={restaurantInitialCategory}
                       isIziBlackMembership={isIziBlackMembership}
                       flashOffers={flashOffers}
+                      exploreBanners={exploreBanners}
                     />
                   </motion.div>
                 )}
 
                 {(subView === "explore_pharmacy" || subView === "pharmacy_list") && (
-                  <motion.div key="explore-pharmacy" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-pharmacy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <PharmacyExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_beverages" || subView === "beverages_list") && (
-                  <motion.div key="explore-beverages" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-beverages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <BeverageExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_market" || subView === "market_list") && (
-                  <motion.div key="explore-market" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-market" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <NewMarketExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_petshop" || subView === "pets_list") && (
-                  <motion.div key="explore-petshop" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-petshop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <PetshopExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}

@@ -6,7 +6,8 @@ import { ExploreBanners } from "../../common/ExploreBanners";
 
 interface CategoryOption {
   label: string;
-  img: string;
+  img?: string;
+  icon?: string;
 }
 
 interface GenericCategoryExplorerProps {
@@ -119,8 +120,14 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
 
   const filters = ["Ordenar", "Cupom", "Entrega Grátis", "Entrega Rastreável"];
 
+  const featuredShops = React.useMemo(() => {
+    return filteredShops.slice(0, 3);
+  }, [filteredShops]);
+
   return (
-    <div className="absolute inset-0 z-[140] bg-white text-zinc-900 flex flex-col overflow-y-auto no-scrollbar">
+    <div 
+      className="absolute inset-0 z-[140] bg-white text-zinc-900 flex flex-col overflow-y-auto no-scrollbar"
+    >
       
       {/* HEADER PREMIUM */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-6 py-6 flex items-center gap-4">
@@ -162,8 +169,8 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
                 }}
                 className={`flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all border ${
                   svc.label === activeService 
-                  ? "bg-zinc-900 border-zinc-900 text-yellow-400 font-black shadow-xl" 
-                  : "bg-white border-zinc-100 text-zinc-400 font-bold"
+                  ? "bg-yellow-400 border-yellow-400 text-black font-black" 
+                  : "bg-zinc-100 border-zinc-100 text-zinc-500 font-bold hover:bg-zinc-200"
                 }`}
               >
                 <span className="material-symbols-rounded text-[20px]">{svc.icon}</span>
@@ -173,7 +180,17 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
          </div>
       </section>
 
-      {/* BANNERS DE EXPLORAÇÃO */}
+      {/* CONTEÚDO DINÂMICO (Anima apenas o conteúdo abaixo das abas) */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeService}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+          className="flex-1"
+        >
+          {/* BANNERS DE EXPLORAÇÃO */}
       <ExploreBanners banners={exploreBanners} serviceType={activeService} />
 
       {/* CATEGORIAS DE PRODUTOS (CARDS IMERSIVOS) */}
@@ -199,10 +216,18 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
                   onClick={() => setActiveCategoryFilter(isActive ? null : cat.label)}
                   className="flex flex-col items-center gap-4 min-w-[85px] cursor-pointer group"
                 >
-                   <div className={`size-20 rounded-[32px] overflow-hidden shadow-2xl transition-all duration-500 border-4 ${
-                     isActive ? 'border-yellow-400 scale-110 shadow-yellow-400/20' : 'border-white shadow-zinc-200'
+                   <div className={`size-16 rounded-3xl flex items-center justify-center border shadow-sm transition-all relative overflow-hidden active:scale-90 ${
+                     isActive 
+                       ? 'bg-gradient-to-br from-yellow-400 via-yellow-300 to-amber-400 border-yellow-300 shadow-lg shadow-yellow-400/30 scale-105' 
+                       : 'bg-zinc-50 border-zinc-100 group-hover:bg-yellow-50'
                    }`}>
-                      <img src={cat.img} alt={cat.label} className={`size-full object-cover transition-transform duration-700 ${isActive ? 'scale-125' : 'group-hover:scale-110'}`} />
+                      {cat.img ? (
+                        <img src={cat.img} alt={cat.label} className={`size-10 object-contain relative z-[1] transition-transform duration-700 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                      ) : (
+                        <span className={`material-symbols-rounded text-[28px] relative z-[1] ${isActive ? 'text-black' : 'text-zinc-400'}`}>
+                          {cat.icon || 'category'}
+                        </span>
+                      )}
                    </div>
                    <span className={`text-[10px] font-black uppercase tracking-tighter text-center leading-tight transition-colors ${
                      isActive ? 'text-yellow-600' : 'text-zinc-500'
@@ -251,6 +276,42 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
         )}
       </AnimatePresence>
 
+      {/* FEATURED / OS FAVORITOS */}
+      {(!activeCategoryFilter || activeCategoryFilter === "Todos") && featuredShops.length > 0 && (
+        <section className="mb-12">
+           <div className="flex items-center justify-between px-6 mb-6">
+              <h2 className="text-xl font-black text-zinc-900 uppercase italic tracking-tighter">Famosos no Izi</h2>
+              <button className="text-yellow-600 font-black text-[10px] uppercase tracking-widest">Ver ranking</button>
+           </div>
+           <div className="flex gap-6 overflow-x-auto no-scrollbar px-6">
+              {featuredShops.map((shop, i) => {
+                const coverImage = shop.banner_url || shop.banner || shop.image_url || shop.img || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=500&auto=format&fit=crop";
+                return (
+                  <motion.div 
+                    key={shop.id || i}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleShopClick(shop)}
+                    className="min-w-[280px] h-[340px] bg-white rounded-[44px] overflow-hidden shadow-2xl shadow-zinc-200/50 relative border border-zinc-50 cursor-pointer"
+                  >
+                     <img src={coverImage} className="size-full object-cover" alt={shop.name} />
+                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-8">
+                        <div className="flex items-center gap-2 mb-2">
+                           <div className="bg-yellow-400 text-black px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter">Top {i + 1}</div>
+                           <div className="flex items-center gap-1 text-white text-[12px] font-bold">
+                              <span className="material-symbols-rounded text-yellow-400 text-[12px]">star</span>
+                              {shop.rating || "4.9"}
+                           </div>
+                        </div>
+                        <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-tight">{shop.name}</h3>
+                        <p className="text-zinc-400 text-xs font-bold mt-1 uppercase tracking-widest">{shop.delivery_time || "25-35"} min • {shop.delivery_fee === 0 || shop.free_delivery || shop.freeDelivery ? "Entrega Grátis" : `R$ ${shop.delivery_fee}`}</p>
+                     </div>
+                  </motion.div>
+                );
+              })}
+           </div>
+        </section>
+      )}
+
       {/* LISTA DE LOJISTAS */}
       <section className="px-6 py-8 mb-32">
          <div className="flex items-center justify-between mb-8 px-1">
@@ -280,6 +341,8 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
          </div>
       </section>
 
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

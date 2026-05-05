@@ -121,17 +121,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
       }
     };
 
+    // Ordem: Restaurantes > Mercado > Farmácia > Bebidas > Gás e Água > Izi Envios > Viagens
     const priorityOrder = [
-      ['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras'],
-      ['gas', 'gas_agua', 'agua', 'viagem', 'mobilidade'],
-      ['padaria', 'bakery', 'confeitaria'],
       ['restaurants', 'food', 'restaurante', 'restaurantes'],
       ['markets', 'mercado', 'mercados', 'market'],
       ['pharmacy', 'farmacia', 'farmacias'],
       ['beverages', 'bebidas', 'bebida'],
-      ['petshop', 'pets', 'pet_shop'],
-      ['butcher', 'acougue', 'carnes']
+      ['gas', 'gas_agua', 'agua', 'gas_e_agua'],
+      ['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras'],
+      ['viagem', 'mobilidade', 'corridas', 'taxi'],
     ];
+
+    // Slugs que ficam no menu lateral (Ver Mais) em vez do grid
+    const sideMenuSlugs = ['petshop', 'pets', 'pet_shop', 'pet', 'padaria', 'bakery', 'confeitaria', 'butcher', 'acougue', 'carnes'];
 
     const getPriority = (slug: string) => {
       const s = (slug || '').toLowerCase();
@@ -142,14 +144,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
     };
 
     const dynamicServices = establishmentTypes
-      .filter((t: any) => t.is_active !== false)
+      .filter((t: any) => {
+        if (t.is_active === false) return false;
+        const slug = (t.value || t.id || '').toLowerCase();
+        // Excluir petshop e outros do grid principal
+        return !sideMenuSlugs.includes(slug);
+      })
       .map((t: any) => {
         const slug = (t.value || t.id || "").toLowerCase();
         if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
-          return { ...t, name: 'Izi Envios', icon: 'package_2', action: () => handleCategoryClick(t) };
+          return { ...t, name: 'Izi Envios', icon: 'package_2', _exclusive: true, action: () => handleCategoryClick(t) };
         }
-        if (['gas', 'gas_agua', 'agua', 'gas_e_agua', 'viagem', 'mobilidade', 'corridas', 'taxi'].includes(slug)) {
-          return { ...t, name: 'Viagens', icon: 'directions_car', action: () => handleCategoryClick(t) };
+        if (['gas', 'gas_agua', 'agua', 'gas_e_agua'].includes(slug)) {
+          return { ...t, name: 'Gás e Água', icon: 'local_fire_department', action: () => handleCategoryClick(t) };
+        }
+        if (['viagem', 'mobilidade', 'corridas', 'taxi'].includes(slug)) {
+          return { ...t, name: 'Viagens', icon: 'directions_car', _exclusive: true, action: () => handleCategoryClick(t) };
         }
         return {
           ...t,
@@ -157,12 +167,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
         };
       })
       .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
-      .slice(0, 9);
+      .slice(0, 7);
+
+    // Garantir que Izi Envios e Viagens existam, mesmo que não venham do banco
+    const hasIziEnvios = dynamicServices.some((s: any) => s.name === 'Izi Envios');
+    const hasViagens = dynamicServices.some((s: any) => s.name === 'Viagens');
+    const extraServices: any[] = [];
+    if (!hasIziEnvios) extraServices.push({ id: 'izi_envios_fixed', name: 'Izi Envios', icon: 'package_2', _exclusive: true, action: () => navigateSubView('explore_izi_envios') });
+    if (!hasViagens) extraServices.push({ id: 'viagens_fixed', name: 'Viagens', icon: 'directions_car', _exclusive: true, action: () => navigateSubView('explore_envios') });
 
     const displayServices = [
       ...dynamicServices,
+      ...extraServices,
       { id: 'ver_mais', name: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) }
-    ];
+    ].slice(0, 10);
 
     const heroImages = useMemo(() => 
       appSettings?.promo_banner_config?.image_urls?.length > 0 
@@ -410,27 +428,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     {/* Categorias */}
                     <section>
                       <div className="grid grid-cols-5 gap-y-8 gap-x-4">
-                          {displayServices.map((s: any) => (
-                            <motion.div 
-                              key={s.id}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={s.action}
-                              className="flex flex-col items-center gap-2 cursor-pointer group"
-                            >
-                               <div className="size-16 rounded-3xl bg-zinc-50 flex items-center justify-center border border-zinc-100 shadow-sm group-hover:bg-yellow-50 transition-all relative overflow-hidden active:scale-90">
-                                  {s.icon && s.icon.startsWith('http') ? (
-                                    <img src={s.icon} className="size-10 object-contain" alt={s.name} />
-                                  ) : s.img ? (
-                                    <img src={s.img} className="size-10 object-contain" alt={s.name} />
-                                  ) : (
-                                    <span className="material-symbols-rounded text-zinc-400 text-[28px]">{s.icon || 'storefront'}</span>
+                          {displayServices.map((s: any) => {
+                            const isExclusive = s._exclusive === true;
+                            return (
+                              <motion.div 
+                                key={s.id}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={s.action}
+                                className="flex flex-col items-center gap-2 cursor-pointer group relative"
+                              >
+                                {/* Badge EXCLUSIVO */}
+                                {isExclusive && (
+                                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
+                                    <span className="bg-yellow-400 text-black text-[5px] font-black px-1.5 py-[1px] rounded-full uppercase tracking-widest whitespace-nowrap shadow-sm">Exclusivo</span>
+                                  </div>
+                                )}
+                                <div className={`size-16 rounded-3xl flex items-center justify-center border shadow-sm transition-all relative overflow-hidden active:scale-90 ${
+                                  isExclusive 
+                                    ? 'bg-gradient-to-br from-yellow-400 via-yellow-300 to-amber-400 border-yellow-300 shadow-lg shadow-yellow-400/30 group-hover:shadow-xl group-hover:shadow-yellow-400/40' 
+                                    : 'bg-zinc-50 border-zinc-100 group-hover:bg-yellow-50'
+                                }`}>
+                                  {isExclusive && (
+                                    <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent" />
                                   )}
-                               </div>
-                               <span className="text-[10px] font-black text-zinc-900 text-center leading-tight uppercase tracking-tighter truncate w-full">
-                                 {s.name || s.label}
-                               </span>
-                            </motion.div>
-                          ))}
+                                  {s.icon && s.icon.startsWith('http') ? (
+                                    <img src={s.icon} className="size-10 object-contain relative z-[1]" alt={s.name} />
+                                  ) : s.img ? (
+                                    <img src={s.img} className="size-10 object-contain relative z-[1]" alt={s.name} />
+                                  ) : (
+                                    <span className={`material-symbols-rounded text-[28px] relative z-[1] ${isExclusive ? 'text-black' : 'text-zinc-400'}`}>{s.icon || 'storefront'}</span>
+                                  )}
+                                </div>
+                                <span className={`text-[10px] font-black text-center leading-tight uppercase tracking-tighter truncate w-full ${
+                                  isExclusive ? 'text-yellow-600' : 'text-zinc-900'
+                                }`}>
+                                  {s.name || s.label}
+                                </span>
+                              </motion.div>
+                            );
+                          })}
                       </div>
                     </section>
 

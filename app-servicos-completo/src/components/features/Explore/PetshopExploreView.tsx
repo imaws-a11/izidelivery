@@ -19,15 +19,16 @@ export const PetshopExploreView: React.FC<PetshopExploreViewProps> = (props) => 
       label: t.name, 
       img: t.icon && (t.icon.startsWith('http') || t.icon.startsWith('/')) 
         ? t.icon 
-        : `https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=100&h=100&fit=crop` 
+        : undefined,
+      icon: "pets"
     }));
 
   const categories = dynamicCategories.length > 0 ? dynamicCategories : [
-    { label: "Ração", img: "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=100&h=100&fit=crop" },
-    { label: "Petiscos", img: "https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=100&h=100&fit=crop" },
-    { label: "Brinquedos", img: "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=100&h=100&fit=crop" },
-    { label: "Higiene", img: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=100&h=100&fit=crop" },
-    { label: "Acessórios", img: "https://images.unsplash.com/photo-1544568100-847a948585b9?w=100&h=100&fit=crop" },
+    { label: "Ração", icon: "cruelty_free" },
+    { label: "Petiscos", icon: "bone" },
+    { label: "Brinquedos", icon: "smart_toy" },
+    { label: "Higiene", icon: "bathtub" },
+    { label: "Acessórios", icon: "checkroom" },
   ];
 
   return (
