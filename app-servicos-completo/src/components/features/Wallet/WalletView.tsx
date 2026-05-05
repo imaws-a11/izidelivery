@@ -11,97 +11,111 @@ import { Capacitor } from '@capacitor/core';
 
 // Componente para o Leitor de QR Code usando a câmera nativa ou Web
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const resultRef = useRef(onResult);
-  const cancelRef = useRef(onCancel);
   const [status, setStatus] = useState<"initializing" | "ready" | "error">("initializing");
   
   useEffect(() => {
-    return () => {};
-  }, [onResult, onCancel]);
-
-  useEffect(() => {
     let isMounted = true;
-    
-    const startWebCamera = async () => {
-      await new Promise(r => setTimeout(r, 800));
-      if (!isMounted) return;
+    let scanner: Html5Qrcode | null = null;
 
-      try {
-        const scanner = new Html5Qrcode("reader");
-        scannerRef.current = scanner;
+    const startScan = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { camera } = await BarcodeScanner.checkPermissions();
+          if (camera !== 'granted') {
+            const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+            if (newStatus !== 'granted') {
+              onCancel();
+              return;
+            }
+          }
 
-        await scanner.start(
-          { facingMode: "environment" }, 
-          { fps: 20, aspectRatio: 1.0, qrbox: { width: 250, height: 250 } }, 
-          (text) => resultRef.current(text), 
-          () => {}
-        );
-        setStatus("ready");
-      } catch (err: any) {
-        console.error("[SCANNER] Erro na câmera:", err);
-        setStatus("error");
+          // Abre activity nativa do Google Barcode Scanner
+          const { barcodes } = await BarcodeScanner.scan();
+          
+          if (isMounted) {
+            if (barcodes.length > 0) onResult(barcodes[0].displayValue);
+            else onCancel();
+          }
+        } catch (err) {
+          console.error("[SCANNER] Erro nativo:", err);
+          onCancel();
+        }
+      } else {
+        try {
+          scanner = new Html5Qrcode("reader");
+          await scanner.start(
+            { facingMode: "environment" }, 
+            { fps: 20, qrbox: { width: 280, height: 280 } }, 
+            (text) => {
+               if (isMounted) {
+                 scanner?.stop().catch(() => {});
+                 onResult(text);
+               }
+            }, 
+            () => {}
+          );
+          setStatus("ready");
+        } catch (err: any) {
+          console.error("[SCANNER] Erro web:", err);
+          setStatus("error");
+        }
       }
     };
 
-    if (!Capacitor.isNativePlatform()) {
-      startWebCamera();
-    } else {
-       // Lógica nativa simplificada para debug
-       setStatus("ready");
-       document.body.classList.add('scanner-active');
-       if (Capacitor.getPlatform() === 'android') BarcodeScanner.hideBackground();
-       BarcodeScanner.scan().then(({ barcodes }) => {
-          if (barcodes.length > 0) resultRef.current(barcodes[0].displayValue);
-          else cancelRef.current();
-       }).finally(() => {
-          document.body.classList.remove('scanner-active');
-       });
-    }
+    startScan();
 
     return () => {
       isMounted = false;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+      if (scanner && scanner.isScanning) {
+        scanner.stop().catch(() => {});
       }
     };
   }, []);
 
   return (
-    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center pointer-events-auto ${Capacitor.isNativePlatform() ? 'bg-transparent' : 'bg-black'}`}>
+    <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center">
       <div id="reader" className="w-full h-full" />
       
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <div className="w-64 h-64 border-4 border-yellow-400 rounded-[40px] relative">
-             <div className="absolute inset-0 bg-yellow-400/10 animate-pulse" />
-          </div>
-          <p className="text-white font-black mt-8 uppercase tracking-widest text-[10px]">Aponte para o QR Code</p>
-      </div>
-
-      <div className="absolute top-10 right-10 pointer-events-auto">
+      {/* Botão Fechar */}
+      <div className="absolute top-10 right-10 z-[10000]">
         <button 
           onClick={onCancel}
-          className="size-16 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white"
+          className="size-16 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
         >
            <span className="material-symbols-outlined text-4xl">close</span>
         </button>
       </div>
 
-      {/* BOTÃO DE DEBUG - SEMPRE VISÍVEL PARA TESTE */}
-      <div className="absolute bottom-20 pointer-events-auto">
-         <button 
-           onClick={() => onResult("izipay:debug-test")}
-           className="px-8 py-4 bg-yellow-400 text-black font-black rounded-full uppercase text-[10px] tracking-widest shadow-xl"
-         >
-           Simular Scan (Debug)
-         </button>
-      </div>
+      {/* Botão de Debug - Apenas no Web/Dev */}
+      {!Capacitor.isNativePlatform() && (
+        <div className="absolute bottom-20 z-[10001]">
+           <button 
+             onClick={() => onResult("izipay:debug-test")}
+             className="px-8 py-4 bg-yellow-400 text-black font-black rounded-full uppercase text-[10px] tracking-widest shadow-xl"
+           >
+             Simular Scan (Debug)
+           </button>
+        </div>
+      )}
 
       {status === "initializing" && (
-         <div className="absolute inset-0 bg-black flex items-center justify-center">
+         <div className="absolute inset-0 bg-black flex items-center justify-center z-[10002]">
             <div className="size-10 border-4 border-yellow-400 border-t-transparent animate-spin rounded-full" />
          </div>
       )}
+
+      {status === "error" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black z-[10003] p-10 text-center">
+           <span className="material-symbols-outlined text-red-500 text-6xl">videocam_off</span>
+           <h3 className="text-white font-black text-xl uppercase">Erro na Câmera</h3>
+           <button onClick={onCancel} className="px-10 py-4 bg-white/10 rounded-full text-white font-black uppercase text-[10px]">Voltar</button>
+        </div>
+      )}
+
+      <style>{`
+        #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+        #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) { display: none !important; }
+      `}</style>
     </div>
   );
 };

@@ -15,6 +15,8 @@ import SplashScreen from './components/common/SplashScreen';
 import { IziBottomSheet } from './components/common/IziBottomSheet';
 import { OnboardingView } from './components/features/OnboardingView';
 import { MissionsView } from './components/features/MissionsView';
+import NotificationsCenterView from './components/features/NotificationsCenterView';
+import Icon from './components/common/Icon';
 import { incrementMissionProgress } from './lib/gamification';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
@@ -66,82 +68,7 @@ const mapOptions = {
         { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#bae6fd" }] }
     ]
 };
-
-function Icon({ name, className = "", size = 20 }: any) {
-  const icons: Record<string, any> = {
-    'grid_view': BespokeIcons.Home,
-    'stars': BespokeIcons.Star,
-    'event': BespokeIcons.Calendar,
-    'history': BespokeIcons.History,
-    'payments': BespokeIcons.Wallet,
-    'person': BespokeIcons.User,
-    'menu': BespokeIcons.Menu,
-    'star': BespokeIcons.StarFilled,
-    'account_balance_wallet': BespokeIcons.Wallet,
-    'package_2': BespokeIcons.Bag,
-    'two_wheeler': BespokeIcons.Motorcycle,
-    'directions_car': BespokeIcons.Car,
-    'local_shipping': BespokeIcons.Truck,
-    'schedule': BespokeIcons.Clock,
-    'location_on': BespokeIcons.Pin,
-    'check_circle': BespokeIcons.Check,
-    'verified': BespokeIcons.Check,
-    'chat': BespokeIcons.Support,
-    'power_off': BespokeIcons.Logout,
-    'power_settings_new': BespokeIcons.Power,
-    'radar': BespokeIcons.Bolt,
-    'check': BespokeIcons.Check,
-    'close': BespokeIcons.X,
-    'analytics': BespokeIcons.Coins,
-    'today': BespokeIcons.Clock,
-    'route': BespokeIcons.Map,
-    'military_tech': BespokeIcons.Shield,
-    'workspace_premium': BespokeIcons.Shield,
-    'event_available': BespokeIcons.Check,
-    'history_edu': BespokeIcons.History,
-    'sentiment_dissatisfied': BespokeIcons.Help,
-    'satellite_alt': BespokeIcons.Map,
-    'navigation': BespokeIcons.Pin,
-    'map': BespokeIcons.Map,
-    'emergency': BespokeIcons.Help,
-    'moped': BespokeIcons.Motorcycle,
-    'chevron_right': BespokeIcons.ChevronRight,
-    'pedal_bike': BespokeIcons.Motorcycle,
-    'support_agent': BespokeIcons.Support,
-    'badge': BespokeIcons.User,
-    'settings': BespokeIcons.Menu,
-    'volume_up': BespokeIcons.Notifications,
-    'visibility': BespokeIcons.Eye,
-    'visibility_off': BespokeIcons.EyeOff,
-    'arrow_back': BespokeIcons.ChevronLeft,
-    'arrow_forward': BespokeIcons.ChevronRight,
-    'sync': BespokeIcons.History,
-    'cloud_sync': BespokeIcons.History,
-    'qr_code_scanner': BespokeIcons.Bolt,
-    'home': BespokeIcons.Home,
-    'storefront': BespokeIcons.Bag,
-    'my_location': BespokeIcons.Pin,
-    'directions': BespokeIcons.Map,
-    'photo_camera': BespokeIcons.Camera,
-    'account_balance': BespokeIcons.Bank,
-    'layers': BespokeIcons.Layers,
-    'admin_panel_settings': BespokeIcons.Shield,
-    'package': BespokeIcons.Bag,
-    'restaurant': BespokeIcons.Restaurant,
-    'shopping_cart': BespokeIcons.ShoppingBag,
-    'local_pharmacy': BespokeIcons.Pharmacy,
-    'local_bar': BespokeIcons.Beverage,
-    'description': BespokeIcons.FileText,
-    'call': BespokeIcons.Phone,
-    'history_toggle_off': BespokeIcons.History,
-    'emoji_events': BespokeIcons.StarFilled,
-  };
-
-  const IconComp = icons[name] || BespokeIcons.Help;
-  return <IconComp size={size} className={className} />;
-}
-
-type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos' | 'missions';
+type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos' | 'missions' | 'notifications';
 type ServiceType = 'package' | 'mototaxi' | 'car_ride' | 'frete' | 'motorista_particular' | 'motoboy' | string;
 
 interface Order {
@@ -981,6 +908,40 @@ function App() {
     }, [driverId]);
 
     const [activeTab, setActiveTab] = useState<View>('dashboard');
+    const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
+
+    useEffect(() => {
+        if (!driverId) return;
+
+        const syncUnreadCount = async () => {
+            const { count } = await supabase
+                .from('notifications_delivery')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', driverId)
+                .eq('status', 'pending');
+            
+            setUnreadNotifsCount(count || 0);
+        };
+
+        syncUnreadCount();
+
+        const channel = supabase
+            .channel(`unread-notifs-${driverId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'notifications_delivery',
+                filter: `user_id=eq.${driverId}`
+            }, () => {
+                syncUnreadCount();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [driverId]);
+
     const activeTabRef = useRef(activeTab);
     useEffect(() => { 
         activeTabRef.current = activeTab; 
@@ -3633,8 +3594,42 @@ function App() {
     }, [clearDriverSessionState]);
 
     const renderHeader = () => (
-        <header className="px-6 py-6 flex items-center justify-center sticky top-0 z-50 bg-transparent shrink-0">
-            <h1 className="text-xl font-black text-zinc-900 tracking-tighter uppercase leading-none">Izi Entregador</h1>
+        <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-zinc-100/50 shrink-0">
+            {/* Perfil Icon (Left) */}
+            <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setActiveTab('profile')}
+                className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner overflow-hidden relative"
+            >
+                {driverAvatar ? (
+                    <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                    <Icon name="person" size={24} className="text-zinc-400" />
+                )}
+            </motion.button>
+
+            {/* Logo/Title */}
+            <div className="flex flex-col items-center">
+                <h1 className="text-lg font-black text-zinc-900 tracking-tighter uppercase leading-none">Izi Pilot</h1>
+                <div className="flex items-center gap-1 mt-1">
+                    <div className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`} />
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
+                </div>
+            </div>
+
+            {/* Notifications Icon (Right) */}
+            <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setActiveTab('notifications')}
+                className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner relative"
+            >
+                <Icon name="notifications" size={24} className={unreadNotifsCount > 0 ? 'text-yellow-600' : 'text-zinc-400'} />
+                {unreadNotifsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 size-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
+                    </span>
+                )}
+            </motion.button>
         </header>
     );
 
@@ -3778,9 +3773,8 @@ function App() {
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'scheduled', label: 'Escalas', icon: 'event', badge: scheduledOrders.length },
                                     { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active && !myApplications.some(app => String(app.slot_id) === String(s.id))).length },
-                                    { id: 'earnings', label: 'Ganhos', icon: 'payments' },
-                                    { id: 'profile', label: 'Perfil', icon: 'person' }
-                                    ].filter(item => {
+                                    { id: 'earnings', label: 'Ganhos', icon: 'payments' }
+                                 ].filter(item => {
                                         if (item.id === 'scheduled' || item.id === 'active_mission') {
                                             return isOnline || !!activeMission;
                                         }
@@ -8413,7 +8407,7 @@ function App() {
                             )}
 
                             <div className="flex flex-col h-full overflow-hidden">
-                                {activeTab !== 'dashboard' && renderHeader()}
+                                {renderHeader()}
                                 
                                 <main className="flex-1 overflow-y-auto no-scrollbar relative">
                                     <AnimatePresence mode="wait">
@@ -8424,6 +8418,7 @@ function App() {
                                         {activeTab === 'missions' && <div key="miss" className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></div>}
                                         {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
                                         {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
+                                        {activeTab === 'notifications' && <div key="notif" className="flex-1 h-full"><NotificationsCenterView driverId={driverId || ''} onBack={() => setActiveTab('dashboard')} /></div>}
                                     </AnimatePresence>
 
                                     <AnimatePresence>

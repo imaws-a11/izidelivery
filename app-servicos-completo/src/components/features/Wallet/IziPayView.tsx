@@ -14,183 +14,87 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   const [status, setStatus] = useState<"initializing" | "ready" | "error">("initializing");
   
   useEffect(() => {
-    console.log("[SCANNER] Iniciando componente...", Capacitor.getPlatform());
-    resultRef.current = onResult;
-    cancelRef.current = onCancel;
-  }, [onResult, onCancel]);
-
-  useEffect(() => {
     let isMounted = true;
+    let scanner: Html5Qrcode | null = null;
 
-    const startNativeScan = async () => {
-      try {
-        console.log("[SCANNER] Checando permissões nativas...");
-        const { camera } = await BarcodeScanner.checkPermissions();
-        if (camera !== 'granted') {
-          const { camera: newStatus } = await BarcodeScanner.requestPermissions();
-          if (newStatus !== 'granted') {
-            cancelRef.current();
-            return;
+    const startScan = async () => {
+      console.log("[SCANNER] Iniciando scanner...", Capacitor.getPlatform());
+      
+      if (Capacitor.isNativePlatform()) {
+        try {
+          // 1. Checar/Pedir permissões
+          const { camera } = await BarcodeScanner.checkPermissions();
+          if (camera !== 'granted') {
+            const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+            if (newStatus !== 'granted') {
+              onCancel();
+              return;
+            }
           }
-        }
 
-        setStatus("ready");
-        
-        // Tornar o webview transparente para a câmera nativa aparecer por baixo
-        document.body.style.background = 'transparent';
-        document.body.style.backgroundColor = 'transparent';
-        document.documentElement.style.background = 'transparent';
-        document.documentElement.style.backgroundColor = 'transparent';
-        
-        const rootEl = document.getElementById('root');
-        if (rootEl) {
-          rootEl.style.background = 'transparent';
-          rootEl.style.backgroundColor = 'transparent';
+          // 2. O método .scan() abre uma ACTIVITY NATIVA (Google Barcode Scanner)
+          // Ela tem UI própria, botão de fechar e lanterna. Não precisa de overlay web.
+          const { barcodes } = await BarcodeScanner.scan();
+          
+          if (isMounted) {
+            if (barcodes.length > 0) {
+              onResult(barcodes[0].displayValue);
+            } else {
+              onCancel();
+            }
+          }
+        } catch (err) {
+          console.error("[SCANNER] Erro nativo:", err);
+          onCancel();
         }
-        
-        await BarcodeScanner.hideBackground();
-
-        const { barcodes } = await BarcodeScanner.scan();
-        
-        // Restaurar backgrounds
-        await BarcodeScanner.showBackground();
-        document.body.style.background = '';
-        document.body.style.backgroundColor = '';
-        document.documentElement.style.background = '';
-        document.documentElement.style.backgroundColor = '';
-        if (rootEl) {
-          rootEl.style.background = '';
-          rootEl.style.backgroundColor = '';
+      } else {
+        // Web Fallback
+        try {
+          scanner = new Html5Qrcode("reader");
+          await scanner.start(
+            { facingMode: "environment" },
+            { fps: 20, qrbox: { width: 280, height: 280 } },
+            (text) => {
+              if (isMounted) {
+                scanner?.stop().catch(() => {});
+                onResult(text);
+              }
+            },
+            () => {}
+          );
+          setStatus("ready");
+        } catch (err) {
+          console.error("[SCANNER] Erro web:", err);
+          setStatus("error");
         }
-
-        if (barcodes.length > 0 && isMounted) {
-          resultRef.current(barcodes[0].displayValue);
-        } else {
-          cancelRef.current();
-        }
-      } catch (err) {
-        console.error("[SCANNER] Erro no scanner nativo:", err);
-        try { await BarcodeScanner.showBackground(); } catch (_) {}
-        document.body.style.background = '';
-        document.body.style.backgroundColor = '';
-        document.documentElement.style.background = '';
-        document.documentElement.style.backgroundColor = '';
-        const rootEl = document.getElementById('root');
-        if (rootEl) {
-          rootEl.style.background = '';
-          rootEl.style.backgroundColor = '';
-        }
-        cancelRef.current();
       }
     };
 
-    const startWebCamera = async () => {
-      console.log("[SCANNER] Iniciando câmera Web...");
-      await new Promise(r => setTimeout(r, 600));
-      if (!isMounted) return;
-
-      try {
-        const scanner = new Html5Qrcode("reader");
-        scannerRef.current = scanner;
-
-        await scanner.start(
-          { facingMode: "environment" }, 
-          { fps: 20, aspectRatio: 1.0, qrbox: { width: 250, height: 250 } }, 
-          (text) => resultRef.current(text), 
-          () => {}
-        );
-        setStatus("ready");
-      } catch (err) {
-        console.error("[SCANNER] Erro ao iniciar Html5Qrcode:", err);
-        setStatus("error");
-      }
-    };
-
-    if (Capacitor.isNativePlatform()) {
-      startNativeScan();
-    } else {
-      startWebCamera();
-    }
+    startScan();
 
     return () => {
       isMounted = false;
-      const scanner = scannerRef.current;
-      if (scanner) {
-        if (scanner.isScanning) {
-          scanner.stop().catch(() => {});
-        }
-        scannerRef.current = null;
-      }
-      if (Capacitor.isNativePlatform()) {
-        BarcodeScanner.showBackground().catch(() => {});
-        document.body.style.background = '';
-        document.body.style.backgroundColor = '';
-        document.documentElement.style.background = '';
-        document.documentElement.style.backgroundColor = '';
-        const rootEl = document.getElementById('root');
-        if (rootEl) {
-          rootEl.style.background = '';
-          rootEl.style.backgroundColor = '';
-        }
+      if (scanner && scanner.isScanning) {
+        scanner.stop().catch(() => {});
       }
     };
   }, []);
 
-  // --- Renderização NATIVA ---
-  if (Capacitor.isNativePlatform()) {
-    return (
-      <div 
-        id="scanner-overlay"
-        className="fixed inset-0 flex flex-col items-center justify-center"
-        style={{ zIndex: 99999, background: 'transparent' }}
-      >
-         {/* Botão Fechar - posição fixa no topo com safe area */}
-         <button 
-           onClick={async () => {
-             try { await BarcodeScanner.stopScan(); } catch(_) {}
-             try { await BarcodeScanner.showBackground(); } catch(_) {}
-             document.body.style.background = '';
-             document.body.style.backgroundColor = '';
-             document.documentElement.style.background = '';
-             document.documentElement.style.backgroundColor = '';
-             const rootEl = document.getElementById('root');
-             if (rootEl) {
-               rootEl.style.background = '';
-               rootEl.style.backgroundColor = '';
-             }
-             onCancel();
-           }}
-           className="absolute right-6 size-14 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
-           style={{ top: 'max(24px, env(safe-area-inset-top, 24px))' }}
-         >
-           <span className="material-symbols-outlined text-3xl">close</span>
-         </button>
-         
-         {/* Viewfinder central */}
-         <div className="w-64 h-64 border-2 border-yellow-400 rounded-[40px] relative">
-            <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-[38px] animate-pulse" />
-            <div className="absolute top-1/2 left-0 w-full h-1 bg-yellow-400/50 blur-sm animate-scan" />
-         </div>
-
-         {/* Label inferior */}
-         <div className="absolute bottom-32 bg-black/60 backdrop-blur-xl px-8 py-5 rounded-[30px] border border-white/10 text-center space-y-2">
-            <p className="font-black text-white uppercase tracking-widest text-[10px]">Escanear QR Code</p>
-            <p className="text-zinc-400 text-[8px] font-bold uppercase tracking-tight">Posicione o código no centro do quadro</p>
-         </div>
-
-         <style>{`
-            @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-            .animate-scan { animation: scan 2s linear infinite; }
-         `}</style>
-      </div>
-    );
-  }
-
-  // --- Renderização WEB ---
+  // No Native, retornamos apenas um fundo preto/loading enquanto a activity abre
+  // No Web, retornamos o container do leitor
   return (
     <div className="fixed inset-0 z-[2000] bg-black flex flex-col items-center justify-center">
-      <div id="reader" className="w-full h-full bg-black" />
+      <div id="reader" className="w-full h-full" />
       
+      {/* Botão de Voltar Sempre Disponível (para caso a câmera demore) */}
+      <button 
+        onClick={onCancel}
+        className="absolute z-[2001] right-6 size-14 rounded-full bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
+        style={{ top: 'max(24px, env(safe-area-inset-top, 24px))' }}
+      >
+         <span className="material-symbols-outlined text-3xl">close</span>
+      </button>
+
       {status === "initializing" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black z-[2005]">
            <div className="size-12 border-4 border-yellow-400 border-t-transparent animate-spin rounded-full" />
@@ -203,34 +107,20 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
            <span className="material-symbols-outlined text-red-500 text-6xl">videocam_off</span>
            <div className="space-y-2">
              <h3 className="text-white font-black text-xl uppercase tracking-tighter">Erro na Câmera</h3>
-             <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Não foi possível acessar sua câmera. Verifique as permissões do navegador.</p>
+             <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Não foi possível acessar sua câmera. Verifique as permissões.</p>
            </div>
            <button 
              onClick={onCancel}
              className="px-10 py-4 bg-white/10 rounded-full text-white font-black text-[10px] uppercase tracking-widest"
            >
-             Voltar para Carteira
+             Voltar
            </button>
         </div>
       )}
 
-      <button 
-        onClick={onCancel}
-        className="absolute z-[2001] right-6 size-14 rounded-full bg-black/60 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform"
-        style={{ top: 'max(24px, env(safe-area-inset-top, 24px))' }}
-      >
-         <span className="material-symbols-outlined text-3xl">close</span>
-      </button>
-
       <style>{`
-        #reader video {
-          width: 100% !important;
-          height: 100% !important;
-          object-fit: cover !important;
-        }
-        #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) {
-          display: none !important;
-        }
+        #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+        #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) { display: none !important; }
       `}</style>
     </div>
   );
