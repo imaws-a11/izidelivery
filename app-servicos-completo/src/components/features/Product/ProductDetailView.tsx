@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useApp } from "../../../hooks/useApp";
 import { useOrder } from "../../../hooks/useOrder";
@@ -12,8 +12,10 @@ export const ProductDetailView = () => {
     activeService, 
     setSubView, 
     showToast,
-    triggerCartAnimation
+    triggerCartAnimation,
   } = useApp();
+  
+  const [showSuccess, setShowSuccess] = useState(false);
   
   const { cart, setCart } = useOrder();
 
@@ -177,16 +179,14 @@ export const ProductDetailView = () => {
   return (
     <div className="h-full bg-[#F8F9FA] flex flex-col hide-scrollbar overflow-y-auto">
       <div className="relative w-full h-[35vh] bg-cover bg-center shrink-0" style={{ backgroundImage: "url('" + itemImage + "')" }}>
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/20"></div>
+        <div className="absolute inset-0 bg-black/10"></div>
         <header className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between z-20">
-          <div className="size-1 w-1" />
-          <button onClick={handleBack} className="flex items-center justify-center w-10 h-10 bg-black/10 backdrop-blur-xl rounded-full text-black border border-white/40 shadow-sm active:scale-90 transition-all">
-            <span className="material-symbols-rounded">close</span>
-          </button>
+          <div className="size-10" />
+          <div className="size-10" />
         </header>
       </div>
 
-      <div className="relative z-10 -mt-12 bg-white rounded-t-[48px] px-8 pt-12 pb-40 space-y-10 flex-1 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] border-t border-white">
+      <div className="relative z-10 -mt-12 bg-white rounded-t-[48px] px-8 pt-12 pb-40 space-y-10 flex-1 border-t border-zinc-50">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase leading-none italic">{selectedItem.name}</h2>
@@ -309,8 +309,11 @@ export const ProductDetailView = () => {
                 }));
                 setCart([...cart, ...items]);
                 triggerCartAnimation(e, selectedItem.img || "");
-                handleBack();
-                showToast("Item adicionado!", "success");
+                setShowSuccess(true);
+                setTimeout(() => {
+                  setShowSuccess(false);
+                  handleBack();
+                }, 1500);
               }} 
             >
               <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-0.5">Adicionar</span>
@@ -319,6 +322,32 @@ export const ProductDetailView = () => {
           </div>
         )}
       </div>
+
+      {/* FEEDBACK VISUAL PREMIUM */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[600] flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+          >
+             <motion.div 
+               initial={{ scale: 0.5, y: 20 }}
+               animate={{ scale: 1, y: 0 }}
+               className="bg-zinc-900 px-8 py-6 rounded-[32px] flex flex-col items-center gap-4 shadow-2xl border border-white/10"
+             >
+                <div className="size-20 rounded-full bg-yellow-400 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.4)]">
+                   <span className="material-symbols-rounded text-black text-4xl font-black">shopping_cart_checkout</span>
+                </div>
+                <div className="text-center">
+                   <h4 className="text-white font-black uppercase tracking-widest text-sm">Produto Adicionado</h4>
+                   <p className="text-zinc-500 text-[10px] font-bold uppercase mt-1">Pronto para o checkout!</p>
+                </div>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

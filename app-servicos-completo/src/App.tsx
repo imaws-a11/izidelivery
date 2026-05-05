@@ -4635,12 +4635,12 @@ const navigateSubView = (target: string) => {
                   <motion.div 
                     key="flash_list" 
                     initial={{ y: "100%" }} 
-                    animate={{ y: "10%" }} 
+                    animate={{ y: 0 }} 
                     exit={{ y: "100%" }} 
                     transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-                    className="fixed inset-x-0 bottom-0 top-0 z-[150] overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
+                    className="fixed inset-x-0 bottom-0 top-0 z-[500] overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
                   >
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full z-[160]" />
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full z-[510]" />
                     {renderFlashOffersList()}
                   </motion.div>
                 )}
@@ -4700,13 +4700,13 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {subView === "shipping_details" && (
-                  <motion.div key="shipping_details" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }} className="absolute inset-0 z-[170]">
+                  <motion.div key="shipping_details" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }} className="absolute inset-0 z-[500]">
                     <ShippingDetailsView />
                   </motion.div>
                 )}
 
                 {subView === "scheduled_checkout" && (
-                  <motion.div key="scheduled_checkout" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }} className="absolute inset-0 z-[170]">
+                  <motion.div key="scheduled_checkout" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }} className="absolute inset-0 z-[500]">
                     <ScheduledCheckoutView
                       transitData={transitData}
                       setTransitData={setTransitData}
@@ -4727,18 +4727,18 @@ const navigateSubView = (target: string) => {
                   <motion.div 
                     key="product_detail" 
                     initial={{ y: "100%" }} 
-                    animate={{ y: "10%" }} 
+                    animate={{ y: 0 }} 
                     exit={{ y: "100%" }} 
                     transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-                    className="fixed inset-x-0 bottom-0 top-0 z-[160] overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
+                    className="fixed inset-x-0 bottom-0 top-0 z-[500] overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
                   >
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full z-[170]" />
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full z-[510]" />
                     <ProductDetailView />
                   </motion.div>
                 )}
 
                 {subView === "experience_detail" && selectedExperience && (
-                  <motion.div key="exp_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[170]">
+                  <motion.div key="exp_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[500]">
                     <ExperienceDetailView 
                       item={selectedExperience} 
                       onBack={() => setSubView('explore_' + selectedExperience.category as any)} 
