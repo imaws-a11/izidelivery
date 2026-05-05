@@ -32,6 +32,7 @@ export default function TaxonomyCenter({ initialMode = 'assignment' }: { initial
   };
   const [isEditingGlobal, setIsEditingGlobal] = useState(initialMode === 'global');
   const [editingType, setEditingType] = useState<any>(null);
+  const [editorMode, setEditorMode] = useState<'grid' | 'organizer'>('grid');
   
   // States for the refined assignment flow
   const [tempStoreType, setTempStoreType] = useState<string | null>(null);
@@ -476,92 +477,218 @@ export default function TaxonomyCenter({ initialMode = 'assignment' }: { initial
                         </div>
                         <div>
                            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">Categorias de Serviços</h2>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Gerencie os ícones e cards que aparecem na Home do App</p>
+                           <div className="flex items-center gap-4 mt-2">
+                              <button 
+                                onClick={() => setEditorMode('grid')}
+                                className={`text-[10px] font-black uppercase tracking-widest transition-all ${editorMode === 'grid' ? 'text-emerald-500 underline decoration-2 underline-offset-4' : 'text-slate-400 hover:text-slate-600'}`}
+                              >
+                                Editor em Grid
+                              </button>
+                              <span className="text-slate-200 dark:text-slate-800">|</span>
+                              <button 
+                                onClick={() => setEditorMode('organizer')}
+                                className={`text-[10px] font-black uppercase tracking-widest transition-all ${editorMode === 'organizer' ? 'text-emerald-500 underline decoration-2 underline-offset-4' : 'text-slate-400 hover:text-slate-600'}`}
+                              >
+                                Organizador da Home
+                              </button>
+                           </div>
                         </div>
                      </div>
-                     <button 
-                       onClick={() => {
-                         setEditingType({ name: '', value: '', icon: 'category', description: '', is_active: true, parent_id: null });
-                       }}
-                       className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all"
-                     >
-                       <span className="material-symbols-outlined text-xl">add_circle</span>
-                       Nova Categoria Master
-                     </button>
+                     <div className="flex gap-4">
+                        <button 
+                          onClick={() => {
+                            setEditingType({ name: '', value: '', icon: 'category', description: '', is_active: true, parent_id: null });
+                          }}
+                          className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-xl">add_circle</span>
+                          Nova Categoria Master
+                        </button>
+                     </div>
                   </div>
 
-                  <Reorder.Group 
-                     axis="y" 
-                     values={orderedMasters} 
-                     onReorder={handleReorderMasters}
-                     className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
-                  >
-                     {orderedMasters.map(main => (
-                       <Reorder.Item 
-                         key={main.id} 
-                         value={main}
-                         className="bg-slate-50 dark:bg-slate-800 px-8 py-10 rounded-[40px] border border-slate-100 dark:border-slate-700/50 space-y-10 group hover:shadow-2xl hover:shadow-black/5 transition-all relative overflow-hidden cursor-grab active:cursor-grabbing"
+                  <AnimatePresence mode="wait">
+                     {editorMode === 'grid' ? (
+                       <motion.div 
+                         key="grid-view"
+                         initial={{ opacity: 0, scale: 0.95 }}
+                         animate={{ opacity: 1, scale: 1 }}
+                         exit={{ opacity: 0, scale: 0.95 }}
+                         className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
                        >
-                          <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-30" />
-                          
-                          <div className="flex items-center justify-between">
-                             <div className="flex items-center gap-4">
-                                <div className="size-14 rounded-3xl bg-white dark:bg-slate-700 flex items-center justify-center text-primary shadow-sm border border-slate-50 dark:border-slate-600">
-                                   <span className="flex items-center justify-center">{renderIcon(main.icon, 'text-3xl')}</span>
-                                </div>
-                                <div>
-                                   <span className="font-black text-[13px] uppercase tracking-tighter dark:text-white italic">{main.name}</span>
-                                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{main.value}</p>
-                                </div>
-                             </div>
-                             <div className="flex gap-2">
-                                <button onClick={() => setEditingType(main)} className="size-10 rounded-2xl bg-white dark:bg-slate-700 text-slate-400 hover:text-primary transition-all shadow-sm flex items-center justify-center hover:border-primary/30 border border-transparent">
-                                   <span className="material-symbols-outlined text-lg font-bold">edit</span>
-                                </button>
-                                <button onClick={() => handleDeleteEstablishmentType(main.id)} className="size-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-400 hover:text-rose-600 transition-all shadow-sm flex items-center justify-center border border-transparent hover:border-rose-500/30">
-                                   <span className="material-symbols-outlined text-lg">delete</span>
-                                </button>
-                             </div>
-                          </div>
-
-                          <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-inner">
-                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Prévia no App (Home)</p>
-                              <div className="flex flex-col items-center gap-2 w-20">
-                                 <div className="size-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm">
-                                    {renderIcon(main.icon, 'text-2xl text-slate-400')}
+                         {orderedMasters.map(main => (
+                           <div key={main.id} className="bg-slate-50 dark:bg-slate-800 px-8 py-10 rounded-[40px] border border-slate-100 dark:border-slate-700/50 space-y-10 group hover:shadow-2xl hover:shadow-black/5 transition-all relative overflow-hidden">
+                              <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-30" />
+                              
+                              <div className="flex items-center justify-between">
+                                 <div className="flex items-center gap-4">
+                                    <div className="size-14 rounded-3xl bg-white dark:bg-slate-700 flex items-center justify-center text-primary shadow-sm border border-slate-50 dark:border-slate-600">
+                                       <span className="flex items-center justify-center">{renderIcon(main.icon, 'text-3xl')}</span>
+                                    </div>
+                                    <div>
+                                       <span className="font-black text-[13px] uppercase tracking-tighter dark:text-white italic">{main.name}</span>
+                                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{main.value}</p>
+                                    </div>
                                  </div>
-                                 <span className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate w-full text-center">{main.name}</span>
+                                 <div className="flex gap-2">
+                                    <button onClick={() => setEditingType(main)} className="size-10 rounded-2xl bg-white dark:bg-slate-700 text-slate-400 hover:text-primary transition-all shadow-sm flex items-center justify-center hover:border-primary/30 border border-transparent">
+                                       <span className="material-symbols-outlined text-lg font-bold">edit</span>
+                                    </button>
+                                    <button onClick={() => handleDeleteEstablishmentType(main.id)} className="size-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-400 hover:text-rose-600 transition-all shadow-sm flex items-center justify-center border border-transparent hover:border-rose-500/30">
+                                       <span className="material-symbols-outlined text-lg">delete</span>
+                                    </button>
+                                 </div>
+                              </div>
+
+                              <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-inner">
+                                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Prévia no App (Home)</p>
+                                  <div className="flex flex-col items-center gap-2 w-20">
+                                     <div className="size-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm">
+                                        {renderIcon(main.icon, 'text-2xl text-slate-400')}
+                                     </div>
+                                     <span className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate w-full text-center">{main.name}</span>
+                                  </div>
+                               </div>
+
+                               <div className="space-y-4">
+                                 <div className="flex items-center justify-between ml-1 mb-2">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Especialidades Relacionadas</p>
+                                    <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{establishmentTypes.filter(t => t.parent_id === main.id).length}</span>
+                                 </div>
+                                 
+                                 <div className="flex flex-wrap gap-2">
+                                    {establishmentTypes.filter(t => t.parent_id === main.id).map(sub => (
+                                      <div key={sub.id} className="group/sub relative flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-all hover:bg-slate-900 hover:text-white dark:hover:bg-primary dark:hover:text-slate-900 hover:scale-105 active:scale-95">
+                                         <span className="text-[10px] font-black uppercase tracking-tight">{sub.name}</span>
+                                         <div className="hidden group-hover/sub:flex absolute -top-12 left-1/2 -translate-x-1/2 gap-2 bg-slate-900 rounded-2xl p-2 shadow-2xl z-20 border border-white/10 min-w-max">
+                                            <button onClick={(e) => { e.stopPropagation(); setEditingType(sub); }} className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-[9px] font-black uppercase hover:bg-primary hover:text-slate-900 transition-all">Editar</button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteEstablishmentType(sub.id); }} className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-500 text-[9px] font-black uppercase hover:bg-rose-500 hover:text-white transition-all">Excluir</button>
+                                         </div>
+                                      </div>
+                                    ))}
+                                    <button 
+                                      onClick={() => setEditingType({ name: '', value: '', icon: 'subdirectory_arrow_right', description: '', parent_id: main.id, is_active: true })}
+                                      className="flex items-center justify-center size-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-300 hover:border-primary hover:text-primary transition-all"
+                                      title="Nova Especialidade"
+                                    >
+                                       <span className="material-symbols-outlined text-xl">add</span>
+                                    </button>
+                                 </div>
                               </div>
                            </div>
-
-                           <div className="space-y-4">
-                             <div className="flex items-center justify-between ml-1 mb-2">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Especialidades Relacionadas</p>
-                                <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{establishmentTypes.filter(t => t.parent_id === main.id).length}</span>
+                         ))}
+                       </motion.div>
+                     ) : (
+                       <motion.div 
+                         key="organizer-view"
+                         initial={{ opacity: 0, x: 20 }}
+                         animate={{ opacity: 1, x: 0 }}
+                         exit={{ opacity: 0, x: -20 }}
+                         className="grid grid-cols-1 lg:grid-cols-12 gap-12"
+                       >
+                          {/* LISTA ORDENÁVEL (ESQUERDA) */}
+                          <div className="lg:col-span-7 space-y-6">
+                             <div className="p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[40px] border border-slate-100 dark:border-slate-800">
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 ml-2">Arraste para definir a prioridade</h3>
+                                
+                                <Reorder.Group 
+                                  axis="y" 
+                                  values={orderedMasters} 
+                                  onReorder={handleReorderMasters}
+                                  className="space-y-3"
+                                >
+                                   {orderedMasters.map(item => (
+                                     <Reorder.Item 
+                                       key={item.id} 
+                                       value={item}
+                                       className="flex items-center gap-4 p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors group"
+                                     >
+                                        <div className="size-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-300 group-hover:text-primary transition-colors">
+                                           <span className="material-symbols-outlined text-xl">drag_indicator</span>
+                                        </div>
+                                        <div className="size-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary shrink-0">
+                                           {renderIcon(item.icon, 'text-2xl')}
+                                        </div>
+                                        <div className="flex-1">
+                                           <p className="font-black text-[11px] uppercase tracking-tight italic text-slate-900 dark:text-white leading-none">{item.name}</p>
+                                           <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.value}</p>
+                                        </div>
+                                        <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-[8px] font-black text-slate-400 uppercase">
+                                           Ordem: {orderedMasters.indexOf(item) + 1}
+                                        </div>
+                                     </Reorder.Item>
+                                   ))}
+                                </Reorder.Group>
                              </div>
                              
-                             <div className="flex flex-wrap gap-2">
-                                {establishmentTypes.filter(t => t.parent_id === main.id).map(sub => (
-                                  <div key={sub.id} className="group/sub relative flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-all hover:bg-slate-900 hover:text-white dark:hover:bg-primary dark:hover:text-slate-900 hover:scale-105 active:scale-95">
-                                     <span className="text-[10px] font-black uppercase tracking-tight">{sub.name}</span>
-                                     <div className="hidden group-hover/sub:flex absolute -top-12 left-1/2 -translate-x-1/2 gap-2 bg-slate-900 rounded-2xl p-2 shadow-2xl z-20 border border-white/10 min-w-max">
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingType(sub); }} className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-[9px] font-black uppercase hover:bg-primary hover:text-slate-900 transition-all">Editar</button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteEstablishmentType(sub.id); }} className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-500 text-[9px] font-black uppercase hover:bg-rose-500 hover:text-white transition-all">Excluir</button>
-                                     </div>
-                                  </div>
-                                ))}
-                                <button 
-                                  onClick={() => setEditingType({ name: '', value: '', icon: 'subdirectory_arrow_right', description: '', parent_id: main.id, is_active: true })}
-                                  className="flex items-center justify-center size-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-300 hover:border-primary hover:text-primary transition-all"
-                                  title="Nova Especialidade"
-                                >
-                                   <span className="material-symbols-outlined text-xl">add</span>
-                                </button>
+                             <div className="p-8 bg-emerald-500/5 rounded-[40px] border border-emerald-500/10 flex items-center gap-6">
+                                <div className="size-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-500/20">
+                                   <span className="material-symbols-outlined">info</span>
+                                </div>
+                                <div>
+                                   <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Dica do Especialista</p>
+                                   <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1">A ordem definida aqui impacta diretamente a taxa de cliques (CTR) no aplicativo. Coloque os serviços de maior demanda no topo.</p>
+                                </div>
                              </div>
                           </div>
-                       </Reorder.Item>
-                     ))}
-                  </Reorder.Group>
+
+                          {/* SIMULADOR PHONE MOCKUP (DIREITA) */}
+                          <div className="lg:col-span-5 flex justify-center">
+                             <div className="w-[340px] h-[700px] bg-slate-950 rounded-[60px] p-4 border-[8px] border-slate-900 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative overflow-hidden ring-1 ring-white/10">
+                                {/* NOTCH */}
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-2xl z-20" />
+                                
+                                {/* CONTENT */}
+                                <div className="size-full bg-white dark:bg-slate-950 rounded-[44px] overflow-hidden flex flex-col pt-10">
+                                   {/* APP HEADER PREVIEW */}
+                                   <div className="px-6 py-4 flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                         <div className="size-8 rounded-full bg-primary" />
+                                         <div className="w-16 h-2 bg-slate-100 dark:bg-slate-800 rounded-full" />
+                                      </div>
+                                      <span className="material-symbols-outlined text-slate-300">shopping_cart</span>
+                                   </div>
+
+                                   <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 pb-20">
+                                      {/* BANNER MOCKUP */}
+                                      <div className="w-full h-32 bg-slate-100 dark:bg-slate-900 rounded-3xl" />
+                                      
+                                      <div className="space-y-4">
+                                         <div className="flex items-center justify-between">
+                                            <div className="w-24 h-3 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                                            <div className="w-10 h-2 bg-slate-100 dark:bg-slate-900 rounded-full" />
+                                         </div>
+                                         
+                                         {/* DYNAMIC GRID PREVIEW */}
+                                         <div className="grid grid-cols-2 gap-3">
+                                            {orderedMasters.map(item => (
+                                              <motion.div 
+                                                layoutId={`mockup-${item.id}`}
+                                                key={item.id} 
+                                                className="aspect-[4/3] bg-slate-50 dark:bg-slate-900 rounded-[28px] border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center gap-2 p-2"
+                                              >
+                                                 <div className="size-10 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-primary shadow-sm border border-slate-50 dark:border-slate-700">
+                                                    {renderIcon(item.icon, 'text-xl')}
+                                                 </div>
+                                                 <span className="text-[8px] font-black text-slate-900 dark:text-white uppercase tracking-tighter text-center line-clamp-1 px-1">{item.name}</span>
+                                              </motion.div>
+                                            ))}
+                                         </div>
+                                      </div>
+                                   </div>
+
+                                   {/* BOTTOM NAV MOCKUP */}
+                                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[80%] h-14 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[28px] border border-white/10 shadow-2xl flex items-center justify-around px-4">
+                                      <span className="material-symbols-outlined text-primary text-xl">home</span>
+                                      <span className="material-symbols-outlined text-slate-300 text-xl">explore</span>
+                                      <span className="material-symbols-outlined text-slate-300 text-xl">person</span>
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
                </motion.div>
              )}
            </AnimatePresence>
