@@ -28,10 +28,10 @@ import FinancialTab from './components/FinancialTab';
 import IziBlackTab from './components/IziBlackTab';
 import SupportTab from './components/SupportTab';
 import MerchantDashboardTab from './components/MerchantDashboardTab';
-import CategoriesTab from './components/CategoriesTab';
+import TaxonomyCenter from './components/TaxonomyCenter';
 import NotificationsTab from './components/NotificationsTab';
 import GamificationTab from './components/GamificationTab';
-import EstablishmentTypesTab from './components/EstablishmentTypesTab';
+// import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
 
 
@@ -264,9 +264,9 @@ function App() {
               {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
               {activeTab === 'merchant_studio' && <MerchantStudio />}
-              {activeTab === 'establishment_types' && <EstablishmentTypesTab />}
+              {activeTab === 'establishment_types' && <TaxonomyCenter initialMode="global" />}
               {(activeTab === 'financial' && userRole === 'merchant') && <MyStudioTab />}
-              {activeTab === 'categories' && userRole === 'admin' && <CategoriesTab />}
+              {activeTab === 'categories' && userRole === 'admin' && <TaxonomyCenter initialMode="assignment" />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}
               {activeTab === 'support' && <SupportTab />}

@@ -47,6 +47,7 @@ export const ExploreRestaurantsView = ({
     { label: "Mercados", icon: "shopping_cart" },
     { label: "Farmácias", icon: "medical_services" },
     { id: "bebidas", label: "Bebidas", icon: "local_bar" },
+    { label: "Gás e Água", icon: "local_fire_department" },
     { id: "pet", label: "Petshop", icon: "pets" },
   ];
 
@@ -143,6 +144,7 @@ export const ExploreRestaurantsView = ({
                     "Mercados": "explore_market",
                     "Farmácias": "explore_pharmacy",
                     "Bebidas": "explore_beverages",
+                    "Gás e Água": "explore_gas",
                     "Petshop": "explore_petshop"
                   };
                   const targetView = viewMap[svc.label];

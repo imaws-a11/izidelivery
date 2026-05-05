@@ -57,6 +57,9 @@ export const FloatingHeader: React.FC<FloatingHeaderProps> = ({
 
         {/* Carrinho / Sacola */}
         <motion.button
+          key={`cart-btn-${cartLength}`}
+          initial={cartLength > 0 ? { scale: 1.2 } : { scale: 1 }}
+          animate={{ scale: 1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onCartClick}
           className="size-12 rounded-2xl bg-yellow-400 flex items-center justify-center text-black relative shadow-2xl active:bg-yellow-500 transition-colors"
@@ -64,8 +67,8 @@ export const FloatingHeader: React.FC<FloatingHeaderProps> = ({
           <Icon name="shopping_bag" />
           {cartLength > 0 && (
             <motion.div 
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
+              initial={{ scale: 0, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
               className="absolute -top-1 -right-1 bg-black text-white size-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-yellow-400"
             >
               {cartLength}

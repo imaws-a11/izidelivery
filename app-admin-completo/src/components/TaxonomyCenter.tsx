@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
 import { toastSuccess, toastError } from '../lib/useToast';
 
-export default function CategoriesTab() {
+export default function TaxonomyCenter({ initialMode = 'assignment' }: { initialMode?: 'assignment' | 'global' }) {
   const {
     merchantsList,
     establishmentTypes,
@@ -30,7 +30,7 @@ export default function CategoriesTab() {
     }
     return <span className={`material-symbols-outlined ${className}`}>{icon}</span>;
   };
-  const [isEditingGlobal, setIsEditingGlobal] = useState(false);
+  const [isEditingGlobal, setIsEditingGlobal] = useState(initialMode === 'global');
   const [editingType, setEditingType] = useState<any>(null);
   
   // States for the refined assignment flow
@@ -63,6 +63,10 @@ export default function CategoriesTab() {
     }
   }, [selectedMerchantId]);
 
+  useEffect(() => {
+    setIsEditingGlobal(initialMode === 'global');
+  }, [initialMode]);
+
   const [isSavingAssignment, setIsSavingAssignment] = useState(false);
 
   const handleSaveAssignment = async () => {
@@ -84,7 +88,53 @@ export default function CategoriesTab() {
     }
   };
 
-  const getMainCategories = () => establishmentTypes.filter(t => !t.parent_id);
+  const getMainCategories = () => establishmentTypes.filter(t => !t.parent_id).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  
+  const handleMoveMaster = async (item: any, direction: 'up' | 'down') => {
+    const masters = getMainCategories();
+    const index = masters.findIndex(m => m.id === item.id);
+    if (index === -1) return;
+
+    const newMasters = [...masters];
+    if (direction === 'up' && index > 0) {
+      const temp = newMasters[index].sort_order;
+      newMasters[index].sort_order = newMasters[index - 1].sort_order - 1;
+      // Garantir que todos tenham ordens distintas e crescentes
+      await handleUpdateEstablishmentType(newMasters[index]);
+    } else if (direction === 'down' && index < newMasters.length - 1) {
+      newMasters[index].sort_order = newMasters[index + 1].sort_order + 1;
+      await handleUpdateEstablishmentType(newMasters[index]);
+    }
+    fetchEstablishmentTypes();
+  };
+
+  const [orderedMasters, setOrderedMasters] = useState<any[]>([]);
+
+  useEffect(() => {
+    setOrderedMasters(getMainCategories());
+  }, [establishmentTypes]);
+
+  const handleReorderMasters = async (newList: any[]) => {
+    setOrderedMasters(newList);
+    // Atualização otimista local já foi feita pelo Reorder.Group
+    // Persistir no banco de forma assíncrona
+    try {
+      const updates = newList.map((item, index) => ({
+        ...item,
+        sort_order: index
+      }));
+      
+      // Para evitar flood de rede, só atualizamos se a ordem mudou de fato
+      for (const item of updates) {
+        const original = establishmentTypes.find(t => t.id === item.id);
+        if (original && original.sort_order !== item.sort_order) {
+           await handleUpdateEstablishmentType(item);
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao persistir nova ordem:", err);
+    }
+  };
   const getSubcategories = (parentValue: string) => {
     const parent = establishmentTypes.find(p => p.value === parentValue);
     if (!parent) return [];
@@ -110,15 +160,15 @@ export default function CategoriesTab() {
             onClick={() => setIsEditingGlobal(false)}
             className={`px-8 py-3.5 rounded-[20px] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${!isEditingGlobal ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xl shadow-black/5' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            <span className="material-symbols-outlined text-lg">storefront</span>
-            Atribuição Lojistas
+            <span className="material-symbols-outlined text-lg">link</span>
+            Vincular Lojistas
           </button>
           <button 
             onClick={() => setIsEditingGlobal(true)}
             className={`px-8 py-3.5 rounded-[20px] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${isEditingGlobal ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xl shadow-black/5' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            <span className="material-symbols-outlined text-lg">settings_suggest</span>
-            Editor Global
+            <span className="material-symbols-outlined text-lg">grid_view</span>
+            Categorias de Serviços (App)
           </button>
         </div>
       </div>
@@ -248,14 +298,19 @@ export default function CategoriesTab() {
                                    {isSelected && (
                                       <motion.div layoutId={`main-cat-bg-${t.id}`} className="absolute inset-0 bg-primary pointer-events-none" />
                                    )}
+                                   
+                                   <div className="absolute top-4 right-4 flex gap-2 z-20">
+                                      {isSelected && <span className="material-symbols-outlined text-lg text-slate-900">check_circle</span>}
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); setEditingType(t); }}
+                                        className={`size-8 rounded-lg flex items-center justify-center transition-all ${isSelected ? 'bg-slate-900/10 text-slate-900 hover:bg-slate-900/20' : 'bg-slate-200/50 text-slate-400 hover:text-primary opacity-0 group-hover:opacity-100'}`}
+                                      >
+                                         <span className="material-symbols-outlined text-base">edit</span>
+                                      </button>
+                                   </div>
+
                                    <span className={`relative z-10 transition-transform group-hover:scale-110 flex items-center justify-center ${isSelected ? 'text-slate-900' : 'text-slate-300 dark:text-slate-600'}`}>{renderIcon(t.icon, 'text-4xl')}</span>
                                    <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
-                                   
-                                   {isSelected && (
-                                      <div className="absolute top-4 right-4 z-10">
-                                         <span className="material-symbols-outlined text-lg">check_circle</span>
-                                      </div>
-                                   )}
                                  </button>
                                );
                              })}
@@ -299,21 +354,43 @@ export default function CategoriesTab() {
                                           <span className={`relative z-10 flex items-center justify-center ${isSubSelected ? 'text-white' : 'text-slate-300 dark:text-slate-600'}`}>{renderIcon(t.icon, 'text-4xl')}</span>
                                           <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
                                           
-                                          {isSubSelected && (
-                                             <div className="absolute top-4 right-4 z-10">
-                                                <span className="material-symbols-outlined text-lg">verified</span>
-                                             </div>
-                                          )}
+                                          <div className="absolute top-4 right-4 flex gap-2 z-20">
+                                             {isSubSelected && <span className="material-symbols-outlined text-lg text-white">verified</span>}
+                                             <button 
+                                               onClick={(e) => { e.stopPropagation(); setEditingType(t); }}
+                                               className={`size-8 rounded-lg flex items-center justify-center transition-all ${isSubSelected ? 'bg-white/20 text-white hover:bg-white/40' : 'bg-slate-200/50 text-slate-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100'}`}
+                                             >
+                                                <span className="material-symbols-outlined text-base">edit</span>
+                                             </button>
+                                          </div>
                                        </button>
                                      );
                                    })}
+                                   <button 
+                                     onClick={() => {
+                                       const parent = establishmentTypes.find(p => p.value === tempStoreType);
+                                       setEditingType({ name: '', value: '', icon: 'subdirectory_arrow_right', description: '', parent_id: parent?.id || null, is_active: true });
+                                     }}
+                                     className="flex flex-col items-center justify-center gap-4 p-8 rounded-[32px] border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-300 hover:border-emerald-500 hover:text-emerald-500 transition-all group"
+                                   >
+                                      <span className="material-symbols-outlined text-4xl group-hover:scale-110 transition-transform">add_circle</span>
+                                      <span className="font-black text-[10px] uppercase tracking-widest">Nova Especialidade</span>
+                                   </button>
                                   
                                   {getSubcategories(tempStoreType).length === 0 && (
                                     <div className="col-span-full py-16 flex flex-col items-center gap-4 bg-slate-50 dark:bg-slate-800/50 rounded-[40px] border-2 border-dashed border-slate-200 dark:border-slate-800">
                                        <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-700">inventory_2</span>
                                        <div className="text-center">
                                           <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Nenhuma especialidade disponível</p>
-                                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Vá em "Editor Global" para criar subcategorias para {tempStoreType}</p>
+                                          <button 
+                                             onClick={() => {
+                                               const parent = establishmentTypes.find(p => p.value === tempStoreType);
+                                               setEditingType({ name: '', value: '', icon: 'subdirectory_arrow_right', description: '', parent_id: parent?.id || null, is_active: true });
+                                             }}
+                                             className="mt-4 px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all"
+                                           >
+                                              Criar Agora
+                                           </button>
                                        </div>
                                     </div>
                                   )}
@@ -398,13 +475,13 @@ export default function CategoriesTab() {
                            <span className="material-symbols-outlined text-3xl">settings_applications</span>
                         </div>
                         <div>
-                           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">Matriz de Taxonomia</h2>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Dicionário global de classes e sub-classes</p>
+                           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">Categorias de Serviços</h2>
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Gerencie os ícones e cards que aparecem na Home do App</p>
                         </div>
                      </div>
                      <button 
                        onClick={() => {
-                         setEditingType({ name: '', value: '', icon: 'category', is_active: true, parent_id: null });
+                         setEditingType({ name: '', value: '', icon: 'category', description: '', is_active: true, parent_id: null });
                        }}
                        className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all"
                      >
@@ -413,9 +490,18 @@ export default function CategoriesTab() {
                      </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                     {getMainCategories().map(main => (
-                       <div key={main.id} className="bg-slate-50 dark:bg-slate-800 px-8 py-10 rounded-[40px] border border-slate-100 dark:border-slate-700/50 space-y-10 group hover:shadow-2xl hover:shadow-black/5 transition-all relative overflow-hidden">
+                  <Reorder.Group 
+                     axis="y" 
+                     values={orderedMasters} 
+                     onReorder={handleReorderMasters}
+                     className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
+                  >
+                     {orderedMasters.map(main => (
+                       <Reorder.Item 
+                         key={main.id} 
+                         value={main}
+                         className="bg-slate-50 dark:bg-slate-800 px-8 py-10 rounded-[40px] border border-slate-100 dark:border-slate-700/50 space-y-10 group hover:shadow-2xl hover:shadow-black/5 transition-all relative overflow-hidden cursor-grab active:cursor-grabbing"
+                       >
                           <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-30" />
                           
                           <div className="flex items-center justify-between">
@@ -438,7 +524,17 @@ export default function CategoriesTab() {
                              </div>
                           </div>
 
-                          <div className="space-y-4">
+                          <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-inner">
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Prévia no App (Home)</p>
+                              <div className="flex flex-col items-center gap-2 w-20">
+                                 <div className="size-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    {renderIcon(main.icon, 'text-2xl text-slate-400')}
+                                 </div>
+                                 <span className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate w-full text-center">{main.name}</span>
+                              </div>
+                           </div>
+
+                           <div className="space-y-4">
                              <div className="flex items-center justify-between ml-1 mb-2">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Especialidades Relacionadas</p>
                                 <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{establishmentTypes.filter(t => t.parent_id === main.id).length}</span>
@@ -455,7 +551,7 @@ export default function CategoriesTab() {
                                   </div>
                                 ))}
                                 <button 
-                                  onClick={() => setEditingType({ name: '', value: '', icon: 'subdirectory_arrow_right', parent_id: main.id, is_active: true })}
+                                  onClick={() => setEditingType({ name: '', value: '', icon: 'subdirectory_arrow_right', description: '', parent_id: main.id, is_active: true })}
                                   className="flex items-center justify-center size-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-300 hover:border-primary hover:text-primary transition-all"
                                   title="Nova Especialidade"
                                 >
@@ -463,9 +559,9 @@ export default function CategoriesTab() {
                                 </button>
                              </div>
                           </div>
-                       </div>
+                       </Reorder.Item>
                      ))}
-                  </div>
+                  </Reorder.Group>
                </motion.div>
              )}
            </AnimatePresence>
@@ -530,6 +626,17 @@ export default function CategoriesTab() {
                    </div>
 
                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Descrição Curta</label>
+                       <textarea 
+                         className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[32px] px-8 py-6 font-bold text-sm focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner resize-none"
+                         value={editingType.description || ''}
+                         onChange={e => setEditingType({...editingType, description: e.target.value})}
+                         placeholder="Ex: Estabelecimentos focados em alimentação e bebidas..."
+                         rows={3}
+                       />
+                    </div>
+
+                   <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Ícone Representativo</label>
                       <div className="flex flex-col gap-4 bg-slate-50 dark:bg-slate-800 p-6 rounded-[32px] border border-slate-100 dark:border-slate-700">
                          <div className="flex items-center gap-5">
@@ -575,6 +682,28 @@ export default function CategoriesTab() {
                          </div>
                       </div>
                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Identificador (Slug)</label>
+                          <input 
+                            value={editingType.value}
+                            onChange={e => setEditingType({ ...editingType, value: e.target.value })}
+                            className="w-full h-16 bg-slate-50 dark:bg-slate-800 rounded-[28px] px-8 font-bold text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                            placeholder="ex: restaurante"
+                          />
+                       </div>
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Ordem de Exibição</label>
+                          <input 
+                            type="number"
+                            value={editingType.sort_order || 0}
+                            onChange={e => setEditingType({ ...editingType, sort_order: parseInt(e.target.value) })}
+                            className="w-full h-16 bg-slate-50 dark:bg-slate-800 rounded-[28px] px-8 font-bold text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                            placeholder="0"
+                          />
+                       </div>
+                    </div>
 
                     <div className="space-y-3">
                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Disponibilidade</label>

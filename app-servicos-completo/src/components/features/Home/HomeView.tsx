@@ -85,12 +85,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
       setActiveService(title);
       const slug = (cat.value || cat.id || "").toLowerCase();
       
-      if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
+      if (['izi_envios', 'fruit', 'hortifruti'].includes(slug)) {
         navigateSubView("explore_izi_envios");
         return;
       }
 
-      if (['gas', 'gas_agua', 'agua', 'gas_e_agua', 'viagem', 'mobilidade', 'corridas', 'taxi'].includes(slug)) {
+      if (['viagens', 'viagem', 'mobilidade'].includes(slug)) {
         navigateSubView("explore_envios");
         return;
       }
@@ -107,6 +107,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
         navigateSubView(`explore_petshop`);
       } else if (['bakery', 'padaria', 'confeitaria', 'pães'].includes(slug)) {
         navigateSubView(`explore_bakery`);
+      } else if (['gas', 'gas_agua', 'agua', 'gas_e_agua'].includes(slug)) {
+        navigateSubView(`explore_gas`);
       } else {
         if (setExploreCategoryState) {
           setExploreCategoryState({
@@ -121,64 +123,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
       }
     };
 
-    // Ordem: Restaurantes > Mercado > Farmácia > Bebidas > Gás e Água > Izi Envios > Viagens
-    const priorityOrder = [
-      ['restaurants', 'food', 'restaurante', 'restaurantes'],
-      ['markets', 'mercado', 'mercados', 'market'],
-      ['pharmacy', 'farmacia', 'farmacias'],
-      ['beverages', 'bebidas', 'bebida'],
-      ['gas', 'gas_agua', 'agua', 'gas_e_agua'],
-      ['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras'],
-      ['viagem', 'mobilidade', 'corridas', 'taxi'],
-    ];
 
-    // Slugs que ficam no menu lateral (Ver Mais) em vez do grid
-    const sideMenuSlugs = ['petshop', 'pets', 'pet_shop', 'pet', 'padaria', 'bakery', 'confeitaria', 'butcher', 'acougue', 'carnes'];
-
-    const getPriority = (slug: string) => {
-      const s = (slug || '').toLowerCase();
-      for (let i = 0; i < priorityOrder.length; i++) {
-        if (priorityOrder[i].includes(s)) return i;
-      }
-      return 999;
-    };
 
     const dynamicServices = establishmentTypes
-      .filter((t: any) => {
-        if (t.is_active === false) return false;
-        const slug = (t.value || t.id || '').toLowerCase();
-        // Excluir petshop e outros do grid principal
-        return !sideMenuSlugs.includes(slug);
-      })
-      .map((t: any) => {
-        const slug = (t.value || t.id || "").toLowerCase();
-        if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
-          return { ...t, name: 'Izi Envios', icon: 'package_2', _exclusive: true, action: () => handleCategoryClick(t) };
-        }
-        if (['gas', 'gas_agua', 'agua', 'gas_e_agua'].includes(slug)) {
-          return { ...t, name: 'Gás e Água', icon: 'local_fire_department', action: () => handleCategoryClick(t) };
-        }
-        if (['viagem', 'mobilidade', 'corridas', 'taxi'].includes(slug)) {
-          return { ...t, name: 'Viagens', icon: 'directions_car', _exclusive: true, action: () => handleCategoryClick(t) };
-        }
-        return {
-          ...t,
-          action: () => handleCategoryClick(t)
-        };
-      })
-      .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
-      .slice(0, 7);
-
-    // Garantir que Izi Envios e Viagens existam, mesmo que não venham do banco
-    const hasIziEnvios = dynamicServices.some((s: any) => s.name === 'Izi Envios');
-    const hasViagens = dynamicServices.some((s: any) => s.name === 'Viagens');
-    const extraServices: any[] = [];
-    if (!hasIziEnvios) extraServices.push({ id: 'izi_envios_fixed', name: 'Izi Envios', icon: 'package_2', _exclusive: true, action: () => navigateSubView('explore_izi_envios') });
-    if (!hasViagens) extraServices.push({ id: 'viagens_fixed', name: 'Viagens', icon: 'directions_car', _exclusive: true, action: () => navigateSubView('explore_envios') });
+      .filter((t: any) => t.is_active !== false && !t.parent_id)
+      .map((t: any) => ({
+        ...t,
+        action: () => handleCategoryClick(t)
+      }))
+      .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0));
 
     const displayServices = [
-      ...dynamicServices,
-      ...extraServices,
+      ...dynamicServices.slice(0, 9),
       { id: 'ver_mais', name: 'Ver mais', icon: 'grid_view', action: () => setIsExploreOpen(true) }
     ].slice(0, 10);
 
@@ -437,12 +393,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                 onClick={s.action}
                                 className="flex flex-col items-center gap-2 cursor-pointer group relative"
                               >
-                                {/* Badge EXCLUSIVO */}
-                                {isExclusive && (
-                                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
-                                    <span className="bg-yellow-400 text-black text-[5px] font-black px-1.5 py-[1px] rounded-full uppercase tracking-widest whitespace-nowrap shadow-sm">Exclusivo</span>
-                                  </div>
-                                )}
+                                {/* Badge EXCLUSIVO removido a pedido do usuário */}
                                 <div className={`size-16 rounded-3xl flex items-center justify-center border shadow-sm transition-all relative overflow-hidden active:scale-90 ${
                                   isExclusive 
                                     ? 'bg-gradient-to-br from-yellow-400 via-yellow-300 to-amber-400 border-yellow-300 shadow-lg shadow-yellow-400/30 group-hover:shadow-xl group-hover:shadow-yellow-400/40' 
@@ -573,13 +524,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         </div>
                     </section>
 
-                    {/* RESTAURANTES LISTA */}
-                    <section>
+                    <section className="pb-20">
                         <div className="flex items-center justify-between mb-8">
                           <h3 className="text-2xl font-black text-zinc-900 uppercase tracking-tighter">Explorar Lojas</h3>
                         </div>
                         <div className="space-y-8">
-                          {ESTABLISHMENTS.slice(6, 16).map((shop, i) => (
+                          {ESTABLISHMENTS.map((shop, i) => (
                             <motion.div
                               key={shop.id || i}
                               initial={{ opacity: 0, y: 20 }}

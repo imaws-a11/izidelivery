@@ -107,6 +107,8 @@ interface AppContextData {
   setIziCoins: (coins: number) => void;
   paymentMethod: string;
   setPaymentMethod: (method: string) => void;
+  triggerCartAnimation: (e: any, img: string) => void;
+  cartAnimations: any[];
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -148,6 +150,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [lightningData, setLightningData] = useState<any>(null);
+  const [cartAnimations, setCartAnimations] = useState<any[]>([]);
+
+  const triggerCartAnimation = (e: any, img: string) => {
+    if (!e) return;
+    const id = Date.now().toString() + Math.random();
+    setCartAnimations(prev => [...prev, { id, x: e.clientX, y: e.clientY, img }]);
+    setTimeout(() => {
+      setCartAnimations(prev => prev.filter(a => a.id !== id));
+    }, 800);
+  };
 
   // Localização
   const [userLocation, setUserLocation] = useState<any>({ lat: null, lng: null, loading: true, error: null, address: "" });
@@ -503,7 +515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       marketConditions, fetchMarketData, routePolyline, setRoutePolyline, distanceValueKm, setDistanceValueKm,
       nearbyDrivers, setNearbyDrivers, nearbyDriversCount, setNearbyDriversCount,
       handleConfirmMobility, selectedCard, setSelectedCard, walletBalance, setWalletBalance, iziCoins, setIziCoins,
-      paymentMethod, setPaymentMethod
+      paymentMethod, setPaymentMethod, triggerCartAnimation, cartAnimations
     }}>
       {children}
     </AppContext.Provider>

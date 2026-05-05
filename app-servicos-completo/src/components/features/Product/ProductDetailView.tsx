@@ -11,7 +11,8 @@ export const ProductDetailView = () => {
     selectedShop, 
     activeService, 
     setSubView, 
-    showToast 
+    showToast,
+    triggerCartAnimation
   } = useApp();
   
   const { cart, setCart } = useOrder();
@@ -174,12 +175,13 @@ export const ProductDetailView = () => {
   const totalProductPrice = selectedItem.price + addonsPrice;
 
   return (
-    <div className="absolute inset-0 z-[70] bg-[#F8F9FA] flex flex-col hide-scrollbar overflow-y-auto">
-      <div className="relative w-full h-[40vh] bg-cover bg-center shrink-0" style={{ backgroundImage: "url('" + itemImage + "')" }}>
-        <div className="absolute inset-0 bg-gradient-to-t from-[#F8F9FA] via-transparent to-black/20"></div>
-        <header className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
-          <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl text-zinc-900 border border-white/40 shadow-sm active:scale-90 transition-all">
-            <Icon name="arrow_back" />
+    <div className="h-full bg-[#F8F9FA] flex flex-col hide-scrollbar overflow-y-auto">
+      <div className="relative w-full h-[35vh] bg-cover bg-center shrink-0" style={{ backgroundImage: "url('" + itemImage + "')" }}>
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/20"></div>
+        <header className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between z-20">
+          <div className="size-1 w-1" />
+          <button onClick={handleBack} className="flex items-center justify-center w-10 h-10 bg-black/10 backdrop-blur-xl rounded-full text-black border border-white/40 shadow-sm active:scale-90 transition-all">
+            <span className="material-symbols-rounded">close</span>
           </button>
         </header>
       </div>
@@ -297,7 +299,7 @@ export const ProductDetailView = () => {
 
             <button 
               className="flex-1 flex flex-col items-center justify-center z-10 h-full"
-              onClick={() => {
+            onClick={(e) => {
                 const details = buildCartItemDetails(selectedItem, selectedOptions);
                 const items = Array.from({ length: tempQuantity }, (_, i) => ({ 
                   ...selectedItem, 
@@ -306,6 +308,7 @@ export const ProductDetailView = () => {
                   cartId: selectedItem.id + "-" + Date.now() + "-" + i 
                 }));
                 setCart([...cart, ...items]);
+                triggerCartAnimation(e, selectedItem.img || "");
                 handleBack();
                 showToast("Item adicionado!", "success");
               }} 

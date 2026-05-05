@@ -115,6 +115,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
     { label: "Mercados", icon: "shopping_cart" },
     { label: "Farmácias", icon: "medical_services" },
     { label: "Bebidas", icon: "local_bar" },
+    { label: "Gás e Água", icon: "local_fire_department" },
     { label: "Petshop", icon: "pets" },
   ];
 
@@ -162,6 +163,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
                     "Mercados": "explore_market",
                     "Farmácias": "explore_pharmacy",
                     "Bebidas": "explore_beverages",
+                    "Gás e Água": "explore_gas",
                     "Petshop": "explore_petshop"
                   };
                   const targetView = viewMap[svc.label];

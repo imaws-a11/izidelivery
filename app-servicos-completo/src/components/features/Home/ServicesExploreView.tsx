@@ -27,7 +27,12 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
     const slug = (cat.value || cat.id || "").toLowerCase();
     
     // Viagem é uma rota nativa específica
-    if (['izi_envios', 'viagem', 'mobilidade', 'corridas', 'taxi', 'viagens'].includes(slug)) {
+    if (['izi_envios', 'fruit', 'hortifruti'].includes(slug)) {
+      navigateSubView("explore_izi_envios");
+      return;
+    }
+
+    if (['viagens', 'viagem', 'mobilidade'].includes(slug)) {
       navigateSubView("explore_envios");
       return;
     }
@@ -63,43 +68,17 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
     }
   };
 
-  const priorityOrder = [
-    ['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras'],
-    ['gas', 'gas_agua', 'agua', 'viagem', 'mobilidade'],
-    ['padaria', 'bakery', 'confeitaria'],
-    ['restaurants', 'food', 'restaurante', 'restaurantes'],
-    ['markets', 'mercado', 'mercados', 'market'],
-    ['pharmacy', 'farmacia', 'farmacias'],
-    ['beverages', 'bebidas', 'bebida'],
-    ['petshop', 'pets', 'pet_shop'],
-    ['butcher', 'acougue', 'carnes']
-  ];
 
-  const getPriority = (slug: string) => {
-    const s = (slug || '').toLowerCase();
-    for (let i = 0; i < priorityOrder.length; i++) {
-      if (priorityOrder[i].includes(s)) return i;
-    }
-    return 999;
-  };
 
   const dynamicCategories = establishmentTypes
-    .filter((t: any) => t.is_active !== false)
-    .sort((a: any, b: any) => getPriority(a.value || a.id) - getPriority(b.value || b.id))
-    .map((t: any) => {
-      const slug = (t.value || t.id || "").toLowerCase();
-      if (['fruit', 'hortifruti', 'hortifrutti', 'frutas', 'verduras', 'legumes'].includes(slug)) {
-        return { ...t, name: 'Izi Envios', icon: 'package_2', action: () => handleCategoryClick(t) };
-      }
-      return {
-        ...t,
-        action: () => handleCategoryClick(t)
-      };
-    });
+    .filter((t: any) => t.is_active !== false && !t.parent_id)
+    .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map((t: any) => ({
+      ...t,
+      action: () => handleCategoryClick(t)
+    }));
 
   const highlights = [
-    { id: 'taxi', label: 'Viagens', icon: 'directions_car', color: 'bg-zinc-950', textColor: 'text-yellow-500', route: 'explore_envios' },
-    { id: 'envios', label: 'Izi Envios', icon: 'package_2', color: 'bg-zinc-100', textColor: 'text-black', route: 'explore_izi_envios', isNew: true },
     { id: 'clube', label: 'Clube', icon: 'loyalty', color: 'bg-zinc-900', textColor: 'text-white' },
     { id: 'promos', label: 'Promoções', icon: 'percent', color: 'bg-emerald-500', textColor: 'text-white' },
     { id: 'favoritos', label: 'Favoritos', icon: 'favorite', color: 'bg-rose-500', textColor: 'text-white' },

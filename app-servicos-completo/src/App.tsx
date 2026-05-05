@@ -162,7 +162,8 @@ function App() {
     selectedCard, setSelectedCard,
     walletBalance, setWalletBalance, iziCoins, setIziCoins,
     paymentMethod, setPaymentMethod,
-    savedCards, fetchSavedCards, handleDeleteCard
+    savedCards, fetchSavedCards, handleDeleteCard,
+    triggerCartAnimation, cartAnimations
   } = useApp();
 
   // Injeta função global de navegação para componentes modulares
@@ -176,8 +177,7 @@ function App() {
 
   const { unreadCount } = useNotification();
 
-  const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
-  const userLevel = useMemo(() => Math.floor((userXP || 0) / 100) + 1, [userXP]);
+   const userLevel = useMemo(() => Math.floor((userXP || 0) / 100) + 1, [userXP]);
   const activeOrdersCount = useMemo(() => 
     orders.filter(o => o.status && !["concluido", "cancelado"].includes(o.status)).length, 
   [orders]);
@@ -210,13 +210,7 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const triggerCartAnimation = (e: React.MouseEvent, img: string) => {
-    const id = Date.now().toString() + Math.random();
-    setCartAnimations(prev => [...prev, { id, x: e.clientX, y: e.clientY, img }]);
-    setTimeout(() => {
-      setCartAnimations(prev => prev.filter(a => a.id !== id));
-    }, 800);
-  };
+
 
   const [showSplash, setShowSplash] = useState(true);
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
@@ -3333,26 +3327,26 @@ const navigateSubView = (target: string) => {
     }
 
     return (
-      <div className="absolute inset-0 z-[100] bg-white text-zinc-900 flex flex-col hide-scrollbar overflow-y-auto pb-10">
-        {/* HEADER TRANSPARENTE SEM FUNDO */}
-        <header className="absolute top-0 left-0 right-0 z-[130] p-6 flex items-center gap-6 pointer-events-none">
+      <div className="h-full bg-white text-zinc-900 flex flex-col hide-scrollbar overflow-y-auto pb-10">
+        {/* HEADER BOTTOM SHEET */}
+        <header className="shrink-0 p-6 pt-10 flex items-center justify-between">
+           <div>
+              <h2 className="text-3xl font-black text-black uppercase tracking-tighter leading-none italic">Oferta</h2>
+              <p className="text-[9px] text-zinc-400 font-black uppercase tracking-[0.2em] mt-1">Exclusiva Izi Flash</p>
+           </div>
            <button 
             onClick={() => {
               setSubView("none" as any);
               setSelectedItem(null);
             }} 
-            className="size-12 rounded-2xl bg-black/5 border border-black/5 flex items-center justify-center text-black active:scale-90 transition-all pointer-events-auto"
+            className="size-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 active:scale-90 transition-all"
           >
-            <Icon name="arrow_back_ios_new" className="text-xl" />
+            <span className="material-symbols-rounded text-xl">close</span>
           </button>
         </header>
 
-        <main className="flex-1 space-y-10 pb-20">
-          {/* HERO INFO */}
-          <section className="pt-24 px-8 flex flex-col items-center text-center">
-             <span className="text-yellow-600 text-[10px] font-black uppercase tracking-[0.5em] mb-4">Oferta Izi Flash</span>
-             <h1 className="text-4xl font-black tracking-tighter uppercase leading-none mb-8">Exclusiva</h1>
-
+        <main className="flex-1 space-y-6 pb-20">
+          <section className="px-8 flex flex-col items-center text-center">
              {/* Timer Clean */}
              {displayDeals.length > 0 && displayDeals[0].expires_at && (
                <div className="bg-zinc-50 border border-zinc-100 p-8 rounded-[40px] shadow-sm mb-4">
@@ -3395,7 +3389,10 @@ const navigateSubView = (target: string) => {
                     </div>
                     
                     <button 
-                      onClick={() => handleAddToCart(deal)}
+                      onClick={(e) => {
+                        handleAddToCart(deal, e);
+                        showToast("Item adicionado!", "success");
+                      }}
                       className="w-full h-20 bg-black text-yellow-400 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4"
                     >
                       Adicionar ao Carrinho
@@ -4590,13 +4587,13 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {subView === "explore_gas" && (
-                  <motion.div key="explore-gas" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-gas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <GasWaterExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_bakery" && (
-                  <motion.div key="explore-bakery" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
+                  <motion.div key="explore-bakery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
                     <BakeryExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
@@ -4619,14 +4616,41 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
 
+                {/* BACKDROP PARA BOTTOM SHEETS (Flash, Product, Exclusive) */}
+                {(subView === "flash_offers" || subView === "exclusive_offer" || subView === "product" || subView === "product_detail") && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setSubView("none" as any)}
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[145]"
+                  />
+                )}
+
                 {subView === "flash_offers" && (
-                  <motion.div key="flash_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[150]">
+                  <motion.div 
+                    key="flash_list" 
+                    initial={{ y: "100%" }} 
+                    animate={{ y: "10%" }} 
+                    exit={{ y: "100%" }} 
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }} 
+                    className="fixed inset-x-0 bottom-0 top-0 z-[150] overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
+                  >
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full z-[160]" />
                     {renderFlashOffersList()}
                   </motion.div>
                 )}
 
                 {subView === "exclusive_offer" && (
-                  <motion.div key="exclusive_v" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[160]">
+                  <motion.div 
+                    key="exclusive_v" 
+                    initial={{ y: "100%" }} 
+                    animate={{ y: "5%" }} 
+                    exit={{ y: "100%" }} 
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }} 
+                    className="fixed inset-x-0 bottom-0 top-0 z-[160] overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
+                  >
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full z-[170]" />
                     {renderExclusiveOffer()}
                   </motion.div>
                 )}
@@ -4696,7 +4720,15 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {(subView === "product" || subView === "product_detail") && (
-                  <motion.div key="product_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
+                  <motion.div 
+                    key="product_detail" 
+                    initial={{ y: "100%" }} 
+                    animate={{ y: "10%" }} 
+                    exit={{ y: "100%" }} 
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }} 
+                    className="fixed inset-x-0 bottom-0 top-0 z-[160] overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
+                  >
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full z-[170]" />
                     <ProductDetailView />
                   </motion.div>
                 )}

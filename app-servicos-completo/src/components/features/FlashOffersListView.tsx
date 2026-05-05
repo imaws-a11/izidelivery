@@ -31,36 +31,25 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
   }, []);
 
   return (
-    <motion.div 
-      initial={{ y: '100%' }}
-      animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+    <div 
       ref={scrollContainerRef}
-      className="bg-white absolute inset-0 z-[120] flex flex-col hide-scrollbar overflow-y-auto pb-10"
+      className="bg-white h-full flex flex-col hide-scrollbar overflow-y-auto pb-10"
     >
-      {/* HEADER TRANSPARENTE SEM FUNDO */}
-      <header className="absolute top-0 left-0 right-0 z-[130] p-6 flex items-center gap-6 pointer-events-none">
+      {/* HEADER BOTTOM SHEET */}
+      <header className="shrink-0 p-6 pt-10 flex items-center justify-between">
+         <div>
+            <h1 className="text-3xl font-black text-black uppercase tracking-tighter leading-none italic">Izi Flash</h1>
+            <p className="text-[9px] text-zinc-400 font-black uppercase tracking-[0.2em] mt-1">Ofertas Relâmpago Ativas</p>
+         </div>
          <button 
           onClick={() => setSubView("none")}
-          className="size-12 rounded-2xl bg-black/5 border border-black/5 flex items-center justify-center text-black active:scale-90 transition-all pointer-events-auto"
+          className="size-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 active:scale-90 transition-all"
         >
-          <span className="material-symbols-rounded text-xl">arrow_back_ios_new</span>
+          <span className="material-symbols-rounded text-xl">close</span>
         </button>
       </header>
 
-      <main className="flex-1 space-y-8">
-        {/* HERO BANNER - DESIGN CLEAN */}
-        <div className="relative h-64 overflow-hidden">
-           <div className="absolute inset-0 bg-yellow-400">
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 to-amber-500 opacity-50" />
-           </div>
-           <div className="absolute bottom-10 left-8 right-8 z-10">
-              <h1 className="text-4xl font-black text-black uppercase tracking-tighter leading-none mb-2">Izi Flash</h1>
-              <p className="text-[10px] text-black/60 font-black uppercase tracking-[0.2em]">Ofertas Relâmpago Ativas Agora</p>
-           </div>
-           <span className="absolute -right-8 -bottom-8 material-symbols-rounded text-[180px] text-black/5 rotate-12">bolt</span>
-        </div>
+      <main className="flex-1 space-y-8 pt-4">
 
         {/* Grid de Ofertas */}
         <div className="px-6 grid grid-cols-1 gap-8">
@@ -148,6 +137,6 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
           )}
         </div>
       </main>
-    </motion.div>
+    </div>
   );
 };
