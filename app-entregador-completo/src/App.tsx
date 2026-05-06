@@ -1868,6 +1868,7 @@ function App() {
                         setIsProfileNotFound(true);
                         setIsApproved(false);
                         setIsProfileLoaded(true);
+                        setShowOnboarding(true);
                     } else if (profile) {
                         setDriverName(profile.name || 'Entregador');
                         setPixKey(profile.bank_info?.pix_key || '');
@@ -2037,7 +2038,14 @@ function App() {
     // Ele dispara quando driverId e isAuthenticated ficam disponíveis.
     // =====================================================================
     useEffect(() => {
-        if (!driverId || !isAuthenticated) return;
+        if (!driverId || !isAuthenticated || !isProfileLoaded) return;
+
+        // SE O PERFIL NÃO ESTÁ APROVADO, FORÇA OFFLINE.
+        if (!isApproved) {
+            setIsOnline(false);
+            localStorage.setItem('Izi_online', 'false');
+            return;
+        }
 
         const localWantsOnline = localStorage.getItem('Izi_online') === 'true';
 
@@ -8583,7 +8591,6 @@ function App() {
                                     setShowOnboarding(false);
                                     handleLogout();
                                 }}
-                                onClose={() => setShowOnboarding(false)}
                             />
                         )}
 

@@ -351,7 +351,9 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
                     {step === 'rejected' && (
                         <button onClick={() => setStep('form')} className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem]">Tentar Novamente</button>
                     )}
-                    <button onClick={onClose} className="w-full h-18 bg-zinc-100 text-zinc-900 font-black uppercase tracking-[0.2em] rounded-[2rem]">Voltar ao Início</button>
+                    {onClose && (
+                        <button onClick={onClose} className="w-full h-18 bg-zinc-100 text-zinc-900 font-black uppercase tracking-[0.2em] rounded-[2rem]">Voltar ao Início</button>
+                    )}
                     <button onClick={onLogout} className="w-full h-18 bg-white border border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem]">Sair da Conta</button>
                 </div>
             </motion.div>
