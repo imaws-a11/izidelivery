@@ -594,8 +594,9 @@ function App() {
     const [driverPlate, setDriverPlate] = useState(() => localStorage.getItem('izi_driver_plate') || '');
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-    const [isApproved, setIsApproved] = useState(false);
-    const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+    const [isApproved, setIsApproved] = useState(() => localStorage.getItem('izi_driver_approved') === 'true');
+    const [isProfileLoaded, setIsProfileLoaded] = useState(() => localStorage.getItem('izi_driver_approved') !== null);
+    const [isCardExpanded, setIsCardExpanded] = useState(false);
     const [authEmail, setAuthEmail] = useState('');
     const [authPassword, setAuthPassword] = useState('');
     const [showAuthPassword, setShowAuthPassword] = useState(false);
@@ -1168,7 +1169,8 @@ function App() {
         nextXp: 100, 
         performance: [0, 0, 0, 0, 0, 0, 0],
         weeklyEarnings: [0, 0, 0, 0, 0, 0, 0],
-        monthlyPerformance: Array(12).fill(0)
+        monthlyPerformance: Array(12).fill(0),
+        growth: 0
     });
     const [earningsViewTab, setEarningsViewTab] = useState<'week' | 'month' | 'year'>('week');
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
@@ -1311,7 +1313,8 @@ function App() {
             'Izi_active_mission',
             'Izi_declined_slots',
             'Izi_declined_timed',
-            'Izi_online',
+            'izi_driver_online',
+            'izi_driver_approved',
             'izi_audio_unlocked'
         ];
 
@@ -1363,16 +1366,6 @@ function App() {
         await BarcodeScanner.stopScan();
     };
 
-    // WATCHDOG DE STATUS ONLINE
-    // Se o estado isOnline divergir do localStorage por qualquer motivo (race condition, re-render),
-    // este efeito força a reconciliação com a intenção do motorista.
-    useEffect(() => {
-        const localIntent = localStorage.getItem('Izi_online') === 'true';
-        if (localIntent && !isOnline) {
-
-            setIsOnline(true);
-        }
-    }, [isOnline]);
 
     // Sincronizar detalhe da vaga aberta com o Realtime
     useEffect(() => {
@@ -1741,8 +1734,10 @@ function App() {
 
     useEffect(() => {
 
-        // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
-        const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
+    // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
+    const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
+        console.log('[AUTH] loadProfileAndEnforceOnboarding chamada para:', userId);
+        try {
             const { data: profile, error: profileError } = await supabase
                 .from('drivers_delivery')
                 .select('name, phone, email, vehicle_type, license_plate, document_number, bank_info, avatar_url, preferences, is_active')
@@ -1751,22 +1746,26 @@ function App() {
 
             if (profileError) {
                 console.error('[AUTH] Erro ao buscar perfil:', profileError);
+                toastError('Falha de conexão. Tente atualizar a tela.');
+                return;
             }
 
             if (!profile) {
-                // Novo usuário sem perfil ou erro: força onboarding
+                // Novo usuário sem perfil
                 setIsProfileNotFound(true);
                 setIsApproved(false);
-                setIsProfileLoaded(true);
                 setIsOnline(false);
-                localStorage.setItem('Izi_online', 'false');
+                localStorage.setItem('izi_driver_online', 'false');
                 setShowOnboarding(true);
                 ensureDriverRecord(userId, userEmail, userName);
                 return;
             }
 
             // Preenche estado com dados do perfil
-            if (profile.name) setDriverName(profile.name);
+            if (profile.name) {
+                setDriverName(profile.name);
+                localStorage.setItem('izi_driver_name', profile.name);
+            }
             if (profile.avatar_url) {
                 setDriverAvatar(profile.avatar_url);
                 localStorage.setItem('izi_driver_avatar', profile.avatar_url);
@@ -1778,37 +1777,71 @@ function App() {
             if (profile.license_plate) setDriverPlate(profile.license_plate);
             if (profile.bank_info?.pix_key) setPixKey(profile.bank_info.pix_key);
 
-            const active = !!profile.is_active;
-            setIsApproved(active);
-            setIsProfileLoaded(true);
+            setEditProfileData({
+                name: profile.name || '',
+                phone: profile.phone || '',
+                email: profile.email || '',
+                vehicle_type: profile.vehicle_type || '',
+                plate: profile.license_plate || '',
+                cpf: profile.document_number || ''
+            });
 
+            if (profile.preferences) {
+                const p = profile.preferences as any;
+                if (p.pref_sound !== undefined) setPrefSoundEnabled(p.pref_sound);
+                if (p.pref_vibration !== undefined) setPrefVibrationEnabled(p.pref_vibration);
+                if (p.pref_nav_app !== undefined) setPrefNavApp(p.pref_nav_app);
+                if (p.pref_max_radius !== undefined) setPrefMaxRadius(p.pref_max_radius);
+                if (p.pref_vehicle) setPrefVehicleTypes(p.pref_vehicle);
+                if (p.pref_services) setPrefServiceTypes(p.pref_services);
+            }
+
+            const active = !!profile.is_active;
+            console.log('[AUTH] Perfil carregado. is_active:', profile.is_active, '=> isApproved:', active);
+            setIsApproved(active);
+            localStorage.setItem('izi_driver_approved', active.toString());
+
+            // Sincroniza isOnline com aprovação: se não aprovado, nunca pode estar online
             if (!active) {
-                // Motorista não aprovado: força offline e onboarding
                 setIsOnline(false);
-                localStorage.setItem('Izi_online', 'false');
+                localStorage.setItem('izi_driver_online', 'false');
                 setShowOnboarding(true);
             }
-        };
 
-        // Check initial Supabase session
+            refreshFinanceData();
+            syncMissionWithDB();
+        } catch (e: any) {
+            console.error('[AUTH] Erro fatal em loadProfileAndEnforceOnboarding:', e);
+        } finally {
+            setIsProfileLoaded(true);
+        }
+    };
+
+        // Check initial Supabase session — CAMINHO PRINCIPAL no F5/refresh
         const checkSession = async () => {
             try {
+                console.log('[AUTH] checkSession: Verificando sessão...');
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
                     console.error('[AUTH] Erro ao verificar sessão inicial:', error.message);
                 }
                 const user = session?.user;
                 if (user) {
+                    console.log('[AUTH] checkSession: Sessão encontrada para', user.email);
                     setDriverId(user.id);
                     setIsAuthenticated(true);
+                    hasBootedRef.current = true;
                     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                     await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
                 } else {
+                    console.log('[AUTH] checkSession: Nenhuma sessão ativa.');
                     setDriverId(null);
                     setIsAuthenticated(false);
+                    setIsProfileLoaded(true);
                 }
             } catch (e: any) {
                 console.error('[AUTH] Erro ao verificar sessão inicial:', e);
+                setIsProfileLoaded(true);
             } finally {
                 setAuthInitLoading(false);
             }
@@ -1816,23 +1849,27 @@ function App() {
 
         checkSession();
 
-        // Listener de eventos de autenticação (Login, Logout, Refresh)
+        // Listener de eventos de autenticação — SÓ age em SIGNED_IN (novo login)
+        // INITIAL_SESSION é ignorado pois checkSession já tratou acima.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('[AUTH] Evento:', event);
+            console.log('[AUTH] onAuthStateChange:', event);
             
             if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
                 setIsAuthenticated(false);
                 setDriverId(null);
+                setIsProfileLoaded(true);
                 setAuthInitLoading(false);
                 return;
             }
 
-            const user = session?.user;
-            if (user) {
-                setDriverId(user.id);
-                setIsAuthenticated(true);
-                if (!hasBootedRef.current) {
+            // Só carrega perfil em login novo, NÃO em INITIAL_SESSION
+            if (event === 'SIGNED_IN' && !hasBootedRef.current) {
+                const user = session?.user;
+                if (user) {
+                    console.log('[AUTH] onAuthStateChange SIGNED_IN novo login:', user.email);
                     hasBootedRef.current = true;
+                    setDriverId(user.id);
+                    setIsAuthenticated(true);
                     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                     await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
                 }
@@ -1846,9 +1883,6 @@ function App() {
             const user = session?.user;
             if (!user) return;
             const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-            
-            // Força re-verificação ao voltar
-            hasBootedRef.current = false; 
             await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -1905,145 +1939,6 @@ function App() {
             supabase.removeChannel(broadcastSub);
         };
     }, [driverId]);
-    useEffect(() => {
-        // Timeout de segurança: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
-        const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            
-            if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-                setIsAuthenticated(false);
-                setDriverId(null);
-                setAuthInitLoading(false);
-                return;
-            }
-
-            const user = session?.user;
-            if (user) {
-                setDriverId(user.id);
-                setIsAuthenticated(true);
-
-                // BOOT ÚNICO: só executa restauração completa na primeira vez
-                if (!hasBootedRef.current) {
-                    hasBootedRef.current = true;
-
-                    // Buscar perfil completo
-                    const { data: profile, error: profileError } = await supabase
-                        .from('drivers_delivery')
-                        .select('name, phone, email, vehicle_type, license_plate, document_number, bank_info, avatar_url, preferences, is_active')
-                        .eq('id', user.id)
-                        .maybeSingle();
- 
-                    if (profileError) {
-                        console.error('[AUTH] Erro ao buscar perfil:', profileError);
-                    }
-
-                    if (!profile && !profileError) {
-                        setIsProfileNotFound(true);
-                        setIsApproved(false);
-                        setIsProfileLoaded(true);
-                        setShowOnboarding(true);
-                    } else if (profile) {
-                        setDriverName(profile.name || 'Entregador');
-                        setPixKey(profile.bank_info?.pix_key || '');
-                        setDriverPlate(profile.license_plate || '');
-                        
-                        // Persistência local para importação automática
-                        if (profile.name) localStorage.setItem('izi_driver_name', profile.name);
-                        if (profile.phone) localStorage.setItem('izi_driver_phone', profile.phone);
-                        if (profile.email) localStorage.setItem('izi_driver_email', profile.email);
-                        if (profile.vehicle_type) localStorage.setItem('izi_driver_vehicle', profile.vehicle_type);
-                        if (profile.license_plate) localStorage.setItem('izi_driver_plate', profile.license_plate);
-                        if (profile.document_number) localStorage.setItem('izi_driver_cpf', profile.document_number);
-
-                        setDriverAvatar(profile.avatar_url || null);
-                        if (profile.avatar_url) localStorage.setItem('izi_driver_avatar', profile.avatar_url);
-                        else localStorage.removeItem('izi_driver_avatar');
-
-                        setEditProfileData({
-                            name: profile.name || '',
-                            phone: profile.phone || '',
-                            email: profile.email || '',
-                            vehicle_type: profile.vehicle_type || '',
-                            plate: profile.license_plate || '',
-                            cpf: profile.document_number || ''
-                        });
-
-                        if (profile.preferences) {
-                            const p = profile.preferences as any;
-                            if (p.pref_sound !== undefined) {
-                                setPrefSoundEnabled(p.pref_sound);
-                                localStorage.setItem('pref_sound', String(p.pref_sound));
-                            }
-                            if (p.pref_vibration !== undefined) {
-                                setPrefVibrationEnabled(p.pref_vibration);
-                                localStorage.setItem('pref_vibration', String(p.pref_vibration));
-                            }
-                            if (p.pref_nav_app !== undefined) {
-                                setPrefNavApp(p.pref_nav_app);
-                                localStorage.setItem('pref_nav_app', p.pref_nav_app);
-                            }
-                            if (p.pref_max_radius !== undefined) {
-                                setPrefMaxRadius(p.pref_max_radius);
-                                localStorage.setItem('pref_max_radius', String(p.pref_max_radius));
-                            }
-                            if (p.pref_vehicle) {
-                                setPrefVehicleTypes(p.pref_vehicle);
-                                localStorage.setItem('pref_vehicle', JSON.stringify(p.pref_vehicle));
-                            }
-                            if (p.pref_services) {
-                                setPrefServiceTypes(p.pref_services);
-                                localStorage.setItem('pref_services', JSON.stringify(p.pref_services));
-                            }
-                        }
-                        const active = !!profile.is_active;
-                        setIsApproved(active);
-                        setIsProfileLoaded(true);
-                        if (!active) {
-                            setIsOnline(false);
-                            localStorage.setItem('Izi_online', 'false');
-                            setShowOnboarding(true);
-                        }
-                    } else {
-                        const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                        setDriverName(name);
-                        ensureDriverRecord(user.id, user.email || '', name);
-                        // FIX: Ensure that if profile is not loaded or error occurred, we force Onboarding view
-                        setIsProfileNotFound(true);
-                        setIsApproved(false);
-                        setIsProfileLoaded(true);
-                        setShowOnboarding(true);
-                    }
-
-                    refreshFinanceData();
-                    
-                    syncMissionWithDB();
-                } else {
-                    // Renovações de token (TOKEN_REFRESHED): NÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O alterar nenhum estado
-
-                }
-            } else {
-                if (hasBootedRef.current) {
-                    console.warn('[AUTH] SIGNED_OUT detectado. Limpando sessão...');
-                    hasBootedRef.current = false;
-                    setDriverId(null);
-                    setIsAuthenticated(false);
-                    setDriverName('Entregador');
-                    setDriverAvatar(null);
-                    localStorage.removeItem('izi_driver_avatar');
-                    localStorage.removeItem('izi_driver_uid');
-                    localStorage.removeItem('izi_driver_authenticated');
-                    localStorage.removeItem('izi_driver_name');
-                }
-            }
-            setAuthInitLoading(false);
-        });
-
-        return () => {
-            subscription.unsubscribe();
-            clearTimeout(authTimeout);
-        };
-    }, []);
 
     useEffect(() => {
         if (activeTab === 'earnings' || activeTab === 'history') {
@@ -2081,6 +1976,8 @@ function App() {
                     data: {
                         name: authName.trim(),
                         phone: authPhone.trim(),
+                        role: 'driver',
+                        user_type: 'driver'
                     }
                 }
             });
@@ -2122,11 +2019,11 @@ function App() {
         // SE O PERFIL NÃO ESTÁ APROVADO, FORÇA OFFLINE.
         if (!isApproved) {
             setIsOnline(false);
-            localStorage.setItem('Izi_online', 'false');
+            localStorage.setItem('izi_driver_online', 'false');
             return;
         }
 
-        const localWantsOnline = localStorage.getItem('Izi_online') === 'true';
+        const localWantsOnline = localStorage.getItem('izi_driver_online') === 'true';
 
         // Setar estado local imediatamente (sem depender do banco)
         setIsOnline(localWantsOnline);
@@ -2135,7 +2032,7 @@ function App() {
         if (Capacitor.getPlatform() === 'android' && localWantsOnline) {
              ForegroundService.startForegroundService({
                 id: 1001,
-                title: "Izi Pilot: Online",
+                title: "Izi Entregador: Online",
                 body: "Buscando novas chamadas em tempo real..."
             }).catch(e => console.error("Erro ao restaurar FS:", e));
         }
@@ -2205,20 +2102,18 @@ function App() {
     }, [driverId, isAuthenticated, isOnline]);
 
     const handleToggleOnline = async () => {
-        if (!isProfileLoaded) return; // FIX: Block toggling if profile isn't loaded yet
-        
-        // Só bloqueia ao tentar ir ONLINE se o perfil já carregou e o cadastro ainda não foi aprovado
-        // Ficar offline sempre deve funcionar sem restrição
-        if (!isApproved && !isOnline) {
+        const nextState = !isOnline;
+
+        // Se quer ir ONLINE e já sabemos que NÃO está aprovado, bloqueia
+        // Se o perfil ainda não carregou, PERMITE — o loadProfile vai corrigir se necessário
+        if (nextState && isApproved === false && isProfileLoaded) {
             setShowPendingApprovalModal(true);
             return;
         }
 
-        const nextState = !isOnline;
-
         // SALVA NO LOCALSTORAGE IMEDIATAMENTE Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ antes de qualquer chamada ao banco
         // Isso garante que F5 sempre restaura o status correto, independente de rede
-        localStorage.setItem('Izi_online', nextState.toString());
+        localStorage.setItem('izi_driver_online', nextState.toString());
         setIsOnline(nextState);
         if (!nextState) setOrders([]);
         
@@ -2235,7 +2130,7 @@ function App() {
                         if (nextState) {
                             await ForegroundService.startForegroundService({
                                 id: 1001,
-                                title: "Izi Pilot: Online",
+                                title: "Izi Entregador: Online",
                                 body: "Buscando novas chamadas em tempo real..."
                             });
                         } else {
@@ -3217,12 +3112,15 @@ function App() {
             if (estTypes) setEstablishmentTypes(estTypes);
 
             // 2. Processamento financeiro unificado
-            let balance = 0, todaySum = 0, weeklySum = 0, monthlySum = 0, yearlySum = 0, totalGanhos = 0;
+            let balance = 0, todaySum = 0, weeklySum = 0, monthlySum = 0, yearlySum = 0, totalGanhos = 0, previousWeeklySum = 0;
             const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
             const startOfWeek = new Date(); 
             const diffDays = (startOfWeek.getDay() === 0 ? 6 : startOfWeek.getDay() - 1);
             startOfWeek.setDate(startOfWeek.getDate() - diffDays);
             startOfWeek.setHours(0, 0, 0, 0);
+
+            const startOfPreviousWeek = new Date(startOfWeek);
+            startOfPreviousWeek.setDate(startOfPreviousWeek.getDate() - 7);
             
             const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
             const startOfYear = new Date(); startOfYear.setMonth(0, 1); startOfYear.setHours(0, 0, 0, 0);
@@ -3251,7 +3149,10 @@ function App() {
                             const day = tDate.getDay();
                             const idx = day === 0 ? 6 : day - 1;
                             weeklyEarnings[idx] += amount;
+                        } else if (tDate >= startOfPreviousWeek) {
+                            previousWeeklySum += amount;
                         }
+
                         if (tDate >= startOfMonth) monthlySum += amount;
                         if (tDate >= startOfYear) {
                             yearlySum += amount;
@@ -3261,6 +3162,10 @@ function App() {
                     }
                 });
             }
+
+            const growth = previousWeeklySum > 0 
+                ? ((weeklySum - previousWeeklySum) / previousWeeklySum) * 100 
+                : (weeklySum > 0 ? 100 : 0);
 
             // 3. Cálculo de Performance (Contagem de entregas últimos 7 dias)
             const performance = [0, 0, 0, 0, 0, 0, 0]; 
@@ -3683,40 +3588,34 @@ function App() {
     }, [clearDriverSessionState]);
 
     const renderHeader = () => (
-        <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-zinc-100/50 shrink-0">
+        <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
             {/* Perfil Icon (Left) */}
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setActiveTab('profile')}
-                className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner overflow-hidden relative"
+                className="size-12 flex items-center justify-center overflow-hidden relative"
             >
                 {driverAvatar ? (
-                    <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                    <div className="size-10 rounded-xl overflow-hidden border border-zinc-100 shadow-sm">
+                        <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                    </div>
                 ) : (
-                    <Icon name="person" size={24} className="text-zinc-400" />
+                    <Icon name="person" size={28} className="text-zinc-900" />
                 )}
             </motion.button>
 
-            {/* Logo/Title */}
-            <div className="flex flex-col items-center">
-                <h1 className="text-lg font-black text-zinc-900 tracking-tighter uppercase leading-none">Izi Pilot</h1>
-                <div className="flex items-center gap-1 mt-1">
-                    <div className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`} />
-                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
-                </div>
-            </div>
+            {/* Logo/Spacer or minimalist title removal */}
+            <div />
 
             {/* Notifications Icon (Right) */}
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setActiveTab('notifications')}
-                className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner relative"
+                className="size-12 flex items-center justify-center relative"
             >
-                <Icon name="notifications" size={24} className={unreadNotifsCount > 0 ? 'text-yellow-600' : 'text-zinc-400'} />
+                <Icon name="notifications" size={28} className={unreadNotifsCount > 0 ? 'text-yellow-600' : 'text-zinc-900'} />
                 {unreadNotifsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 size-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                        {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
-                    </span>
+                    <span className="absolute top-2 right-2 size-2.5 bg-rose-500 rounded-full border-2 border-white" />
                 )}
             </motion.button>
         </header>
@@ -3857,7 +3756,7 @@ function App() {
                             >
                                 {[
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
-                                    { id: 'missions', label: 'Missões', icon: 'emoji_events' },
+                                    { id: 'missions', label: 'Bônus', icon: 'stars' },
                                     { id: 'active_mission', label: 'Entrega', icon: 'route' },
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'scheduled', label: 'Escalas', icon: 'event', badge: scheduledOrders.length },
@@ -4086,19 +3985,18 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
-                    {(isProfileLoaded || driverId) && !isApproved && (
+                    {isProfileLoaded && !isApproved && (
                         <motion.div 
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="bg-rose-500 p-6 rounded-[32px] shadow-[0_20px_40px_rgba(244,63,94,0.3)] flex items-center gap-5 relative overflow-hidden"
+                            className="bg-white/10 backdrop-blur-xl p-6 rounded-[2.5rem] flex items-center gap-5 relative overflow-hidden border border-zinc-200/50 shadow-xl"
                         >
-                            <div className="absolute top-0 right-0 size-24 bg-white/10 blur-2xl rounded-full translate-x-8 -translate-y-8" />
-                            <div className="size-14 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
-                                <Icon name="warning" className="text-white" size={32} />
+                            <div className="size-14 rounded-2xl bg-zinc-900/5 flex items-center justify-center shrink-0 border border-zinc-200/50">
+                                <Icon name="warning" className="text-zinc-900" size={32} />
                             </div>
-                            <div className="flex-1">
-                                <h3 className="text-white font-black text-sm uppercase tracking-tighter leading-tight">Cadastro Pendente</h3>
-                                <p className="text-white/80 text-[10px] font-bold leading-tight mt-1 uppercase tracking-widest">
+                            <div className="flex-1 text-left">
+                                <h3 className="text-zinc-900 font-black text-sm uppercase tracking-tighter leading-tight">Cadastro Pendente</h3>
+                                <p className="text-zinc-500 text-[10px] font-bold leading-tight mt-1 uppercase tracking-widest">
                                     Seu perfil está em análise. Complete seu cadastro ou aguarde a aprovação.
                                 </p>
                             </div>
@@ -4107,134 +4005,115 @@ function App() {
                                     console.log("[DEBUG] Abrindo Onboarding pelo Card", { driverId });
                                     setShowOnboarding(true);
                                 }}
-                                className="h-10 px-4 rounded-xl bg-white text-rose-500 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+                                className="h-10 px-4 rounded-xl bg-zinc-900 text-white font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg"
                             >
                                 Detalhes
                             </button>
                         </motion.div>
                     )}
 
-                    <header className="bg-yellow-400 rounded-[3rem] overflow-hidden relative p-7 flex flex-col items-center text-center gap-5 shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
-                    {/* Elementos Decorativos de Fundo */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/40 rounded-full blur-[100px] pointer-events-none" />
-                    <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-black/5 rounded-full blur-[80px] pointer-events-none" />
-
-                    {/* Perfil Centralizado */}
-                    <div className="relative z-10 flex flex-col items-center gap-4">
-                        <div
-                            onClick={() => setActiveTab('profile')}
-                            className="w-20 h-20 rounded-[28px] border-4 border-white overflow-hidden shadow-2xl bg-zinc-100 hover:scale-105 transition-transform duration-300 cursor-pointer relative group"
+                <header className={`bg-zinc-900 rounded-[2.5rem] overflow-hidden relative ${isCardExpanded ? 'p-8' : 'p-6'} flex flex-col items-center text-center transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/5`}>
+                    
+                    {/* Botão de Expansão */}
+                    <button 
+                        onClick={() => setIsCardExpanded(!isCardExpanded)}
+                        className="absolute top-5 right-5 size-10 flex items-center justify-center active:scale-90 transition-all z-20 rounded-full bg-white/5"
+                    >
+                        <motion.div
+                            animate={{ rotate: isCardExpanded ? 180 : 0 }}
                         >
-                            {driverAvatar ? (
-                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <Icon name="person" size={48} className="text-zinc-900" />
-                                </div>
-                            )}
-                            
-                            {/* Pequeno badge indicativo */}
-                            <div className="absolute bottom-1 right-1 size-6 rounded-full bg-white flex items-center justify-center border border-zinc-100 shadow-lg">
-                                <Icon name="photo_camera" size={10} className="text-zinc-900" />
-                            </div>
+                            <Icon name="expand_more" size={24} className="text-white/60" />
+                        </motion.div>
+                    </button>
+
+                    <div className="flex flex-col items-center gap-1 mb-6">
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                            <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+                            <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.3em]">
+                                Entregador Parceiro
+                            </span>
                         </div>
-                        <div className="space-y-2">
-                            <h1 className="text-3xl font-black text-zinc-900 tracking-tight leading-none uppercase">
-                                {driverName || 'Piloto Izi'}
-                            </h1>
-                            <div className="flex items-center justify-center gap-2 bg-white/20 px-4 py-1.5 rounded-full border border-white/20 backdrop-blur-md">
-                                <Icon name="military_tech" size={14} className="text-zinc-900" />
-                                <span className="text-zinc-900 text-[10px] font-black uppercase tracking-[0.2em]">
-                                    Nível {stats.level} • VIP
-                                </span>
-                            </div>
-                        </div>
+                        <h1 className="text-xl font-black text-white tracking-tight leading-none uppercase">
+                            {driverName || 'Entregador'}
+                        </h1>
                     </div>
 
                     {/* Ganhos de Hoje Centralizados e Gigantes */}
-                    <div className="relative z-10 w-full">
-                        <p className="text-[10px] font-black uppercase text-zinc-900 tracking-[0.4em] mb-2">Ganhos de Hoje</p>
+                    <div className="relative z-10 w-full mb-2">
+                        <p className={`font-black uppercase text-white/40 tracking-[0.4em] mb-1 transition-all duration-500 ${isCardExpanded ? 'text-[9px]' : 'text-[10px]'}`}>Ganhos de Hoje</p>
                         <div className="flex flex-col items-center">
                             <div className="flex items-start justify-center leading-none">
-                                <span className="text-4xl font-black text-zinc-900 mt-4 mr-1">R$</span>
-                                <span className="text-[7rem] font-black text-zinc-900 tracking-tighter leading-none">
+                                <span className={`font-black text-yellow-400 transition-all duration-500 ${isCardExpanded ? 'text-2xl mt-3' : 'text-3xl mt-4'} mr-1`}>R$</span>
+                                <span className={`font-black text-white tracking-tighter leading-none transition-all duration-500 ${isCardExpanded ? 'text-6xl' : 'text-[7rem]'}`}>
                                     {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
                                 </span>
-                                <span className="text-4xl font-black text-zinc-900 mt-4 ml-1">,{stats.today.toFixed(2).split('.')[1]}</span>
+                                <span className={`font-black text-white/60 transition-all duration-500 ${isCardExpanded ? 'text-2xl mt-3' : 'text-3xl mt-4'} ml-1`}>,{stats.today.toFixed(2).split('.')[1]}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Resumo Semanal e Barra de Progresso */}
-                    <div className="relative z-10 w-full space-y-6">
-                        <div className="flex justify-around items-center py-4 bg-white/20 rounded-[2rem] border border-white/20">
-                            <div className="text-center">
-                                <p className="text-[8px] font-black uppercase text-zinc-900 tracking-widest mb-1">Esta Semana</p>
-                                <p className="text-xl font-black text-zinc-900">R$ {stats.weekly.toFixed(0)}</p>
-                            </div>
-                            <div className="w-px h-8 bg-black/10" />
-                            <div className="text-center">
-                                <p className="text-[8px] font-black uppercase text-zinc-900 tracking-widest mb-1">Entregas</p>
-                                <p className="text-xl font-black text-zinc-900">{stats.deliveries || 0}</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-end px-2">
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl font-black text-zinc-900 leading-none">{stats.xp}</span>
-                                    <span className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">XP</span>
+                    {/* Resumo em Lista e Barra de Progresso */}
+                    <AnimatePresence>
+                        {isCardExpanded && (
+                            <motion.div 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="relative z-10 w-full mt-6 overflow-hidden"
+                            >
+                                <div className="space-y-1">
+                                    {[
+                                        { label: 'Aceitas', value: stats.count || 0, icon: 'check_circle', color: 'text-emerald-400' },
+                                        { label: 'Rejeites', value: Object.keys(JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}')).length, icon: 'cancel', color: 'text-red-400' },
+                                        { label: 'Esta Semana', value: `R$ ${stats.weekly.toFixed(2)}`, icon: 'calendar_today', color: 'text-yellow-400' },
+                                        { label: 'Entregas Totais', value: stats.deliveries || 0, icon: 'local_shipping', color: 'text-blue-400' }
+                                    ].map((item, idx) => (
+                                        <div key={item.label}>
+                                            <div className="flex justify-between items-center py-4 px-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`size-8 flex items-center justify-center ${item.color}`}>
+                                                        <Icon name={item.icon} size={20} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/50">{item.label}</span>
+                                                </div>
+                                                <span className="text-sm font-black text-white tracking-tight">{item.value}</span>
+                                            </div>
+                                            {idx < 3 && <div className="h-px bg-white/5 w-full" />}
+                                        </div>
+                                    ))}
                                 </div>
-                                <p className="text-[9px] font-black text-zinc-900 uppercase tracking-widest">Meta Nível {stats.level + 1}</p>
-                            </div>
-                            
-                            <div className="relative h-3 w-full bg-white/30 rounded-full overflow-hidden p-0.5 border border-white/20">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${Math.min((stats.xp % 100), 98)}%` }}
-                                    transition={{ duration: 1.5, ease: "circOut" }}
-                                    className="h-full rounded-full bg-zinc-900"
-                                />
-                            </div>
-                        </div>
-                    </div>
+
+                                <div className="mt-8 mb-2 flex flex-col gap-4 px-2">
+                                    <div className="flex justify-between items-end">
+                                        <div className="flex flex-col items-start">
+                                            <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Nível {stats.level}</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-3xl font-black text-white leading-none">{stats.xp}</span>
+                                                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">XP</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[9px] font-black text-white/60 uppercase tracking-widest">Meta Nível {stats.level + 1}</p>
+                                    </div>
+                                    
+                                    <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min((stats.xp % 100), 98)}%` }}
+                                            transition={{ duration: 1.5, ease: "circOut" }}
+                                            className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.3)]"
+                                        />
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </header>
 
 
-                <section className="space-y-2">
-                    <p className="text-zinc-500 font-medium uppercase tracking-widest text-[10px] text-center">Disponível para entregas</p>
-                    <h2 className="text-zinc-900 text-3xl font-black tracking-tight text-center uppercase">Missões e <span className="text-yellow-600">Vagas</span></h2>
-                </section>
 
                 <section className="space-y-6">
-                    <div className="flex flex-col items-center justify-center gap-3 text-center">
-                        <div className="w-full bg-white rounded-[24px] border border-zinc-100 shadow-sm px-5 py-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-100 px-3 py-1.5 rounded-full">
-                                    <div className="size-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
-                                    <p className="text-yellow-600 font-black text-[9px] uppercase tracking-[0.25em]">Radar Ativo</p>
-                                </div>
-                                <h3 className="text-base font-black text-zinc-900 tracking-tight uppercase">Novos Pedidos</h3>
-                            </div>
-                            <button
-                                onClick={() => fetchOrders()}
-                                disabled={isSyncing || !isOnline}
-                                className={`size-9 flex items-center justify-center rounded-[14px] transition-all active:scale-90 ${
-                                    isOnline
-                                        ? isSyncing
-                                            ? 'bg-yellow-400 text-zinc-900 shadow-[0_4px_12px_rgba(250,204,21,0.3)]'
-                                            : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100 border border-zinc-200'
-                                        : 'bg-zinc-100 text-zinc-300 cursor-not-allowed opacity-50 border border-zinc-100'
-                                }`}
-                            >
-                                <motion.div
-                                    animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
-                                    transition={isSyncing ? { repeat: Infinity, duration: 0.9, ease: 'linear' } : { duration: 0.3 }}
-                                >
-                                    <Icon name="sync" size={18} />
-                                </motion.div>
-                            </button>
-                        </div>
+                    <div className="flex flex-col items-center justify-center gap-3 text-center px-4">
+                        <h3 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">Novos Pedidos</h3>
                     </div>
                     <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar -mx-6 px-6">
                         {filteredOrders.map((order) => {
@@ -4248,15 +4127,15 @@ function App() {
                                         animate={{ opacity: 1, y: 0 }}
                                         className="flex-shrink-0 w-[90vw] max-w-[420px] relative pt-14 pb-4"
                                     >
-                                        <div className="bg-white rounded-[3rem] p-8 relative flex flex-col items-center text-center border border-zinc-100 shadow-xl"
+                                        <div className="bg-white/70 backdrop-blur-lg rounded-[2.5rem] p-8 relative flex flex-col items-center text-center border border-zinc-200/50"
                                         >
-                                            {/* Floating 3D Icon Overlay — Design Claymorphic */}
-                                            <div className={`absolute -top-14 w-28 h-28 rounded-[2.5rem] flex items-center justify-center shadow-lg transition-all transform hover:rotate-6 active:scale-95 ${
+                                            {/* Floating Icon Overlay — Design Minimalista */}
+                                            <div className={`absolute -top-10 w-20 h-20 rounded-[1.5rem] flex items-center justify-center transition-all ${
                                                 presentation.isMobility 
-                                                    ? 'bg-gradient-to-br from-indigo-400 via-indigo-500 to-blue-600 shadow-indigo-500/30' 
-                                                    : 'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 shadow-yellow-500/30'
+                                                    ? 'bg-indigo-600' 
+                                                    : 'bg-yellow-400'
                                             }`}>
-                                                <Icon name={presentation.details.icon} className={`text-[56px] ${presentation.isMobility ? 'text-white' : 'text-zinc-900'}`} />
+                                                <Icon name={presentation.details.icon} className={`text-[40px] ${presentation.isMobility ? 'text-white' : 'text-zinc-900'}`} />
                                             </div>
 
                                             <div className="mt-8 w-full">
@@ -4289,10 +4168,10 @@ function App() {
                                                     {presentation.isMobility ? 'Um passageiro está aguardando por você.' : 'Uma missão de entrega de alta prioridade disponível.'}
                                                 </p>
 
-                                                {/* Payment Highlight Box */}
-                                                <div className={`rounded-2xl p-4 sm:p-6 border mb-6 sm:mb-8 shadow-inner ${
+                                                {/* Payment Box */}
+                                                <div className={`rounded-2xl p-4 sm:p-6 border mb-6 sm:mb-8 ${
                                                     presentation.isMobility 
-                                                        ? 'bg-indigo-50/50 border-indigo-100/50' 
+                                                        ? 'bg-indigo-50 border-indigo-100' 
                                                         : 'bg-zinc-50 border-zinc-100'
                                                 }`}>
                                                     <p className="text-zinc-400 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
@@ -5595,13 +5474,12 @@ function App() {
             <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
-                className="flex-1 flex flex-col bg-zinc-50 overflow-hidden"
+                className="flex-1 flex flex-col bg-zinc-50 overflow-hidden font-['Plus_Jakarta_Sans']"
             >
                 {/* Header Premium */}
                 <div className="px-6 pt-8 pb-4 space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em] mb-1">Financial Hub</p>
                             <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">Meus Ganhos</h2>
                         </div>
                         <div className="flex gap-2">
@@ -5742,12 +5620,14 @@ function App() {
 
                         <div className="bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm space-y-4">
                             <div className="size-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
-                                <Icon name="trending_up" size={20} className="text-emerald-500" />
+                                <Icon name={stats.growth >= 0 ? 'trending_up' : 'trending_down'} size={20} className={stats.growth >= 0 ? 'text-emerald-500' : 'text-red-500'} />
                             </div>
                             <div>
                                 <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Progresso</p>
-                                <p className="text-lg font-black text-zinc-900 leading-none">+12.5%</p>
-                                <p className="text-[8px] text-zinc-400 font-bold uppercase mt-1">vs. período anterior</p>
+                                <p className={`text-lg font-black leading-none ${stats.growth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                    {stats.growth >= 0 ? '+' : ''}{stats.growth}%
+                                </p>
+                                <p className="text-[8px] text-zinc-400 font-bold uppercase mt-1">vs. semana anterior</p>
                             </div>
                         </div>
                     </div>
@@ -6398,7 +6278,7 @@ function App() {
                         <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
                     <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em]">Izi Pilot</p>
+                        <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em]">Izi Entregador</p>
                         <h2 className="text-lg font-black text-zinc-900">Meus Veículos</h2>
                     </div>
                 </header>
@@ -8521,7 +8401,6 @@ function App() {
                         <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
                             <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
                             <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
-                            <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
                             <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
                             <AnimatePresence>{showPersonalDataModal && renderPersonalDataModal()}</AnimatePresence>
                             <AnimatePresence>{showPlateModal && renderPlateEditView()}</AnimatePresence>
@@ -8599,42 +8478,82 @@ function App() {
                                 </motion.div>
                             )}
 
-                            <div className="flex flex-col h-full overflow-hidden">
-                                {renderHeader()}
-                                
+                            <header className="px-6 pt-12 pb-4 bg-white border-b border-zinc-100 flex items-center justify-between shadow-sm relative z-10 shrink-0">
+                                <div className="flex items-center gap-4">
+                                    <button 
+                                        onClick={() => setActiveTab('profile')}
+                                        className="relative active:scale-95 transition-transform"
+                                    >
+                                        <div className="size-12 rounded-[20px] bg-zinc-50 border border-zinc-100 flex items-center justify-center overflow-hidden">
+                                            {driverAvatar ? (
+                                                <img src={driverAvatar} alt="Perfil" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Icon name="person" className="text-zinc-400" />
+                                            )}
+                                        </div>
+                                        <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-white flex items-center justify-center shadow-sm border border-zinc-100">
+                                            <Icon name="settings" size={12} className="text-zinc-400" />
+                                        </div>
+                                    </button>
+                                    <div>
+                                        <h1 className="text-xl font-black text-zinc-900 tracking-tight leading-none mb-1">
+                                            Olá, <span className="text-yellow-600">{driverName.split(' ')[0]}</span>
+                                        </h1>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
+                                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                                                {isOnline ? 'Online' : 'Offline'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveTab('notifications')}
+                                    className="size-12 rounded-[20px] bg-zinc-50 border border-zinc-100 flex items-center justify-center relative active:scale-95 transition-transform"
+                                >
+                                    <Icon name="notifications" className="text-zinc-600" />
+                                    {unreadNotifsCount > 0 && (
+                                        <span className="absolute top-2 right-2 size-2.5 bg-rose-500 border-2 border-white rounded-full animate-pulse" />
+                                    )}
+                                </button>
+                            </header>
+
+                            <div className="flex-1 relative overflow-hidden flex flex-col bg-zinc-50">
                                 <main className="flex-1 overflow-y-auto no-scrollbar relative">
                                     <AnimatePresence mode="wait">
-                                        {activeTab === 'dashboard' && <div key="dash">{renderDashboard()}</div>}
-                                        {activeTab === 'history' && <div key="hist">{renderHistoryView()}</div>}
-                                        {activeTab === 'earnings' && <div key="earn">{renderEarningsView()}</div>}
-                                        {activeTab === 'profile' && <div key="prof">{renderProfileView()}</div>}
-                                        {activeTab === 'missions' && <div key="miss" className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></div>}
-                                        {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
-                                        {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
-                                        {activeTab === 'notifications' && <div key="notif" className="flex-1 h-full"><NotificationsCenterView driverId={driverId || ''} onBack={() => setActiveTab('dashboard')} /></div>}
+                                        {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderDashboard()}</motion.div>}
+                                        {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderActiveMissionView()}</motion.div>}
+                                        {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderHistoryView()}</motion.div>}
+                                        {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderEarningsView()}</motion.div>}
+                                        {activeTab === 'profile' && <motion.div key="prof" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderProfileView()}</motion.div>}
+                                        {activeTab === 'missions' && <motion.div key="miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></motion.div>}
+                                        {activeTab === 'dedicated' && <motion.div key="dedi" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderDedicatedView()}</motion.div>}
+                                        {activeTab === 'scheduled' && <motion.div key="sched" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderScheduledView()}</motion.div>}
+                                        {activeTab === 'notifications' && <motion.div key="notif" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full"><NotificationsCenterView driverId={driverId || ''} onBack={() => setActiveTab('dashboard')} /></motion.div>}
                                     </AnimatePresence>
 
                                     <AnimatePresence>
                                         {activeMission && activeTab !== 'active_mission' && (
-                                            <motion.button 
-                                                key="mission-btn" 
-                                                initial={{ y: 80, opacity: 0 }} 
-                                                animate={{ y: 0, opacity: 1 }} 
-                                                exit={{ y: 80, opacity: 0 }} 
-                                                onClick={() => setActiveTab('active_mission')} 
-                                                className="fixed bottom-28 left-5 right-5 z-[60] bg-yellow-400 text-zinc-950 rounded-[2.5rem] h-20 flex items-center justify-between px-8 shadow-[0_25px_50px_rgba(250,204,21,0.3)]"
+                                            <motion.div 
+                                                initial={{ y: -100, opacity: 0 }}
+                                                animate={{ y: 0, opacity: 1 }}
+                                                exit={{ y: -100, opacity: 0 }}
+                                                className="absolute top-4 left-4 right-4 z-[100]"
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="size-4 bg-zinc-950 rounded-full animate-ping" />
-                                                    <div className="flex flex-col items-start">
-                                                        <span className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-950/60 leading-none mb-1">Missão Ativa</span>
-                                                        <span className="font-black text-xs uppercase tracking-[0.1em] text-zinc-950">Continuar Entrega</span>
+                                                <button
+                                                    onClick={() => setActiveTab('active_mission')}
+                                                    className="w-full bg-emerald-500 text-white rounded-[24px] p-4 flex items-center gap-4 shadow-xl active:scale-95 transition-all"
+                                                >
+                                                    <div className="size-12 bg-white/20 rounded-[16px] flex items-center justify-center">
+                                                        <Icon name="route" className="text-white" />
                                                     </div>
-                                                </div>
-                                                <div className="size-12 bg-zinc-950/10 rounded-2xl flex items-center justify-center shadow-inner">
-                                                    <Icon name="arrow_forward" className="text-zinc-950 text-2xl font-black" />
-                                                </div>
-                                            </motion.button>
+                                                    <div className="text-left flex-1">
+                                                        <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-0.5">Em Andamento</p>
+                                                        <p className="text-sm font-black leading-tight">Retornar à Missão</p>
+                                                    </div>
+                                                    <Icon name="chevron_right" className="text-emerald-100" />
+                                                </button>
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
 
@@ -8665,8 +8584,12 @@ function App() {
                                 userId={driverId || ''} 
                                 onApproved={() => {
                                     setShowOnboarding(false);
-                                    setIsProfileNotFound(false);
-                                    if (driverId) checkApprovalStatus(driverId);
+                                    setIsProfileLoaded(true);
+                                    toastSuccess('Cadastro aprovado!');
+                                    // Recarrega perfil para atualizar status
+                                    if (driverId) {
+                                        loadProfileAndEnforceOnboarding(driverId, authEmail || '', authName || '');
+                                    }
                                 }} 
                                 onLogout={() => {
                                     setShowOnboarding(false);

@@ -34,6 +34,36 @@ const DriverApplicationsTab = () => {
   const handleApprove = async (app: any) => {
     setActionLoading(true);
     try {
+      // 1. Verificar se o telefone já está em uso por outro ID (incluindo excluídos)
+      const { data: existingPhone, error: phoneError } = await supabase
+        .from('drivers_delivery')
+        .select('id, name, is_deleted')
+        .eq('phone', app.phone)
+        .neq('id', app.user_id)
+        .maybeSingle();
+
+      if (phoneError) throw phoneError;
+
+      if (existingPhone) {
+        const status = existingPhone.is_deleted ? 'excluído' : 'ativo';
+        throw new Error(`Conflito: O telefone ${app.phone} já pertence ao motorista "${existingPhone.name}" (${status}). Remova o motorista antigo ou altere o telefone antes de aprovar.`);
+      }
+
+      // 2. Verificar se o e-mail já está em uso por outro ID
+      const { data: existingEmail, error: emailError } = await supabase
+        .from('drivers_delivery')
+        .select('id, name, is_deleted')
+        .eq('email', app.email)
+        .neq('id', app.user_id)
+        .maybeSingle();
+
+      if (emailError) throw emailError;
+
+      if (existingEmail) {
+        const status = existingEmail.is_deleted ? 'excluído' : 'ativo';
+        throw new Error(`Conflito: O e-mail ${app.email} já pertence ao motorista "${existingEmail.name}" (${status}).`);
+      }
+
       const { error: driverError } = await supabase
         .from('drivers_delivery')
         .upsert({
