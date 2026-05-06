@@ -1721,22 +1721,48 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsSaving(true);
     try {
       const { 
-        is_available, // Remove is_available se existir
-        title, // Remove title se existir (usado em promotions)
+        is_available,
+        title,
         ...cleanData 
       } = editingItem;
 
+      // Abordagem Sênior: Verificar se já existe um entregador com este e-mail ou telefone
+      // para evitar duplicidade e apenas vincular ao lojista atual.
+      let existingId = cleanData.id;
+
+      if (!existingId) {
+        if (cleanData.email) {
+          const { data } = await supabase.from('drivers_delivery')
+            .select('id')
+            .eq('email', cleanData.email)
+            .maybeSingle();
+          if (data) existingId = data.id;
+        }
+        
+        if (!existingId && cleanData.phone) {
+          const { data } = await supabase.from('drivers_delivery')
+            .select('id')
+            .eq('phone', cleanData.phone)
+            .maybeSingle();
+          if (data) existingId = data.id;
+        }
+      }
+
       const { error } = await supabase.from('drivers_delivery').upsert({
         ...cleanData,
-        merchant_id: merchantProfile.id
+        id: existingId, // Se encontrou, atualiza. Se não, o Supabase gera um novo.
+        merchant_id: merchantProfile.id,
+        is_deleted: false,
+        is_active: true
       });
+
       if (error) throw error;
-      toastSuccess('Seu entregador foi salvo!');
+      toastSuccess(existingId ? 'Vínculo do entregador atualizado!' : 'Seu entregador foi salvo!');
       setEditingItem(null);
       setEditType(null);
       fetchMyDrivers();
     } catch (err: any) {
-      toastError(err.message);
+      toastError('Erro ao salvar entregador: ' + err.message);
     } finally {
       setIsSaving(false);
     }
