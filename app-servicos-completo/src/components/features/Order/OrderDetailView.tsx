@@ -9,7 +9,7 @@ interface OrderDetailViewProps {
   toastSuccess?: (msg: string) => void;
   toastError?: (msg: string) => void;
   onTrackOrder?: (order: any) => void;
-  onCancelOrder?: (id: string) => Promise<boolean>;
+  onCancelOrder?: (id: string) => void | Promise<void>;
 }
 
 export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
@@ -81,13 +81,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
     setIsCancelling(true);
     try {
-      const success = await onCancelOrder(order.id);
-      if (success) {
-        if (toastSuccess) toastSuccess('Pedido cancelado com sucesso.');
-        onBack();
-      } else {
-        if (toastError) toastError('Erro ao cancelar pedido.');
-      }
+      await onCancelOrder(order.id);
+      // O handleCancelOrder do App.tsx já exibe toast e navega de volta
+    } catch (err) {
+      if (toastError) toastError('Erro ao cancelar pedido.');
     } finally {
       setIsCancelling(false);
     }

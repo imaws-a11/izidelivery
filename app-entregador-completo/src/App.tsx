@@ -4430,14 +4430,7 @@ function App() {
                                         onClick={() => { setSelectedSlot(slot); }}
                                         className={`relative w-full rounded-[40px] overflow-hidden p-6 sm:p-7 flex flex-col gap-5 text-left active:scale-[0.97] transition-all group shadow-xl ${isAccepted ? 'border-2 border-emerald-500 bg-emerald-50/40' : 'border border-zinc-100 bg-white'}`}
                                     >
-                                        {/* Selo de Vaga Conquistada no Canto Superior Esquerdo */}
-                                        {isAccepted && (
-                                            <div className="absolute top-0 left-0 p-4 z-20">
-                                                <div className="size-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 -rotate-6 group-hover:rotate-0 transition-transform">
-                                                     <Icon name="verified" size={24} />
-                                                </div>
-                                            </div>
-                                        )}
+                                        {/* Selo removido para evitar sobreposição com a foto do lojista */}
 
                                         <div className="relative z-10 flex items-start justify-between gap-3 sm:gap-4">
                                             <div className="flex gap-4 items-center flex-1 min-w-0 pr-10">
@@ -4460,9 +4453,9 @@ function App() {
                                                     <h4 className={`text-base sm:text-lg font-black tracking-tight leading-tight mb-1.5 ${isAccepted ? 'text-emerald-700' : 'text-zinc-900'}`}>{slot.title}</h4>
                                                     
                                                     <div className="space-y-1">
-                                                        <div className="flex items-start gap-1.5 text-[9px] font-bold uppercase tracking-widest text-zinc-400">
-                                                            <Icon name="location_on" className="text-zinc-300 mt-0.5" size={10} />
-                                                            <span className="leading-tight line-clamp-1 break-words">{slot.admin_users?.store_address || 'Unidade Local'}</span>
+                                                        <div className="flex items-start gap-1.5 text-[9px] font-bold uppercase tracking-widest text-zinc-900">
+                                                            <Icon name="location_on" className="text-zinc-400 mt-0.5" size={10} />
+                                                            <span className="leading-tight line-clamp-1 break-words font-black">{slot.admin_users?.store_address || 'Unidade Local'}</span>
                                                         </div>
                                                         <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-yellow-600">
                                                             <Icon name="event" size={10} />
@@ -4514,7 +4507,9 @@ function App() {
                                                 <div className={`size-9 rounded-xl flex items-center justify-center border shrink-0 ${
                                                     isAccepted ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-zinc-50 border-zinc-100'
                                                 }`}>
-                                                    <Icon name="schedule" className={isAccepted ? 'text-emerald-600' : 'text-zinc-400'} size={16} />
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={isAccepted ? 'text-emerald-600' : 'text-yellow-600'}>
+                                                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                                    </svg>
                                                 </div>
                                                 <p className={`text-[10px] font-bold uppercase tracking-wider ${isAccepted ? 'text-emerald-600' : 'text-zinc-500'}`}>{slot.working_hours}</p>
                                             </div>
@@ -5094,14 +5089,7 @@ function App() {
                                     >
                                         {isAccepted && <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />}
                                         
-                                        {/* Selo de Vaga Conquistada */}
-                                        {isAccepted && (
-                                            <div className="absolute top-0 left-0 p-4 z-20">
-                                                <div className="size-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 -rotate-6 transition-transform">
-                                                     <Icon name="verified" size={18} />
-                                                </div>
-                                            </div>
-                                        )}
+                                        {/* Selo removido para evitar sobreposição */}
 
                                         <div className={`size-16 rounded-[24px] border flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500 ${
                                             isAccepted ? 'bg-emerald-100 border-emerald-200' : 'bg-zinc-50 border-zinc-100'
@@ -5109,7 +5097,7 @@ function App() {
                                             {s.admin_users?.store_logo
                                                 ? <img src={s.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                                 : <div className={`size-full flex items-center justify-center ${isAccepted ? 'bg-emerald-200' : 'bg-yellow-50'}`}>
-                                                    <Icon name={isAccepted ? 'verified' : 'stars'} size={28} className={isAccepted ? 'text-emerald-600' : 'text-yellow-500'} />
+                                                    <Icon name={isAccepted ? 'military_tech' : 'stars'} size={28} className={isAccepted ? 'text-emerald-600' : 'text-yellow-500'} />
                                                   </div>}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -5129,7 +5117,9 @@ function App() {
                                                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${
                                                     isAccepted ? 'bg-emerald-100/50 border-emerald-200' : 'bg-zinc-50 border-zinc-100'
                                                 }`}>
-                                                    <Icon name="schedule" size={12} className={isAccepted ? 'text-emerald-600' : 'text-yellow-600'} />
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={isAccepted ? 'text-emerald-600' : 'text-yellow-600'}>
+                                                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                                    </svg>
                                                     <p className={`text-[9px] font-black uppercase tracking-wider ${isAccepted ? 'text-emerald-600' : 'text-zinc-500'}`}>{s.working_hours || 'A combinar'}</p>
                                                 </div>
                                             </div>

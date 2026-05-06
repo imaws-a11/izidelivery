@@ -1005,24 +1005,22 @@ function App() {
 
   const handleCancelOrder = async (orderId: string) => {
     if (!orderId) {
-      toastError("ID do pedido nÃ£o encontrado.");
+      toastError("ID do pedido não encontrado.");
       return;
     }
 
     try {
-      const { data: orderData } = await supabase.from("orders_delivery").select("status").eq("id", orderId).single();
-      
-      let error = null;
-      if (orderData && ["novo", "pendente", "pendente_pagamento", "waiting_driver", "searching_driver", "waiting_merchant"].includes(orderData.status)) {
-         const { error: delError } = await supabase.from("orders_delivery").delete().eq("id", orderId);
-         error = delError;
-      } else {
-         const { error: updError } = await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", orderId);
-         error = updError;
-      }
+      const { data, error } = await supabase
+        .from("orders_delivery")
+        .update({ status: "cancelado" })
+        .eq("id", orderId)
+        .select("id, status")
+        .single();
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+
+      if (!data || data.status !== "cancelado") {
+        throw new Error("Não foi possível cancelar. Tente novamente.");
       }
 
       toastSuccess("Pedido cancelado com sucesso!");
@@ -1033,7 +1031,7 @@ function App() {
       setSubView("none");
     } catch (err: any) {
       console.error("Erro ao cancelar pedido:", err);
-      toastError(`NÃ£o foi possÃ­vel cancelar: ${err.message || 'Erro de rede'}`);
+      toastError(`Não foi possível cancelar: ${err.message || 'Erro de rede'}`);
     }
   };
 
@@ -2955,10 +2953,7 @@ const navigateSubView = (target: string) => {
       toastSuccess("Entrega concluÃ­da com sucesso! ðŸŽ‰");
     }
 
-    // Se cancelado
-    if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
-      toastError("ServiÃ§o cancelado.");
-    }
+    // Se cancelado — não exibir toast aqui, pois o handleCancelOrder já notifica o usuário
   }, [orders, subView, selectedItem?.id, selectedItem?.status, selectedItem?.driver_id]);
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
@@ -4939,6 +4934,13 @@ const navigateSubView = (target: string) => {
                        driverLocation={driverLocation}
                        onBack={() => window.history.back()}
                        onUpdateLocation={updateLocation}
+                       onCancel={() => selectedItem?.id && handleCancelOrder(selectedItem.id)}
+                       onContactDriver={() => {
+                         if (selectedItem) {
+                           setSelectedItem(selectedItem);
+                           setSubView("order_chat");
+                         }
+                       }}
                     />
                   </motion.div>
                 )}

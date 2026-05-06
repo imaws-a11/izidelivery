@@ -238,9 +238,10 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 
             {/* BOTÃO DE CANCELAMENTO - POSIÇÃO DE DESTAQUE */}
             {(() => {
-                const canCancel = isMobility
-                  ? ['novo', 'pendente', 'pendente_pagamento', 'waiting_driver'].includes(selectedItem.status)
-                  : ['novo', 'pendente', 'pendente_pagamento', 'waiting_merchant'].includes(selectedItem.status);
+                const cancelableStatuses = isMobility
+                  ? ['novo', 'pendente', 'pendente_pagamento', 'waiting_driver', 'searching_driver', 'aceito', 'confirmado', 'atribuido', 'a_caminho_coleta', 'saiu_para_coleta', 'at_pickup', 'chegou_coleta', 'no_local_coleta', 'a_caminho', 'picked_up', 'em_rota', 'saiu_para_entrega']
+                  : ['novo', 'pendente', 'pendente_pagamento', 'waiting_merchant'];
+                const canCancel = cancelableStatuses.includes(selectedItem.status);
                 if (!canCancel) return null;
                 
                 return (
@@ -252,18 +253,18 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                     <button
                       onClick={async () => {
                         console.log("[DEBUG] Clique no botão de cancelar. OrderID:", selectedItem?.id);
-                        const confirm = await showConfirm({ message: "Deseja realmente cancelar este pedido?", danger: true });
+                        const confirm = await showConfirm({ message: isMobility ? "Deseja realmente cancelar esta viagem?" : "Deseja realmente cancelar este pedido?", danger: true });
                         if(confirm) {
                           onCancelOrder(selectedItem?.id);
                         }
                       }}
-                      className="w-full py-5 rounded-[28px] bg-zinc-50 border border-zinc-100 text-zinc-400 font-black text-[10px] uppercase tracking-[0.25em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-zinc-200 hover:text-zinc-600 shadow-sm"
+                      className="w-full py-5 rounded-[28px] bg-rose-50 border border-rose-200 text-rose-500 font-black text-[10px] uppercase tracking-[0.25em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-rose-300 hover:bg-rose-100 shadow-sm"
                     >
                       <span className="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform">close</span>
-                      {isMobility ? "Cancelar Solicitação" : "Cancelar este Pedido"}
+                      {isMobility ? "Cancelar Viagem" : "Cancelar este Pedido"}
                     </button>
                     <p className="text-center text-zinc-600 text-[8px] font-black uppercase tracking-widest mt-3 opacity-60">
-                      {isMobility ? "Disponível antes do motorista aceitar" : "Disponível enquanto o lojista não aceita"}
+                      {isMobility ? "Cancelamento disponível até a conclusão" : "Disponível enquanto o lojista não aceita"}
                     </p>
                   </motion.div>
                 );

@@ -168,9 +168,24 @@ export default function MyStudioTab() {
     };
   }, [selectedSlotForCandidates?.id, fetchSlotApplications]);
 
-  const handleCandidateAction = async (appId: string, status: 'accepted' | 'rejected') => {
+  const handleCandidateAction = async (appId: string, status: 'accepted' | 'rejected' | 'pending') => {
     setProcessingAppId(appId);
     try {
+      if (status === 'accepted') {
+        // Segurança: verificar se já existe alguém aceito para esta vaga
+        const { data: acceptedApps } = await supabase
+          .from('slot_applications')
+          .select('id')
+          .eq('slot_id', selectedSlotForCandidates.id)
+          .eq('status', 'accepted');
+
+        if (acceptedApps && acceptedApps.length > 0) {
+          toastError('Esta vaga já possui um candidato aprovado. Remova o atual antes de aceitar um novo.');
+          setProcessingAppId(null);
+          return;
+        }
+      }
+
       const app = slotApplications.find((a: any) => a.id === appId);
       const { error } = await supabase.from('slot_applications').update({ status }).eq('id', appId);
       if (error) throw error;
@@ -180,11 +195,21 @@ export default function MyStudioTab() {
         await supabase.from('dedicated_slots_delivery').update({ is_active: false }).eq('id', selectedSlotForCandidates.id);
         
         await supabase.functions.invoke('send-push-notification', {
-          body: { driver_id: app.driver_id, title: 'Vaga Confirmada! 🌟', body: `Sua candidatura para "${selectedSlotForCandidates?.title}" foi aprovada!`, data: { type: 'dedicated_slot_confirmed', slot_id: selectedSlotForCandidates?.id } }
+          body: { 
+            driver_id: app.driver_id, 
+            title: 'Vaga Confirmada! 🌟', 
+            body: `Sua candidatura para "${selectedSlotForCandidates?.title}" foi aprovada!`, 
+            data: { type: 'dedicated_slot_confirmed', slot_id: selectedSlotForCandidates?.id } 
+          }
         }).catch(() => {});
       }
+
+      if (status === 'pending') {
+        // Se estiver "descandidatando", a vaga volta a ficar ativa/disponível
+        await supabase.from('dedicated_slots_delivery').update({ is_active: true }).eq('id', selectedSlotForCandidates.id);
+      }
       
-      toastSuccess(status === 'accepted' ? 'Candidato aprovado e vaga preenchida!' : 'Candidatura recusada.');
+      toastSuccess(status === 'accepted' ? 'Candidato aprovado e vaga preenchida!' : status === 'pending' ? 'Candidato desvinculado. A vaga está aberta novamente!' : 'Candidatura recusada.');
       fetchSlotApplications(selectedSlotForCandidates.id);
     } catch (e: any) { toastError('Erro: ' + e.message); }
     finally { setProcessingAppId(null); }
@@ -1689,8 +1714,8 @@ export default function MyStudioTab() {
                                   className="flex-1 h-11 bg-slate-100 dark:bg-white/5 text-rose-500 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500/10 transition-all">
                                   Recusar
                                 </button>
-                                <button onClick={() => handleCandidateAction(app.id, 'accepted')} disabled={processingAppId === app.id}
-                                  className="flex-[2] h-11 bg-primary text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+                                <button onClick={() => handleCandidateAction(app.id, 'accepted')} disabled={processingAppId === app.id || slotApplications.some(a => a.status === 'accepted')}
+                                  className="flex-[2] h-11 bg-primary text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale">
                                   {processingAppId === app.id ? '...' : 'Aceitar Piloto'}
                                 </button>
                               </div>
@@ -1714,8 +1739,9 @@ export default function MyStudioTab() {
                                     <span className="material-symbols-outlined text-sm">call</span> Contato
                                   </button>
                                   <button onClick={() => handleCandidateAction(app.id, 'pending')}
-                                    className="px-4 h-11 bg-white/5 text-white/40 rounded-2xl text-[9px] font-black uppercase hover:text-rose-500 transition-all" title="Remover da vaga">
+                                    className="px-6 h-11 bg-rose-500/10 text-rose-500 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2">
                                     <span className="material-symbols-outlined text-sm">logout</span>
+                                    Desvincular
                                   </button>
                                 </div>
                               )}
