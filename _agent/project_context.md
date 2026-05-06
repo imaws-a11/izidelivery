@@ -1,5 +1,14 @@
 # IZI Delivery - Contexto Técnico (Compacto)
-Atualizado: 2026-05-05
+Atualizado: 2026-05-06
+
+### ✅ Segurança e Fluxo de Aprovação (Entregador)
+- **Tripla Trava:** Refatorada a inicialização do app para impedir bypass do onboarding.
+  - **Auth Sync:** Removida a confiança no `localStorage` para o estado `isAuthenticated`; agora o app aguarda a resposta real do Supabase antes de liberar o Dashboard.
+  - **Foreground Enforcement:** Adicionado listener de `visibilitychange` que força a re-verificação do status de aprovação sempre que o app volta do background.
+  - **Sequential Loading:** Centralizada a lógica em `loadProfileAndEnforceOnboarding` para garantir que o perfil seja validado antes de qualquer interação online.
+- **UX de Status:** 
+  - **Card Permanente:** Implementado card vermelho de "Cadastro Pendente" no Dashboard que persiste enquanto `is_active` for falso.
+  - **Navegação Livre:** Adicionado botão "Voltar ao Início" em todas as etapas do onboarding (inclusive Boas-vindas), permitindo que o motorista navegue no app em modo leitura enquanto aguarda.
 
 ### ✅ Estabilização Onboarding (Entregador)
 - **UI/UX:** Design Claymorphic aplicado.
