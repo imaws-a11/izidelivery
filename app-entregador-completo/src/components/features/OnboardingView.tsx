@@ -49,9 +49,15 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
       
       if (app) {
         console.log("[DEBUG] Candidatura encontrada:", app.status);
-        if (app.status === 'pending') setStep('waiting');
-        else if (app.status === 'rejected') setStep('rejected');
-        else if (app.status === 'approved') onApproved();
+        if (app.status === 'pending') {
+          setStep('waiting');
+        } else if (app.status === 'rejected') {
+          setStep('rejected');
+        } else if (app.status === 'approved') {
+          // Se a candidatura está aprovada, mas o driver não está ativo (vimos acima)
+          // significa que ele foi desativado pelo admin ou está pendente de sincronização
+          setStep('waiting');
+        }
       } else {
         console.log("[DEBUG] Nenhuma candidatura encontrada, mostrando welcome");
         setStep('welcome');
@@ -188,9 +194,19 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
                     >
                         Começar Cadastro
                     </button>
+                    
+                    {onClose && (
+                        <button 
+                            onClick={onClose} 
+                            className="w-full h-18 bg-zinc-100 text-zinc-900 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all"
+                        >
+                            Voltar ao Início
+                        </button>
+                    )}
+
                     <button 
                         onClick={onLogout} 
-                        className="w-full h-18 bg-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all"
+                        className="w-full h-18 bg-white border border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all"
                     >
                         Sair da Conta
                     </button>

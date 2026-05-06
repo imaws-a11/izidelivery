@@ -586,8 +586,8 @@ function App() {
     const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
     const { isLoaded } = useJsApiLoader({ id: GOOGLE_MAPS_ID, googleMapsApiKey: mapsKey, libraries: GOOGLE_MAPS_LIBRARIES, language: 'pt-BR', region: 'BR' });
 
-    const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('izi_driver_authenticated') === 'true');
-    const [driverId, setDriverId] = useState<string | null>(() => localStorage.getItem('izi_driver_uid'));
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [driverId, setDriverId] = useState<string | null>(null);
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
     const [driverName, setDriverName] = useState(() => localStorage.getItem('izi_driver_name') || 'Entregador');
     const [driverAvatar, setDriverAvatar] = useState<string | null>(() => localStorage.getItem('izi_driver_avatar') || null);
@@ -1741,8 +1741,54 @@ function App() {
 
     useEffect(() => {
 
-        // O listener de transmissões foi movido para um useEffect dedicado abaixo.
+        // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
+        const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
+            const { data: profile, error: profileError } = await supabase
+                .from('drivers_delivery')
+                .select('name, phone, email, vehicle_type, license_plate, document_number, bank_info, avatar_url, preferences, is_active')
+                .eq('id', userId)
+                .maybeSingle();
 
+            if (profileError) {
+                console.error('[AUTH] Erro ao buscar perfil:', profileError);
+            }
+
+            if (!profile) {
+                // Novo usuário sem perfil ou erro: força onboarding
+                setIsProfileNotFound(true);
+                setIsApproved(false);
+                setIsProfileLoaded(true);
+                setIsOnline(false);
+                localStorage.setItem('Izi_online', 'false');
+                setShowOnboarding(true);
+                ensureDriverRecord(userId, userEmail, userName);
+                return;
+            }
+
+            // Preenche estado com dados do perfil
+            if (profile.name) setDriverName(profile.name);
+            if (profile.avatar_url) {
+                setDriverAvatar(profile.avatar_url);
+                localStorage.setItem('izi_driver_avatar', profile.avatar_url);
+            }
+            if (profile.vehicle_type) {
+                setDriverVehicle(profile.vehicle_type);
+                localStorage.setItem('izi_driver_vehicle', profile.vehicle_type);
+            }
+            if (profile.license_plate) setDriverPlate(profile.license_plate);
+            if (profile.bank_info?.pix_key) setPixKey(profile.bank_info.pix_key);
+
+            const active = !!profile.is_active;
+            setIsApproved(active);
+            setIsProfileLoaded(true);
+
+            if (!active) {
+                // Motorista não aprovado: força offline e onboarding
+                setIsOnline(false);
+                localStorage.setItem('Izi_online', 'false');
+                setShowOnboarding(true);
+            }
+        };
 
         // Check initial Supabase session
         const checkSession = async () => {
@@ -1750,30 +1796,19 @@ function App() {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
                     console.error('[AUTH] Erro ao verificar sessão inicial:', error.message);
-                    if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
-                        console.warn("[AUTH] Refresh token inválido detectado no boot. Limpando...");
-                        clearDriverSessionState();
-                        return;
-                    }
                 }
                 const user = session?.user;
                 if (user) {
                     setDriverId(user.id);
                     setIsAuthenticated(true);
                     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                    setDriverName(name);
-                    ensureDriverRecord(user.id, user.email || '', name);
+                    await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
                 } else {
-                    // Se não tem sessão no Supabase, garantimos que o driverId do estado esteja nulo
-                    // Mas NÃO limpamos o localStorage aqui para não interferir com o handleLogout
                     setDriverId(null);
                     setIsAuthenticated(false);
                 }
             } catch (e: any) {
                 console.error('[AUTH] Erro ao verificar sessão inicial:', e);
-                if (e.message?.includes("Refresh Token Not Found")) {
-                    clearDriverSessionState();
-                }
             } finally {
                 setAuthInitLoading(false);
             }
@@ -1781,10 +1816,49 @@ function App() {
 
         checkSession();
 
+        // Listener de eventos de autenticação (Login, Logout, Refresh)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('[AUTH] Evento:', event);
+            
+            if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+                setIsAuthenticated(false);
+                setDriverId(null);
+                setAuthInitLoading(false);
+                return;
+            }
+
+            const user = session?.user;
+            if (user) {
+                setDriverId(user.id);
+                setIsAuthenticated(true);
+                if (!hasBootedRef.current) {
+                    hasBootedRef.current = true;
+                    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
+                    await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
+                }
+            }
+        });
+
+        // Listener de visibilidade: quando o app volta do background (web/PWA/APK)
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState !== 'visible') return;
+            const { data: { session } } = await supabase.auth.getSession();
+            const user = session?.user;
+            if (!user) return;
+            const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
+            
+            // Força re-verificação ao voltar
+            hasBootedRef.current = false; 
+            await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
         return () => {
             clearTimeout(authTimeout);
+            subscription.unsubscribe();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
 
@@ -1934,6 +2008,11 @@ function App() {
                         const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                         setDriverName(name);
                         ensureDriverRecord(user.id, user.email || '', name);
+                        // FIX: Ensure that if profile is not loaded or error occurred, we force Onboarding view
+                        setIsProfileNotFound(true);
+                        setIsApproved(false);
+                        setIsProfileLoaded(true);
+                        setShowOnboarding(true);
                     }
 
                     refreshFinanceData();
@@ -2070,7 +2149,7 @@ function App() {
                     if (error) console.error('[ONLINE-RESTORE] Erro ao sincronizar online no banco:', error.message);
                 });
         }
-    }, [driverId, isAuthenticated]);
+    }, [driverId, isAuthenticated, isProfileLoaded]);
 
     // Sincronização entre múltiplos dispositivos (Online status, Carteira, Perfil)
     useEffect(() => {
@@ -2126,9 +2205,11 @@ function App() {
     }, [driverId, isAuthenticated, isOnline]);
 
     const handleToggleOnline = async () => {
+        if (!isProfileLoaded) return; // FIX: Block toggling if profile isn't loaded yet
+        
         // Só bloqueia ao tentar ir ONLINE se o perfil já carregou e o cadastro ainda não foi aprovado
         // Ficar offline sempre deve funcionar sem restrição
-        if (isProfileLoaded && !isApproved && !isOnline) {
+        if (!isApproved && !isOnline) {
             setShowPendingApprovalModal(true);
             return;
         }
@@ -4005,11 +4086,11 @@ function App() {
                 }}
             >
                 <div className="px-6 space-y-10">
-                    {isProfileLoaded && !isApproved && (
+                    {(isProfileLoaded || driverId) && !isApproved && (
                         <motion.div 
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="bg-rose-500 p-6 rounded-[32px] shadow-[0_20px_40px_rgba(244,63,94,0.2)] flex items-center gap-5 relative overflow-hidden"
+                            className="bg-rose-500 p-6 rounded-[32px] shadow-[0_20px_40px_rgba(244,63,94,0.3)] flex items-center gap-5 relative overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 size-24 bg-white/10 blur-2xl rounded-full translate-x-8 -translate-y-8" />
                             <div className="size-14 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
@@ -4018,12 +4099,12 @@ function App() {
                             <div className="flex-1">
                                 <h3 className="text-white font-black text-sm uppercase tracking-tighter leading-tight">Cadastro Pendente</h3>
                                 <p className="text-white/80 text-[10px] font-bold leading-tight mt-1 uppercase tracking-widest">
-                                    Aguarde a aprovação do administrador para começar a trabalhar.
+                                    Seu perfil está em análise. Complete seu cadastro ou aguarde a aprovação.
                                 </p>
                             </div>
                             <button 
                                 onClick={() => {
-                                    console.log("[DEBUG] Clique em Detalhes", { showOnboarding, driverId, isAuthenticated });
+                                    console.log("[DEBUG] Abrindo Onboarding pelo Card", { driverId });
                                     setShowOnboarding(true);
                                 }}
                                 className="h-10 px-4 rounded-xl bg-white text-rose-500 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg"
@@ -8591,6 +8672,7 @@ function App() {
                                     setShowOnboarding(false);
                                     handleLogout();
                                 }}
+                                onClose={() => setShowOnboarding(false)}
                             />
                         )}
 
