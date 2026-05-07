@@ -515,6 +515,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             dispatch_priority: data.dispatch_priority || 'global',
             scheduling_priority: data.scheduling_priority || 'global',
             is_open: data.is_open ?? true,
+            opening_mode: data.opening_mode || 'auto',
             free_delivery: data.free_delivery ?? false,
             estimated_time: data.estimated_time || '30-45 min',
             store_type: data.store_type || 'restaurant',

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../../lib/supabase";
 import { MerchantCard } from "../Establishment/MerchantCard";
 import { useApp } from "../../../contexts/AppContext";
+import { Icon } from "../../common/Icon";
 
 interface MarketExploreViewProps {
   setSubView: (view: any) => void;
@@ -204,7 +205,7 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
                             onClick={(e) => { e.stopPropagation(); handleAddToCart(prod); }}
                             className="absolute bottom-2 right-2 size-10 rounded-xl bg-yellow-400 text-black flex items-center justify-center shadow-lg active:scale-90 transition-all"
                           >
-                             <span className="material-symbols-rounded">add</span>
+                             <Icon name="add" size={18} />
                           </button>
                        </div>
                        <div className="px-1">

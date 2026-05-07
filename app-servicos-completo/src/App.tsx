@@ -1396,6 +1396,7 @@ function App() {
     cart.filter((item) => item.id === id).length;
 
   const processingItemsRef = useRef<Set<string>>(new Set());
+  const isFirstEmptySync = useRef(true);
 
   const handleAddToCart = async (item: any, e?: React.MouseEvent) => {
     if (processingItemsRef.current.has(item.id)) return;
@@ -2814,29 +2815,44 @@ const navigateSubView = (target: string) => {
         },
         (payload: any) => {
           const updated = payload.new;
+          console.log(`[REALTIME] Recebido update de status para ID: ${updated.id}`, updated);
+
           setESTABLISHMENTS(prev => {
               const idx = prev.findIndex(e => e.id === updated.id);
               if (idx === -1) return prev;
               
               const newArr = [...prev];
-              const isOpen = isStoreOpen(updated.opening_hours, updated.is_open, updated.opening_mode);
+              const existing = newArr[idx];
               
-              console.log(`[REALTIME] Status de ${updated.store_name} atualizado:`, { isOpen, manual: updated.is_open });
+              // CRITICO: Mesclar dados novos com os existentes para nÃ£o perder o 'opening_mode'
+              // Supabase Realtime pode enviar apenas os campos alterados.
+              const merged = { ...existing, ...updated };
+              
+              // Recalcular status de abertura com base nos dados mesclados
+              const isOpen = isStoreOpen(merged.opening_hours, merged.is_open, merged.opening_mode);
+              
+              console.log(`[REALTIME] Sincronizando ${merged.name}:`, { 
+                isOpen, 
+                mode: merged.opening_mode, 
+                manual: merged.is_open 
+              });
 
-              newArr[idx] = {
-                ...newArr[idx],
+              const updatedItem = {
+                ...existing,
+                ...updated,
                 isOpen,
                 tag: isOpen ? "Aberto Agora" : "Fechado",
                 statusTag: isOpen ? "Aberto" : "Fechado",
-                mode: updated.opening_mode,
-                opening_hours: updated.opening_hours,
-                is_open: updated.is_open,
-                free_delivery: updated.free_delivery,
-                freeDelivery: updated.free_delivery,
-                service_fee: updated.service_fee
               };
+
+              newArr[idx] = updatedItem;
               
-              // Re-ordenar para manter abertos no topo
+              // Se o cliente estÃ¡ visualizando este restaurante, atualizar o selectedShop instantaneamente
+              if (selectedShopRef.current?.id === updated.id) {
+                setSelectedShop(prev => prev ? { ...prev, ...updatedItem } : null);
+              }
+              
+              // Manter ordenação de abertos no topo
               return newArr.sort((a, b) => (a.isOpen === b.isOpen ? 0 : a.isOpen ? -1 : 1));
             });
           }

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../../../contexts/AppContext";
 import { MerchantCard } from "../Establishment/MerchantCard";
 import { ExploreBanners } from "../../common/ExploreBanners";
+import { Icon } from "../../common/Icon";
 
 interface CategoryOption {
   label: string;
@@ -263,7 +264,7 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
                           onClick={(e) => { e.stopPropagation(); handleAddToCart(prod); }}
                           className="absolute bottom-2 right-2 size-10 rounded-xl bg-yellow-400 text-black flex items-center justify-center shadow-lg active:scale-90 transition-all"
                         >
-                           <span className="material-symbols-rounded">add</span>
+                           <Icon name="add" size={18} />
                         </button>
                      </div>
                      <div className="px-1">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
+import { toastSuccess, toastError } from '../lib/useToast';
 import { AddressSearchInput } from './AddressSearchInput';
 
 // Componente de Toggle Premium
@@ -285,7 +286,12 @@ export default function MyStoreTab() {
                    setIsSaving(true);
                    const nextOpen = !merchantProfile.is_open;
                    const { error } = await supabase.from('admin_users').update({ is_open: nextOpen, opening_mode: 'manual' }).eq('id', merchantProfile.merchant_id);
-                   if (!error) setMerchantProfile({ ...merchantProfile, is_open: nextOpen, opening_mode: 'manual' });
+                   if (!error) {
+                     setMerchantProfile({ ...merchantProfile, is_open: nextOpen, opening_mode: 'manual' });
+                     toastSuccess(`Loja ${nextOpen ? 'Aberta' : 'Fechada'} com sucesso!`);
+                   } else {
+                     toastError('Erro ao atualizar sinal da loja');
+                   }
                    setIsSaving(false);
                 }} />
               </div>
@@ -300,7 +306,12 @@ export default function MyStoreTab() {
                      onClick={async () => {
                         setIsSaving(true);
                         const { error } = await supabase.from('admin_users').update({ opening_mode: 'auto' }).eq('id', merchantProfile.merchant_id);
-                        if (!error) setMerchantProfile({ ...merchantProfile, opening_mode: 'auto' });
+                        if (!error) {
+                          setMerchantProfile({ ...merchantProfile, opening_mode: 'auto' });
+                          toastSuccess('Modo Automático reativado!');
+                        } else {
+                          toastError('Erro ao resetar modo');
+                        }
                         setIsSaving(false);
                      }}
                      className="text-[8px] font-black uppercase text-primary hover:underline"

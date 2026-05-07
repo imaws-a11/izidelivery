@@ -234,7 +234,7 @@ export const ProductDetailView = () => {
                             {isSelected ? (
                               <span className="text-[14px] font-black">{qty}</span>
                             ) : (
-                              <span className="material-symbols-outlined text-[18px] font-black">add</span>
+                              <Icon name="add" size={18} className="font-black" />
                             )}
                           </div>
                           <span className={"font-black text-[14px] uppercase tracking-tighter italic " + (isSelected ? 'text-zinc-900' : 'text-zinc-900')}>{item.name}</span>
@@ -247,14 +247,14 @@ export const ProductDetailView = () => {
                                 onClick={(e) => { e.stopPropagation(); updateOptionQuantity(group, item, -1); }}
                                 className="size-8 rounded-xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-md"
                               >
-                                <span className="material-symbols-outlined text-sm font-black">remove</span>
+                                <Icon name="remove" size={14} className="font-black" />
                               </button>
                               <span className="text-[13px] font-black w-4 text-center text-black">{qty}</span>
                               <button 
                                 onClick={(e) => { e.stopPropagation(); updateOptionQuantity(group, item, 1); }}
                                 className="size-8 rounded-xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-md"
                               >
-                                <span className="material-symbols-outlined text-sm font-black">add</span>
+                                <Icon name="add" size={14} className="font-black" />
                               </button>
                             </div>
                           ) : (
@@ -286,14 +286,14 @@ export const ProductDetailView = () => {
                 onClick={(e) => { e.stopPropagation(); setTempQuantity(Math.max(1, tempQuantity - 1)); }}
                 className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
               >
-                <span className="material-symbols-outlined font-black">remove</span>
+                <Icon name="remove" size={18} className="font-black" />
               </button>
               <span className="font-black text-lg w-6 text-center">{tempQuantity}</span>
               <button 
                 onClick={(e) => { e.stopPropagation(); setTempQuantity(tempQuantity + 1); }}
                 className="size-11 rounded-2xl bg-black text-yellow-400 flex items-center justify-center active:scale-75 transition-all shadow-lg"
               >
-                <span className="material-symbols-outlined font-black">add</span>
+                <Icon name="add" size={18} className="font-black" />
               </button>
             </div>
 
@@ -316,8 +316,10 @@ export const ProductDetailView = () => {
                 }, 1500);
               }} 
             >
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-0.5">Adicionar</span>
-              <span className="font-black text-lg tracking-tighter">R$ {(totalProductPrice * tempQuantity).toFixed(2).replace(".", ",")}</span>
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-0.5">Adicionar à Sacola</span>
+                <span className="font-black text-lg tracking-tighter">R$ {(totalProductPrice * tempQuantity).toFixed(2).replace(".", ",")}</span>
+              </div>
             </button>
           </div>
         )}

@@ -405,24 +405,35 @@ export const ExploreRestaurantsView = ({
           >
             <button 
               onClick={() => navigateSubView("cart")}
-              className="w-full h-24 bg-zinc-900 rounded-[40px] flex items-center justify-between px-10 shadow-[0_30px_60px_rgba(0,0,0,0.4)] active:scale-[0.98] transition-all relative overflow-hidden group"
+              className="w-full h-24 bg-zinc-900 rounded-[40px] flex items-center justify-center px-10 shadow-[0_30px_60px_rgba(0,0,0,0.4)] active:scale-[0.98] transition-all relative overflow-hidden group"
             >
               <div className="absolute inset-0 bg-yellow-400 translate-y-full group-hover:translate-y-[85%] transition-transform opacity-10" />
               
-              <div className="flex items-center gap-6 relative z-10">
-                 <div className="size-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-black font-black text-xl shadow-lg shadow-yellow-400/20">
-                   {cart.length}
-                 </div>
-                 <div className="text-left">
-                    <p className="text-white font-black text-lg uppercase tracking-tighter leading-none italic">Ver Sacola</p>
-                    <p className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Finalizar Pedido</p>
-                 </div>
-              </div>
-              
-              <div className="relative z-10 flex items-center gap-4">
-                 <span className="text-white/30 text-xs font-bold uppercase tracking-widest">Izi Flash</span>
-                 <Icon name="arrow_forward_ios" size={18} className="text-white" />
-              </div>
+              {(() => {
+                const subtotal = cart.reduce((sum: number, item: any) => {
+                  const basePrice = Number(item.price) || 0;
+                  const addonsPrice = Array.isArray(item.addonDetails) 
+                    ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
+                    : 0;
+                  return sum + basePrice + addonsPrice;
+                }, 0);
+
+                return (
+                  <div className="flex items-center gap-6 relative z-10 w-full justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-black font-black text-xl shadow-lg shadow-yellow-400/20">
+                        {cart.length}
+                      </div>
+                      <span className="text-white font-black uppercase tracking-[0.2em] italic text-sm">Ver Sacola</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/40 font-black italic text-xs uppercase">Total</span>
+                      <span className="text-yellow-400 font-black italic text-xl tracking-tighter">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </button>
           </motion.div>
         )}

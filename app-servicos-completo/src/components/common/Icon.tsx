@@ -66,6 +66,8 @@ export function Icon({ name, className = "", size = 20 }: IconProps) {
     'route': BespokeIcons.Route,
     'package': BespokeIcons.Package,
     'inventory_2': BespokeIcons.Package,
+    'add': BespokeIcons.Plus,
+    'remove': BespokeIcons.Minus,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
