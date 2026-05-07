@@ -90,16 +90,17 @@ export const ExploreRestaurantsView = ({
 
   const filteredShops = useMemo(() => {
     return establishments.filter(shop => {
-      const isRestaurante = shop.category?.toLowerCase() === "restaurante" || 
-                            shop.type?.toLowerCase() === "restaurant" ||
-                            shop.type?.toLowerCase() === "restaurante";
+      const type = shop.type?.toLowerCase() || "";
+      const isRestaurante = type.includes("restaurant") || type.includes("restaurante");
                             
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            shop.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           shop.foodCategory?.some((c: string) => c.toLowerCase().includes(searchQuery.toLowerCase())) ||
                            shop.tags?.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
                             
       const matchesCat = activeCategory === "Todos" || 
                         shop.category?.toLowerCase().includes(activeCategory.toLowerCase()) || 
+                        shop.foodCategory?.some((c: string) => c.toLowerCase().includes(activeCategory.toLowerCase())) ||
                         shop.tags?.some((t: string) => t.toLowerCase().includes(activeCategory.toLowerCase()));
       
       return isRestaurante && matchesSearch && matchesCat;

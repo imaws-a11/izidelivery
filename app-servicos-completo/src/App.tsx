@@ -2753,6 +2753,7 @@ const navigateSubView = (target: string) => {
             name: m.store_name || "Loja Parceira",
             description: m.store_description || "",
             type: rawType,
+            category: rawType,
             foodCategory: Array.isArray(m.food_category) ? m.food_category : [m.food_category || "all"],
             tag: isOpen ? "Aberto Agora" : "Fechado",
             statusTag: isOpen ? "Aberto" : "Fechado",
