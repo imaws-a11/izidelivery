@@ -586,8 +586,8 @@ function App() {
     const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
     const { isLoaded } = useJsApiLoader({ id: GOOGLE_MAPS_ID, googleMapsApiKey: mapsKey, libraries: GOOGLE_MAPS_LIBRARIES, language: 'pt-BR', region: 'BR' });
 
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [driverId, setDriverId] = useState<string | null>(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('izi_driver_id') !== null);
+    const [driverId, setDriverId] = useState<string | null>(() => localStorage.getItem('izi_driver_id'));
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
     const [driverName, setDriverName] = useState(() => localStorage.getItem('izi_driver_name') || 'Entregador');
     const [driverAvatar, setDriverAvatar] = useState<string | null>(() => localStorage.getItem('izi_driver_avatar') || null);
@@ -908,20 +908,42 @@ function App() {
         }
     }, [driverId]);
 
-    const [activeTab, setActiveTab] = useState<View>('dashboard');
+    const [activeTab, setActiveTab] = useState<View>(() => (localStorage.getItem('izi_driver_active_tab') as View) || 'dashboard');
     const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
 
     useEffect(() => {
         if (!driverId) return;
 
         const syncUnreadCount = async () => {
-            const { count } = await supabase
-                .from('notifications_delivery')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', driverId)
-                .eq('status', 'pending');
-            
-            setUnreadNotifsCount(count || 0);
+            try {
+                const sUrl = import.meta.env.VITE_SUPABASE_URL;
+                const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                const token = await getSecureToken();
+                
+                // Usando Prefer: count=exact e limit=0 para obter apenas o total sem dados
+                const response = await fetch(`${sUrl}/rest/v1/notifications_delivery?user_id=eq.${driverId}&status=eq.pending&select=id`, {
+                    headers: {
+                        'apikey': sKey,
+                        'Authorization': `Bearer ${token}`,
+                        'Range': '0-0',
+                        'Prefer': 'count=exact'
+                    }
+                });
+                
+                if (response.ok) {
+                    const contentRange = response.headers.get('Content-Range');
+                    if (contentRange) {
+                        const total = contentRange.split('/')[1];
+                        setUnreadNotifsCount(parseInt(total || '0'));
+                    } else {
+                        // Fallback se não vier Content-Range
+                        const data = await response.json();
+                        setUnreadNotifsCount(data.length);
+                    }
+                }
+            } catch (err) {
+                console.error("[NOTIFS] Erro ao sincronizar contagem:", err);
+            }
         };
 
         syncUnreadCount();
@@ -1829,6 +1851,7 @@ function App() {
                 if (user) {
                     console.log('[AUTH] checkSession: Sessão encontrada para', user.email);
                     setDriverId(user.id);
+                    localStorage.setItem('izi_driver_id', user.id);
                     setIsAuthenticated(true);
                     hasBootedRef.current = true;
                     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
@@ -1836,6 +1859,7 @@ function App() {
                 } else {
                     console.log('[AUTH] checkSession: Nenhuma sessão ativa.');
                     setDriverId(null);
+                    localStorage.removeItem('izi_driver_id');
                     setIsAuthenticated(false);
                     setIsProfileLoaded(true);
                 }
@@ -1857,6 +1881,7 @@ function App() {
             if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
                 setIsAuthenticated(false);
                 setDriverId(null);
+                localStorage.removeItem('izi_driver_id');
                 setIsProfileLoaded(true);
                 setAuthInitLoading(false);
                 return;
@@ -1869,6 +1894,7 @@ function App() {
                     console.log('[AUTH] onAuthStateChange SIGNED_IN novo login:', user.email);
                     hasBootedRef.current = true;
                     setDriverId(user.id);
+                    localStorage.setItem('izi_driver_id', user.id);
                     setIsAuthenticated(true);
                     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                     await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
@@ -1895,6 +1921,11 @@ function App() {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
+
+    // Salva a aba ativa para persistência no F5
+    useEffect(() => {
+        localStorage.setItem('izi_driver_active_tab', activeTab);
+    }, [activeTab]);
 
     // Effect dedicado para Transmissões Administrativas (Popups)
     useEffect(() => {
@@ -3503,27 +3534,61 @@ function App() {
         const val = vehicleVal === 'bicicleta' ? '' : plateVal.trim().toUpperCase();
         if (vehicleVal !== 'bicicleta' && !val) { toastError('Informe a placa do veículo'); return; }
         if (!vehicleVal) { toastError('Selecione o tipo de veículo'); return; }
-        if (!driverId) return;
+        if (!driverId) { toastError('Sessão inválida. Por favor, faça login novamente.'); return; }
 
         setIsSavingPlate(true);
+        console.log('[PLATE] Iniciando salvamento...', { val, vehicleVal, driverId });
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
         try {
-            const { error } = await supabase
-                .from('drivers_delivery')
-                .update({ license_plate: val, vehicle_type: vehicleVal })
-                .eq('id', driverId);
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            console.log('[PLATE] Obtendo token...');
+            const authToken = await getSecureToken();
+            console.log('[PLATE] Token obtido, enviando PATCH...');
 
-            if (error) throw error;
+            const response = await fetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ 
+                    license_plate: val, 
+                    vehicle_type: vehicleVal 
+                }),
+                signal: controller.signal
+            });
 
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error('[PLATE] Erro na resposta:', response.status, errText);
+                throw new Error(`Erro na API: ${response.status} - ${errText}`);
+            }
+
+            console.log('[PLATE] Sucesso! Atualizando estados...');
             setDriverPlate(val);
             setDriverVehicle(vehicleVal);
             localStorage.setItem('izi_driver_plate', val);
             localStorage.setItem('izi_driver_vehicle', vehicleVal);
+            
             setIsEditingPlate(false);
             toastSuccess('Veículo atualizado!');
+            setShowPlateModal(false); 
         } catch (e: any) {
-            console.error('[PLATE] ERRO:', e);
-            toastError('Erro ao salvar veículo');
+            clearTimeout(timeoutId);
+            console.error('[PLATE] Exceção capturada:', e);
+            const msg = e.name === 'AbortError' ? 'Tempo esgotado ao salvar. Verifique sua conexão.' : (e.message || 'Tente novamente');
+            toastError('Erro ao salvar veículo: ' + msg);
         } finally {
+            console.log('[PLATE] Finalizado.');
             setIsSavingPlate(false);
         }
     };
@@ -3533,40 +3598,73 @@ function App() {
         const needsPlate = newVehicleType !== 'bicicleta';
         if (needsPlate && newVehiclePlate.trim().length < 7) { toastError('Informe a placa (mín. 7 caracteres)'); return; }
         if (!newVehicleModel.trim()) { toastError('Informe o modelo do veículo'); return; }
-        if (!driverId) return;
+        if (!driverId) { toastError('Sessão inválida. Por favor, faça login novamente.'); return; }
 
         setIsSavingNewVehicle(true);
+        console.log('[NEW_VEHICLE] Iniciando envio...', { newVehicleType, newVehiclePlate, driverId });
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
         try {
-            const { error } = await supabase
-                .from('driver_vehicle_requests')
-                .insert({
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            console.log('[NEW_VEHICLE] Obtendo token...');
+            const authToken = await getSecureToken();
+            console.log('[NEW_VEHICLE] Token obtido, enviando POST...');
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/driver_vehicle_requests`, {
+                method: 'POST',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({
                     driver_id: driverId,
                     vehicle_type: newVehicleType,
                     plate: needsPlate ? newVehiclePlate.trim().toUpperCase() : null,
                     model: newVehicleModel.trim(),
                     color: newVehicleColor.trim(),
                     status: 'pending',
-                });
+                }),
+                signal: controller.signal
+            });
 
-            if (error) throw error;
+            clearTimeout(timeoutId);
 
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error('[NEW_VEHICLE] Erro na resposta:', response.status, errText);
+                throw new Error(`Erro na API: ${response.status} - ${errText}`);
+            }
+
+            console.log('[NEW_VEHICLE] Sucesso! Limpando form...');
             toastSuccess('Solicitação enviada! O admin irá avaliar seu veículo.');
             setShowNewVehicleForm(false);
             setNewVehicleType('');
             setNewVehiclePlate('');
             setNewVehicleModel('');
             setNewVehicleColor('');
-            // Recarregar solicitações
-            const { data } = await supabase
-                .from('driver_vehicle_requests')
-                .select('*')
-                .eq('driver_id', driverId)
-                .order('created_at', { ascending: false });
-            if (data) setMyVehicleRequests(data);
+            
+            // Recarregar solicitações via fetch nativo
+            console.log('[NEW_VEHICLE] Recarregando lista...');
+            const listRes = await fetch(`${supabaseUrl}/rest/v1/driver_vehicle_requests?driver_id=eq.${driverId}&order=created_at.desc`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${authToken}` }
+            });
+            if (listRes.ok) {
+                const data = await listRes.json();
+                setMyVehicleRequests(data);
+            }
         } catch (e: any) {
-            console.error('[NEW_VEHICLE] ERRO:', e);
-            toastError('Erro ao enviar solicitação');
+            clearTimeout(timeoutId);
+            console.error('[NEW_VEHICLE] Exceção capturada:', e);
+            const msg = e.name === 'AbortError' ? 'Tempo esgotado ao enviar. Verifique sua conexão.' : (e.message || 'Tente novamente');
+            toastError('Erro ao enviar solicitação: ' + msg);
         } finally {
+            console.log('[NEW_VEHICLE] Finalizado.');
             setIsSavingNewVehicle(false);
         }
     };
@@ -5691,22 +5789,22 @@ function App() {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            className="fixed inset-0 z-[100] bg-zinc-50 no-scrollbar overflow-y-auto"
+            className="fixed inset-0 z-[250] bg-zinc-50 no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
         >
-            <div className="min-h-screen px-5 pt-12 pb-32 space-y-8">
-                <header className="flex items-center justify-between px-2">
-                    <div className="flex flex-col gap-1">
-                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Saques ðŸ’°</p>
-                        <h2 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase">Histórico</h2>
-                    </div>
-                    <motion.button 
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setShowWithdrawHistory(false)}
-                        className="size-12 rounded-2xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"
-                    >
-                        <Icon name="close" className="text-zinc-900" size={24} />
-                    </motion.button>
-                </header>
+            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100">
+                <button 
+                    onClick={() => setShowWithdrawHistory(false)}
+                    className="size-12 rounded-[20px] bg-zinc-50 flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
+                >
+                    <Icon name="arrow_back" className="text-zinc-900" />
+                </button>
+                <div className="flex flex-col items-end">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Financeiro</p>
+                    <h2 className="text-lg font-black text-zinc-900 tracking-tighter uppercase">Histórico de Saques</h2>
+                </div>
+            </header>
+
+            <div className="px-5 pt-8 pb-32 space-y-8">
 
                 <div className="space-y-4 pb-20">
                     {withdrawHistory.length === 0 ? (
@@ -5716,7 +5814,7 @@ function App() {
                             </div>
                             <div className="space-y-2">
                                 <p className="text-zinc-900 font-black uppercase text-[10px] tracking-widest">Nada por aqui</p>
-                                <p className="text-zinc-400 text-[9px] font-bold">Você ainda não realizou nenhum saque.</p>
+                                <p className="text-zinc-400 text-[9px] font-black">Você ainda não realizou nenhum saque.</p>
                             </div>
                         </div>
                     ) : (
@@ -5761,10 +5859,10 @@ function App() {
                                             </span>
                                         </div>
                                     </div>
-                                    <p className="text-[9px] text-zinc-400 font-bold uppercase truncate max-w-[150px]">
+                                    <p className="text-[9px] text-zinc-400 font-black uppercase truncate max-w-[150px]">
                                         {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                     </p>
-                                    <p className="text-[8px] text-zinc-300 font-medium line-clamp-1">{tx.description}</p>
+                                    <p className="text-[8px] text-zinc-300 font-bold line-clamp-1">{tx.description}</p>
                                 </div>
                                 <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-400/[0.02] blur-3xl -z-10 rounded-full" />
                             </motion.div>
@@ -5784,13 +5882,13 @@ function App() {
                         >
                             <div className="w-full flex justify-between items-center px-2">
                                 <div className="flex flex-col gap-1">
-                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Transação 🧾</p>
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] opacity-70">Transação 🧾</p>
                                     <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase text-center">Comprovante</h2>
                                 </div>
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => setShowReceipt(false)}
-                                    className="size-12 rounded-2xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"
+                                    className="size-12 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100"
                                 >
                                     <Icon name="close" className="text-zinc-900" size={24} />
                                 </motion.button>
@@ -5846,7 +5944,7 @@ function App() {
                         <Icon name="arrow_back" className="text-zinc-900" />
                     </button>
                     <div className="text-center">
-                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Detalhamento</p>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em]">Detalhamento</p>
                         <h2 className="text-xl font-black text-zinc-900">Fluxo de Saque</h2>
                     </div>
                     <div className="size-12" />
@@ -6080,166 +6178,149 @@ function App() {
     };
 
     const renderProfileView = () => (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-24 pt-4">
-            <div className="flex flex-col items-center pt-8 pb-4">
-                {/* Avatar clicável com upload */}
-                <label
-                    htmlFor="avatar-upload"
-                    onClick={() => console.log('[AVATAR] Label clicado')}
-                    className="size-28 rounded-[40px] flex items-center justify-center mb-6 relative group cursor-pointer select-none"
-                    style={{ background: '#FFFFFF', boxShadow: '12px 12px 24px rgba(0,0,0,0.05), -8px -8px 16px rgba(255,255,255,0.8)' }}
+        <div className="flex-1 flex flex-col h-full bg-white font-['Plus_Jakarta_Sans']">
+            {/* Header com botão voltar */}
+            <div className="px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100 sticky top-0 bg-white z-10">
+                <button 
+                    onClick={() => setActiveTab('dashboard')}
+                    className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
                 >
-                    {driverAvatar ? (
-                        <img
-                            src={driverAvatar}
-                            alt="Foto de Perfil"
-                            className="w-full h-full object-cover rounded-[40px]"
-                        />
-                    ) : (
-                        <Icon name="person" size={48} className="text-primary group-hover:scale-105 transition-transform" />
-                    )}
+                    <Icon name="arrow_back" className="text-white" size={24} />
+                </button>
+                <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meu Perfil</h2>
+                <div className="size-11" />
+            </div>
 
-                    {/* Overlay ao hover */}
-                    <div className="absolute inset-0 rounded-[40px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        {isUploadingAvatar ? (
-                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                            <Icon name="photo_camera" size={28} className="text-white" />
-                        )}
-                    </div>
-
-                    {/* Badge de câmera Claymorphic */}
-                    <div 
-                        className="absolute -bottom-1 -right-1 size-10 rounded-full bg-primary flex items-center justify-center shadow-[inset_3px_3px_6px_rgba(255,255,255,0.7),inset_-3px_-3px_6px_rgba(0,0,0,0.2),0_10px_20px_rgba(0,0,0,0.4)] border-4 border-[#FFFFFF]"
+            <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 no-scrollbar">
+                <div className="flex flex-col items-center">
+                    {/* Avatar */}
+                    <label
+                        htmlFor="avatar-upload"
+                        className="size-32 rounded-[48px] bg-zinc-900 flex items-center justify-center mb-6 relative group cursor-pointer overflow-hidden"
                     >
-                        <Icon name="photo_camera" size={16} className="text-zinc-950" />
-                    </div>
-                </label>
+                        {driverAvatar ? (
+                            <img
+                                src={driverAvatar}
+                                alt="Foto de Perfil"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <Icon name="person" size={48} className="text-white/50" />
+                        )}
 
-                <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={(e) => {
-                        console.log('[AVATAR] Input onChange disparado');
-                        const f = e.target.files?.[0];
-                        if (f) {
-                            handleAvatarUpload(e);
-                        }
-                    }}
-                />
-                <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{driverName}</h2>
-                <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi • Nível {stats.level}</span>
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            {isUploadingAvatar ? (
+                                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <Icon name="photo_camera" size={28} className="text-white" />
+                            )}
+                        </div>
+                    </label>
+
+                    <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                    />
+                    
+                    <div className="text-center space-y-1">
+                        <h2 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">{driverName}</h2>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Nível {stats.level} • {stats.count} Viagens</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                    {[
+                        { label: 'Meus Dados', icon: 'badge', color: 'bg-zinc-900 text-white' },
+                        { label: 'Dados Bancários', icon: 'account_balance', color: 'bg-zinc-100 text-zinc-900' },
+                        { label: 'Veículo & Placa', icon: 'directions_car', color: 'bg-zinc-100 text-zinc-900' },
+                        { label: 'Preferências', icon: 'settings', color: 'bg-zinc-100 text-zinc-900' },
+                        { label: 'Ajuda', icon: 'support_agent', color: 'bg-zinc-100 text-zinc-900' }
+                    ].map((item, i) => (
+                        <button 
+                            key={i} 
+                            onClick={() => {
+                                if (item.label === 'Meus Dados') setShowPersonalDataModal(true);
+                                if (item.label === 'Dados Bancários') setShowBankDetails(true);
+                                if (item.label === 'Veículo & Placa') setShowPlateModal(true);
+                                if (item.label === 'Preferências') setShowPreferences(true);
+                                if (item.label === 'Ajuda') setShowHelpModal(true);
+                            }}
+                            className="w-full h-20 bg-white border border-zinc-100 rounded-[24px] px-6 flex items-center justify-between group active:scale-[0.98] transition-all hover:bg-zinc-50"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className={`size-12 rounded-2xl flex items-center justify-center ${item.color}`}>
+                                    <Icon name={item.icon} size={22} />
+                                </div>
+                                <span className="text-sm font-black text-zinc-900">{item.label}</span>
+                            </div>
+                            <Icon name="chevron_right" className="text-zinc-300 group-hover:text-zinc-900 transition-colors" />
+                        </button>
+                    ))}
                 </div>
                 
-                <div className="flex items-center gap-4 mt-8">
-                    <div className="flex flex-col items-center gap-1 bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] px-6 py-4 rounded-[28px] min-w-[100px] border border-zinc-100">
-                        <Icon name="star" className="text-primary text-lg" />
-                        <span className="text-lg font-black text-zinc-900">4.98</span>
-                        <span className="text-[8px] font-black text-zinc-400 uppercase">Rating</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] px-6 py-4 rounded-[28px] min-w-[100px] border border-zinc-100">
-                        <Icon name="route" className="text-emerald-400 text-lg" />
-                        <span className="text-lg font-black text-zinc-900">{stats.count}</span>
-                        <span className="text-[8px] font-black text-zinc-400 uppercase">Viagens</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                {[
-                    { label: 'Meus Dados', icon: 'badge', color: 'text-primary' },
-                    { label: 'Dados Bancários', icon: 'account_balance', color: 'text-emerald-400' },
-                    { label: 'Veículo & Placa', icon: 'directions_car', color: 'text-yellow-400' },
-                    { label: 'Preferências', icon: 'settings', color: 'text-zinc-400' },
-                    { label: 'Ajuda', icon: 'support_agent', color: 'text-blue-400' }
-                ].map((item, i) => (
-                    <button 
-                        key={i} 
-                        onClick={() => {
-                            if (item.label === 'Meus Dados') setShowPersonalDataModal(true);
-                            if (item.label === 'Dados Bancários') setShowBankDetails(true);
-                            if (item.label === 'Veículo & Placa') setShowPlateModal(true);
-                            if (item.label === 'Preferências') setShowPreferences(true);
-                            if (item.label === 'Ajuda') setShowHelpModal(true);
-                        }}
-                        className="w-full bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className={`size-12 rounded-[18px] bg-zinc-50 flex items-center justify-center border border-zinc-100 ${item.color}`}>
-                                <Icon name={item.icon} className="text-xl" />
-                            </div>
-                            <span className="text-sm font-bold text-zinc-900">{item.label}</span>
-                        </div>
-                        <Icon name="chevron_right" className="text-zinc-900/20 group-hover:text-zinc-900/40 transition-colors" />
-                    </button>
-                ))}
-            </div>
-            
-            <div className="bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 rounded-[32px] p-6 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="bg-zinc-900 rounded-[32px] p-6 text-white flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-[18px] bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+                        <div className="size-12 rounded-2xl bg-white/10 flex items-center justify-center text-white">
                             <Icon name="layers" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-black text-zinc-900">Sobreposição</span>
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Ver chamadas sobre outros apps</span>
+                            <span className="text-sm font-black">Sobreposição</span>
+                            <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Ativar em outros apps</span>
                         </div>
                     </div>
                     <button 
-                        onClick={async () => {
-                            await openOverlaySettings();
-                        }}
-                        className="px-5 py-3 bg-primary text-zinc-900 rounded-2xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all"
+                        onClick={openOverlaySettings}
+                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all"
                     >
                         Configurar
                     </button>
                 </div>
-            </div>
 
-            <button 
-                onClick={handleLogout} 
-                className="w-full py-6 mt-4 rounded-[32px] font-black text-[11px] uppercase tracking-[0.2em] bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 text-red-500 active:scale-95 transition-all"
-            >
-                Encerrar Sessão
-            </button>
+                <div className="space-y-4">
+                    <button 
+                        onClick={handleLogout} 
+                        className="w-full h-18 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] bg-rose-50 text-rose-600 active:scale-95 transition-all border border-rose-100"
+                    >
+                        Encerrar Sessão
+                    </button>
 
-            <div className="bg-[#FFFFFF] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] border border-zinc-100 rounded-[32px] p-8 space-y-5 mt-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
-                <div className="relative z-10">
-                    <h3 className="text-xs font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                        <Icon name="admin_panel_settings" size={16} /> Zona de Segurança
-                    </h3>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed mt-2">
-                        Use estas ferramentas apenas em caso de erros no sistema ou se precisar resetar seu estado de disponibilidade.
-                    </p>
-                </div>
-                <div className="flex gap-3 pt-2 relative z-10">
-                    <button 
-                        onClick={syncMissionWithDB}
-                        className="flex-1 h-12 bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] text-zinc-400 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                    >
-                        Sincronizar
-                    </button>
-                    <button 
-                        onClick={() => {
-                            if (confirm('Deseja forçar a limpeza da missão atual?')) {
-                                setActiveMission(null);
-                                localStorage.removeItem('Izi_active_mission');
-                                setActiveTab('dashboard');
-                                toastSuccess('Limpeza concluída!');
-                            }
-                        }}
-                        className="flex-1 h-12 bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                    >
-                        Resetar Estado
-                    </button>
+                    <div className="p-8 rounded-[32px] bg-zinc-50 border border-zinc-100 space-y-6">
+                        <div className="space-y-2 text-center">
+                            <h3 className="text-xs font-black text-zinc-900 uppercase tracking-widest flex items-center justify-center gap-2">
+                                <Icon name="admin_panel_settings" size={16} /> Zona de Segurança
+                            </h3>
+                            <p className="text-[11px] text-zinc-400 leading-relaxed">
+                                Use apenas em caso de erros de sincronização.
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={syncMissionWithDB}
+                                className="flex-1 h-12 bg-white border border-zinc-200 text-zinc-600 font-black text-[9px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                            >
+                                Sincronizar
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    if (confirm('Deseja forçar a limpeza da missão atual?')) {
+                                        setActiveMission(null);
+                                        localStorage.removeItem('Izi_active_mission');
+                                        setActiveTab('dashboard');
+                                        toastSuccess('Limpeza concluída!');
+                                    }
+                                }}
+                                className="flex-1 h-12 bg-white border border-rose-200 text-rose-500 font-black text-[9px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                            >
+                                Resetar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 
     const renderPlateEditView = () => {
@@ -6261,54 +6342,42 @@ function App() {
             <>
             <motion.div
                 key="plate-edit-modal"
-                initial={{ opacity: 0, x: 50, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                className="fixed inset-0 z-[250] bg-white flex flex-col no-scrollbar overflow-y-auto"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="fixed inset-0 z-[400] bg-white flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
             >
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100">
+                <header className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
                     <button 
                         onClick={() => {
                             setShowPlateModal(false);
                             setDriverPlate(localStorage.getItem('izi_driver_plate') || '');
                             setIsEditingPlate(false);
                         }}
-                        className="size-12 rounded-[20px] bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
+                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
                     >
-                        <Icon name="arrow_back" className="text-zinc-900" />
+                        <Icon name="arrow_back" className="text-white" size={24} />
                     </button>
                     <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em]">Izi Entregador</p>
-                        <h2 className="text-lg font-black text-zinc-900">Meus Veículos</h2>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Veículo</p>
+                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meus Veículos</h2>
                     </div>
                 </header>
 
-                <div className="px-5 pt-8 pb-32 space-y-8">
-                    <div className="rounded-[40px] p-8 relative overflow-hidden group bg-zinc-50 border border-zinc-100 shadow-xl" style={sClayLight}>
-                        <div className="absolute -right-8 -bottom-8 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-700">
-                            <Icon name="directions_car" size={180} className="text-zinc-900" />
-                        </div>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
-                        
-                        <div className="relative z-10 space-y-4">
-                            <div className="size-14 rounded-[20px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05)]">
-                                <Icon name="badge" className="text-yellow-600 text-[28px]" />
-                            </div>
-                            <div>
-                                <h3 className="text-2xl font-black text-zinc-900 tracking-tighter">Tipo de Veículo</h3>
-                                <p className="text-[11px] text-zinc-400 leading-relaxed font-bold max-w-[240px] mt-2">
-                                    Mantenha seu veículo atualizado para que lojistas e clientes identifiquem você facilmente.
-                                </p>
-                            </div>
-                        </div>
+                <div className="px-6 pt-10 pb-32 space-y-12">
+                    <div className="space-y-2">
+                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Tipo de Veículo</h3>
+                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
+                            Mantenha seu veículo atualizado para identificação.
+                        </p>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="space-y-4">
-                            <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
-                                <Icon name="two_wheeler" size={14} className="text-zinc-200" /> Veículo Utilizado
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
+                                Veículo Utilizado
                             </label>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 gap-4">
                                 {[
                                     { id: 'mototaxi', icon: 'two_wheeler', label: 'Moto' },
                                     { id: 'carro', icon: 'directions_car', label: 'Carro' },
@@ -6321,26 +6390,25 @@ function App() {
                                     { id: 'bau_m', icon: 'inventory_2', label: 'Baú M' },
                                     { id: 'bau_g', icon: 'inventory_2', label: 'Baú G' },
                                 ].map((type) => (
-                                    <button
-                                        key={type.id}
-                                        onClick={() => { setDriverVehicle(type.id); setIsEditingPlate(true); }}
-                                        className={`h-24 rounded-[24px] font-black text-[10px] flex flex-col items-center justify-center gap-2 transition-all border ${
-                                            driverVehicle === type.id 
-                                                ? 'bg-yellow-400 text-zinc-900 border-yellow-300 shadow-[0_10px_20px_rgba(250,204,21,0.2)] scale-105' 
-                                                : 'bg-white text-zinc-400 border-zinc-100 shadow-sm hover:bg-zinc-50'
-                                        }`}
-                                    >
-                                        <Icon name={type.icon} size={28} className={driverVehicle === type.id ? 'text-zinc-900' : 'text-zinc-300'} />
-                                        <span className="uppercase tracking-widest">{type.label}</span>
-                                    </button>
-                                ))}
-                            </div>
+                                <button
+                                    key={type.id}
+                                    onClick={() => { setDriverVehicle(type.id); setIsEditingPlate(true); }}
+                                    className={`h-28 rounded-3xl font-black text-[10px] flex flex-col items-center justify-center gap-3 transition-all border-2 ${
+                                        driverVehicle === type.id 
+                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-xl scale-[1.02]' 
+                                            : 'bg-white text-zinc-400 border-zinc-100 hover:border-zinc-200'
+                                    }`}
+                                >
+                                    <Icon name={type.icon} size={32} />
+                                    <span className="uppercase tracking-widest">{type.label}</span>
+                                </button>
+                            ))}
                         </div>
 
                         {driverVehicle !== 'bicicleta' && (
-                            <div className="space-y-4">
-                                <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
-                                    <Icon name="tag" size={14} className="text-zinc-200" /> Placa (Ex: ABC1234 ou ABC1D23)
+                            <div className="space-y-6">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
+                                    Placa do Veículo
                                 </label>
                                 <div className="relative">
                                     <input 
@@ -6351,10 +6419,10 @@ function App() {
                                             setIsEditingPlate(true);
                                         }}
                                         placeholder="ABC1234"
-                                        className="w-full h-16 bg-white shadow-sm border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 transition-all outline-none"
+                                        className="w-full h-20 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-2xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
                                     />
                                     {isEditingPlate && (
-                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                             <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
                                         </div>
                                     )}
@@ -6362,79 +6430,30 @@ function App() {
                             </div>
                         )}
                     </div>
+                </div>
 
-                    <div className="pt-4">
+                    <div className="space-y-12">
                         <button 
                             onClick={() => handleSavePlate(driverPlate, driverVehicle)}
                             disabled={(!driverVehicle || (driverVehicle !== 'bicicleta' && driverPlate.length < 7)) || isSavingPlate}
-                            className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
-                                (!(!driverVehicle || (driverVehicle !== 'bicicleta' && driverPlate.length < 7)))
-                                    ? 'bg-zinc-900 text-white shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-95 border border-zinc-800' 
-                                    : 'bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed border border-zinc-100'
-                            }`}
+                            className="w-full h-18 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-50"
                         >
                             {isSavingPlate ? (
-                                <Icon name="sync" className="animate-spin text-white" />
+                                <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
-                                <Icon name="task_alt" size={20} className="text-yellow-400" />
+                                <>
+                                    <Icon name="check_circle" size={18} className="text-yellow-400" />
+                                    Atualizar Veículo
+                                </>
                             )}
-                            {isSavingPlate ? 'Salvando...' : 'Atualizar Veículo'}
                         </button>
                     </div>
-
-                    {/* Divisor */}
-                    <div className="flex items-center gap-3 pt-4">
-                        <div className="flex-1 h-px bg-zinc-100" />
-                        <span className="text-[9px] font-black text-zinc-300 uppercase tracking-widest">Outros Veículos</span>
-                        <div className="flex-1 h-px bg-zinc-100" />
-                    </div>
-
-                    {/* Botão Cadastrar Novo Veículo */}
-                    <button
-                        onClick={() => setShowNewVehicleForm(true)}
-                        className="w-full h-16 rounded-[28px] border-2 border-dashed border-zinc-200 flex items-center justify-center gap-3 text-zinc-400 font-black text-[11px] uppercase tracking-[0.2em] hover:border-yellow-400 hover:text-yellow-600 transition-all active:scale-95"
-                    >
-                        <Icon name="add_circle" size={20} />
-                        Cadastrar Novo Veículo
-                    </button>
-
-                    {/* Lista de solicitações enviadas */}
-                    {myVehicleRequests.length > 0 && (
-                        <div className="space-y-3">
-                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Solicitações Enviadas</p>
-                            {myVehicleRequests.map((req) => {
-                                const statusMap: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-                                    pending:  { label: 'Em Análise',  color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-100',  icon: 'schedule' },
-                                    approved: { label: 'Aprovado',    color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: 'check_circle' },
-                                    rejected: { label: 'Reprovado',   color: 'text-rose-600',   bg: 'bg-rose-50 border-rose-100',    icon: 'cancel' },
-                                };
-                                const s = statusMap[req.status] || statusMap.pending;
-                                const vehicleLabels: Record<string, string> = {
-                                    mototaxi: 'Moto', carro: 'Carro', bicicleta: 'Bike',
-                                    fiorino: 'Fiorino', caminhonete: 'Pickup', van: 'Van',
-                                    vuc: 'VUC', bau_p: 'Baú P', bau_m: 'Baú M', bau_g: 'Baú G',
-                                };
-                                return (
-                                    <div key={req.id} className={`flex items-center justify-between p-4 rounded-[20px] border ${s.bg}`}>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-black text-zinc-900">{vehicleLabels[req.vehicle_type] || req.vehicle_type}</p>
-                                            <p className="text-[10px] text-zinc-400 font-bold">{req.model} {req.plate ? `• ${req.plate}` : ''}</p>
-                                        </div>
-                                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${s.bg} border`}>
-                                            <Icon name={s.icon} size={12} className={s.color} />
-                                            <span className={`text-[9px] font-black uppercase tracking-wider ${s.color}`}>{s.label}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
                 </div>
             </motion.div>
 
             {/* MODAL: Formulario de Novo Veiculo */}
-            {showNewVehicleForm && (
-                <AnimatePresence>
+            <AnimatePresence>
+                {showNewVehicleForm && (
                     <motion.div
                         key="new-vehicle-modal"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -6516,8 +6535,8 @@ function App() {
                             </button>
                         </motion.div>
                     </motion.div>
-                </AnimatePresence>
-            )}
+                )}
+            </AnimatePresence>
             </>
         );
     };
@@ -6577,117 +6596,104 @@ function App() {
     const renderPersonalDataModal = () => {
         return (
             <motion.div 
-                initial={{ opacity: 0, y: '100%' }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: '100%' }}
-                className="fixed inset-0 z-[400] flex flex-col bg-zinc-50"
+                key="personal-data-modal"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="fixed inset-0 z-[400] bg-white flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
             >
-                <div className="flex items-center justify-between px-6 py-6 bg-white border-b border-zinc-100">
-                    <button onClick={() => setShowPersonalDataModal(false)} className="size-10 rounded-xl flex items-center justify-center bg-zinc-50 border border-zinc-100 active:scale-90 transition-all">
-                        <Icon name="arrow_back" className="text-zinc-900" />
+                <div className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
+                    <button 
+                        onClick={() => setShowPersonalDataModal(false)}
+                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
+                    >
+                        <Icon name="arrow_back" className="text-white" size={24} />
                     </button>
-                    <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest">Meus Dados</h3>
-                    <div className="size-10" />
+                    <div className="flex flex-col items-end">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Perfil</p>
+                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meus Dados</h2>
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 no-scrollbar">
-                    {/* Header Informativo */}
-                    <div className="bg-white rounded-[32px] p-6 border border-zinc-100 shadow-sm space-y-2">
-                        <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-2">
-                            <Icon name="badge" size={24} />
-                        </div>
-                        <h4 className="text-lg font-black text-zinc-900">Perfil Profissional</h4>
-                        <p className="text-xs text-zinc-400 leading-relaxed font-bold">
-                            Mantenha seus dados atualizados para garantir a segurança das suas operações e o recebimento correto de notificações e pagamentos.
+                <div className="flex-1 overflow-y-auto px-6 py-10 space-y-12 no-scrollbar">
+                    <div className="space-y-2">
+                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Dados Pessoais</h3>
+                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
+                            Mantenha seus dados atualizados para garantir segurança.
                         </p>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                         {/* Campo: Nome */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-4">Nome Completo</label>
-                            <div className="relative group">
-                                <Icon name="person" size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    type="text"
-                                    value={editProfileData.name}
-                                    onChange={(e) => setEditProfileData({ ...editProfileData, name: e.target.value })}
-                                    placeholder="Seu nome completo"
-                                    className="w-full h-16 bg-white border border-zinc-100 rounded-[28px] pl-14 pr-6 text-zinc-900 font-bold md:text-sm text-base focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                />
-                            </div>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">Nome Completo</label>
+                            <input 
+                                type="text"
+                                value={editProfileData.name}
+                                onChange={(e) => setEditProfileData({ ...editProfileData, name: e.target.value })}
+                                placeholder="Seu nome completo"
+                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
+                            />
                         </div>
 
                         {/* Campo: Telefone */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-4">WhatsApp / Telefone</label>
-                            <div className="relative group">
-                                <Icon name="call" size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    type="tel"
-                                    value={editProfileData.phone}
-                                    onChange={(e) => setEditProfileData({ ...editProfileData, phone: e.target.value })}
-                                    placeholder="(00) 00000-0000"
-                                    className="w-full h-16 bg-white border border-zinc-100 rounded-[28px] pl-14 pr-6 text-zinc-900 font-bold md:text-sm text-base focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                />
-                            </div>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">WhatsApp / Telefone</label>
+                            <input 
+                                type="tel"
+                                value={editProfileData.phone}
+                                onChange={(e) => setEditProfileData({ ...editProfileData, phone: e.target.value })}
+                                placeholder="(00) 00000-0000"
+                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
+                            />
                         </div>
 
                         {/* Campo: E-mail */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-4">E-mail</label>
-                            <div className="relative group">
-                                <Icon name="alternate_email" size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    type="email"
-                                    value={editProfileData.email}
-                                    onChange={(e) => setEditProfileData({ ...editProfileData, email: e.target.value })}
-                                    placeholder="seu@email.com"
-                                    className="w-full h-16 bg-white border border-zinc-100 rounded-[28px] pl-14 pr-6 text-zinc-900 font-bold md:text-sm text-base focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                />
-                            </div>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">E-mail</label>
+                            <input 
+                                type="email"
+                                value={editProfileData.email}
+                                onChange={(e) => setEditProfileData({ ...editProfileData, email: e.target.value })}
+                                placeholder="seu@email.com"
+                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
+                            />
                         </div>
 
                         {/* Campo: CPF */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-4">CPF (Somente Números)</label>
-                            <div className="relative group">
-                                <Icon name="pin" size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    type="text"
-                                    value={editProfileData.cpf}
-                                    onChange={(e) => setEditProfileData({ ...editProfileData, cpf: e.target.value.replace(/\D/g, '') })}
-                                    placeholder="000.000.000-00"
-                                    maxLength={11}
-                                    className="w-full h-16 bg-white border border-zinc-100 rounded-[28px] pl-14 pr-6 text-zinc-900 font-bold md:text-sm text-base focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                />
-                            </div>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">CPF</label>
+                            <input 
+                                type="text"
+                                value={editProfileData.cpf}
+                                onChange={(e) => setEditProfileData({ ...editProfileData, cpf: e.target.value.replace(/\D/g, '') })}
+                                placeholder="000.000.000-00"
+                                maxLength={11}
+                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
+                            />
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6 pb-12 bg-white border-t border-zinc-100">
+                <div className="p-8 pb-12 bg-white">
                     <button 
                         onClick={handleUpdateProfile}
                         disabled={isSavingProfile || !editProfileData.name}
-                        className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
-                            (!isSavingProfile && editProfileData.name)
-                                ? 'bg-primary text-zinc-950 shadow-[0_10px_30px_rgba(250,204,21,0.3)] hover:scale-[1.02] active:scale-95 border border-white/20' 
-                                : 'bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed border border-zinc-100'
-                        }`}
+                        className="w-full h-18 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-50"
                     >
                         {isSavingProfile ? (
-                            <Icon name="sync" className="animate-spin" />
+                            <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
-                            <Icon name="save" size={20} />
+                            <>
+                                <Icon name="check_circle" size={18} />
+                                Salvar Alterações
+                            </>
                         )}
-                        {isSavingProfile ? 'Salvando...' : 'Salvar Alterações'}
                     </button>
                 </div>
             </motion.div>
         );
     };
-
     const renderPendingApprovalModal = () => (
         <AnimatePresence>
             {showPendingApprovalModal && (
@@ -6728,25 +6734,6 @@ function App() {
                         <p className="text-zinc-500 font-bold text-sm leading-relaxed mb-10">
                             Sua conta está sendo verificada pela nossa equipe. Você receberá uma notificação assim que for aprovado para realizar entregas.
                         </p>
-
-                        <div className="w-full space-y-3">
-                            <button 
-                                onClick={() => setShowPendingApprovalModal(false)}
-                                className="w-full h-16 bg-yellow-400 rounded-3xl font-black text-sm uppercase tracking-widest text-black shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
-                            >
-                                Entendido
-                            </button>
-                            
-                            <button 
-                                onClick={() => {
-                                    setShowPendingApprovalModal(false);
-                                    setShowOnboarding(true);
-                                }}
-                                className="w-full h-16 bg-zinc-100 rounded-3xl font-black text-[10px] uppercase tracking-widest text-zinc-400 active:scale-95 transition-all"
-                            >
-                                Ver Detalhes
-                            </button>
-                        </div>
                     </motion.div>
                 </motion.div>
             )}
@@ -6757,12 +6744,12 @@ function App() {
         return (
             <motion.div
                 key="bank-details-modal"
-                initial={{ opacity: 0, x: 50, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                className="fixed inset-0 z-[250] bg-white flex flex-col no-scrollbar overflow-y-auto"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="fixed inset-0 z-[400] bg-white flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
             >
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100">
+                <header className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
                     <button 
                         onClick={() => {
                             setShowBankDetails(false);
@@ -6770,43 +6757,29 @@ function App() {
                             setBankName(localStorage.getItem('izi_driver_bank_name') || '');
                             setIsEditingPix(false);
                         }}
-                        className="size-12 rounded-[20px] bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
+                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
                     >
-                        <Icon name="arrow_back" className="text-zinc-900" />
+                        <Icon name="arrow_back" className="text-white" size={24} />
                     </button>
                     <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em]">Izi Pay</p>
-                        <h2 className="text-lg font-black text-zinc-900">Dados Bancários</h2>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Financeiro</p>
+                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Recebimento</h2>
                     </div>
                 </header>
 
-                <div className="px-5 pt-8 pb-32 space-y-8">
-                    {/* Header Card */}
-                    <div className="rounded-[40px] p-8 relative overflow-hidden group bg-zinc-50 border border-zinc-100 shadow-xl" style={sClayLight}>
-                        <div className="absolute -right-8 -bottom-8 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-700">
-                            <Icon name="account_balance" size={180} className="text-zinc-900" />
-                        </div>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
-                        
-                        <div className="relative z-10 space-y-4">
-                            <div className="size-14 rounded-[20px] bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05)]">
-                                <Icon name="pix" className="text-emerald-600 text-[28px]" />
-                            </div>
-                            <div>
-                                <h3 className="text-2xl font-black text-zinc-900 tracking-tighter">Receba via PIX</h3>
-                                <p className="text-[11px] text-zinc-400 leading-relaxed font-bold max-w-[240px] mt-2">
-                                    Cadastre a sua chave abaixo. Os seus ganhos serão transferidos automaticamente mediante solicitação de saque.
-                                </p>
-                            </div>
-                        </div>
+                <div className="px-6 pt-10 pb-32 space-y-12">
+                    <div className="space-y-2">
+                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Dados Bancários</h3>
+                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
+                            Cadastre sua chave PIX para receber seus ganhos automaticamente.
+                        </p>
                     </div>
 
-                    {/* Inputs */}
-                    <div className="space-y-4">
-                        <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2">
-                            <Icon name="account_balance" size={14} className="text-zinc-200" /> Nome do Banco
-                        </label>
-                        <div className="relative">
+                    <div className="space-y-10">
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
+                                Nome do Banco
+                            </label>
                             <input 
                                 type="text"
                                 value={bankName}
@@ -6815,14 +6788,14 @@ function App() {
                                     setIsEditingPix(true);
                                 }}
                                 placeholder="Itaú, Nubank, Inter..."
-                                className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-emerald-400/30 transition-all outline-none"
+                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
                             />
                         </div>
 
-                        <label className="flex items-center gap-2 block text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2 mt-4">
-                            <Icon name="key" size={14} className="text-zinc-200" /> Sua Chave Principal
-                        </label>
-                        <div className="relative">
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
+                                Sua Chave PIX
+                            </label>
                             <input 
                                 type="text"
                                 value={pixKey}
@@ -6831,42 +6804,34 @@ function App() {
                                     setIsEditingPix(true);
                                 }}
                                 placeholder="CPF, Celular, E-mail..."
-                                className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-zinc-900 font-bold md:text-sm text-base placeholder:text-zinc-300 focus:ring-2 focus:ring-emerald-400/30 transition-all outline-none"
+                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
                             />
-                            {isEditingPix && pixKey.length > 4 && (
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-yellow-600 uppercase tracking-widest hidden sm:block">Não Salvo</span>
-                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
-                                </div>
-                            )}
                         </div>
-                        <div className="bg-zinc-50 rounded-[24px] p-5 flex gap-4 border border-zinc-100 mt-4">
-                            <div className="mt-0.5"><Icon name="shield" size={16} className="text-zinc-300" /></div>
-                            <p className="text-[9px] font-bold text-zinc-400 flex-1">
-                                A chave fornecida será vinculada de forma definitiva ao seu CPF/CNPJ via nossa integradora financeira de segurança. Revise antes de salvar.
+
+                        <div className="p-6 rounded-3xl bg-zinc-50 border border-zinc-100">
+                            <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                                A chave fornecida será vinculada de forma definitiva ao seu perfil para garantir a segurança dos seus recebimentos.
                             </p>
                         </div>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-4">
                         <button 
                             onClick={async () => {
                                 await handleSavePix(pixKey, bankName);
                                 setShowBankDetails(false);
                             }}
                             disabled={pixKey.length < 5 || bankName.length < 2 || isSavingPix}
-                            className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
-                                (pixKey.length >= 5 && bankName.length >= 2)
-                                    ? 'bg-emerald-500 text-white shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-95 border border-emerald-400' 
-                                    : 'bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed border border-zinc-100'
-                            }`}
+                            className="w-full h-18 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-50"
                         >
                             {isSavingPix ? (
-                                <Icon name="sync" className="animate-spin" />
+                                <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
-                                <Icon name="task_alt" size={20} />
+                                <>
+                                    <Icon name="check_circle" size={18} />
+                                    Salvar Dados
+                                </>
                             )}
-                            {isSavingPix ? 'Autenticando...' : 'Salvar Dados Bancários'}
                         </button>
                     </div>
                 </div>
@@ -6881,109 +6846,134 @@ function App() {
 
         return (
             <motion.div 
-                initial={{ opacity: 0, y: '100%' }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: '100%' }}
-                className="fixed inset-0 z-[400] flex flex-col bg-zinc-50"
+                key="help-modal"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="fixed inset-0 z-[400] bg-white flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
             >
-                <div className="flex items-center justify-between px-6 py-6 bg-white border-b border-zinc-100">
-                    <button onClick={() => setShowHelpModal(false)} className="size-10 rounded-xl flex items-center justify-center bg-zinc-50 border border-zinc-100 active:scale-90 transition-all">
-                        <Icon name="arrow_back" className="text-zinc-900" />
+                <div className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
+                    <button 
+                        onClick={() => setShowHelpModal(false)}
+                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
+                    >
+                        <Icon name="arrow_back" className="text-white" size={24} />
                     </button>
-                    <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest">Ajuda</h3>
-                    <div className="size-10" />
+                    <div className="flex flex-col items-end">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Suporte</p>
+                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Ajuda</h2>
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 no-scrollbar">
+                <div className="flex-1 overflow-y-auto px-6 py-10 space-y-12 no-scrollbar">
+                    <div className="space-y-2">
+                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Central de Ajuda</h3>
+                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
+                            Estamos aqui para ajudar você com qualquer problema.
+                        </p>
+                    </div>
+
                     {/* Suporte Izi */}
-                    <div className="space-y-4">
-                        <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-2">Suporte Administrativo</h4>
-                        <button 
-                            onClick={() => window.open(`https://wa.me/${supportPhone}`, '_blank')}
-                            className="w-full bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm flex items-center gap-5 active:scale-[0.98] transition-all group"
-                        >
-                            <div className="size-14 rounded-2xl bg-emerald-50 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
-                                <Icon name="support_agent" className="text-emerald-500 text-2xl" />
-                            </div>
-                            <div className="flex-1 text-left">
-                                <p className="text-sm font-black text-zinc-900">Suporte Izi Delivery</p>
-                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Falar com administrador via WhatsApp</p>
-                            </div>
-                            <Icon name="chevron_right" className="text-zinc-200" />
-                        </button>
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Suporte Izi</h4>
+                            <button 
+                                onClick={() => window.open(`https://wa.me/${supportPhone}`, '_blank')}
+                                className="w-full flex items-center justify-between py-6 border-b border-zinc-50 active:opacity-60 transition-opacity"
+                            >
+                                <div className="flex items-center gap-5">
+                                    <div className="size-14 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-lg">
+                                        <Icon name="support_agent" className="text-white text-2xl" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">Administração Izi</p>
+                                        <p className="text-[10px] font-bold text-zinc-400 mt-1">Falar via WhatsApp</p>
+                                    </div>
+                                </div>
+                                <Icon name="chevron_right" className="text-zinc-200" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Contato com Usuários */}
-                    <div className="space-y-4">
-                        <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-2">Contatos da Missão</h4>
-                        {activeMission ? (
-                            <div className="space-y-3">
-                                {activeCustomerPhone && (
-                                    <button 
-                                        onClick={() => {
-                                            const cleanPhone = String(activeCustomerPhone).replace(/\D/g, '');
-                                            const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
-                                            window.open(`https://wa.me/${finalPhone}`, '_blank');
-                                        }}
-                                        className="w-full bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm flex items-center gap-5 active:scale-[0.98] transition-all group"
-                                    >
-                                        <div className="size-14 rounded-2xl bg-yellow-50 flex items-center justify-center border border-yellow-100 group-hover:bg-yellow-100 transition-colors">
-                                            <Icon name="chat" className="text-yellow-600 text-2xl" />
-                                        </div>
-                                        <div className="flex-1 text-left">
-                                            <p className="text-sm font-black text-zinc-900">Chat com {activeCustomerName}</p>
-                                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Clique para abrir no WhatsApp</p>
-                                        </div>
-                                        <Icon name="chevron_right" className="text-zinc-200" />
-                                    </button>
-                                )}
-                                {activeMission.merchant_phone && (
-                                    <button 
-                                        onClick={() => {
-                                            const cleanPhone = String(activeMission.merchant_phone).replace(/\D/g, '');
-                                            const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
-                                            window.open(`https://wa.me/${finalPhone}`, '_blank');
-                                        }}
-                                        className="w-full bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm flex items-center gap-5 active:scale-[0.98] transition-all group"
-                                    >
-                                        <div className="size-14 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
-                                            <Icon name="storefront" className="text-blue-500 text-2xl" />
-                                        </div>
-                                        <div className="flex-1 text-left">
-                                            <p className="text-sm font-black text-zinc-900">Suporte do Parceiro</p>
-                                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">{activeMission.merchant_name || 'Loja Parceira'}</p>
-                                        </div>
-                                        <Icon name="chevron_right" className="text-zinc-200" />
-                                    </button>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="bg-white/50 p-8 rounded-[40px] border border-zinc-100 border-dashed text-center space-y-3">
-                                <div className="size-16 rounded-[24px] bg-zinc-50 flex items-center justify-center mx-auto border border-zinc-100 opacity-50">
-                                    <Icon name="history" className="text-zinc-300" size={32} />
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Contatos da Missão</h4>
+                            {activeMission ? (
+                                <div className="divide-y divide-zinc-50">
+                                    {activeCustomerPhone && (
+                                        <button 
+                                            onClick={() => {
+                                                const cleanPhone = String(activeCustomerPhone).replace(/\D/g, '');
+                                                const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+                                                window.open(`https://wa.me/${finalPhone}`, '_blank');
+                                            }}
+                                            className="w-full flex items-center justify-between py-6 active:opacity-60 transition-opacity"
+                                        >
+                                            <div className="flex items-center gap-5">
+                                                <div className="size-14 rounded-2xl bg-zinc-100 flex items-center justify-center">
+                                                    <Icon name="chat" className="text-zinc-900 text-2xl" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">Chat com Cliente</p>
+                                                    <p className="text-[10px] font-bold text-zinc-400 mt-1">{activeCustomerName}</p>
+                                                </div>
+                                            </div>
+                                            <Icon name="chevron_right" className="text-zinc-200" />
+                                        </button>
+                                    )}
+                                    {activeMission.merchant_phone && (
+                                        <button 
+                                            onClick={() => {
+                                                const cleanPhone = String(activeMission.merchant_phone).replace(/\D/g, '');
+                                                const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+                                                window.open(`https://wa.me/${finalPhone}`, '_blank');
+                                            }}
+                                            className="w-full flex items-center justify-between py-6 active:opacity-60 transition-opacity"
+                                        >
+                                            <div className="flex items-center gap-5">
+                                                <div className="size-14 rounded-2xl bg-zinc-100 flex items-center justify-center">
+                                                    <Icon name="storefront" className="text-zinc-900 text-2xl" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">Suporte do Parceiro</p>
+                                                    <p className="text-[10px] font-bold text-zinc-400 mt-1">{activeMission.merchant_name || 'Loja Parceira'}</p>
+                                                </div>
+                                            </div>
+                                            <Icon name="chevron_right" className="text-zinc-200" />
+                                        </button>
+                                    )}
                                 </div>
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] px-4">
-                                    Nenhuma missão ativa no momento.<br />Os contatos aparecerão aqui durante as entregas.
-                                </p>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="py-10 text-center space-y-4">
+                                    <div className="size-16 rounded-[24px] bg-zinc-50 flex items-center justify-center mx-auto border border-zinc-100">
+                                        <Icon name="history" className="text-zinc-200" size={32} />
+                                    </div>
+                                    <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.2em] px-4 leading-relaxed">
+                                        Nenhuma missão ativa.<br />Contatos aparecem aqui nas entregas.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Central de Ajuda FAQ */}
-                    <div className="space-y-4">
-                         <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-2">Perguntas Frequentes</h4>
-                         <div className="bg-white rounded-[32px] border border-zinc-100 overflow-hidden divide-y divide-zinc-50 shadow-sm">
-                             {[
-                                 { q: 'Como recebo meus ganhos?', a: 'Os ganhos são creditados na sua conta Izi e podem ser sacados via PIX instantaneamente após a conclusão.' },
-                                 { q: 'Problemas na entrega?', a: 'Se não conseguir localizar o cliente ou encontrar o endereço, entre em contato com o suporte imediatamente.' },
-                                 { q: 'Mudança de veículo?', a: 'Para trocar de veículo, acesse "Veículo & Placa" e envie a solicitação de alteração.' }
-                             ].map((faq, i) => (
-                                 <div key={i} className="p-6 space-y-2">
-                                     <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">{faq.q}</p>
-                                     <p className="text-[11px] text-zinc-400 leading-relaxed font-bold">{faq.a}</p>
-                                 </div>
-                             ))}
-                         </div>
+                    {/* FAQ */}
+                    <div className="space-y-8 pb-10">
+                        <div className="space-y-6">
+                            <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Perguntas Frequentes</h4>
+                            <div className="divide-y divide-zinc-50">
+                                {[
+                                    { q: 'Como recebo meus ganhos?', a: 'Os ganhos são creditados na sua conta Izi e podem ser sacados via PIX instantaneamente após a conclusão.' },
+                                    { q: 'Problemas na entrega?', a: 'Se não conseguir localizar o cliente ou encontrar o endereço, entre em contato com o suporte imediatamente.' },
+                                    { q: 'Mudança de veículo?', a: 'Para trocar de veículo, acesse "Veículo & Placa" e envie a solicitação de alteração.' }
+                                ].map((faq, i) => (
+                                    <div key={i} className="py-6 space-y-2">
+                                        <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">{faq.q}</p>
+                                        <p className="text-[11px] text-zinc-400 leading-relaxed font-bold">{faq.a}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -6991,19 +6981,15 @@ function App() {
     };
 
     const renderPreferencesView = () => {
-        const ClayToggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
+        const MinimalToggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
             <button
                 onClick={onToggle}
-                className={`relative w-14 h-8 rounded-full transition-all duration-300 flex-shrink-0 ${
-                    enabled 
-                        ? 'bg-yellow-400 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.3)]'
-                        : 'bg-zinc-200 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.8)]'
+                className={`relative w-12 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${
+                    enabled ? 'bg-zinc-900' : 'bg-zinc-200'
                 }`}
             >
-                <div className={`absolute top-1 size-6 rounded-full transition-all duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.2)] ${
-                    enabled 
-                        ? 'left-7 bg-white' 
-                        : 'left-1 bg-white'
+                <div className={`absolute top-1 size-4 rounded-full transition-all duration-300 ${
+                    enabled ? 'left-7 bg-white' : 'left-1 bg-white'
                 }`} />
             </button>
         );
@@ -7086,42 +7072,42 @@ function App() {
         return (
             <motion.div
                 key="preferences-modal"
-                initial={{ opacity: 0, x: 50, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                className="fixed inset-0 z-[250] bg-white flex flex-col overflow-hidden"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="fixed inset-0 z-[400] bg-white flex flex-col overflow-hidden font-['Plus_Jakarta_Sans']"
             >
-                {/* Header */}
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100 flex-shrink-0">
+                <header className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100 flex-shrink-0">
                     <button
                         onClick={() => setShowPreferences(false)}
-                        className="size-12 rounded-[20px] bg-zinc-50 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_8px_rgba(255,255,255,0.8)] flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
+                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
                     >
-                        <Icon name="arrow_back" className="text-zinc-900" />
+                        <Icon name="arrow_back" className="text-white" size={24} />
                     </button>
                     <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Configurações</p>
-                        <h2 className="text-lg font-black text-zinc-900">Preferências</h2>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Ajustes</p>
+                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Preferências</h2>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto no-scrollbar px-5 pt-6 pb-32 space-y-6">
+                <div className="flex-1 overflow-y-auto no-scrollbar px-6 pt-10 pb-32 space-y-12">
+                    <div className="space-y-2">
+                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Minhas Preferências</h3>
+                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
+                            Personalize sua experiência de trabalho.
+                        </p>
+                    </div>
 
                     {/* Notificações */}
-                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
-                            <div className="size-8 rounded-[12px] bg-primary/10 flex items-center justify-center">
-                                <Icon name="notifications" size={16} className="text-primary" />
-                            </div>
-                            <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">Notificações</h3>
-                        </div>
-                        <div className="divide-y divide-zinc-100">
-                            <div className="flex items-center justify-between px-6 py-5">
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Notificações</h3>
+                            <div className="flex items-center justify-between py-2">
                                 <div>
                                     <p className="text-sm font-bold text-zinc-900">Sons de Pedidos</p>
                                     <p className="text-[10px] text-zinc-400 mt-0.5">Alerta sonoro ao receber novas missões</p>
                                 </div>
-                                <ClayToggle enabled={prefSoundEnabled} onToggle={() => {
+                                <MinimalToggle enabled={prefSoundEnabled} onToggle={() => {
                                     const v = !prefSoundEnabled;
                                     setPrefSoundEnabled(v);
                                     savePreference('pref_sound', String(v));
@@ -7132,7 +7118,7 @@ function App() {
                                     <p className="text-sm font-bold text-zinc-900">Vibração</p>
                                     <p className="text-[10px] text-zinc-400 mt-0.5">Vibrar ao receber pedido ou atualização</p>
                                 </div>
-                                <ClayToggle enabled={prefVibrationEnabled} onToggle={() => {
+                                <MinimalToggle enabled={prefVibrationEnabled} onToggle={() => {
                                     const v = !prefVibrationEnabled;
                                     setPrefVibrationEnabled(v);
                                     savePreference('pref_vibration', String(v));
@@ -7142,146 +7128,93 @@ function App() {
                     </div>
 
                     {/* Navegação */}
-                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
-                            <div className="size-8 rounded-[12px] bg-blue-500/10 flex items-center justify-center">
-                                <Icon name="navigation" size={16} className="text-blue-500" />
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">App de Navegação</h3>
+                            <div className="grid grid-cols-1 gap-3">
+                                {[
+                                    { key: 'google', label: 'Google Maps', sub: 'Recomendado' },
+                                    { key: 'waze', label: 'Waze', sub: 'Trânsito em tempo real' },
+                                    { key: 'apple', label: 'Apple Maps', sub: 'Apenas iOS' },
+                                ].map(nav => (
+                                    <button
+                                        key={nav.key}
+                                        onClick={() => { setPrefNavApp(nav.key as any); savePreference('pref_nav_app', nav.key); }}
+                                        className={`w-full flex items-center justify-between p-5 rounded-3xl transition-all border-2 ${
+                                            prefNavApp === nav.key
+                                                ? 'bg-zinc-900 border-zinc-900 text-white shadow-lg scale-[1.02]'
+                                                : 'bg-white border-zinc-100 text-zinc-400 hover:border-zinc-200'
+                                        }`}
+                                    >
+                                        <div className="flex flex-col items-start text-left">
+                                            <span className="text-sm font-bold">{nav.label}</span>
+                                            <span className="text-[10px] opacity-60 font-medium">{nav.sub}</span>
+                                        </div>
+                                        {prefNavApp === nav.key && <Icon name="check_circle" size={20} className="text-white" />}
+                                    </button>
+                                ))}
                             </div>
-                            <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.25em]">App de Navegação</h3>
-                        </div>
-                        <div className="p-4 flex flex-col gap-3">
-                            {[
-                                { key: 'google', label: 'Google Maps', sub: 'Recomendado', color: 'text-green-500', bg: 'bg-green-500/10 border-green-500/20' },
-                                { key: 'waze', label: 'Waze', sub: 'Trânsito em tempo real', color: 'text-blue-500', bg: 'bg-blue-500/10 border-blue-500/20' },
-                                { key: 'apple', label: 'Apple Maps', sub: 'Apenas iOS', color: 'text-zinc-400', bg: 'bg-zinc-100 border-zinc-200' },
-                            ].map(nav => (
-                                <button
-                                    key={nav.key}
-                                    onClick={() => { setPrefNavApp(nav.key as any); savePreference('pref_nav_app', nav.key); }}
-                                    className={`w-full flex items-center justify-between p-4 rounded-[22px] transition-all border ${
-                                        prefNavApp === nav.key
-                                            ? `${nav.bg} active:scale-[0.98]`
-                                            : 'bg-transparent border-transparent active:scale-[0.98]'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Icon name="map" size={18} className={nav.color} />
-                                        <div className="text-left">
-                                            <p className="text-sm font-bold text-zinc-900">{nav.label}</p>
-                                            <p className="text-[9px] text-zinc-400">{nav.sub}</p>
-                                        </div>
-                                    </div>
-                                    {prefNavApp === nav.key && (
-                                        <div className="size-5 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(250,204,21,0.5)]">
-                                            <Icon name="check" size={12} className="text-black" />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
                         </div>
                     </div>
 
                     {/* Serviços de Entrega */}
-                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-5">
-                            <div className="flex items-center gap-3">
-                                <div className="size-12 rounded-[18px] bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center">
-                                    <Icon name="local_shipping" size={22} className="text-emerald-500" />
-                                </div>
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Serviços</h3>
+                            <div className="flex items-center justify-between py-2">
                                 <div>
-                                    <p className="text-sm font-bold text-zinc-900">Serviços de Entrega</p>
-                                    <p className="text-[10px] text-zinc-400 mt-0.5">Restaurantes, Mercados, Farmácias e mais</p>
+                                    <p className="text-sm font-bold text-zinc-900">Aceitar Todos os Serviços</p>
+                                    <p className="text-[10px] text-zinc-400 mt-0.5">Restaurantes, Mercados, Farmácias...</p>
                                 </div>
+                                <MinimalToggle enabled={allServicesEnabled} onToggle={toggleAllServices} />
                             </div>
-                            <ClayToggle enabled={allServicesEnabled} onToggle={toggleAllServices} />
                         </div>
-                        {allServicesEnabled && (
-                            <div className="px-6 pb-5">
-                                <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[20px] p-4 flex items-center gap-3">
-                                    <Icon name="check_circle" size={16} className="text-emerald-500 flex-shrink-0" />
-                                    <p className="text-[10px] text-emerald-500/80 font-bold">Você aceitará todos os tipos de entrega: restaurantes, mercados, farmácias, pet shops e mais.</p>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* Mobilidade */}
-                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] overflow-hidden">
-                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-zinc-100">
-                            <div className="size-8 rounded-[12px] bg-blue-500/10 flex items-center justify-center">
-                                <Icon name="route" size={16} className="text-blue-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.25em]">Mobilidade</h3>
-                                <p className="text-[9px] text-zinc-400 mt-0.5">Selecione os serviços de transporte que aceita</p>
-                            </div>
-                        </div>
-                        <div className="divide-y divide-zinc-100">
-                            {mobilityOptions.map(mob => {
-                                const active = prefServiceTypes.includes(mob.key);
-                                return (
-                                    <div key={mob.key} className="flex items-center justify-between px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`size-10 rounded-[14px] flex items-center justify-center transition-all ${
-                                                active ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-zinc-50 border border-zinc-100'
-                                            }`}>
-                                                <Icon name={mob.icon} size={18} className={active ? 'text-blue-500' : 'text-zinc-300'} />
-                                            </div>
+                    <div className="space-y-8">
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Mobilidade</h3>
+                            <div className="divide-y divide-zinc-50">
+                                {mobilityOptions.map(mob => {
+                                    const active = prefServiceTypes.includes(mob.key);
+                                    return (
+                                        <div key={mob.key} className="flex items-center justify-between py-5">
                                             <div>
                                                 <p className="text-sm font-bold text-zinc-900">{mob.label}</p>
-                                                <p className="text-[9px] text-zinc-400 mt-0.5">{mob.sub}</p>
+                                                <p className="text-[10px] text-zinc-400">{mob.sub}</p>
                                             </div>
+                                            <MinimalToggle enabled={active} onToggle={() => toggleMobility(mob.key)} />
                                         </div>
-                                        <ClayToggle enabled={active} onToggle={() => toggleMobility(mob.key)} />
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
-
-
                     {/* Raio Máximo */}
-                    <div className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-zinc-100 rounded-[32px] p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="size-8 rounded-[12px] bg-purple-500/10 flex items-center justify-center">
-                                <Icon name="radar" size={16} className="text-purple-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-[10px] font-black text-purple-500 uppercase tracking-[0.25em]">Raio de Atuação</h3>
-                                <p className="text-[9px] text-zinc-400 mt-0.5">Distância máxima para aceitar pedidos</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="flex-1 h-2 bg-zinc-100 rounded-full relative">
-                                <div
-                                    className="absolute top-0 left-0 h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                                    style={{ width: `${(prefMaxRadius / 30) * 100}%` }}
-                                />
+                    <div className="space-y-8 pb-10">
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Raio de Atuação</h3>
+                            <div className="space-y-6">
+                                <div className="flex items-end justify-between">
+                                    <p className="text-4xl font-black text-zinc-900 tracking-tighter">{prefMaxRadius}km</p>
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Distância Máxima</p>
+                                </div>
                                 <input
                                     type="range"
-                                    min={1}
-                                    max={30}
+                                    min="1"
+                                    max="30"
+                                    step="1"
                                     value={prefMaxRadius}
-                                    onChange={e => { const v = Number(e.target.value); setPrefMaxRadius(v); savePreference('pref_max_radius', String(v)); }}
-                                    className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setPrefMaxRadius(Number(v));
+                                        savePreference('pref_max_radius', v);
+                                    }}
+                                    className="w-full h-1.5 bg-zinc-100 rounded-lg appearance-none cursor-pointer accent-zinc-900"
                                 />
                             </div>
-                            <div className="bg-zinc-50 border border-zinc-100 rounded-[16px] px-4 py-2 min-w-[72px] text-center">
-                                <span className="text-lg font-black text-zinc-900">{prefMaxRadius}</span>
-                                <span className="text-[9px] font-black text-zinc-400 ml-0.5">km</span>
-                            </div>
-                        </div>
-                        <div className="flex justify-between">
-                            {[1, 5, 10, 20, 30].map(km => (
-                                <button
-                                    key={km}
-                                    onClick={() => { setPrefMaxRadius(km); savePreference('pref_max_radius', String(km)); }}
-                                    className={`text-[9px] font-black px-2 py-1 rounded-full transition-all ${
-                                        prefMaxRadius === km ? 'text-purple-500 bg-purple-500/10' : 'text-zinc-300'
-                                    }`}
-                                >{km}km</button>
-                            ))}
                         </div>
                     </div>
 
@@ -8478,45 +8411,47 @@ function App() {
                                 </motion.div>
                             )}
 
-                            <header className="px-6 pt-12 pb-4 bg-white border-b border-zinc-100 flex items-center justify-between shadow-sm relative z-10 shrink-0">
-                                <div className="flex items-center gap-4">
-                                    <button 
-                                        onClick={() => setActiveTab('profile')}
-                                        className="relative active:scale-95 transition-transform"
-                                    >
-                                        <div className="size-12 rounded-[20px] bg-zinc-50 border border-zinc-100 flex items-center justify-center overflow-hidden">
-                                            {driverAvatar ? (
-                                                <img src={driverAvatar} alt="Perfil" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Icon name="person" className="text-zinc-400" />
-                                            )}
-                                        </div>
-                                        <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-white flex items-center justify-center shadow-sm border border-zinc-100">
-                                            <Icon name="settings" size={12} className="text-zinc-400" />
-                                        </div>
-                                    </button>
-                                    <div>
-                                        <h1 className="text-xl font-black text-zinc-900 tracking-tight leading-none mb-1">
-                                            Olá, <span className="text-yellow-600">{driverName.split(' ')[0]}</span>
-                                        </h1>
-                                        <div className="flex items-center gap-1.5">
-                                            <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
-                                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                                                {isOnline ? 'Online' : 'Offline'}
-                                            </span>
+                            {activeTab === 'dashboard' && (
+                                <header className="px-6 pt-12 pb-4 bg-white border-b border-zinc-100 flex items-center justify-between shadow-sm relative z-10 shrink-0">
+                                    <div className="flex items-center gap-4">
+                                        <button 
+                                            onClick={() => setActiveTab('profile')}
+                                            className="relative active:scale-95 transition-transform"
+                                        >
+                                            <div className="size-12 rounded-[20px] bg-zinc-50 border border-zinc-100 flex items-center justify-center overflow-hidden">
+                                                {driverAvatar ? (
+                                                    <img src={driverAvatar} alt="Perfil" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Icon name="person" className="text-zinc-400" />
+                                                )}
+                                            </div>
+                                            <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-white flex items-center justify-center shadow-sm border border-zinc-100">
+                                                <Icon name="settings" size={12} className="text-zinc-400" />
+                                            </div>
+                                        </button>
+                                        <div>
+                                            <h1 className="text-xl font-black text-zinc-900 tracking-tight leading-none mb-1">
+                                                Olá, <span className="text-yellow-600 font-black">{driverName.split(' ')[0]}</span>
+                                            </h1>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
+                                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                                                    {isOnline ? 'Online' : 'Offline'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <button 
-                                    onClick={() => setActiveTab('notifications')}
-                                    className="size-12 rounded-[20px] bg-zinc-50 border border-zinc-100 flex items-center justify-center relative active:scale-95 transition-transform"
-                                >
-                                    <Icon name="notifications" className="text-zinc-600" />
-                                    {unreadNotifsCount > 0 && (
-                                        <span className="absolute top-2 right-2 size-2.5 bg-rose-500 border-2 border-white rounded-full animate-pulse" />
-                                    )}
-                                </button>
-                            </header>
+                                    <button 
+                                        onClick={() => setActiveTab('notifications')}
+                                        className="size-12 rounded-[20px] bg-zinc-50 border border-zinc-100 flex items-center justify-center relative active:scale-95 transition-transform"
+                                    >
+                                        <Icon name="notifications" className="text-zinc-600" />
+                                        {unreadNotifsCount > 0 && (
+                                            <span className="absolute top-2 right-2 size-2.5 bg-rose-500 border-2 border-white rounded-full animate-pulse" />
+                                        )}
+                                    </button>
+                                </header>
+                            )}
 
                             <div className="flex-1 relative overflow-hidden flex flex-col bg-zinc-50">
                                 <main className="flex-1 overflow-y-auto no-scrollbar relative">
@@ -8525,11 +8460,37 @@ function App() {
                                         {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderActiveMissionView()}</motion.div>}
                                         {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderHistoryView()}</motion.div>}
                                         {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderEarningsView()}</motion.div>}
-                                        {activeTab === 'profile' && <motion.div key="prof" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderProfileView()}</motion.div>}
+                                        {activeTab === 'profile' && (
+                                            <motion.div 
+                                                key="prof" 
+                                                initial={{ x: '-100%' }} 
+                                                animate={{ x: 0 }} 
+                                                exit={{ x: '-100%' }}
+                                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                                className="fixed inset-0 z-[300] bg-white flex flex-col"
+                                            >
+                                                {renderProfileView()}
+                                            </motion.div>
+                                        )}
                                         {activeTab === 'missions' && <motion.div key="miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></motion.div>}
                                         {activeTab === 'dedicated' && <motion.div key="dedi" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderDedicatedView()}</motion.div>}
                                         {activeTab === 'scheduled' && <motion.div key="sched" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderScheduledView()}</motion.div>}
-                                        {activeTab === 'notifications' && <motion.div key="notif" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full"><NotificationsCenterView driverId={driverId || ''} onBack={() => setActiveTab('dashboard')} /></motion.div>}
+                                        {activeTab === 'notifications' && (
+                                            <motion.div key="notif" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full">
+                                                {authInitLoading ? (
+                                                    <div className="flex-1 flex flex-col items-center justify-center bg-zinc-50 py-20 gap-4">
+                                                        <div className="size-12 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
+                                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest animate-pulse">Autenticando...</span>
+                                                    </div>
+                                                ) : (
+                                                    <NotificationsCenterView 
+                                                        driverId={driverId || ''} 
+                                                        onBack={() => setActiveTab('dashboard')} 
+                                                        getSecureToken={getSecureToken}
+                                                    />
+                                                )}
+                                            </motion.div>
+                                         )}
                                     </AnimatePresence>
 
                                     <AnimatePresence>
@@ -8644,7 +8605,7 @@ function App() {
                             </div>
 
                             <div className="bg-zinc-50 border border-zinc-100 rounded-[40px] p-6 space-y-5 shadow-sm relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-zinc-200/20 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
                                 
                                 <div className="flex justify-between items-center bg-white p-5 rounded-[24px] border border-zinc-100 shadow-sm">
                                     <div className="flex flex-col gap-1">

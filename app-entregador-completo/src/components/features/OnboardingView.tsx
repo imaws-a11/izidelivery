@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { toast, toastSuccess, toastError } from '../../lib/useToast';
@@ -10,10 +10,13 @@ interface OnboardingViewProps {
   onClose?: () => void;
 }
 
+type DocType = 'cnh_front' | 'cnh_back' | 'vehicle_front' | 'vehicle_back' | 'residence';
+
 export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApproved, onLogout, onClose }) => {
-  console.log("[DEBUG] OnboardingView montado para o usuário:", userId);
   const [step, setStep] = useState<'welcome' | 'form' | 'waiting' | 'rejected'>('welcome');
   const [loading, setLoading] = useState(true);
+  const [savingDraft, setSavingDraft] = useState(false);
+  
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -24,72 +27,105 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
     vehicle_plate: '',
   });
 
-  const [files, setFiles] = useState<{ cnh: File | null; vehicle: File | null }>({ cnh: null, vehicle: null });
-  const [previews, setPreviews] = useState<{ cnh: string | null; vehicle: string | null }>({ cnh: null, vehicle: null });
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [files, setFiles] = useState<Record<DocType, File | null>>({
+    cnh_front: null,
+    cnh_back: null,
+    vehicle_front: null,
+    vehicle_back: null,
+    residence: null,
+  });
 
-  const checkStatus = async () => {
-    if (!userId || userId === '') {
-      console.log("[DEBUG] userId ausente ou vazio, pulando checkStatus");
-      return;
-    }
+  const [previews, setPreviews] = useState<Record<DocType, string | null>>({
+    cnh_front: null,
+    cnh_back: null,
+    vehicle_front: null,
+    vehicle_back: null,
+    residence: null,
+  });
+
+  const [showFeedback, setShowFeedback] = useState(false);
+  const isFirstLoad = useRef(true);
+
+  // 1. CARREGAR STATUS E RASCUNHO
+  const loadInitialData = async () => {
+    if (!userId) return;
     setLoading(true);
     try {
-      console.log("[DEBUG] Verificando status para:", userId);
-      // 1. Verifica se já foi aprovado e está na tabela oficial
+      // Verifica drivers
       const { data: driver } = await supabase.from('drivers_delivery').select('id, is_active').eq('id', userId).maybeSingle();
       if (driver?.is_active) {
-        console.log("[DEBUG] Driver já ativo, fechando onboarding");
         onApproved();
         return;
       }
 
-      // 2. Verifica se tem candidatura pendente
+      // Verifica candidatura
       const { data: app } = await supabase.from('driver_applications_delivery').select('*').eq('user_id', userId).maybeSingle();
-      
       if (app) {
-        console.log("[DEBUG] Candidatura encontrada:", app.status);
-        if (app.status === 'pending') {
-          setStep('waiting');
-        } else if (app.status === 'rejected') {
-          setStep('rejected');
-        } else if (app.status === 'approved') {
-          // Se a candidatura está aprovada, mas o driver não está ativo (vimos acima)
-          // significa que ele foi desativado pelo admin ou está pendente de sincronização
-          setStep('waiting');
-        }
-      } else {
-        console.log("[DEBUG] Nenhuma candidatura encontrada, mostrando welcome");
-        setStep('welcome');
+        if (app.status === 'pending' || app.status === 'approved') setStep('waiting');
+        else if (app.status === 'rejected') setStep('rejected');
+        return;
       }
+
+      // Se não tem candidatura, busca rascunho para sincronização multidispositivo
+      const { data: userData } = await supabase.from('users_delivery').select('onboarding_draft').eq('id', userId).maybeSingle();
+      if (userData?.onboarding_draft && typeof userData.onboarding_draft === 'object') {
+        const draft = userData.onboarding_draft as any;
+        if (draft.formData) setFormData(draft.formData);
+        if (draft.previews) setPreviews(draft.previews);
+        console.log("[DEBUG] Rascunho carregado para sincronização");
+      }
+
+      setStep('welcome');
     } catch (err) {
-      console.error("[DEBUG] Erro ao verificar status:", err);
+      console.error("[DEBUG] Erro no carregamento inicial:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { 
-    checkStatus(); 
-  }, [userId]);
+  useEffect(() => { loadInitialData(); }, [userId]);
 
+  // 2. AUTO-SAVE RASCUNHO (Sincronização Multidispositivo)
   useEffect(() => {
-    let timer: any;
-    if (loading && step === 'welcome') {
-      timer = setTimeout(() => {
-        setShowFeedback(true);
-      }, 3000);
-    } else {
-      setShowFeedback(false);
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
     }
-    return () => clearTimeout(timer);
-  }, [loading, step]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'cnh' | 'vehicle') => {
+    const timer = setTimeout(async () => {
+      if (step !== 'form') return;
+      setSavingDraft(true);
+      try {
+        await supabase.from('users_delivery').update({
+          onboarding_draft: { formData, previews }
+        }).eq('id', userId);
+      } catch (err) {
+        console.error("Erro ao salvar rascunho:", err);
+      } finally {
+        setSavingDraft(false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [formData, previews, step]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: DocType) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toastError("Arquivo muito grande. Máximo 5MB.");
+        return;
+      }
+
       setFiles(prev => ({ ...prev, [type]: file }));
-      setPreviews(prev => ({ ...prev, [type]: URL.createObjectURL(file) }));
+      
+      try {
+        const url = await uploadDocument(file, type);
+        setPreviews(prev => ({ ...prev, [type]: url }));
+        toastSuccess("Documento enviado!");
+      } catch (err) {
+        toastError("Erro ao subir arquivo.");
+      }
     }
   };
 
@@ -104,8 +140,9 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!files.cnh || !files.vehicle) {
-      toastError("Anexe todos os documentos (CNH e Documento do Veículo).");
+    const missingDocs = Object.entries(previews).filter(([_, url]) => !url);
+    if (missingDocs.length > 0) {
+      toastError("Por favor, anexe todos os 5 documentos obrigatórios.");
       return;
     }
 
@@ -116,19 +153,28 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
     setLoading(true);
     try {
-      const cnhUrl = await uploadDocument(files.cnh, "cnh");
-      const vehicleUrl = await uploadDocument(files.vehicle, "vehicle");
-
       const { error } = await supabase.from('driver_applications_delivery').insert({
         user_id: userId,
-        ...formData,
-        document_cnh: cnhUrl,
-        document_vehicle: vehicleUrl,
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        vehicle_type: formData.vehicle_type,
+        vehicle_model: formData.vehicle_model,
+        vehicle_plate: formData.vehicle_plate,
+        document_cnh: previews.cnh_front,
+        document_cnh_verso: previews.cnh_back,
+        document_vehicle: previews.vehicle_front,
+        document_vehicle_verso: previews.vehicle_back,
+        document_residence: previews.residence,
         status: 'pending'
       });
 
       if (error) throw error;
-      toastSuccess("Cadastro enviado!");
+
+      await supabase.from('users_delivery').update({ onboarding_draft: {} }).eq('id', userId);
+      
+      toastSuccess("Cadastro enviado com sucesso!");
       setStep('waiting');
     } catch (err: any) {
       toastError(err.message);
@@ -143,13 +189,6 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
   if (loading && step === 'welcome') {
     return (
       <div className="fixed inset-0 bg-white z-[20000] flex flex-col items-center justify-center p-10 text-center">
-        {onClose && (
-            <div className="absolute top-6 right-6">
-                <button onClick={onClose} className="size-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 active:scale-95 transition-all">
-                    <span className="material-symbols-outlined">close</span>
-                </button>
-            </div>
-        )}
         <motion.div 
             animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}
@@ -157,12 +196,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
         >
             <span className="material-symbols-outlined text-4xl text-black">moped</span>
         </motion.div>
-        <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">
-          {showFeedback ? "Cadastro ainda em análise" : "Validando Cadastro..."}
-        </h2>
-        <p className="text-zinc-400 font-bold text-xs mt-2 uppercase tracking-widest">
-          {showFeedback ? "Nossa equipe está revisando seus dados" : "Aguarde um momento"}
-        </p>
+        <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Validando Dados...</h2>
       </div>
     );
   }
@@ -171,171 +205,100 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
     <div className="fixed inset-0 bg-white z-[15000] flex flex-col font-display overflow-y-auto">
       <AnimatePresence mode="wait">
         {step === 'welcome' && (
-          <motion.div 
-            key="welcome" 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            className="flex-1 flex flex-col min-h-screen"
-          >
+          <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-screen">
             <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
                 <div className="size-24 bg-yellow-400 rounded-[32px] flex items-center justify-center mb-8 shadow-2xl shadow-yellow-400/20">
                     <span className="material-symbols-outlined text-5xl text-black font-black">moped</span>
                 </div>
                 <h1 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase mb-4 leading-none">Seja um<br/>Entregador Izi</h1>
                 <p className="text-zinc-400 font-bold text-sm leading-relaxed mb-12 px-4 uppercase tracking-wide">
-                    Ganhe dinheiro com sua própria rotina. Cadastre seu veículo e comece hoje mesmo.
+                    Sua conta está sincronizada. Comece aqui e termine em qualquer dispositivo.
                 </p>
-                
                 <div className="w-full max-w-xs space-y-4">
-                    <button 
-                        onClick={() => setStep('form')} 
-                        className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem] shadow-xl shadow-zinc-900/20 active:scale-95 transition-all"
-                    >
-                        Começar Cadastro
+                    <button onClick={() => setStep('form')} className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem] shadow-xl shadow-zinc-900/20 active:scale-95 transition-all">
+                        {previews.cnh_front ? "Continuar Cadastro" : "Começar Cadastro"}
                     </button>
-                    
-                    {onClose && (
-                        <button 
-                            onClick={onClose} 
-                            className="w-full h-18 bg-zinc-100 text-zinc-900 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all"
-                        >
-                            Voltar ao Início
-                        </button>
-                    )}
-
-                    <button 
-                        onClick={onLogout} 
-                        className="w-full h-18 bg-white border border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all"
-                    >
-                        Sair da Conta
-                    </button>
+                    <button onClick={onLogout} className="w-full h-18 bg-white border border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all">Sair da Conta</button>
                 </div>
             </div>
           </motion.div>
         )}
 
         {step === 'form' && (
-          <motion.div 
-            key="form" 
-            initial={{ opacity: 0, x: 50 }} 
-            animate={{ opacity: 1, x: 0 }} 
-            className="flex-1 flex flex-col bg-white min-h-screen pb-32"
-          >
-            {/* HEADER */}
-            <header className="px-6 pt-12 pb-6 flex items-center gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-50">
-                <button 
-                    onClick={() => setStep('welcome')}
-                    className="size-10 rounded-full bg-zinc-100 flex items-center justify-center active:scale-90 transition-transform"
-                >
-                    <span className="material-symbols-outlined text-zinc-800">arrow_back</span>
-                </button>
-                <h1 className="text-xl font-black tracking-tight uppercase">Dados do Cadastro</h1>
+          <motion.div key="form" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="flex-1 flex flex-col bg-white min-h-screen pb-32">
+            <header className="px-6 pt-12 pb-6 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-50">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => setStep('welcome')} className="size-10 rounded-full bg-zinc-100 flex items-center justify-center"><span className="material-symbols-outlined text-zinc-800">arrow_back</span></button>
+                    <h1 className="text-xl font-black tracking-tight uppercase">Cadastro</h1>
+                </div>
+                {savingDraft && <span className="text-[10px] font-black text-yellow-600 animate-pulse uppercase tracking-widest">Sincronizando...</span>}
             </header>
 
             <form onSubmit={handleSubmit} className="px-6 space-y-10 pt-4">
-                {/* DADOS PESSOAIS */}
                 <section className="space-y-6">
                     <h2 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-600 ml-1">Dados Pessoais</h2>
-                    
                     <div>
                         <label className={labelClass}>Nome Completo</label>
-                        <input type="text" required className={inputClass} placeholder="Ex: João Silva" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} />
+                        <input type="text" required className={inputClass} value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} />
                     </div>
-
-                    <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className={labelClass}>E-mail</label>
-                            <input type="email" required className={inputClass} placeholder="seu@email.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                            <input type="email" required className={inputClass} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                         </div>
                         <div>
                             <label className={labelClass}>WhatsApp</label>
-                            <input type="tel" required className={inputClass} placeholder="(00) 00000-0000" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                            <input type="tel" required className={inputClass} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                         </div>
                     </div>
-
                     <div>
                         <label className={labelClass}>Endereço Completo</label>
-                        <textarea required rows={2} className={inputClass + " resize-none"} placeholder="Rua, número, bairro..." value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                        <textarea required rows={2} className={inputClass + " resize-none"} value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
                     </div>
                 </section>
 
-                {/* VEÍCULO */}
                 <section className="space-y-6">
-                    <h2 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-600 ml-1">Seu Veículo</h2>
-                    
-                    <div className="grid grid-cols-2 gap-3">
+                    <h2 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-600 ml-1">Veículo</h2>
+                    <div className="grid grid-cols-4 gap-2">
                         {[
-                            { id: 'moto', label: 'Moto', icon: 'moped' },
-                            { id: 'carro', label: 'Carro', icon: 'directions_car' },
-                            { id: 'bike', label: 'Bike', icon: 'pedal_bike' },
-                            { id: 'van', label: 'Van', icon: 'airport_shuttle' },
+                            { id: 'moto', icon: 'moped' },
+                            { id: 'carro', icon: 'directions_car' },
+                            { id: 'bike', icon: 'pedal_bike' },
+                            { id: 'van', icon: 'airport_shuttle' },
                         ].map(type => (
-                            <button
-                                key={type.id}
-                                type="button"
-                                onClick={() => setFormData({...formData, vehicle_type: type.id})}
-                                className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${formData.vehicle_type === type.id ? 'border-yellow-400 bg-yellow-50' : 'border-zinc-50 bg-[#F3F3F3]'}`}
-                            >
+                            <button key={type.id} type="button" onClick={() => setFormData({...formData, vehicle_type: type.id})} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${formData.vehicle_type === type.id ? 'border-yellow-400 bg-yellow-50' : 'border-zinc-50 bg-[#F3F3F3]'}`}>
                                 <span className="material-symbols-outlined text-zinc-800 text-lg">{type.icon}</span>
-                                <span className="text-[10px] font-black uppercase tracking-tight">{type.label}</span>
                             </button>
                         ))}
                     </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className={labelClass}>Modelo</label>
-                            <input type="text" required className={inputClass} placeholder="Modelo/Ano" value={formData.vehicle_model} onChange={e => setFormData({...formData, vehicle_model: e.target.value})} />
+                            <input type="text" required className={inputClass} value={formData.vehicle_model} onChange={e => setFormData({...formData, vehicle_model: e.target.value})} />
                         </div>
                         <div>
                             <label className={labelClass}>Placa</label>
-                            <input type="text" required className={inputClass} placeholder="ABC-1234" value={formData.vehicle_plate} onChange={e => setFormData({...formData, vehicle_plate: e.target.value.toUpperCase()})} />
+                            <input type="text" required className={inputClass} value={formData.vehicle_plate} onChange={e => setFormData({...formData, vehicle_plate: e.target.value.toUpperCase()})} />
                         </div>
                     </div>
                 </section>
 
-                {/* DOCUMENTOS */}
                 <section className="space-y-6">
-                    <h2 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-600 ml-1">Documentos</h2>
-                    
-                    <div className="grid grid-cols-1 gap-4">
-                        <label className="relative cursor-pointer">
-                            <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(e, 'cnh')} />
-                            <div className={`p-6 rounded-[28px] border-2 border-dashed transition-all flex flex-col items-center justify-center text-center gap-3 ${previews.cnh ? 'border-emerald-400 bg-emerald-50' : 'border-zinc-200 bg-[#F3F3F3]'}`}>
-                                {previews.cnh ? (
-                                    <img src={previews.cnh} alt="CNH" className="h-20 rounded-xl object-cover" />
-                                ) : (
-                                    <span className="material-symbols-outlined text-zinc-400 text-3xl">add_a_photo</span>
-                                )}
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-800">
-                                    {previews.cnh ? "CNH Selecionada" : "Foto da CNH"}
-                                </p>
-                            </div>
-                        </label>
-
-                        <label className="relative cursor-pointer">
-                            <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(e, 'vehicle')} />
-                            <div className={`p-6 rounded-[28px] border-2 border-dashed transition-all flex flex-col items-center justify-center text-center gap-3 ${previews.vehicle ? 'border-emerald-400 bg-emerald-50' : 'border-zinc-200 bg-[#F3F3F3]'}`}>
-                                {previews.vehicle ? (
-                                    <img src={previews.vehicle} alt="Veículo" className="h-20 rounded-xl object-cover" />
-                                ) : (
-                                    <span className="material-symbols-outlined text-zinc-400 text-3xl">add_a_photo</span>
-                                )}
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-800">
-                                    {previews.vehicle ? "Documento Selecionado" : "Documento do Veículo"}
-                                </p>
-                            </div>
-                        </label>
+                    <h2 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-600 ml-1">Documentos (Imagem ou PDF)</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                        <DocUpload slot="cnh_front" label="CNH Frente" preview={previews.cnh_front} onChange={handleFileChange} />
+                        <DocUpload slot="cnh_back" label="CNH Verso" preview={previews.cnh_back} onChange={handleFileChange} />
+                        <DocUpload slot="vehicle_front" label="CRLV Frente" preview={previews.vehicle_front} onChange={handleFileChange} />
+                        <DocUpload slot="vehicle_back" label="CRLV Verso" preview={previews.vehicle_back} onChange={handleFileChange} />
+                        <div className="col-span-2">
+                            <DocUpload slot="residence" label="Comprovante de Residência" preview={previews.residence} onChange={handleFileChange} />
+                        </div>
                     </div>
                 </section>
 
                 <div className="pt-6">
-                    <button
-                        disabled={loading}
-                        className={`w-full h-18 rounded-[2rem] bg-zinc-900 text-white font-black uppercase tracking-[0.2em] shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-3 ${loading ? 'opacity-70' : ''}`}
-                    >
-                        {loading ? 'Enviando...' : 'Finalizar Cadastro'}
+                    <button disabled={loading} className={`w-full h-18 rounded-[2rem] bg-zinc-900 text-white font-black uppercase tracking-[0.2em] shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-3 ${loading ? 'opacity-70' : ''}`}>
+                        {loading ? 'Processando...' : 'Finalizar Cadastro'}
                     </button>
                 </div>
             </form>
@@ -343,33 +306,16 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
         )}
 
         {(step === 'waiting' || step === 'rejected') && (
-            <motion.div 
-                key={step} 
-                initial={{ opacity: 0, y: 30 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-white min-h-screen"
-            >
+            <motion.div key={step} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-white min-h-screen">
                 <div className={`size-24 rounded-[32px] flex items-center justify-center mb-8 ${step === 'waiting' ? 'bg-yellow-100 text-yellow-600' : 'bg-rose-100 text-rose-600'}`}>
-                    <span className="material-symbols-outlined text-5xl font-black">
-                        {step === 'waiting' ? 'hourglass_empty' : 'error_outline'}
-                    </span>
+                    <span className="material-symbols-outlined text-5xl font-black">{step === 'waiting' ? 'hourglass_empty' : 'error_outline'}</span>
                 </div>
-                <h1 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase mb-4 leading-none">
-                    {step === 'waiting' ? <>Análise em<br/>Andamento</> : 'Cadastro Recusado'}
-                </h1>
+                <h1 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase mb-4 leading-none">{step === 'waiting' ? <>Análise em<br/>Andamento</> : 'Cadastro Recusado'}</h1>
                 <p className="text-zinc-400 font-bold text-sm leading-relaxed mb-12 uppercase tracking-wide">
-                    {step === 'waiting' 
-                        ? 'Recebemos seus dados! Nossa equipe está validando seus documentos agora mesmo.' 
-                        : 'Infelizmente seu cadastro não foi aprovado nesta fase. Verifique seus documentos e tente novamente.'
-                    }
+                    {step === 'waiting' ? 'Nossa equipe está validando seus 5 documentos. Você receberá uma notificação em breve.' : 'Verifique seus documentos e tente novamente.'}
                 </p>
                 <div className="w-full max-w-xs space-y-4">
-                    {step === 'rejected' && (
-                        <button onClick={() => setStep('form')} className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem]">Tentar Novamente</button>
-                    )}
-                    {onClose && (
-                        <button onClick={onClose} className="w-full h-18 bg-zinc-100 text-zinc-900 font-black uppercase tracking-[0.2em] rounded-[2rem]">Voltar ao Início</button>
-                    )}
+                    {step === 'rejected' && <button onClick={() => setStep('form')} className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem]">Tentar Novamente</button>}
                     <button onClick={onLogout} className="w-full h-18 bg-white border border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem]">Sair da Conta</button>
                 </div>
             </motion.div>
@@ -377,4 +323,28 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
       </AnimatePresence>
     </div>
   );
+};
+
+const DocUpload = ({ slot, label, preview, onChange }: { slot: DocType, label: string, preview: string | null, onChange: any }) => {
+    const isPDF = preview?.toLowerCase().includes('.pdf');
+    return (
+        <label className="relative cursor-pointer group">
+            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => onChange(e, slot)} />
+            <div className={`p-4 h-40 rounded-[28px] border-2 border-dashed transition-all flex flex-col items-center justify-center text-center gap-2 ${preview ? 'border-emerald-400 bg-emerald-50' : 'border-zinc-200 bg-[#F3F3F3]'}`}>
+                {preview ? (
+                    isPDF ? (
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="material-symbols-outlined text-rose-500 text-4xl">picture_as_pdf</span>
+                            <span className="text-[8px] font-black text-rose-600 uppercase">PDF Pronto</span>
+                        </div>
+                    ) : (
+                        <img src={preview} alt={label} className="h-24 w-full object-cover rounded-xl" />
+                    )
+                ) : (
+                    <span className="material-symbols-outlined text-zinc-400 text-3xl group-hover:scale-110 transition-transform">cloud_upload</span>
+                )}
+                <p className={`text-[9px] font-black uppercase tracking-tight ${preview ? 'text-emerald-700' : 'text-zinc-500'}`}>{label}</p>
+            </div>
+        </label>
+    );
 };

@@ -76,6 +76,49 @@ export default function DriversTab() {
     return (now - lastSeen) < 15_000; // 15s de tolerância
   */
 
+  useEffect(() => {
+    const syncMissingData = async () => {
+      if (!selectedDriverStudio || !selectedDriverStudio.id || (typeof selectedDriverStudio.id === 'string' && selectedDriverStudio.id.startsWith('new-'))) return;
+      
+      // Se já tem os documentos e endereço, não precisa buscar
+      if (selectedDriverStudio.doc_cnh_frente && selectedDriverStudio.doc_vehicle && selectedDriverStudio.address) return;
+
+      console.log('[DEBUG] Buscando dados faltantes na candidatura para:', selectedDriverStudio.id);
+      
+      try {
+        const { data: app, error } = await supabase
+          .from('driver_applications_delivery')
+          .select('*')
+          .eq('user_id', selectedDriverStudio.id)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (app) {
+          setSelectedDriverStudio((prev: any) => ({
+            ...prev,
+            address: prev.address || app.address,
+            doc_cnh_frente: prev.doc_cnh_frente || app.document_cnh,
+            doc_cnh_verso: prev.doc_cnh_verso || app.document_cnh_verso,
+            doc_vehicle: prev.doc_vehicle || app.document_vehicle,
+            doc_vehicle_verso: prev.doc_vehicle_verso || app.document_vehicle_verso,
+            doc_residencia: prev.doc_residencia || app.document_residence,
+            license_plate: prev.license_plate || app.vehicle_plate,
+            vehicle_model: prev.vehicle_model || app.vehicle_model,
+            vehicle_type: prev.vehicle_type || app.vehicle_type,
+            status: app.status === 'approved' ? 'active' : prev.status,
+            is_active: app.status === 'approved' ? true : prev.is_active
+          }));
+        }
+      } catch (err) {
+        console.error('[DEBUG] Erro no auto-sync:', err);
+      }
+    };
+
+    syncMissingData();
+  }, [selectedDriverStudio?.id]);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -534,9 +577,11 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
             <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Arquivos Digitais</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { key: 'doc_cnh_frente', label: 'CNH Frente', icon: 'badge' },
-                { key: 'doc_cnh_verso',  label: 'CNH Verso',  icon: 'badge' },
-                { key: 'doc_residencia', label: 'Comprovante de Residência', icon: 'home_work' },
+                { key: 'doc_cnh_frente',   label: 'CNH Frente', icon: 'badge' },
+                { key: 'doc_cnh_verso',    label: 'CNH Verso',  icon: 'badge' },
+                { key: 'doc_vehicle',      label: 'CRLV Frente', icon: 'directions_car' },
+                { key: 'doc_vehicle_verso', label: 'CRLV Verso',  icon: 'directions_car' },
+                { key: 'doc_residencia',   label: 'Comprovante de Residência', icon: 'home_work' },
               ].map(({ key, label, icon }) => {
                 const url: string = selectedDriverStudio[key] || '';
                 const isPdf = url.toLowerCase().includes('.pdf');
@@ -701,6 +746,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              doc_cnh_frente:  selectedDriverStudio.doc_cnh_frente  || null,
              doc_cnh_verso:   selectedDriverStudio.doc_cnh_verso   || null,
              doc_residencia:  selectedDriverStudio.doc_residencia  || null,
+             doc_vehicle:     selectedDriverStudio.doc_vehicle     || null,
+             doc_vehicle_verso: selectedDriverStudio.doc_vehicle_verso || null,
            };
 
          let error;

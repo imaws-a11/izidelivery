@@ -74,13 +74,30 @@ const DriverApplicationsTab = () => {
           vehicle_type: app.vehicle_type,
           vehicle_model: app.vehicle_model,
           license_plate: app.vehicle_plate,
-          status: 'online',
+          address: app.address,
+          doc_cnh_frente: app.document_cnh,
+          doc_cnh_verso: app.document_cnh_verso,
+          doc_vehicle: app.document_vehicle,
+          doc_vehicle_verso: app.document_vehicle_verso,
+          doc_residencia: app.document_residence,
+          status: 'active',
           rating: 5.0,
           is_active: true
         }, { onConflict: 'id' });
 
       if (driverError) throw driverError;
 
+      // 2. Ativa a conta do usuário e limpa o rascunho de onboarding
+      await supabase
+        .from('users_delivery')
+        .update({ 
+          onboarding_draft: {},
+          is_active: true,
+          status: 'active'
+        })
+        .eq('id', app.user_id);
+
+      // 3. Atualiza o status da candidatura
       const { error: updateError } = await supabase
         .from('driver_applications_delivery')
         .update({ status: 'approved' })

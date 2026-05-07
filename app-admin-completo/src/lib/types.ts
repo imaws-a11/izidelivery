@@ -47,6 +47,11 @@ export interface Driver {
   address?: string;
   created_at: string;
   last_seen_at?: string;
+  doc_cnh_frente?: string;
+  doc_cnh_verso?: string;
+  doc_residencia?: string;
+  doc_vehicle?: string;
+  doc_vehicle_verso?: string;
 }
 
 export interface User {
