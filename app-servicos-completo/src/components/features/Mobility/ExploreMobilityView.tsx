@@ -9,7 +9,11 @@ import { IziBottomSheet } from "../../common/IziBottomSheet";
 
 
 
-export const ExploreEnviosUberView: React.FC = () => {
+interface ExploreMobilityViewProps {
+  onBack: () => void;
+}
+
+export const ExploreMobilityView: React.FC<ExploreMobilityViewProps> = ({ onBack }) => {
   const { 
     calculateDistancePrices, 
     setIsCalculatingPrice, 
@@ -21,15 +25,12 @@ export const ExploreEnviosUberView: React.FC = () => {
     setMobilityStep, 
     routePolyline, 
     routeDistance,
-    driverLocation,
-    distanceValueKm,
     distancePrices,
     paymentMethod,
     setPaymentMethod
   } = useApp();
   const { isLoaded } = useGoogleMapsLoader();
-  const [view, setView] = useState<"explore" | "plan_trip" | "select_priority" | "izi_pay">("plan_trip");
-  const [iziPaySubView, setIziPaySubView] = useState<"main" | "send" | "my_qr" | "scan" | "loan">("main");
+  const [view, setView] = useState<"explore" | "plan_trip" | "select_priority">("plan_trip");
   const [selectedType, setSelectedType] = useState<"moto" | "carro" | "frete">("moto");
   const [selectedFreteType, setSelectedFreteType] = useState<"fiorino" | "caminhonete" | "bau">("fiorino");
   
@@ -118,11 +119,11 @@ export const ExploreEnviosUberView: React.FC = () => {
     };
     autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
       if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-        const userLatLng = new google.maps.LatLng(center.lat, center.lng);
+        const userLatLng = new window.google.maps.LatLng(center.lat, center.lng);
         distanceMatrixService.current?.getDistanceMatrix({
           origins: [userLatLng],
           destinations: predictions.map(p => ({ placeId: p.place_id })),
-          travelMode: google.maps.TravelMode.DRIVING,
+          travelMode: window.google.maps.TravelMode.DRIVING,
           unitSystem: google.maps.UnitSystem.METRIC,
         }, (response, distStatus) => {
           if (distStatus === "OK" && response) {
@@ -179,95 +180,6 @@ export const ExploreEnviosUberView: React.FC = () => {
 
   // --- RENDEREIZAÇÃO CONDICIONAL DE CONTEÚDO ---
   const renderContent = () => {
-    if (view === "izi_pay") {
-      return (
-        <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed inset-0 bg-[#F8F9FA] z-[200] font-sans text-black overflow-y-auto pb-24">
-          <AnimatePresence mode="wait">
-            {iziPaySubView === "main" && (
-              <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <header className="bg-[#FFC107] px-6 pt-12 pb-28 rounded-b-[48px] relative shadow-xl">
-                   <div className="flex items-center gap-6 mb-8">
-                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => setView("select_priority")} className="w-11 h-11 rounded-full bg-black/10 flex items-center justify-center"><span className="material-symbols-rounded text-black font-bold">arrow_back</span></motion.button>
-                      <h1 className="text-2xl font-black text-black">Izi Pay</h1>
-                   </div>
-                   <div className="bg-white p-7 rounded-[32px] shadow-2xl relative z-10 border border-white/50">
-                      <div className="flex justify-between items-start mb-6">
-                         <div><p className="text-zinc-400 font-bold text-[10px] uppercase tracking-widest mb-1">Meu Saldo</p><h2 className="text-4xl font-black text-black">R$ 482,90</h2></div>
-                         <div className="bg-[#FFC107]/10 px-3 py-1.5 rounded-full flex items-center gap-2"><span className="material-symbols-rounded text-[#FFC107] text-lg fill-1">stars</span><span className="text-sm font-black text-[#FFB300]">1.240 <span className="font-bold text-[10px]">COINS</span></span></div>
-                      </div>
-                      <div className="flex gap-3"><button className="flex-1 bg-black text-white h-12 rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-transform">Adicionar Saldo</button><button onClick={() => setIziPaySubView("loan")} className="flex-1 bg-[#F5F5F5] text-black h-12 rounded-2xl font-bold text-sm active:scale-95 transition-transform">Pegar Crédito</button></div>
-                   </div>
-                </header>
-                <main className="px-6 -mt-10 pb-12 space-y-8 relative z-20">
-                   <section className="grid grid-cols-4 gap-4 pt-4">
-                      <QuickAction icon="qr_code_scanner" label="Pagar" onClick={() => document.getElementById('native-camera')?.click()} />
-                      <QuickAction icon="send" label="Enviar" onClick={() => setIziPaySubView("send")} />
-                      <QuickAction icon="qr_code_2" label="Meu QR" onClick={() => setIziPaySubView("my_qr")} />
-                      <QuickAction icon="account_balance_wallet" label="Crédito" onClick={() => setIziPaySubView("loan")} />
-                      <input type="file" id="native-camera" accept="image/*" capture="environment" className="hidden" />
-                   </section>
-                   <section>
-                      <div className="flex justify-between items-center mb-5"><h3 className="text-lg font-black text-black tracking-tight">Meus Cartões</h3><button className="text-[#FFC107] font-black text-xs uppercase">Ver Todos</button></div>
-                      <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2"><CreditCardItem brand="Visa" last="8291" color="bg-zinc-900" text="white" /><CreditCardItem brand="Master" last="4402" color="bg-[#FFC107]" text="black" /></div>
-                   </section>
-                   <section>
-                      <h3 className="text-lg font-black text-black tracking-tight mb-5">Atividade Recente</h3>
-                      <div className="bg-white rounded-[32px] p-2 shadow-sm border border-neutral-100"><TransactionItem title="Uber Trip" date="Hoje, 14:20" amount="- R$ 12,86" icon="directions_car" color="bg-blue-100 text-blue-600" /><TransactionItem title="Depósito Pix" date="Ontem, 18:05" amount="+ R$ 200,00" icon="add" color="bg-green-100 text-green-600" /></div>
-                   </section>
-                </main>
-              </motion.div>
-            )}
-            {iziPaySubView === "send" && (
-              <motion.div key="send" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="min-h-screen bg-white p-6">
-                <header className="flex items-center gap-6 mb-10"><button onClick={() => setIziPaySubView("main")} className="material-symbols-rounded text-black font-bold">arrow_back</button><h2 className="text-2xl font-black">Enviar Izi Coins</h2></header>
-                <div className="space-y-6">
-                  <div className="p-4 bg-neutral-50 rounded-2xl border-2 border-black/5"><p className="text-xs font-bold text-zinc-400 uppercase mb-2">Destinatário</p><input autoFocus placeholder="E-mail ou CPF" className="w-full bg-transparent text-lg font-bold outline-none" /></div>
-                  <div className="p-4 bg-neutral-50 rounded-2xl border-2 border-black/5"><p className="text-xs font-bold text-zinc-400 uppercase mb-2">Valor em Coins</p><input type="number" placeholder="0" className="w-full bg-transparent text-4xl font-black outline-none text-[#FFC107]" /></div>
-                  <button className="w-full bg-black text-white h-16 rounded-2xl font-bold text-lg shadow-xl shadow-black/10">Continuar</button>
-                </div>
-              </motion.div>
-            )}
-            {iziPaySubView === "my_qr" && (
-              <motion.div key="qr" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="min-h-screen bg-[#FFC107] p-8 flex flex-col items-center justify-center text-black">
-                 <button onClick={() => setIziPaySubView("main")} className="absolute top-10 left-6 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl"><span className="material-symbols-rounded font-bold">close</span></button>
-                 <h2 className="text-3xl font-black mb-2">Receber Coins</h2>
-                 <p className="text-black/60 font-medium mb-12">Mostre este código para receber Izi Coins</p>
-                 <div className="bg-white p-10 rounded-[48px] shadow-2xl mb-10"><div className="w-64 h-64 bg-neutral-100 rounded-2xl flex items-center justify-center"><span className="material-symbols-rounded text-[140px] text-black">qr_code_2</span></div></div>
-                 <p className="text-xl font-bold mb-8">@seu_usuario_izi</p>
-                 <button className="bg-black text-white px-10 py-4 rounded-2xl font-bold shadow-2xl flex items-center gap-3"><span className="material-symbols-rounded">share</span> Compartilhar</button>
-              </motion.div>
-            )}
-            {iziPaySubView === "loan" && (
-              <motion.div key="loan" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="min-h-screen bg-white p-6">
-                <header className="flex items-center gap-6 mb-10"><button onClick={() => setIziPaySubView("main")} className="material-symbols-rounded text-black font-bold">arrow_back</button><h2 className="text-2xl font-black">Izi Crédito</h2></header>
-                <div className="space-y-8">
-                   <div className="bg-black text-white p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFC107]/20 blur-[60px]" />
-                      <p className="text-zinc-500 font-bold text-xs uppercase mb-2">Crédito Disponível</p>
-                      <h3 className="text-4xl font-black mb-6">R$ 5.000,00</h3>
-                      <div className="flex items-center gap-2 text-[#FFC107] font-bold text-sm"><span className="material-symbols-rounded text-lg">check_circle</span> Aprovação Instantânea</div>
-                   </div>
-                   <div>
-                      <h4 className="text-lg font-black mb-4">Simular Empréstimo</h4>
-                      <div className="space-y-4">
-                         <div className="p-5 bg-neutral-50 rounded-2xl"><p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Quanto você precisa?</p><input type="number" defaultValue="1000" className="w-full bg-transparent text-2xl font-black outline-none" /></div>
-                         <div className="p-5 bg-neutral-50 rounded-2xl"><p className="text-[10px] font-bold text-zinc-400 uppercase mb-3">Em quantas parcelas?</p>
-                            <div className="flex gap-2">
-                               {['3x', '6x', '12x', '24x'].map(p => <button key={p} className={`flex-1 h-12 rounded-xl font-bold transition-all ${p === '12x' ? 'bg-[#FFC107] text-black' : 'bg-white border border-neutral-200'}`}>{p}</button>)}
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-                   <div className="bg-yellow-50 p-6 rounded-3xl border border-yellow-200"><div className="flex justify-between items-center mb-2"><span className="font-bold text-zinc-500">Valor da Parcela</span><span className="font-black text-lg">12x R$ 98,50</span></div><p className="text-[10px] text-zinc-400 font-bold">Taxa de juros: 1.9% a.m.</p></div>
-                   <button className="w-full bg-black text-white h-16 rounded-2xl font-bold text-lg shadow-xl mt-4">Contratar Empréstimo</button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      );
-    }
-
     if (view === "select_priority") {
       return (
         <div className="relative h-screen w-full bg-white overflow-hidden font-sans">

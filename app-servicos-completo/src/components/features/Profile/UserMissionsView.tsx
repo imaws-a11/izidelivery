@@ -71,7 +71,7 @@ export const UserMissionsView: React.FC<UserMissionsViewProps> = ({ userId, onBa
         {/* Hero Banner */}
         <div className="px-4 pt-4">
           <div
-            className="rounded-[28px] p-7 relative overflow-hidden"
+            className="rounded-[32px] p-8 relative overflow-hidden"
             style={{
               background: "linear-gradient(135deg, #facc15 0%, #f59e0b 100%)",
               boxShadow: "0 16px 40px rgba(250,204,21,0.25)",
@@ -82,47 +82,47 @@ export const UserMissionsView: React.FC<UserMissionsViewProps> = ({ userId, onBa
               <span className="material-symbols-outlined text-zinc-900" style={{ fontSize: 140 }}>emoji_events</span>
             </div>
             <div className="relative z-10">
-              <p className="text-[10px] font-black text-zinc-900/60 uppercase tracking-[0.3em] mb-1">Programa de Recompensas</p>
-              <h2 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none mb-4">
+              <p className="text-[11px] font-black text-zinc-900/60 uppercase tracking-[0.3em] mb-1">Programa de Recompensas</p>
+              <h2 className="text-4xl font-black text-zinc-900 tracking-tighter leading-none mb-6">
                 Complete<br />e ganhe!
               </h2>
-              {/* Stats */}
-              <div className="flex gap-4">
-                <div className="bg-white/30 backdrop-blur-sm rounded-2xl px-4 py-3 flex-1 text-center border border-white/20">
-                  <p className="text-[9px] font-black text-zinc-900/60 uppercase tracking-widest">Concluídas</p>
-                  <p className="text-2xl font-black text-zinc-900 leading-none mt-0.5">{completedCount}</p>
+              {/* Stats - Minimalista sem fundo */}
+              <div className="flex gap-4 border-t border-zinc-900/10 pt-6">
+                <div className="flex-1 text-center">
+                  <p className="text-[10px] font-black text-zinc-900/60 uppercase tracking-widest">Concluídas</p>
+                  <p className="text-3xl font-black text-zinc-900 leading-none mt-1">{completedCount}</p>
                 </div>
-                <div className="bg-white/30 backdrop-blur-sm rounded-2xl px-4 py-3 flex-1 text-center border border-white/20">
-                  <p className="text-[9px] font-black text-zinc-900/60 uppercase tracking-widest">XP Total</p>
-                  <p className="text-2xl font-black text-zinc-900 leading-none mt-0.5">{totalXP}</p>
+                <div className="flex-1 text-center border-l border-r border-zinc-900/10">
+                  <p className="text-[10px] font-black text-zinc-900/60 uppercase tracking-widest">XP Total</p>
+                  <p className="text-3xl font-black text-zinc-900 leading-none mt-1">{totalXP}</p>
                 </div>
-                <div className="bg-white/30 backdrop-blur-sm rounded-2xl px-4 py-3 flex-1 text-center border border-white/20">
-                  <p className="text-[9px] font-black text-zinc-900/60 uppercase tracking-widest">Ativas</p>
-                  <p className="text-2xl font-black text-zinc-900 leading-none mt-0.5">{missions.length}</p>
+                <div className="flex-1 text-center">
+                  <p className="text-[10px] font-black text-zinc-900/60 uppercase tracking-widest">Ativas</p>
+                  <p className="text-3xl font-black text-zinc-900 leading-none mt-1">{missions.length}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Lista de Missões */}
-        <div className="px-4 py-4 space-y-3 pb-32">
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] px-1 mb-2">Missões disponíveis</p>
+        {/* Lista de Missões - Minimalista */}
+        <div className="px-6 py-8 space-y-6 pb-32">
+          <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-4">Missões disponíveis</p>
 
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-[24px] p-6 animate-pulse border border-zinc-100">
-                  <div className="h-12 bg-zinc-100 rounded-2xl mb-4" />
-                  <div className="h-3 bg-zinc-100 rounded-full mb-2 w-3/4" />
-                  <div className="h-3 bg-zinc-50 rounded-full w-1/2" />
+                <div key={i} className="animate-pulse border-b border-zinc-100 pb-6">
+                  <div className="h-10 bg-zinc-100 rounded-xl mb-4 w-1/3" />
+                  <div className="h-3 bg-zinc-100 rounded-full mb-2 w-full" />
+                  <div className="h-3 bg-zinc-50 rounded-full w-2/3" />
                 </div>
               ))}
             </div>
           ) : missions.length === 0 ? (
-            <div className="bg-white rounded-[24px] p-10 text-center border border-zinc-100 border-dashed">
-              <span className="material-symbols-outlined text-zinc-300 text-5xl mb-3 block">sentiment_dissatisfied</span>
-              <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
+            <div className="py-10 text-center">
+              <span className="material-symbols-outlined text-zinc-200 text-6xl mb-4 block">sentiment_dissatisfied</span>
+              <p className="text-sm font-black text-zinc-400 uppercase tracking-widest">
                 Nenhuma missão ativa<br />no momento
               </p>
             </div>
@@ -140,82 +140,80 @@ export const UserMissionsView: React.FC<UserMissionsViewProps> = ({ userId, onBa
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.06 }}
-                  className={`bg-white rounded-[24px] p-6 border relative overflow-hidden ${
-                    isDone ? "border-emerald-100 bg-emerald-50/20" : "border-zinc-100"
-                  }`}
+                  className="bg-transparent border-b border-zinc-100 pb-6 relative"
                 >
                   {/* Badge Concluída */}
                   {isDone && (
-                    <div className="absolute top-4 right-4 flex items-center gap-1 bg-emerald-500 text-white px-3 py-1.5 rounded-xl shadow-sm">
-                      <span className="material-symbols-outlined text-[12px]">check</span>
+                    <div className="absolute top-0 right-0 flex items-center gap-1 bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1.5 rounded-xl shadow-sm">
+                      <span className="material-symbols-outlined text-[12px] font-black">check</span>
                       <span className="text-[9px] font-black uppercase tracking-wider">Concluída</span>
                     </div>
                   )}
 
-                  <div className="flex items-start gap-4 mb-5">
+                  <div className="flex items-start gap-4 mb-4">
                     {/* Ícone */}
                     <div
-                      className={`size-14 rounded-[18px] flex items-center justify-center shrink-0 ${
+                      className={`size-12 rounded-full flex items-center justify-center shrink-0 ${
                         isDone
-                          ? "bg-emerald-100 border border-emerald-200"
+                          ? "bg-emerald-50 border border-emerald-100"
                           : "bg-yellow-50 border border-yellow-100"
                       }`}
                     >
                       <span
-                        className={`material-symbols-outlined text-2xl ${
-                          isDone ? "text-emerald-600" : "text-yellow-600"
+                        className={`material-symbols-outlined text-xl ${
+                          isDone ? "text-emerald-500" : "text-yellow-600"
                         }`}
                       >
                         {mission.icon || "emoji_events"}
                       </span>
                     </div>
                     {/* Título */}
-                    <div className="flex-1 min-w-0 pr-16">
-                      <h3 className="font-black text-zinc-900 text-base leading-tight uppercase tracking-tight">
+                    <div className="flex-1 min-w-0 pr-16 pt-1">
+                      <h3 className="font-black text-zinc-900 text-lg leading-tight tracking-tight">
                         {mission.title}
                       </h3>
                       {mission.description && (
-                        <p className="text-[11px] text-zinc-400 font-medium leading-relaxed mt-1">
+                        <p className="text-xs text-zinc-500 font-bold leading-relaxed mt-1">
                           {mission.description}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* Recompensas */}
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  {/* Recompensas Minimalistas */}
+                  <div className="flex flex-wrap gap-3 mb-5 pl-16">
                     {mission.reward_xp > 0 && (
-                      <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
-                        <span className="material-symbols-outlined text-blue-600 text-[13px]">stars</span>
-                        <span className="text-blue-600 font-black text-[11px]">+{mission.reward_xp} XP</span>
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-blue-500 text-[14px] font-black">stars</span>
+                        <span className="text-blue-500 font-black text-[12px] uppercase tracking-widest">+{mission.reward_xp} XP</span>
                       </div>
                     )}
                     {mission.reward_coins > 0 && (
-                      <div className="flex items-center gap-1.5 bg-yellow-50 border border-yellow-100 px-3 py-1.5 rounded-xl">
-                        <span className="material-symbols-outlined text-yellow-600 text-[13px]">paid</span>
-                        <span className="text-yellow-600 font-black text-[11px]">+{mission.reward_coins} Coins</span>
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-yellow-500 text-[14px] font-black">paid</span>
+                        <span className="text-yellow-600 font-black text-[12px] uppercase tracking-widest">+{mission.reward_coins} Coins</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Barra de progresso */}
-                  <div className="space-y-1.5">
+                  {/* Barra de progresso Neon Minimalista */}
+                  <div className="space-y-2 pl-16">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Progresso</span>
-                      <span className="text-[11px] font-black text-zinc-700">
-                        {current}<span className="text-zinc-300 mx-0.5 font-medium">/</span>
-                        <span className="text-zinc-400 text-[10px]">{target}</span>
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Progresso</span>
+                      <span className="text-[12px] font-black text-zinc-900">
+                        {current}<span className="text-zinc-300 mx-1 font-bold">/</span>
+                        <span className="text-zinc-400 text-[11px]">{target}</span>
                       </span>
                     </div>
-                    <div className="h-3 bg-zinc-100 rounded-full overflow-hidden border border-zinc-100 p-[2px]">
+                    <div className="h-1.5 bg-zinc-100 rounded-full relative">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
-                        transition={{ duration: 1, ease: "easeOut", delay: idx * 0.08 }}
-                        className={`h-full rounded-full ${
+                        transition={{ duration: 1.5, ease: "easeOut", delay: idx * 0.1 }}
+                        className={`absolute top-0 left-0 h-full rounded-full ${
                           isDone
-                            ? "bg-emerald-500"
-                            : "bg-gradient-to-r from-yellow-400 to-amber-500"
+                            ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]"
+                            : "bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.8)]"
                         }`}
                       />
                     </div>

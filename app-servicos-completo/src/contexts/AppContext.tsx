@@ -376,11 +376,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const directionsService = new window.google.maps.DirectionsService();
       
-      const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
+      const result = await new Promise<window.google.maps.DirectionsResult>((resolve, reject) => {
         directionsService.route({
           origin,
           destination,
-          travelMode: google.maps.TravelMode.DRIVING,
+          travelMode: window.google.maps.TravelMode.DRIVING,
         }, (res, status) => {
           if (status === "OK" && res) resolve(res);
           else reject(new Error(`Falha ao calcular rota: ${status}`));

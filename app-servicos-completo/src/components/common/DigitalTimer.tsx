@@ -4,12 +4,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface DigitalTimerProps {
   targetDate: string;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'dark' | 'light';
+  variant?: 'dark' | 'light' | 'premium-red';
 }
 
-const DigitBox = ({ value, label, current, variant }: { value: string, label: string, current: any, variant: 'dark' | 'light' }) => (
+const getBoxStyle = (variant: string) => {
+  if (variant === 'premium-red') return 'bg-gradient-to-b from-red-600/20 to-red-900/40 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.3)] backdrop-blur-md';
+  if (variant === 'dark') return 'bg-zinc-900 border-white/10';
+  return 'bg-black/5 border-black/5';
+};
+
+const getTextStyle = (variant: string) => {
+  if (variant === 'premium-red') return 'text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.9)]';
+  if (variant === 'dark') return 'text-yellow-400';
+  return 'text-black';
+};
+
+const DigitBox = ({ value, label, current, variant }: { value: string, label: string, current: any, variant: 'dark' | 'light' | 'premium-red' }) => (
   <div className="flex flex-col items-center gap-1">
-    <div className={`${current.box} ${variant === 'dark' ? 'bg-zinc-900 border-white/10' : 'bg-black/5 border-black/5'} rounded-xl border flex items-center justify-center relative overflow-hidden`}>
+    <div className={`${current.box} ${getBoxStyle(variant)} rounded-xl border flex items-center justify-center relative overflow-hidden`}>
       <AnimatePresence initial={false} mode="wait">
         <motion.span
           key={value}
@@ -17,7 +29,7 @@ const DigitBox = ({ value, label, current, variant }: { value: string, label: st
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -15, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-          className={`${current.text} font-black ${variant === 'dark' ? 'text-yellow-400' : 'text-black'} tracking-tighter z-10 flex items-center justify-center w-full h-full`}
+          className={`${current.text} font-black ${getTextStyle(variant)} tracking-tighter z-10 flex items-center justify-center w-full h-full`}
         >
           {value}
         </motion.span>
@@ -67,7 +79,7 @@ export const DigitalTimer: React.FC<DigitalTimerProps> = ({ targetDate, size = '
       <motion.span 
         animate={{ opacity: [1, 0.3, 1] }}
         transition={{ duration: 1, repeat: Infinity }}
-        className={`${current.text} font-black ${variant === 'dark' ? 'text-yellow-400' : 'text-black/30'}`}
+        className={`${current.text} font-black ${getTextStyle(variant)}`}
       >
         :
       </motion.span>
@@ -75,7 +87,7 @@ export const DigitalTimer: React.FC<DigitalTimerProps> = ({ targetDate, size = '
       <motion.span 
         animate={{ opacity: [1, 0.3, 1] }}
         transition={{ duration: 1, repeat: Infinity }}
-        className={`${current.text} font-black ${variant === 'dark' ? 'text-yellow-400' : 'text-black/30'}`}
+        className={`${current.text} font-black ${getTextStyle(variant)}`}
       >
         :
       </motion.span>

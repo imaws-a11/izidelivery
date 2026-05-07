@@ -79,7 +79,7 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
     }));
 
   const highlights = [
-    { id: 'clube', label: 'Clube', icon: 'loyalty', color: 'bg-zinc-900', textColor: 'text-white' },
+    { id: 'clube', label: 'Izi Black', icon: 'star', color: 'bg-zinc-900', textColor: 'text-white', route: 'izi_black_card' },
     { id: 'promos', label: 'Promoções', icon: 'percent', color: 'bg-emerald-500', textColor: 'text-white' },
     { id: 'favoritos', label: 'Favoritos', icon: 'favorite', color: 'bg-rose-500', textColor: 'text-white' },
   ];
@@ -101,7 +101,7 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 z-[200] backdrop-blur-sm"
+            className="fixed inset-0 bg-black/40 z-[500] backdrop-blur-sm"
           />
 
           {/* Drawer Lateral */}
@@ -110,7 +110,7 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-[201] shadow-2xl flex flex-col rounded-r-[40px] overflow-hidden"
+            className="fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-[501] shadow-2xl flex flex-col rounded-r-[40px] overflow-hidden"
           >
             {/* Header */}
             <div className="p-8 flex items-center justify-between">

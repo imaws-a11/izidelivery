@@ -33,94 +33,125 @@ export const LoyaltyView = ({ onBack, userName, userLevel = 1, userXP = 0 }: { o
   const progress = Math.min((userXP / nextLevelXP) * 100, 100);
 
   return (
-    <div className="flex flex-col min-h-screen h-full bg-zinc-900 text-white pb-20 overflow-y-auto">
-      <header className="px-6 pt-20 pb-6 flex items-center justify-between sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-md">
-        <button onClick={onBack} className="size-10 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-colors">
+    <div className="flex flex-col min-h-screen h-full bg-black text-white pb-20 overflow-y-auto">
+      <header className="px-6 pt-20 pb-6 flex items-center justify-between sticky top-0 z-50 bg-black/90 backdrop-blur-md">
+        <button onClick={onBack} className="size-10 flex items-center justify-center rounded-full active:scale-90 transition-all">
           <span className="material-symbols-rounded text-white">arrow_back</span>
         </button>
-        <h1 className="text-xl font-black text-white">Fidelidade</h1>
-        <div className="size-10" />
+        <div className="flex flex-col items-center">
+          <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em]">Assinatura</p>
+          <h1 className="text-xl font-black text-white tracking-tighter">Clube Izi Black</h1>
+        </div>
+        <div className="size-10 flex items-center justify-center">
+          <span className="material-symbols-rounded text-yellow-500 text-xl">workspace_premium</span>
+        </div>
       </header>
 
-      <main className="px-6 py-6 space-y-8">
-        {/* Status Card */}
-        <div className={`rounded-[40px] p-8 relative overflow-hidden shadow-2xl ${levelData?.color ? '' : 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-yellow-400/20'}`} style={levelData?.color ? { background: `linear-gradient(to bottom right, ${levelData.color}, #a16207)` } : {}}>
-           <div className="absolute -right-10 -top-10 text-white/20">
-              <span className="material-symbols-rounded text-[200px]">{levelData?.icon || 'military_tech'}</span>
+      <main className="px-6 py-6 space-y-10">
+        {/* Status Card Minimalista */}
+        <div className="rounded-[32px] p-8 relative overflow-hidden border border-zinc-800 bg-zinc-900/50">
+           <div className="absolute -right-6 -top-6 text-white/5">
+              <span className="material-symbols-rounded text-[180px]">{levelData?.icon || 'workspace_premium'}</span>
            </div>
            
            <div className="relative z-10">
-              <span className="px-3 py-1 bg-black/20 rounded-full text-[10px] font-black uppercase tracking-widest text-white">Nível {userLevel}</span>
-              <h2 className="text-4xl font-black text-white mt-4 leading-tight">{levelData?.title || 'Explorador'}<br/>Izi</h2>
+              <div className="flex items-center gap-2 mb-6">
+                <div className="h-1 w-6 bg-yellow-500 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Nível {userLevel}</span>
+              </div>
               
-              <div className="mt-8 space-y-2">
-                 <div className="flex justify-between text-white text-xs font-bold">
-                    <span>{userXP} XP</span>
-                    <span>Faltam {Math.max(0, nextLevelXP - userXP)} XP</span>
+              <h2 className="text-4xl font-black text-white leading-tight tracking-tighter mb-1">
+                {levelData?.title || 'Membro Black'}
+              </h2>
+              <p className="text-sm font-bold text-zinc-500">{userName || 'Cliente VIP'}</p>
+              
+              <div className="mt-10 space-y-3">
+                 <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Progresso</p>
+                      <span className="text-lg font-black text-white">{userXP} <span className="text-zinc-600 text-xs font-bold">XP</span></span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Faltam</p>
+                      <span className="text-lg font-black text-zinc-300">{Math.max(0, nextLevelXP - userXP)} <span className="text-zinc-600 text-xs font-bold">XP</span></span>
+                    </div>
                  </div>
-                 <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                 <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden relative">
                     <motion.div 
                       initial={{ width: 0 }} 
                       animate={{ width: `${progress}%` }} 
-                      className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                      className="absolute top-0 left-0 h-full bg-yellow-500 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)]"
                     />
                  </div>
               </div>
            </div>
         </div>
 
-        {/* Benefícios */}
-        <section className="space-y-4">
-           <h3 className="text-lg font-black tracking-tight">Seus Benefícios</h3>
-           {isLoading ? (
-             <div className="flex justify-center py-4"><div className="size-6 border-2 border-zinc-700 border-t-yellow-400 rounded-full animate-spin" /></div>
-           ) : levelData?.rewards && Array.isArray(levelData.rewards) ? (
-             levelData.rewards.map((reward: any, idx: number) => (
-               <div key={idx} className="bg-zinc-800 rounded-3xl p-6 border border-zinc-700/50 flex items-center gap-4">
-                  <div className="size-12 rounded-xl bg-zinc-700 flex items-center justify-center shrink-0">
-                     <span className="material-symbols-rounded text-yellow-400">{reward.icon || 'star'}</span>
-                  </div>
-                  <div>
-                     <h4 className="font-bold text-white leading-tight">{reward.title}</h4>
-                     <p className="text-xs text-zinc-400 mt-1">{reward.description}</p>
-                  </div>
-               </div>
-             ))
-           ) : (
-             <>
-               <div className="bg-zinc-800 rounded-3xl p-6 border border-zinc-700/50 flex items-center gap-4">
-                  <div className="size-12 rounded-xl bg-zinc-700 flex items-center justify-center shrink-0">
-                     <span className="material-symbols-rounded text-yellow-400">local_shipping</span>
-                  </div>
-                  <div>
-                     <h4 className="font-bold text-white">Frete Grátis</h4>
-                     <p className="text-xs text-zinc-400 mt-1">Em restaurantes parceiros às terças.</p>
-                  </div>
-               </div>
-               <div className="bg-zinc-800 rounded-3xl p-6 border border-zinc-700/50 flex items-center gap-4">
-                  <div className="size-12 rounded-xl bg-zinc-700 flex items-center justify-center shrink-0">
-                     <span className="material-symbols-rounded text-emerald-400">payments</span>
-                  </div>
-                  <div>
-                     <h4 className="font-bold text-white">Cashback em Dobro</h4>
-                     <p className="text-xs text-zinc-400 mt-1">2% de cashback pagando com Izi Pay.</p>
-                  </div>
-               </div>
-             </>
-           )}
+        {/* Benefícios Minimalistas */}
+        <section className="space-y-6">
+           <div>
+             <h3 className="text-lg font-black text-white tracking-tight">Benefícios Black</h3>
+             <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Vantagens exclusivas da sua assinatura</p>
+           </div>
+           
+           <div className="space-y-6">
+             {isLoading ? (
+               <div className="flex justify-center py-4"><div className="size-6 border-2 border-zinc-800 border-t-yellow-500 rounded-full animate-spin" /></div>
+             ) : levelData?.rewards && Array.isArray(levelData.rewards) ? (
+               levelData.rewards.map((reward: any, idx: number) => (
+                 <div key={idx} className="flex items-start gap-4 border-b border-zinc-800 pb-6 last:border-0 last:pb-0">
+                    <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                       <span className="material-symbols-rounded text-yellow-500 text-[18px]">{reward.icon || 'star'}</span>
+                    </div>
+                    <div className="flex-1 pt-1">
+                       <h4 className="font-black text-white text-[15px] leading-tight tracking-tight">{reward.title}</h4>
+                       <p className="text-xs text-zinc-500 font-bold leading-relaxed mt-1">{reward.description}</p>
+                    </div>
+                 </div>
+               ))
+             ) : (
+               <>
+                 <div className="flex items-start gap-4 border-b border-zinc-800 pb-6">
+                    <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                       <span className="material-symbols-rounded text-yellow-500 text-[18px]">local_shipping</span>
+                    </div>
+                    <div className="flex-1 pt-1">
+                       <h4 className="font-black text-white text-[15px] leading-tight tracking-tight">Frete Grátis Black</h4>
+                       <p className="text-xs text-zinc-500 font-bold leading-relaxed mt-1">Entregas gratuitas ilimitadas em todos os restaurantes parceiros e mercados.</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-4 border-b border-zinc-800 pb-6 last:border-0 last:pb-0">
+                    <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                       <span className="material-symbols-rounded text-emerald-400 text-[18px]">payments</span>
+                    </div>
+                    <div className="flex-1 pt-1">
+                       <h4 className="font-black text-white text-[15px] leading-tight tracking-tight">Cashback em Dobro</h4>
+                       <p className="text-xs text-zinc-500 font-bold leading-relaxed mt-1">Acumule 2% de cashback em todas as compras pagando com saldo Izi Pay.</p>
+                    </div>
+                 </div>
+               </>
+             )}
+           </div>
         </section>
 
-        {/* Como ganhar XP */}
-        <section className="space-y-4">
-           <h3 className="text-lg font-black tracking-tight">Como ganhar XP?</h3>
+        {/* Como ganhar XP Minimalista */}
+        <section className="space-y-6 pt-4 border-t border-zinc-900">
+           <div>
+             <h3 className="text-lg font-black text-white tracking-tight">Evolução no Clube</h3>
+             <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Como subir de nível</p>
+           </div>
+           
            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-zinc-800 p-5 rounded-3xl border border-zinc-700/50 text-center flex flex-col items-center justify-center">
-                 <span className="material-symbols-rounded text-3xl text-zinc-400 mb-2">shopping_bag</span>
-                 <p className="text-xs font-bold text-zinc-300">Faça pedidos<br/><span className="text-yellow-400">+10 XP</span></p>
+              <div className="p-5 border border-zinc-800 rounded-3xl flex flex-col items-center justify-center text-center">
+                 <span className="material-symbols-rounded text-2xl text-zinc-600 mb-3">shopping_bag</span>
+                 <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Pedidos</p>
+                 <span className="text-sm font-black text-yellow-500">+10 XP</span>
               </div>
-              <div className="bg-zinc-800 p-5 rounded-3xl border border-zinc-700/50 text-center flex flex-col items-center justify-center">
-                 <span className="material-symbols-rounded text-3xl text-zinc-400 mb-2">reviews</span>
-                 <p className="text-xs font-bold text-zinc-300">Avalie lojas<br/><span className="text-yellow-400">+5 XP</span></p>
+              <div className="p-5 border border-zinc-800 rounded-3xl flex flex-col items-center justify-center text-center">
+                 <span className="material-symbols-rounded text-2xl text-zinc-600 mb-3">reviews</span>
+                 <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Avaliações</p>
+                 <span className="text-sm font-black text-yellow-500">+5 XP</span>
               </div>
            </div>
         </section>

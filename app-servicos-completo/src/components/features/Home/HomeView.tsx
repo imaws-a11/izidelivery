@@ -478,7 +478,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <section>
                       <div className="grid grid-cols-5 gap-y-8 gap-x-4">
                           {displayServices.map((s: any) => {
-                            const isExclusive = s._exclusive === true;
+                            const nameStr = (s.name || s.label || '').toLowerCase();
+                            const slugStr = (s.id || '').toLowerCase();
+                            const isHighlight = s._exclusive === true || ['izi_envios', 'viagens', 'mobilidade'].includes(slugStr) || nameStr.includes('envios') || nameStr.includes('viagem') || nameStr.includes('viagens');
+                            
                             return (
                               <motion.div 
                                 key={s.id}
@@ -486,25 +489,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                 onClick={s.action}
                                 className="flex flex-col items-center gap-2 cursor-pointer group relative"
                               >
-                                {/* Badge EXCLUSIVO removido a pedido do usuário */}
                                 <div className={`size-16 rounded-3xl flex items-center justify-center border shadow-sm transition-all relative overflow-hidden active:scale-90 ${
-                                  isExclusive 
+                                  isHighlight 
                                     ? 'bg-gradient-to-br from-yellow-400 via-yellow-300 to-amber-400 border-yellow-300 shadow-lg shadow-yellow-400/30 group-hover:shadow-xl group-hover:shadow-yellow-400/40' 
                                     : 'bg-zinc-50 border-zinc-100 group-hover:bg-yellow-50'
                                 }`}>
-                                  {isExclusive && (
+                                  {isHighlight && (
                                     <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent" />
                                   )}
                                   {s.icon && s.icon.startsWith('http') ? (
-                                    <img src={s.icon} className="size-10 object-contain relative z-[1]" alt={s.name} />
+                                    <img src={s.icon} className="size-11 object-contain relative z-[1]" alt={s.name} />
                                   ) : s.img ? (
-                                    <img src={s.img} className="size-10 object-contain relative z-[1]" alt={s.name} />
+                                    <img src={s.img} className="size-11 object-contain relative z-[1]" alt={s.name} />
                                   ) : (
-                                    <span className={`material-symbols-rounded text-[28px] relative z-[1] ${isExclusive ? 'text-black' : 'text-zinc-400'}`}>{s.icon || 'storefront'}</span>
+                                    <span className={`material-symbols-rounded text-[32px] relative z-[1] ${isHighlight ? 'text-black' : 'text-zinc-400'}`}>{s.icon || 'storefront'}</span>
                                   )}
                                 </div>
                                 <span className={`text-[10px] font-black text-center leading-tight uppercase tracking-tighter truncate w-full ${
-                                  isExclusive ? 'text-yellow-600' : 'text-zinc-900'
+                                  isHighlight ? 'text-yellow-600' : 'text-zinc-900'
                                 }`}>
                                   {s.name || s.label}
                                 </span>
@@ -539,8 +541,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                       <span className="bg-yellow-400 text-black text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Oferta Flash</span>
                                       <span className="text-white/60 text-[9px] font-bold uppercase tracking-widest truncate">{f.admin_users?.store_name}</span>
                                       {f.expires_at && (
-                                          <div className="ml-auto">
-                                            <DigitalTimer targetDate={f.expires_at} size="sm" />
+                                      <div className="ml-auto">
+                                            <DigitalTimer targetDate={f.expires_at} size="sm" variant="premium-red" />
                                           </div>
                                       )}
                                     </div>

@@ -74,12 +74,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     toastSuccess("Em breve! Acúmulo de pontos Decolar nas suas compras Izi.");
   };
   const menuItems = [
-    { icon: "emoji_events", label: "Missões", action: () => setSubView?.("user_missions") },
+    { icon: "star", label: "Clube Izi Black", action: () => setSubView?.("izi_black_card") },
     { icon: "chat_bubble", label: "Conversas", action: () => setSubView?.("chats") },
     { icon: "notifications", label: "Notificações", action: () => setSubView?.("notifications_center") },
     { icon: "description", label: "Dados da conta", action: () => setSubView?.("account_details") },
     { icon: "credit_card", label: "Pagamentos", action: () => setSubView?.("payments") },
-    { icon: "star", label: "Clube Izi", action: () => setSubView?.("izi_black_purchase") },
     { icon: "confirmation_number", label: "Cupons", action: () => setSubView?.("coupons") },
     { icon: "lock", label: "Código de entrega", action: () => setSubView?.("delivery_code") },
     { icon: "workspace_premium", label: "Fidelidade", action: () => setSubView?.("loyalty") },
@@ -130,7 +129,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
         <div className="flex flex-col">
           <h2 className="text-2xl font-black text-zinc-900 leading-tight">{userName || "Pai"}</h2>
-          <button className="flex items-center gap-1 mt-1 group">
+          <button 
+            onClick={() => setSubView?.("izi_black_card")}
+            className="flex items-center gap-1 mt-1 group"
+          >
             <span className="text-yellow-600 text-sm font-bold group-hover:underline">Clube por 1 mês grátis!</span>
             <span className="material-symbols-outlined text-yellow-600 text-sm">chevron_right</span>
           </button>

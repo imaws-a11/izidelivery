@@ -4662,7 +4662,11 @@ const navigateSubView = (target: string) => {
 
                 {subView === "explore_izi_envios" && (
                   <motion.div key="exp_izi_envios" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                    <ExploreIziEnviosView onBack={() => window.history.back()} />
+                    <ExploreIziEnviosView 
+                      onBack={() => setSubView("none" as any)} 
+                      navigateSubView={navigateSubView} 
+                      setTransitData={setTransitData} 
+                    />
                   </motion.div>
                 )}
 

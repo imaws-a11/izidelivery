@@ -242,7 +242,7 @@ function LoanDetailScreen({ loan, amt, rate, inst, pmt, totalDue, totalInterest,
   return (
     <motion.div key="loan-detail-fullscreen" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
       transition={{ type: "spring", damping: 28, stiffness: 280 }}
-      className="fixed inset-0 bg-white z-[200] overflow-y-auto"
+      className="fixed inset-0 bg-white z-[1050] overflow-y-auto"
     >
       {/* Header */}
       <header className="px-6 pt-14 pb-4 flex items-center gap-4 bg-white sticky top-0 z-20 border-b border-zinc-100">
@@ -404,10 +404,10 @@ function LoanDetailScreen({ loan, amt, rate, inst, pmt, totalDue, totalInterest,
               </div>
             )}
             {/* Info legal */}
-            <div className="bg-zinc-50 p-4 rounded-[20px] space-y-1">
-              <p className="text-[8px] font-bold text-zinc-400">• Taxa: {(rate*100).toFixed(1)}% a.m. (juros compostos - Tabela Price)</p>
-              <p className="text-[8px] font-bold text-zinc-400">• Multa por atraso: 2% sobre parcela vencida (CDC Art. 52)</p>
-              <p className="text-[8px] font-bold text-zinc-400">• Juros de mora: 1% a.m. pro-rata (CC Art. 406)</p>
+            <div className="p-4 space-y-1">
+              <p className="text-[8px] font-bold text-zinc-500">• Taxa: {(rate*100).toFixed(1)}% a.m. (juros compostos - Tabela Price)</p>
+              <p className="text-[8px] font-bold text-zinc-500">• Multa por atraso: 2% sobre parcela vencida (CDC Art. 52)</p>
+              <p className="text-[8px] font-bold text-zinc-500">• Juros de mora: 1% a.m. pro-rata (CC Art. 406)</p>
             </div>
           </>
         )}
@@ -415,7 +415,7 @@ function LoanDetailScreen({ loan, amt, rate, inst, pmt, totalDue, totalInterest,
 
       {/* Botão fixo de pagamento (só na tela de detalhes, se ativo) */}
       {step === 'details' && loan.status === 'active' && (
-        <div className="fixed bottom-8 inset-x-0 px-6 z-50 pointer-events-none">
+        <div className="fixed bottom-8 inset-x-0 px-6 z-[1100] pointer-events-none">
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => setStep('select')}
             className="w-full h-16 bg-emerald-400 text-black rounded-full font-black text-sm uppercase tracking-widest shadow-2xl shadow-emerald-400/40 pointer-events-auto"
           >Pagar Parcelas</motion.button>
@@ -684,7 +684,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       initial={{ x: "100%" }} 
       animate={{ x: 0 }} 
       exit={{ x: "100%" }}
-      className="fixed inset-0 bg-white z-[100] flex flex-col"
+      className="fixed inset-0 bg-white z-[1050] flex flex-col"
     >
       <header className="px-6 pt-20 pb-6 flex items-center gap-6 sticky top-0 bg-white z-50">
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
@@ -765,7 +765,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-zinc-900 z-[100] flex flex-col p-8"
+      className="fixed inset-0 bg-zinc-900 z-[1050] flex flex-col p-8"
     >
       <motion.button 
         whileTap={{ scale: 0.9 }} 
@@ -904,7 +904,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       initial={{ y: "100%" }} 
       animate={{ y: 0 }} 
       exit={{ y: "100%" }}
-      className="fixed inset-0 bg-zinc-50 z-[100] overflow-y-auto"
+      className="fixed inset-0 bg-zinc-50 z-[1050] overflow-y-auto"
     >
       <header className="px-6 pt-20 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 sticky top-0 z-20">
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setSubView("main"); setLoanSuccess(false); setLoanAmount(""); }} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
@@ -943,11 +943,11 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                   R$ {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </h3>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2 px-0 py-2">
                     <span className="material-symbols-rounded text-yellow-400 text-lg fill-1">verified_user</span>
                     <span className="text-[9px] font-black text-white uppercase tracking-widest">Aprovação Digital</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2 px-0 py-2">
                     <span className="material-symbols-rounded text-emerald-400 text-lg">percent</span>
                     <span className="text-[9px] font-black text-white uppercase tracking-widest">Taxa: {loanInterestRate}%</span>
                   </div>
@@ -1040,9 +1040,9 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
 
             {/* Formulário de Solicitação */}
             {hasActiveLoan ? (
-              <div className="bg-amber-50 p-6 rounded-[32px] border border-amber-200 flex items-center gap-4">
+              <div className="bg-amber-50/10 p-6 rounded-[32px] border-none flex items-center gap-4">
                 <span className="material-symbols-rounded text-amber-500 text-2xl">info</span>
-                <p className="text-amber-700 text-sm font-bold">Você já possui uma solicitação {existingLoans.find(l => l.status === 'pending') ? 'em análise' : 'ativa'}. Aguarde a conclusão antes de solicitar um novo crédito.</p>
+                <p className="text-amber-600 text-sm font-bold">Você já possui uma solicitação {existingLoans.find(l => l.status === 'pending') ? 'em análise' : 'ativa'}. Aguarde a conclusão antes de solicitar um novo crédito.</p>
               </div>
             ) : preApprovedLimit <= 0 ? (
               <div className="bg-zinc-100 p-8 rounded-[32px] flex flex-col items-center text-center gap-4">
@@ -1055,7 +1055,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                 <h4 className="text-xl font-black tracking-tight uppercase ml-2">Solicitar Crédito</h4>
                 
                 {/* Valor */}
-                <div className="p-8 bg-white rounded-[40px] shadow-xl border border-zinc-100">
+                <div className="p-8 bg-transparent rounded-[40px] border-none">
                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-1">Valor do Empréstimo</p>
                   <div className="flex items-baseline gap-3">
                     <span className="text-2xl font-black text-zinc-300">R$</span>
@@ -1085,7 +1085,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                 </div>
 
                 {/* Parcelas */}
-                <div className="p-8 bg-white rounded-[40px] shadow-xl border border-zinc-100">
+                <div className="p-8 bg-transparent rounded-[40px] border-none">
                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6 ml-1">Plano de Pagamento</p>
                   <div className="grid grid-cols-4 gap-3">
                     {[3, 6, 12, 24].map(p => (
@@ -1104,7 +1104,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                 {amount > 0 && (
                   <div className="space-y-4">
                     {/* Card principal */}
-                    <div className="bg-emerald-50 p-7 rounded-[32px] border border-emerald-100 space-y-4">
+                    <div className="bg-emerald-50/10 p-7 rounded-[32px] border-none space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Parcela Mensal</p>
@@ -1119,15 +1119,15 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
 
                     {/* Grid de detalhes */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white p-5 rounded-[24px] border border-zinc-100">
+                      <div className="bg-transparent p-5 rounded-[24px] border-none">
                         <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">1º Vencimento</p>
                         <p className="text-sm font-black text-zinc-900">{firstDueDate.toLocaleDateString('pt-BR')}</p>
                       </div>
-                      <div className="bg-white p-5 rounded-[24px] border border-zinc-100">
+                      <div className="bg-transparent p-5 rounded-[24px] border-none">
                         <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Último Vencimento</p>
                         <p className="text-sm font-black text-zinc-900">{lastDueDate.toLocaleDateString('pt-BR')}</p>
                       </div>
-                      <div className="bg-white p-5 rounded-[24px] border border-zinc-100">
+                      <div className="bg-transparent p-5 rounded-[24px] border-none">
                         <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total de Juros</p>
                         <p className="text-sm font-black text-red-500">R$ {totalInterest.toFixed(2).replace('.', ',')}</p>
                       </div>
@@ -1138,7 +1138,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                     </div>
 
                     {/* Mini tabela de amortização */}
-                    <div className="bg-white p-5 rounded-[24px] border border-zinc-100 space-y-3">
+                    <div className="bg-transparent p-5 rounded-[24px] border-none space-y-3">
                       <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Prévia da Amortização (Price)</p>
                       {(() => {
                         let saldo = amount;
@@ -1165,10 +1165,10 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                     </div>
 
                     {/* Informações legais */}
-                    <div className="bg-zinc-50 p-4 rounded-[20px] border border-zinc-100 space-y-1">
-                      <p className="text-[9px] font-bold text-zinc-400">• Taxa mensal: <span className="text-zinc-600">{loanInterestRate}% a.m.</span> (juros compostos)</p>
-                      <p className="text-[9px] font-bold text-zinc-400">• Multa por atraso: <span className="text-zinc-600">2% sobre parcela vencida</span></p>
-                      <p className="text-[9px] font-bold text-zinc-400">• Juros de mora: <span className="text-zinc-600">1% a.m. pro-rata</span></p>
+                    <div className="p-4 space-y-1">
+                      <p className="text-[9px] font-bold text-zinc-500">• Taxa mensal: <span className="text-zinc-700">{loanInterestRate}% a.m.</span> (juros compostos)</p>
+                      <p className="text-[9px] font-bold text-zinc-500">• Multa por atraso: <span className="text-zinc-700">2% sobre parcela vencida</span></p>
+                      <p className="text-[9px] font-bold text-zinc-500">• Juros de mora: <span className="text-zinc-700">1% a.m. pro-rata</span></p>
                     </div>
                   </div>
                 )}
@@ -1179,7 +1179,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
 
         {/* Botão de envio fixo flutuante */}
         {!loanLoading && !loanSuccess && !hasActiveLoan && preApprovedLimit > 0 && (
-          <div className="fixed bottom-10 inset-x-0 px-6 z-50 pointer-events-none">
+          <div className="fixed bottom-10 inset-x-0 px-6 z-[1100] pointer-events-none">
             <motion.button 
               whileTap={{ scale: 0.98 }}
               onClick={handleSubmitLoan}
@@ -1461,7 +1461,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
           />
         )}
         {subView === "statement" && (
-           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed inset-0 bg-white z-[120] flex flex-col">
+           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed inset-0 bg-white z-[1050] flex flex-col">
               <header className="px-6 pt-20 pb-6 flex items-center gap-6 border-b border-zinc-100 sticky top-0 bg-white z-20">
                  <button onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-black font-black">
                     <span className="material-symbols-rounded">arrow_back</span>
@@ -1500,7 +1500,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
            </motion.div>
         )}
         {subView === "deposit" && (
-           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed inset-0 bg-[#F7F7F7] z-[120] flex flex-col">
+           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed inset-0 bg-[#F7F7F7] z-[1050] flex flex-col">
               <header className="px-6 pt-20 pb-6 flex items-center gap-6 bg-white border-b border-zinc-100 relative z-10">
                  <button onClick={() => setSubView("main")} className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-900 font-black">
                     <span className="material-symbols-rounded">arrow_back</span>

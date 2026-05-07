@@ -5,35 +5,19 @@ import { useApp } from "../../../../hooks/useApp";
 import { supabase } from "../../../../lib/supabase";
 import { useGoogleMapsLoader } from "../../../../hooks/useGoogleMapsLoader";
 
-// Estilo de Mapa Uber/Waze (Clean Silver)
+// Estilo de Mapa Premium (Clean Silver/White)
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
-  { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+  { "elementType": "geometry", "stylers": [{ "color": "#f8f9fa" }] },
   { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
-  { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
-  { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
-  { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-  { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
-  { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#9ca3af" }] },
   { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
-  { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
-  { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-  { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
-  { "featureType": "transit.line", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
-  { "featureType": "transit.station", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
-  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c9c9c9" }] },
-  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] }
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#e5e7eb" }] }
 ];
 
 const MAP_OPTIONS: google.maps.MapOptions = {
   disableDefaultUI: true,
   styles: MAP_STYLES,
-  gestureHandling: 'greedy',
-  maxZoom: 20,
-  minZoom: 3,
-  backgroundColor: '#f5f5f5'
+  gestureHandling: 'greedy'
 };
 
 interface ExploreIziEnviosViewProps {
@@ -41,11 +25,11 @@ interface ExploreIziEnviosViewProps {
 }
 
 export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBack }) => {
-  const { setSubView, setTransitData, transitData, userLocation, calculateDistancePrices } = useApp();
+  const { setSubView, setTransitData, transitData, userLocation, calculateDistancePrices, updateLocation } = useApp();
   const { isLoaded } = useGoogleMapsLoader();
   const [view, setView] = useState<"explore" | "plan_trip" | "select_priority">("plan_trip");
   const [selectedPriority, setSelectedPriority] = useState<string>("normal");
-  const [originQuery, setOriginQuery] = useState("Minha localização");
+  const [originQuery, setOriginQuery] = useState("");
   const [destQuery, setDestQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<"origin" | "dest" | null>(null);
@@ -56,6 +40,12 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
     lat: userLocation.lat || -20.1438,
     lng: userLocation.lng || -44.1989
   }), [userLocation.lat, userLocation.lng]);
+
+  useEffect(() => {
+    if (userLocation.address && !originQuery) {
+      setOriginQuery(userLocation.address);
+    }
+  }, [userLocation.address]);
 
   const fetchServices = async () => {
     try {
@@ -157,7 +147,7 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
 
   const handleSelectLocation = (loc: any) => {
     const destStr = `${loc.title}, ${loc.subtitle}`;
-    const originStr = originQuery === "Minha localização" ? (userLocation.address || "Rua Henry Karan, 660") : originQuery;
+    const originStr = originQuery === "Minha localização" || !originQuery ? (userLocation.address || "") : originQuery;
     
     setTransitData((prev: any) => ({
       ...prev,
@@ -167,7 +157,6 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
     }));
     
     calculateDistancePrices(originStr, destStr);
-
     setView("select_priority");
     setSheetPos(42);
   };
@@ -190,9 +179,9 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
             <motion.button 
               whileTap={{ scale: 0.9 }} 
               onClick={() => setView("plan_trip")} 
-              className="absolute top-12 left-5 w-11 h-11 bg-white rounded-full flex items-center justify-center shadow-2xl z-50"
+              className="absolute top-12 left-5 size-12 bg-white/90 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-2xl z-50 border border-zinc-100 text-black"
             >
-              <span className="material-symbols-rounded text-black font-bold text-[28px]">arrow_back</span>
+              <span className="material-symbols-rounded font-black text-2xl">arrow_back</span>
             </motion.button>
           </div>
 
@@ -210,16 +199,16 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
             initial={{ y: "100%" }} 
             animate={{ y: `${sheetPos}%` }} 
             transition={{ type: "spring", damping: 35, stiffness: 350 }} 
-            className="absolute bottom-0 left-0 w-full bg-white rounded-t-[40px] shadow-[0_-30px_100px_rgba(0,0,0,0.3)] z-[100]" 
+            className="absolute bottom-0 left-0 w-full bg-white rounded-t-[40px] shadow-[0_-30px_100px_rgba(0,0,0,0.15)] z-[100]" 
             style={{ height: '95vh', touchAction: 'none' }}
           >
             <div className="pt-4 pb-2 flex flex-col items-center cursor-grab active:cursor-grabbing">
-              <div className="w-14 h-1.5 bg-neutral-200 rounded-full mb-3" />
-              <h2 className="text-[19px] font-bold text-neutral-800 tracking-tight uppercase">Escolher Prioridade</h2>
+              <div className="w-14 h-1.5 bg-zinc-100 rounded-full mb-3" />
+              <h2 className="text-[14px] font-black text-zinc-400 tracking-widest uppercase">Escolher Prioridade</h2>
             </div>
             
             <div className="px-6 pb-20 overflow-y-auto no-scrollbar h-full space-y-7 pt-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {dynamicServices.map(s => (
                   <VehicleOption 
                     key={s.id}
@@ -235,7 +224,7 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
                 ))}
               </div>
 
-              <div className="border-t border-neutral-100 pt-5">
+              <div className="border-t border-zinc-50 pt-8 pb-12">
                 <motion.button 
                   whileTap={{ scale: 0.98 }} 
                   onClick={() => {
@@ -248,7 +237,7 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
                     setTransitData((prev: any) => ({ ...prev, priority: selectedPriority, subService: selectedPriority === 'scheduled' ? 'agendado' : 'express' }));
                     setSubView(routeMap[selectedPriority] as any || "explore_express");
                   }} 
-                  className="w-full bg-black text-white h-[64px] rounded-2xl font-bold text-lg shadow-2xl uppercase tracking-tighter"
+                  className="w-full bg-black text-white h-[74px] rounded-[32px] font-black text-lg shadow-[0_20px_40px_rgba(0,0,0,0.15)] uppercase tracking-widest"
                 >
                   Confirmar {dynamicServices.find(s => s.id === selectedPriority)?.name || 'Envio'}
                 </motion.button>
@@ -266,31 +255,72 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
           animate={{ x: 0 }} 
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="fixed inset-0 bg-white z-[200] font-sans text-black pb-32 overflow-y-auto select-none"
+          className="fixed inset-0 bg-white z-[200] font-sans text-black pb-32 overflow-y-auto select-none no-scrollbar"
         >
-          <header className="px-5 pt-12 pb-4 flex items-center gap-6 sticky top-0 bg-white z-50">
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => onBack()} className="material-symbols-rounded font-bold text-2xl">arrow_back</motion.button>
-            <h1 className="text-[20px] font-bold">Planeje seu envio</h1>
+          <header className="px-6 pt-14 pb-6 flex items-center gap-6 sticky top-0 bg-white z-50 border-b border-zinc-50">
+            <motion.button 
+              whileTap={{ scale: 0.9 }} 
+              onClick={() => onBack()} 
+              className="size-11 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-black"
+            >
+              <span className="material-symbols-rounded font-black text-2xl">arrow_back</span>
+            </motion.button>
+            <h1 className="text-xl font-black uppercase tracking-tighter">Planeje seu envio</h1>
           </header>
-          <main className="px-5 space-y-6">
-            <section className="flex items-center gap-3">
-              <div className="flex-1 border-[2.5px] border-black rounded-xl p-3 flex flex-col gap-4 relative bg-white">
-                <div className="flex items-center gap-4">
-                  <div className="w-2.5 h-2.5 rounded-full border-[2.5px] border-black shrink-0" />
-                  <input type="text" value={originQuery} onChange={(e) => { setOriginQuery(e.target.value); setIsSearching("origin"); }} onFocus={() => setIsSearching("origin")} className="w-full bg-transparent outline-none text-zinc-900 font-medium text-[15px]" />
+
+          <main className="px-6 pt-8 space-y-8">
+            <section className="flex flex-col gap-6">
+              <div className="rounded-[40px] p-8 flex flex-col gap-8 relative bg-white border border-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+                <div className="absolute left-[39px] top-[56px] bottom-[56px] w-0.5 bg-zinc-100" />
+
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className="size-4 rounded-full border-[3px] border-zinc-200 bg-white shrink-0" />
+                  <div className="flex-1 flex items-center gap-3">
+                    <input 
+                      type="text" 
+                      placeholder="De onde enviar?"
+                      value={originQuery} 
+                      onChange={(e) => { setOriginQuery(e.target.value); setIsSearching("origin"); }} 
+                      onFocus={() => setIsSearching("origin")} 
+                      className="flex-1 bg-transparent outline-none text-black font-black text-[16px] uppercase tracking-tighter placeholder:text-zinc-300" 
+                    />
+                    <motion.button 
+                      whileTap={{ scale: 0.9 }}
+                      onClick={async () => {
+                        const newLoc = await updateLocation(true);
+                        if (newLoc && newLoc.address) {
+                          setOriginQuery(newLoc.address);
+                          setIsSearching("dest");
+                        }
+                      }}
+                      className="size-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600"
+                    >
+                      <span className="material-symbols-rounded text-xl font-black">my_location</span>
+                    </motion.button>
+                  </div>
                 </div>
-                <div className="h-[1px] bg-neutral-100 ml-6" />
-                <div className="flex items-center gap-4">
-                  <div className="w-2.5 h-2.5 bg-black shrink-0" />
-                  <input autoFocus placeholder="Para onde enviar?" value={destQuery} onChange={(e) => { setDestQuery(e.target.value); setIsSearching("dest"); }} onFocus={() => setIsSearching("dest")} className="w-full bg-transparent outline-none text-zinc-900 font-medium text-[15px] placeholder:text-zinc-400" />
+
+                <div className="h-px bg-zinc-50 ml-10" />
+
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className="size-4 bg-black shrink-0 rounded-sm" />
+                  <input 
+                    autoFocus
+                    placeholder="Para onde enviar?" 
+                    value={destQuery} 
+                    onChange={(e) => { setDestQuery(e.target.value); setIsSearching("dest"); }} 
+                    onFocus={() => setIsSearching("dest")} 
+                    className="w-full bg-transparent outline-none text-black font-black text-[16px] uppercase tracking-tighter placeholder:text-zinc-300" 
+                  />
                 </div>
-                <div className="absolute left-[16px] top-[25px] bottom-[25px] w-[2px] bg-black" />
               </div>
             </section>
-            <section className="space-y-6 pt-2 pb-20">
+
+            <section className="space-y-6 pt-4 pb-32">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] px-2">Sugestões de Destino</p>
               <AnimatePresence mode="popLayout">
                 {suggestions.map((loc, i) => (
-                  <motion.div key={loc.placeId || i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ delay: i * 0.02 }}>
+                  <motion.div key={loc.placeId || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ delay: i * 0.03 }}>
                     <DestinationItem {...loc} onClick={() => handleSelectLocation(loc)} />
                   </motion.div>
                 ))}
@@ -302,39 +332,49 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
     }
 
     return (
-      <div className="min-h-screen bg-white font-sans text-black pb-32 overflow-y-auto select-none overflow-x-hidden relative">
-        <header className="px-5 pt-12 pb-6 bg-white sticky top-0 z-50 flex items-center gap-6">
-          <motion.button whileTap={{ scale: 0.8 }} onClick={onBack} className="material-symbols-rounded font-bold text-[28px]">arrow_back</motion.button>
-          <h1 className="text-[36px] font-bold tracking-tight leading-none uppercase">Izi Envios</h1>
+      <div className="min-h-screen bg-white font-sans text-black pb-32 overflow-y-auto select-none overflow-x-hidden no-scrollbar">
+        <header className="px-6 pt-14 pb-8 bg-white sticky top-0 z-50 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <motion.button 
+              whileTap={{ scale: 0.8 }} 
+              onClick={onBack} 
+              className="size-11 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center"
+            >
+              <span className="material-symbols-rounded font-black text-black text-2xl">arrow_back</span>
+            </motion.button>
+            <h1 className="text-[32px] font-black tracking-tighter leading-none uppercase">Izi Envios</h1>
+          </div>
+          
+          <div className="size-11 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center">
+             <span className="material-symbols-rounded text-black font-black">package_2</span>
+          </div>
         </header>
         
-        <main className="px-5 space-y-7">
-          <section onClick={() => setView("plan_trip")} className="flex items-center bg-[#EEEEEE] rounded-full h-[54px] px-4 gap-2 cursor-pointer active:scale-[0.98] transition-transform">
-            <div className="flex flex-1 items-center gap-3">
-              <span className="material-symbols-rounded font-bold text-[24px]">search</span>
-              <span className="text-black font-semibold text-lg opacity-90">Para onde enviar?</span>
+        <main className="px-6 space-y-10">
+          <section 
+            onClick={() => setView("plan_trip")} 
+            className="group flex items-center bg-zinc-50 rounded-[32px] h-[84px] px-8 gap-5 cursor-pointer active:scale-[0.98] transition-all hover:bg-zinc-100 border border-zinc-100 shadow-[0_15px_30px_rgba(0,0,0,0.02)]"
+          >
+            <div className="flex flex-1 items-center gap-5 overflow-hidden">
+              <div className="size-12 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center shadow-sm shrink-0">
+                <span className="material-symbols-rounded font-black text-black text-2xl">search</span>
+              </div>
+              <div className="flex flex-col min-w-0">
+                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1.5">Enviar para</span>
+                 <span className="text-black font-black text-sm uppercase tracking-tighter truncate">
+                   {userLocation.address || "Para onde enviar?"}
+                 </span>
+              </div>
             </div>
-            <div className="h-[38px] bg-white rounded-full flex items-center px-4 gap-2 shadow-sm">
-              <span className="material-symbols-rounded font-bold text-[18px]">calendar_month</span>
-              <span className="text-black font-bold text-[13px]">Agendar</span>
+            <div className="h-[50px] bg-black rounded-2xl flex items-center px-5 gap-3 shadow-xl shrink-0">
+              <span className="material-symbols-rounded font-black text-white text-[20px]">calendar_month</span>
+              <span className="text-white font-black text-[11px] uppercase tracking-widest">Agendar</span>
             </div>
           </section>
 
-          <section className="flex items-center gap-4 py-1">
-            <div className="w-9 h-9 rounded-lg bg-[#EEEEEE] flex items-center justify-center shrink-0">
-              <span className="material-symbols-rounded text-xl opacity-80">schedule</span>
-            </div>
-            <div className="flex-1 min-w-0 border-b border-neutral-100/50 pb-4">
-              <p className="font-semibold text-[16px] leading-tight truncate">Último envio para:</p>
-              <p className="text-zinc-500 text-[14px] font-medium truncate">Rua Presidente Vargas, 367</p>
-            </div>
-          </section>
-
-          <section>
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-bold uppercase tracking-tighter">Categorias de Envio</h2>
-            </div>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          <section className="space-y-6">
+            <h2 className="text-lg font-black uppercase tracking-tighter px-2">Categorias de Envio</h2>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
               {dynamicServices.map(s => (
                 <UberServiceCard 
                   key={s.id} 
@@ -349,6 +389,21 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
               ))}
             </div>
           </section>
+
+          <section className="bg-zinc-50 rounded-[40px] p-8 border border-zinc-100">
+            <h3 className="text-lg font-black uppercase tracking-tighter mb-6">Últimos Envios</h3>
+            <div className="space-y-6">
+              <div className="flex items-center gap-5 cursor-pointer active:opacity-50">
+                <div className="size-11 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-rounded text-zinc-400 text-xl">history</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-[14px] leading-tight truncate uppercase tracking-tighter">Rua Presidente Vargas, 367</p>
+                  <p className="text-zinc-400 text-[10px] font-black truncate uppercase tracking-widest mt-1">Entregue hoje</p>
+                </div>
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     );
@@ -361,60 +416,64 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
   );
 };
 
-// Componentes Auxiliares (Mesmo design do ExploreEnviosUberView)
-const VehicleOption = ({ title, icon, img, time, price, badge, selected, onClick }: any) => (
+const VehicleOption = ({ title, img, time, price, badge, selected, onClick }: any) => (
   <motion.div 
     onClick={onClick} 
-    className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all border-[3px] ${selected ? "border-black bg-white shadow-md" : "border-transparent bg-transparent hover:bg-neutral-50"}`}
+    whileTap={{ scale: 0.98 }}
+    className={`flex items-center p-6 rounded-[32px] cursor-pointer transition-all border-2
+      ${selected ? "border-black bg-white shadow-xl" : "border-zinc-50 bg-zinc-50/50 hover:bg-white hover:border-zinc-100"}`}
   >
-    <div className="size-16 shrink-0 flex items-center justify-center">
-      <img src={img} className="w-full h-full object-contain" />
+    <div className="size-16 shrink-0 flex items-center justify-center rounded-2xl bg-white shadow-sm border border-zinc-50">
+      <img src={img} className="w-10 h-10 object-contain" />
     </div>
-    <div className="flex-1 ml-4">
-      <div className="flex items-center gap-1">
-        <h3 className="font-bold text-[16px]">{title}</h3>
-      </div>
-      <p className="text-zinc-500 text-[13px] font-medium mt-1">{time}</p>
+    <div className="flex-1 ml-5">
+      <h3 className="font-black text-[16px] text-black uppercase tracking-tighter">{title}</h3>
+      <p className="text-zinc-400 text-[11px] font-black uppercase tracking-widest mt-1">{time}</p>
       {badge && (
-        <div className="mt-2 inline-flex items-center gap-1 bg-[#285A98] text-white px-2 py-0.5 rounded-full">
-          <span className="material-symbols-rounded text-[12px] fill-1">bolt</span>
-          <span className="text-[10px] font-bold uppercase">{badge}</span>
+        <div className="mt-2 inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2.5 py-1 rounded-xl">
+          <span className="material-symbols-rounded text-[14px] font-black">bolt</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">{badge}</span>
         </div>
       )}
     </div>
     <div className="text-right">
-      <p className="font-bold text-[16px]">{price}</p>
+      <p className="font-black text-[16px] text-black tracking-tighter">{price}</p>
     </div>
   </motion.div>
 );
 
 const UberServiceCard = ({ name, img, badge, onClick }: any) => (
-  <motion.div whileTap={{ scale: 0.94 }} onClick={onClick} className="flex flex-col items-center gap-2 shrink-0 cursor-pointer">
-    <div className="w-[100px] h-[100px] bg-[#EEEEEE] rounded-xl flex items-center justify-center relative p-3 border border-neutral-100 shadow-sm">
+  <motion.div 
+    whileTap={{ scale: 0.94 }} 
+    onClick={onClick} 
+    className="flex flex-col items-center gap-3 shrink-0 cursor-pointer group"
+  >
+    <div className="w-[100px] h-[100px] bg-white rounded-[28px] flex items-center justify-center relative p-4 border border-zinc-100 shadow-[0_15px_35px_rgba(0,0,0,0.03)] group-hover:border-zinc-300 group-hover:shadow-lg transition-all">
       {badge && (
-        <span className="absolute -top-1 right-1 bg-yellow-400 text-black text-[10px] px-2 py-0.5 rounded-full font-bold z-10 border-2 border-white uppercase">
+        <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-[9px] px-2.5 py-1 rounded-full font-black z-10 border-2 border-white shadow-lg uppercase tracking-widest">
           {badge}
         </span>
       )}
-      <img src={img} className="w-full h-full object-contain" />
+      <img src={img} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
     </div>
-    <span className="text-[12px] font-bold text-zinc-900 uppercase tracking-tighter text-center max-w-[100px] leading-tight">
-      {name}
-    </span>
+    <span className="text-[11px] font-black text-black uppercase tracking-widest text-center">{name}</span>
   </motion.div>
 );
 
 const DestinationItem = ({ title, subtitle, dist, isPlace, onClick }: any) => (
-  <div onClick={onClick} className="flex items-center gap-4 cursor-pointer active:opacity-60 group">
-    <div className="w-9 h-9 rounded-full bg-[#EEEEEE] flex items-center justify-center shrink-0 group-hover:bg-neutral-200 transition-colors">
-      <span className="material-symbols-rounded text-black text-[20px]">{isPlace ? "location_on" : "schedule"}</span>
+  <div 
+    onClick={onClick} 
+    className="flex items-center gap-5 cursor-pointer active:opacity-60 group p-2 hover:bg-zinc-50 rounded-[24px] transition-colors"
+  >
+    <div className="size-11 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 group-hover:bg-black group-hover:text-white transition-all">
+      <span className="material-symbols-rounded text-[22px] font-black">{isPlace ? "location_on" : "schedule"}</span>
     </div>
-    <div className="flex-1 min-w-0 border-b border-neutral-50 pb-4">
-      <div className="flex items-center justify-between">
-        <p className="font-bold text-[15px] truncate">{title}</p>
-        <span className="text-[12px] text-zinc-400 font-bold whitespace-nowrap ml-2">{dist}</span>
+    <div className="flex-1 min-w-0 border-b border-zinc-50 group-last:border-none pb-4 pt-2">
+      <div className="flex items-center justify-between gap-4">
+        <p className="font-black text-[16px] truncate uppercase tracking-tighter text-black">{title}</p>
+        <span className="text-[11px] text-zinc-400 font-black uppercase tracking-widest whitespace-nowrap ml-2">{dist}</span>
       </div>
-      <p className="text-zinc-500 text-[13px] truncate">{subtitle}</p>
+      <p className="text-zinc-400 text-[11px] font-black uppercase tracking-widest truncate mt-1">{subtitle}</p>
     </div>
   </div>
 );

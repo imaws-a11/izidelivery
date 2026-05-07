@@ -40,92 +40,91 @@ export const IziBlackView = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 py-6 border-b border-white/5">
-          <div className="flex items-center gap-4">
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => window.history.back()} className="size-10 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center">
-              <Icon name="arrow_back" size={20} />
-            </motion.button>
-            <h1 className="text-lg font-black tracking-tighter text-white uppercase">Clube Izi Black</h1>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={() => window.history.back()} className="size-10 rounded-full border border-zinc-800 bg-black flex items-center justify-center">
+            <Icon name="arrow_back" size={20} className="text-white" />
+          </motion.button>
+          <div className="flex items-center gap-2">
+            <Icon name="diamond" size={16} className="text-yellow-500" />
+            <span className="text-[10px] font-black tracking-[0.3em] text-white uppercase mt-0.5">Izi Black</span>
           </div>
-          <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-400 border border-yellow-400/20">
-            <Icon name="military_tech" size={20} />
-          </div>
+          <div className="size-10" />
         </header>
 
-        <main className="px-6 py-10 space-y-12">
-          {/* Hero Section */}
-          <div className="space-y-4 text-center">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="inline-block px-4 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-2"
-            >
-              Privilégio Elite
-            </motion.div>
-            <h2 className="text-4xl font-black text-white leading-[0.9] tracking-tighter">
-              Eleve sua <br />
-              <span className="text-yellow-400 italic">experiência.</span>
-            </h2>
-            <p className="text-zinc-500 text-sm font-medium px-4">
-              O ecossistema IZI completo com benefícios exclusivos por apenas R$ {appSettings?.izi_black_fee || '19,90'}/mês.
-            </p>
+        <main className="flex-1">
+          {/* Premium Hero */}
+          <div className="pt-12 pb-16 px-6 flex flex-col items-center text-center relative">
+             <div className="absolute top-10 left-1/2 -translate-x-1/2 w-48 h-48 bg-yellow-500/10 rounded-full blur-[80px] pointer-events-none" />
+             
+             <h1 className="text-[44px] font-black text-white tracking-tighter leading-[0.9] mb-6 relative z-10">
+                O ápice do <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600">
+                  ecossistema.
+                </span>
+             </h1>
+             <p className="text-zinc-400 font-medium text-[13px] max-w-[280px] mx-auto leading-relaxed relative z-10">
+                Acesso irrestrito a benefícios exclusivos, prioridade máxima e economia real todos os meses.
+             </p>
           </div>
 
-          {/* CTA Principal */}
+          {/* Economy Highlight */}
+          <div className="mx-6 py-8 border-t border-b border-zinc-900 flex items-center justify-between">
+             <div>
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-2">Economia Média</p>
+                <div className="flex items-baseline gap-1">
+                   <span className="text-yellow-500 font-black text-xl">R$</span>
+                   <span className="text-5xl font-black text-white tracking-tighter">120</span>
+                   <span className="text-zinc-600 font-bold text-xs">/mês</span>
+                </div>
+             </div>
+             <div className="w-px h-16 bg-zinc-900" />
+             <div className="text-right">
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-2">Assinatura</p>
+                <div className="flex items-baseline justify-end gap-1">
+                   <span className="text-zinc-500 font-black text-sm">R$</span>
+                   <span className="text-3xl font-black text-zinc-300 tracking-tighter">{appSettings?.izi_black_fee || '9,90'}</span>
+                </div>
+             </div>
+          </div>
+
+          {/* Minimalist Benefits */}
+          <div className="px-6 py-12 space-y-8">
+             <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] text-center mb-8">
+               Vantagens da Assinatura
+             </p>
+             
+             {masterPerks.map((p, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex items-start gap-5 group"
+                >
+                   <div className="size-12 rounded-full border border-zinc-800 bg-zinc-900/30 flex items-center justify-center shrink-0 group-hover:border-yellow-500/50 group-hover:bg-yellow-500/10 transition-colors">
+                      <Icon name={p.icon} size={20} className="text-zinc-400 group-hover:text-yellow-500 transition-colors" />
+                   </div>
+                   <div className="pt-1 border-b border-zinc-900 pb-8 flex-1">
+                      <h3 className="text-base font-black text-white tracking-tight">{p.title}</h3>
+                      <p className="text-[11px] text-zinc-500 font-bold leading-relaxed mt-1 pr-4">{p.desc}</p>
+                   </div>
+                </motion.div>
+             ))}
+          </div>
+        </main>
+
+        {/* Sticky Bottom CTA */}
+        <div className="fixed bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black via-black/95 to-transparent z-50 pt-20">
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setSubView("izi_black_purchase")}
-            className="w-full py-6 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl relative overflow-hidden group"
-            style={{
-              background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)",
-              color: "#000"
-            }}
+            className="w-full py-5 rounded-2xl bg-yellow-500 text-black font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(234,179,8,0.2)] relative overflow-hidden group"
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-            <span className="relative z-10 flex items-center justify-center gap-3">
-              Assinar IZI Black
-              <Icon name="arrow_forward" size={18} />
+            <span className="relative z-10 flex items-center gap-2">
+              Desbloquear IZI Black <Icon name="lock_open" size={18} />
             </span>
           </motion.button>
-
-          {/* Benefits Grid */}
-          <div className="space-y-8">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em]">Protocolos Premium</h3>
-              <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_#fbbf24]" />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {masterPerks.map((p, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-zinc-900/40 border border-white/[0.03] rounded-[32px] p-6 flex items-center gap-5 group hover:bg-zinc-900/60 transition-all"
-                >
-                  <div className="size-14 rounded-2xl bg-white/[0.03] flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform border border-white/[0.05]">
-                    <Icon name={p.icon} size={28} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-black text-sm text-white tracking-tight">{p.title}</p>
-                    <p className="text-zinc-600 text-[11px] font-medium leading-tight mt-1">{p.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Savings Social Proof */}
-          <div className="bg-white/[0.02] border border-white/[0.05] rounded-[40px] p-8 text-center space-y-4">
-            <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest">Economia Média de Membros</p>
-            <div className="flex items-baseline justify-center gap-1">
-              <span className="text-yellow-400 font-black text-2xl">R$</span>
-              <span className="text-6xl font-black text-white tracking-tighter">142</span>
-              <span className="text-zinc-500 font-black text-lg">/mês</span>
-            </div>
-            <p className="text-[10px] text-zinc-600 font-medium">Baseado no uso médio de frete grátis e cashback.</p>
-          </div>
-        </main>
+        </div>
       </div>
     );
   }
@@ -134,111 +133,84 @@ export const IziBlackView = () => {
   return (
     <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
       <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 py-6 border-b border-white/5">
-        <div className="flex items-center gap-4">
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => window.history.back()} className="size-10 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center">
-            <Icon name="arrow_back" size={20} />
-          </motion.button>
-          <h1 className="text-lg font-black tracking-tighter text-white uppercase italic">Elite Black</h1>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => window.history.back()} className="size-10 rounded-full border border-zinc-800 bg-black flex items-center justify-center">
+          <Icon name="arrow_back" size={20} className="text-white" />
+        </motion.button>
+        <div className="flex items-center gap-2">
+          <Icon name="diamond" size={16} className="text-yellow-500" />
+          <span className="text-[10px] font-black tracking-[0.3em] text-white uppercase mt-0.5">Membro Black</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-[8px] font-black text-yellow-400 uppercase tracking-widest leading-none">Membro Fundador</p>
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-tighter mt-1">Status Ativo</p>
-          </div>
-          <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center text-black border border-yellow-400/20 shadow-[0_0_20px_rgba(251,191,36,0.3)]">
-            <Icon name="military_tech" size={24} />
-          </div>
+        <div className="size-10 flex items-center justify-center">
+           <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />
         </div>
       </header>
 
-      <main className="px-6 py-8 space-y-10">
-        {/* IziCoin Card */}
-        <motion.section
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative bg-zinc-950 rounded-[50px] p-10 overflow-hidden text-center shadow-[0_30px_60px_rgba(0,0,0,0.5)] border border-white/[0.03]"
-        >
-          <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12">
-            <Icon name="monetization_on" size={150} />
-          </div>
+      <main className="px-6 py-10 space-y-12">
+        {/* IziCoin Section - No Card */}
+        <section className="text-center relative py-4">
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none" />
+           
+           <div className="flex items-center justify-center gap-3 mb-4">
+              <Icon name="monetization_on" size={20} className="text-yellow-500" />
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em]">Saldo IziCoins</p>
+           </div>
 
-          <div className="relative z-10 space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_15px_#fbbf24]" />
-              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.5em]">Saldo IziCoins</p>
-            </div>
+           <h2 className="text-[64px] font-black text-white tabular-nums tracking-tighter leading-none mb-6">
+             {iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString('pt-BR')}
+           </h2>
 
-            <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4">
-              {iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString('pt-BR')}
-            </h2>
-
-            <div className="flex flex-col items-center gap-3 pt-4">
-              <div className="px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">
-                {globalSettings?.izi_coin_rate || 5} coins a cada R$ 1,00 gasto
+           <div className="flex flex-col items-center gap-4">
+              <div className="px-4 py-1.5 rounded-full border border-zinc-900 bg-zinc-950/50 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                {globalSettings?.izi_coin_rate || 5} coins por R$ 1,00 gasto
               </div>
               <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSubView("wallet")}
-                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest hover:underline"
+                className="text-[11px] font-black text-yellow-500 uppercase tracking-[0.2em] underline decoration-yellow-500/30 underline-offset-8"
               >
                 Gerenciar Carteira
               </motion.button>
-            </div>
-          </div>
-        </motion.section>
+           </div>
+        </section>
 
-        {/* Member Stats Grid */}
-        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="grid grid-cols-3 gap-4">
+        {/* Member Stats - No Boxes */}
+        <section className="py-8 border-t border-b border-zinc-900 grid grid-cols-3 divide-x divide-zinc-900">
           {[
             { value: myOrders?.length || 0, label: 'Pedidos', icon: 'shopping_bag' },
             { value: `R$${iziCashbackEarned?.toFixed(0) || '0'}`, label: 'Cashback', icon: 'history_edu' },
             { value: `R$${((myOrders?.length || 0) * 8.5).toFixed(0)}`, label: 'Economia', icon: 'savings' },
           ].map((stat, i) => (
-            <div key={i} className="bg-zinc-900/50 border border-white/[0.03] rounded-[32px] p-6 text-center space-y-2 group hover:bg-zinc-900 transition-all">
-              <div className="size-10 rounded-2xl bg-white/[0.03] flex items-center justify-center mx-auto text-yellow-400 group-hover:scale-110 transition-transform border border-white/[0.05]">
-                <Icon name={stat.icon} size={18} />
-              </div>
-              <div>
-                <p className="text-xl font-black text-white tracking-tight leading-none">{stat.value}</p>
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1.5">{stat.label}</p>
-              </div>
+            <div key={i} className="flex flex-col items-center justify-center text-center px-2">
+              <Icon name={stat.icon} size={18} className="text-zinc-600 mb-3" />
+              <p className="text-2xl font-black text-white tracking-tighter leading-none">{stat.value}</p>
+              <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mt-2">{stat.label}</p>
             </div>
           ))}
-        </motion.section>
+        </section>
 
-        {/* Active Perks List */}
-        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em]">Benefícios Ativos</h3>
-            <span className="flex items-center gap-2">
-              <div className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-              <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Protocolo Seguro</span>
-            </span>
+        {/* Active Perks - List Style */}
+        <section className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Benefícios Ativos</h3>
+            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Plano Mensal</span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {activePerks.map((perk, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 + i * 0.1 }}
-                onClick={() => setActivePerkDetail(activePerkDetail === perk.id ? null : perk.id)}
-                className={`flex flex-col rounded-[32px] border transition-all cursor-pointer overflow-hidden ${activePerkDetail === perk.id
-                    ? 'bg-yellow-400/5 border-yellow-400/20'
-                    : 'bg-zinc-900/40 border-white/[0.03]'
-                  }`}
-              >
-                <div className="flex items-center gap-5 p-6">
-                  <div className={`size-12 rounded-2xl flex items-center justify-center ${activePerkDetail === perk.id ? 'bg-yellow-400 text-black' : 'bg-white/[0.03] text-yellow-400'}`}>
-                    <Icon name={perk.icon} size={22} />
+              <div key={i} className="border-b border-zinc-950 last:border-0">
+                <motion.div
+                  onClick={() => setActivePerkDetail(activePerkDetail === perk.id ? null : perk.id)}
+                  className="flex items-center gap-5 py-6 cursor-pointer group"
+                >
+                  <div className={`size-12 rounded-full border flex items-center justify-center transition-all ${activePerkDetail === perk.id ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500' : 'border-zinc-900 bg-transparent text-zinc-500 group-hover:border-zinc-700'}`}>
+                    <Icon name={perk.icon} size={20} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-black text-white uppercase tracking-tight">{perk.label}</p>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">Benefício Ilimitado</p>
+                    <p className="text-[15px] font-black text-white tracking-tight">{perk.label}</p>
+                    <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">Acesso Ilimitado</p>
                   </div>
-                  <Icon name={activePerkDetail === perk.id ? 'expand_less' : 'expand_more'} size={20} className="text-white/20" />
-                </div>
+                  <Icon name={activePerkDetail === perk.id ? 'remove' : 'add'} size={20} className={activePerkDetail === perk.id ? 'text-yellow-500' : 'text-zinc-800'} />
+                </motion.div>
 
                 <AnimatePresence>
                   {activePerkDetail === perk.id && (
@@ -246,43 +218,43 @@ export const IziBlackView = () => {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="px-6 pb-6"
+                      className="overflow-hidden"
                     >
-                      <div className="pt-2 border-t border-white/[0.03]">
-                        <p className="text-xs text-zinc-400 font-medium leading-relaxed">
+                      <div className="pb-8 pl-[68px] pr-4">
+                        <p className="text-xs text-zinc-500 font-medium leading-relaxed">
                           {perk.desc}
                         </p>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.section>
+        </section>
 
-        {/* Quick Actions / Integration */}
-        <div className="pt-4 space-y-4">
+        {/* Premium Integration */}
+        <div className="pt-4">
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => setSubView("quest_center")}
-            className="w-full py-6 rounded-[35px] bg-white/[0.03] border border-white/[0.05] flex items-center justify-between px-8 group hover:bg-white/[0.05] transition-all"
+            className="w-full p-8 rounded-[32px] border border-zinc-900 bg-zinc-950/30 flex items-center justify-between group hover:border-yellow-500/20 transition-all"
           >
-            <div className="flex items-center gap-5">
-              <div className="size-12 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
-                <Icon name="military_tech" size={24} />
+            <div className="flex items-center gap-6">
+              <div className="size-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500">
+                <Icon name="military_tech" size={28} />
               </div>
               <div className="text-left">
-                <p className="font-black text-sm text-white">Izi Battle Pass</p>
-                <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Missões e Ranking Global</p>
+                <p className="font-black text-lg text-white tracking-tight">Izi Battle Pass</p>
+                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.2em] mt-1">Nível {userLevel} • Missões Ativas</p>
               </div>
             </div>
-            <Icon name="chevron_right" size={20} className="text-white/20" />
+            <Icon name="chevron_right" size={24} className="text-zinc-800 group-hover:text-yellow-500 transition-colors" />
           </motion.button>
         </div>
 
-        <div className="text-center pt-8 opacity-20">
-          <p className="text-[8px] font-black text-white uppercase tracking-[0.8em]">Exclusive Elite Access • Izi Black</p>
+        <div className="text-center py-12">
+          <p className="text-[8px] font-black text-zinc-800 uppercase tracking-[1em]">Exclusive Member • Izi Black</p>
         </div>
       </main>
     </div>
