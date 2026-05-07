@@ -115,7 +115,7 @@ export const ExploreRestaurantsView = ({
       {/* HEADER PREMIUM IDENTICO AO GENERIC */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-6 py-6 flex items-center gap-4">
         <button 
-          onClick={() => setSubView("home")}
+          onClick={() => navigateSubView("home")}
           className="size-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center active:scale-95 transition-all shadow-sm"
         >
           <span className="material-symbols-rounded text-zinc-900">arrow_back_ios_new</span>

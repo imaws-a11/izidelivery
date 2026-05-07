@@ -1998,6 +1998,16 @@ function App() {
 
       // [Comentario Limpo pelo Sistema]
   useEffect(() => {
+    // Se o browser preservou o state após um F5, restaura as variáveis do React em vez de sobrescrever
+    if (window.history.state && window.history.state.view) {
+      const { view: v, tab: t, subView: sv } = window.history.state;
+      if (v) setView(v);
+      if (t) setTab(t);
+      if (sv) setSubView(sv);
+    } else {
+      window.history.replaceState({ view, tab, subView }, "");
+    }
+
     const handlePopState = (event: PopStateEvent) => {
       if (event.state) {
         const { view: v, tab: t, subView: sv } = event.state;
@@ -2027,7 +2037,6 @@ function App() {
       }
     };
     window.addEventListener("popstate", handlePopState);
-    window.history.replaceState({ view, tab, subView }, "");
 
     // [NOVO] Handler para o botÃ£o voltar fÃ­sico do dispositivo (Android)
     const backHandler = CapacitorApp.addListener('backButton', () => {
@@ -4580,43 +4589,43 @@ const navigateSubView = (target: string) => {
 
                 {(subView === "explore_pharmacy" || subView === "pharmacy_list") && (
                   <motion.div key="explore-pharmacy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
-                    <PharmacyExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <PharmacyExploreView onBack={() => navigateSubView("home")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_beverages" || subView === "beverages_list") && (
                   <motion.div key="explore-beverages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
-                    <BeverageExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <BeverageExploreView onBack={() => navigateSubView("home")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_market" || subView === "market_list") && (
                   <motion.div key="explore-market" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
-                    <NewMarketExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <NewMarketExploreView onBack={() => navigateSubView("home")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {(subView === "explore_petshop" || subView === "pets_list") && (
                   <motion.div key="explore-petshop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
-                    <PetshopExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <PetshopExploreView onBack={() => navigateSubView("home")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_gas" && (
                   <motion.div key="explore-gas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
-                    <GasWaterExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <GasWaterExploreView onBack={() => navigateSubView("home")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_bakery" && (
                   <motion.div key="explore-bakery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 z-[140]">
-                    <BakeryExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <BakeryExploreView onBack={() => navigateSubView("home")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 
                 {subView === "explore_fruit" && (
                   <motion.div key="explore-fruit" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                    <FruitExploreView onBack={() => window.history.back()} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
+                    <FruitExploreView onBack={() => navigateSubView("home")} onShopClick={handleShopClick} exploreBanners={exploreBanners} />
                   </motion.div>
                 )}
 

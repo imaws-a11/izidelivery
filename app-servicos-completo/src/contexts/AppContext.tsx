@@ -330,7 +330,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getCartSubtotal = () => cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const clearCart = () => { setCart([]); setAppliedCoupon(null); setUseCoins(false); };
 
-  const navigateSubView = (target: string) => setSubView(target);
+  const APP_TABS = ["home", "orders", "wallet", "profile", "busca"] as const;
+  const navigateSubView = (target: string) => {
+    if ((APP_TABS as readonly string[]).includes(target)) {
+      setTab(target as typeof tab);
+      setSubView("none");
+      window.history.pushState(
+        { view: "app", tab: target, subView: "none" },
+        "",
+      );
+    } else {
+      setSubView(target);
+      window.history.pushState(
+        { view: "app", tab, subView: target },
+        "",
+      );
+    }
+  };
 
   const handleShopClick = async (shop: any) => {
     setSelectedShop(shop);
