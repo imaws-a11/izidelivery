@@ -73,7 +73,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const handleDecolarClick = () => {
     toastSuccess("Em breve! Acúmulo de pontos Decolar nas suas compras Izi.");
   };
-  const menuItems = [
+  const menuItems: Array<{ icon: string; label: string; action: () => void | undefined; badge?: string | number }> = [
     { icon: "star", label: "Clube Izi Black", action: () => setSubView?.("izi_black_card") },
     { icon: "chat_bubble", label: "Conversas", action: () => setSubView?.("chats") },
     { icon: "notifications", label: "Notificações", action: () => setSubView?.("notifications_center") },

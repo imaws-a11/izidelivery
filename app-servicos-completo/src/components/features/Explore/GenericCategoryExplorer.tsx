@@ -39,15 +39,13 @@ export const GenericCategoryExplorer: React.FC<GenericCategoryExplorerProps> = (
   const { 
     ESTABLISHMENTS: establishments, 
     handleShopClick: ctxHandleShopClick,
-    searchQuery,
-    setSearchQuery,
-    handleAddToCart,
     navigateSubView
   } = useApp();
 
   const handleShopClick = onShopClick || ctxHandleShopClick;
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const safeSearchQuery = searchQuery || "";
   const safeEstablishments = Array.isArray(establishments) ? establishments : [];

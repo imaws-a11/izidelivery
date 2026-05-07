@@ -150,6 +150,8 @@ export interface MerchantProfile {
     pix_key?: string;
   };
   monthly_goal?: number;
+  commission_percent?: number;
+  payment_enabled?: boolean;
   metadata?: any;
 }
 

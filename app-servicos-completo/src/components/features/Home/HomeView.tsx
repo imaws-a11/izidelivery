@@ -428,7 +428,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-2">Lojas Encontradas</h3>
                         <div className="space-y-4">
                           {searchResults.merchants.map((shop, i) => (
-                            <MerchantCard key={shop.id || i} shop={shop} onClick={() => handleShopClick(shop)} />
+                            <MerchantCard key={shop.id || i} shop={shop} onClick={() => handleShopClick(shop)} index={i} />
                           ))}
                         </div>
                       </div>

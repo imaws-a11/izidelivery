@@ -11,7 +11,7 @@ export const ProductDetailView = () => {
     selectedShop, 
     activeService, 
     setSubView, 
-    showToast,
+    toastError,
     triggerCartAnimation,
   } = useApp();
   
@@ -111,7 +111,7 @@ export const ProductDetailView = () => {
     });
 
     if (didHitLimit) {
-      showToast(`Limite de ${group.max_select} seleções em ${group.name}`, "error");
+      toastError(`Limite de ${group.max_select} seleções em ${group.name}`);
     }
   };
 

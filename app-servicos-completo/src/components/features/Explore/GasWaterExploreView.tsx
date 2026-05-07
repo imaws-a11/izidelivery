@@ -224,7 +224,6 @@ export const GasWaterExploreView: React.FC<GasWaterExploreViewProps> = ({
              <div className="flex flex-col gap-6">
                 {filteredShops.map((shop, i) => (
                   <MerchantCard 
-                    key={shop.id || i}
                     shop={shop}
                     onClick={() => onShopClick(shop)}
                     index={i}

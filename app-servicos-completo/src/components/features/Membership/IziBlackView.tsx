@@ -11,11 +11,13 @@ export const IziBlackView = () => {
     iziCoins,
     globalSettings,
     appSettings,
-    myOrders,
-    iziCashbackEarned
+    orders,
+    iziCashbackEarned,
+    userXP
   } = useApp();
 
   const [activePerkDetail, setActivePerkDetail] = useState<string | null>(null);
+  const userLevel = Math.max(1, Math.floor((userXP || 0) / 100));
 
   // Benefícios para quem JÁ É membro
   const activePerks = [
@@ -176,9 +178,9 @@ export const IziBlackView = () => {
         {/* Member Stats - No Boxes */}
         <section className="py-8 border-t border-b border-zinc-900 grid grid-cols-3 divide-x divide-zinc-900">
           {[
-            { value: myOrders?.length || 0, label: 'Pedidos', icon: 'shopping_bag' },
+            { value: orders?.length || 0, label: 'Pedidos', icon: 'shopping_bag' },
             { value: `R$${iziCashbackEarned?.toFixed(0) || '0'}`, label: 'Cashback', icon: 'history_edu' },
-            { value: `R$${((myOrders?.length || 0) * 8.5).toFixed(0)}`, label: 'Economia', icon: 'savings' },
+            { value: `R$${((orders?.length || 0) * 8.5).toFixed(0)}`, label: 'Economia', icon: 'savings' },
           ].map((stat, i) => (
             <div key={i} className="flex flex-col items-center justify-center text-center px-2">
               <Icon name={stat.icon} size={18} className="text-zinc-600 mb-3" />

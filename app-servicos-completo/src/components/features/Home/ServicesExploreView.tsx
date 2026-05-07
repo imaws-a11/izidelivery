@@ -78,7 +78,7 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
       action: () => handleCategoryClick(t)
     }));
 
-  const highlights = [
+  const highlights: Array<{ id: string, label: string, icon: string, color: string, textColor: string, route?: string, isNew?: boolean }> = [
     { id: 'clube', label: 'Izi Black', icon: 'star', color: 'bg-zinc-900', textColor: 'text-white', route: 'izi_black_card' },
     { id: 'promos', label: 'Promoções', icon: 'percent', color: 'bg-emerald-500', textColor: 'text-white' },
     { id: 'favoritos', label: 'Favoritos', icon: 'favorite', color: 'bg-rose-500', textColor: 'text-white' },
