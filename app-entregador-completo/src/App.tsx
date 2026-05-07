@@ -1055,6 +1055,9 @@ function App() {
     const [audioBlocked, setAudioBlocked] = useState(false);
     const [overlayBlocked, setOverlayBlocked] = useState(false);
     const [overlayBannerDismissed, setOverlayBannerDismissed] = useState(false);
+    const [showFloatingOrder, setShowFloatingOrder] = useState(false);
+    const [floatingOrder, setFloatingOrder] = useState<any>(null);
+    const floatingOrderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Verificar periodicamente se a permissão de sobreposição foi concedida
     useEffect(() => {
@@ -1827,7 +1830,8 @@ function App() {
             if (!active) {
                 setIsOnline(false);
                 localStorage.setItem('izi_driver_online', 'false');
-                setShowOnboarding(true);
+                // Removed setShowOnboarding(true) so users aren't forced into the onboarding screen on every refresh.
+                // They can use the "Detalhes" button on the dashboard card to open it manually.
             }
 
             refreshFinanceData();
@@ -2892,11 +2896,20 @@ function App() {
                             ForegroundService.moveToForeground().catch(() => {});
                         }
                         if (Notification.permission === 'granted') {
-                            new Notification('ðŸš€ Nova Missão Izi!', { 
+                            new Notification('🚀 Nova Missão Izi!', { 
                                 body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
                                 icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                             });
                         }
+                        // Dispara popup flutuante de nova chamada
+                        setFloatingOrder(mappedOrder);
+                        setShowFloatingOrder(true);
+                        // Auto-dismiss após 30s se não interagir
+                        if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
+                        floatingOrderTimeoutRef.current = setTimeout(() => {
+                            setShowFloatingOrder(false);
+                            setFloatingOrder(null);
+                        }, 30000);
                     }
                     return [mappedOrder, ...prev].slice(0, 20);
                 });
@@ -3537,43 +3550,15 @@ function App() {
         if (!driverId) { toastError('Sessão inválida. Por favor, faça login novamente.'); return; }
 
         setIsSavingPlate(true);
-        console.log('[PLATE] Iniciando salvamento...', { val, vehicleVal, driverId });
         
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
         try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            
-            console.log('[PLATE] Obtendo token...');
-            const authToken = await getSecureToken();
-            console.log('[PLATE] Token obtido, enviando PATCH...');
+            const { error } = await supabase
+                .from('drivers_delivery')
+                .update({ license_plate: val, vehicle_type: vehicleVal })
+                .eq('id', driverId);
 
-            const response = await fetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({ 
-                    license_plate: val, 
-                    vehicle_type: vehicleVal 
-                }),
-                signal: controller.signal
-            });
+            if (error) throw error;
 
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errText = await response.text();
-                console.error('[PLATE] Erro na resposta:', response.status, errText);
-                throw new Error(`Erro na API: ${response.status} - ${errText}`);
-            }
-
-            console.log('[PLATE] Sucesso! Atualizando estados...');
             setDriverPlate(val);
             setDriverVehicle(vehicleVal);
             localStorage.setItem('izi_driver_plate', val);
@@ -3583,12 +3568,9 @@ function App() {
             toastSuccess('Veículo atualizado!');
             setShowPlateModal(false); 
         } catch (e: any) {
-            clearTimeout(timeoutId);
-            console.error('[PLATE] Exceção capturada:', e);
-            const msg = e.name === 'AbortError' ? 'Tempo esgotado ao salvar. Verifique sua conexão.' : (e.message || 'Tente novamente');
-            toastError('Erro ao salvar veículo: ' + msg);
+            console.error('[PLATE] Erro ao salvar:', e);
+            toastError('Erro ao salvar veículo: ' + (e.message || 'Tente novamente'));
         } finally {
-            console.log('[PLATE] Finalizado.');
             setIsSavingPlate(false);
         }
     };
@@ -3601,47 +3583,21 @@ function App() {
         if (!driverId) { toastError('Sessão inválida. Por favor, faça login novamente.'); return; }
 
         setIsSavingNewVehicle(true);
-        console.log('[NEW_VEHICLE] Iniciando envio...', { newVehicleType, newVehiclePlate, driverId });
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
         try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            
-            console.log('[NEW_VEHICLE] Obtendo token...');
-            const authToken = await getSecureToken();
-            console.log('[NEW_VEHICLE] Token obtido, enviando POST...');
-
-            const response = await fetch(`${supabaseUrl}/rest/v1/driver_vehicle_requests`, {
-                method: 'POST',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({
+            const { error } = await supabase
+                .from('driver_vehicle_requests')
+                .insert([{
                     driver_id: driverId,
                     vehicle_type: newVehicleType,
                     plate: needsPlate ? newVehiclePlate.trim().toUpperCase() : null,
                     model: newVehicleModel.trim(),
                     color: newVehicleColor.trim(),
-                    status: 'pending',
-                }),
-                signal: controller.signal
-            });
+                    status: 'pending'
+                }]);
 
-            clearTimeout(timeoutId);
+            if (error) throw error;
 
-            if (!response.ok) {
-                const errText = await response.text();
-                console.error('[NEW_VEHICLE] Erro na resposta:', response.status, errText);
-                throw new Error(`Erro na API: ${response.status} - ${errText}`);
-            }
-
-            console.log('[NEW_VEHICLE] Sucesso! Limpando form...');
             toastSuccess('Solicitação enviada! O admin irá avaliar seu veículo.');
             setShowNewVehicleForm(false);
             setNewVehicleType('');
@@ -3649,22 +3605,18 @@ function App() {
             setNewVehicleModel('');
             setNewVehicleColor('');
             
-            // Recarregar solicitações via fetch nativo
-            console.log('[NEW_VEHICLE] Recarregando lista...');
-            const listRes = await fetch(`${supabaseUrl}/rest/v1/driver_vehicle_requests?driver_id=eq.${driverId}&order=created_at.desc`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${authToken}` }
-            });
-            if (listRes.ok) {
-                const data = await listRes.json();
-                setMyVehicleRequests(data);
-            }
+            // Recarregar solicitações
+            const { data } = await supabase
+                .from('driver_vehicle_requests')
+                .select('*')
+                .eq('driver_id', driverId)
+                .order('created_at', { ascending: false });
+                
+            if (data) setMyVehicleRequests(data);
         } catch (e: any) {
-            clearTimeout(timeoutId);
-            console.error('[NEW_VEHICLE] Exceção capturada:', e);
-            const msg = e.name === 'AbortError' ? 'Tempo esgotado ao enviar. Verifique sua conexão.' : (e.message || 'Tente novamente');
-            toastError('Erro ao enviar solicitação: ' + msg);
+            console.error('[NEW_VEHICLE] Erro:', e);
+            toastError('Erro ao enviar solicitação: ' + (e.message || 'Tente novamente'));
         } finally {
-            console.log('[NEW_VEHICLE] Finalizado.');
             setIsSavingNewVehicle(false);
         }
     };
@@ -7909,7 +7861,132 @@ function App() {
         );
     };
 
+    const renderFloatingOrderPopup = () => {
+        if (!showFloatingOrder || !floatingOrder) return null;
+
+        const presentation = getServicePresentation(floatingOrder);
+        const grossEarnings = getGrossEarnings(floatingOrder);
+        const netEarnings = getNetEarnings(floatingOrder);
+
+        const handleAcceptFloating = () => {
+            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
+            setShowFloatingOrder(false);
+            setSelectedOrder(floatingOrder);
+            handleAccept(floatingOrder);
+            setFloatingOrder(null);
+        };
+
+        const handleDeclineFloating = () => {
+            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
+            setShowFloatingOrder(false);
+            setFloatingOrder(null);
+        };
+
+        const handleViewDetails = () => {
+            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
+            setShowFloatingOrder(false);
+            setSelectedOrder(floatingOrder);
+            setShowOrderModal(true);
+            setFloatingOrder(null);
+        };
+
+        return (
+            <motion.div
+                key="floating-order-popup"
+                initial={{ opacity: 0, scale: 0.85, y: -40 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                className="fixed inset-0 z-[9999] flex flex-col items-center justify-center font-['Plus_Jakarta_Sans']"
+                style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)' }}
+            >
+                {/* Card principal */}
+                <div className="w-full max-w-sm mx-4 bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
+                    {/* Header colorido por tipo */}
+                    <div className="relative overflow-hidden px-6 pt-8 pb-6"
+                        style={{ background: `linear-gradient(135deg, ${presentation.color || '#facc15'} 0%, ${presentation.color || '#facc15'}cc 100%)` }}
+                    >
+                        {/* Pulse ring de atenção */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="animate-ping absolute size-24 rounded-full bg-white/20" />
+                        </div>
+                        <div className="relative z-10 flex items-center gap-4">
+                            <div className="size-16 rounded-[22px] bg-white/30 backdrop-blur flex items-center justify-center shadow-lg">
+                                <Icon name={presentation.icon || 'rocket_launch'} size={32} className="text-zinc-900" />
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-900/60">Nova Chamada 🔥</p>
+                                <h2 className="text-2xl font-black text-zinc-900 tracking-tighter leading-none">{presentation.title || 'Missão Izi'}</h2>
+                                <p className="text-[11px] font-bold text-zinc-900/70 mt-0.5">{presentation.headline}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Info da missão */}
+                    <div className="px-6 py-5 space-y-4">
+                        {/* Ganhos */}
+                        <div className="flex items-center justify-between bg-zinc-50 rounded-2xl px-4 py-3 border border-zinc-100">
+                            <div>
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Seu Ganho</p>
+                                <p className="text-3xl font-black text-zinc-900 tracking-tighter">R$ {netEarnings.toFixed(2).replace('.', ',')}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Distância</p>
+                                <p className="text-lg font-black text-zinc-700">{floatingOrder.distance || '—'}</p>
+                            </div>
+                        </div>
+
+                        {/* Rota resumida */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <div className="size-7 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Icon name="store" size={14} className="text-blue-500" />
+                                </div>
+                                <p className="text-sm font-bold text-zinc-700 truncate">{floatingOrder.merchant_name || floatingOrder.store_name || 'Parceiro Izi'}</p>
+                            </div>
+                            <div className="ml-3.5 w-0.5 h-4 bg-gradient-to-b from-blue-400 to-emerald-400 rounded-full" />
+                            <div className="flex items-center gap-3">
+                                <div className="size-7 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Icon name="location_on" size={14} className="text-emerald-500" />
+                                </div>
+                                <p className="text-sm font-bold text-zinc-700 truncate">{floatingOrder.delivery_address || 'Endereço de entrega'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Botões de ação */}
+                    <div className="px-6 pb-6 space-y-3">
+                        <button
+                            onClick={handleAcceptFloating}
+                            className="w-full h-16 bg-zinc-900 text-white rounded-[22px] font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-zinc-900/20"
+                        >
+                            <Icon name="check_circle" size={22} className="text-yellow-400" />
+                            Aceitar Missão
+                        </button>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={handleViewDetails}
+                                className="h-12 bg-zinc-100 text-zinc-700 rounded-[18px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                            >
+                                <Icon name="info" size={16} />
+                                Detalhes
+                            </button>
+                            <button
+                                onClick={handleDeclineFloating}
+                                className="h-12 bg-rose-50 text-rose-500 rounded-[18px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all border border-rose-100"
+                            >
+                                <Icon name="close" size={16} />
+                                Recusar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    };
+
     const renderOrderDetailsModal = () => {
+
         if (!selectedOrder || !showOrderModal) return null;
 
         const presentation = getServicePresentation(selectedOrder);
@@ -8332,6 +8409,8 @@ function App() {
                 {isAuthenticated && (
                     <>
                         <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
+                            {/* Popup flutuante de nova chamada — sobrepõe tudo */}
+                            <AnimatePresence>{showFloatingOrder && renderFloatingOrderPopup()}</AnimatePresence>
                             <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
                             <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
                             <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>

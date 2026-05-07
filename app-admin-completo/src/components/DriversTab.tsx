@@ -107,8 +107,7 @@ export default function DriversTab() {
             license_plate: prev.license_plate || app.vehicle_plate,
             vehicle_model: prev.vehicle_model || app.vehicle_model,
             vehicle_type: prev.vehicle_type || app.vehicle_type,
-            status: app.status === 'approved' ? 'active' : prev.status,
-            is_active: app.status === 'approved' ? true : prev.is_active
+            // Não sobrescrever is_active/status aqui — gerenciado pelo admin via handleUpdateDriverStatus
           }));
         }
       } catch (err) {
@@ -675,7 +674,13 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
             <div className="p-8 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
 <div className="flex gap-4">
   <button 
-    onClick={() => setSelectedDriverStudio({...selectedDriverStudio, is_active: !selectedDriverStudio.is_active})}
+    onClick={async () => {
+      const newStatus = selectedDriverStudio.is_active ? 'inactive' : 'active';
+      // Feedback visual imediato
+      setSelectedDriverStudio({...selectedDriverStudio, is_active: !selectedDriverStudio.is_active, status: newStatus});
+      // Persiste no banco
+      await handleUpdateDriverStatus(selectedDriverStudio.id, newStatus);
+    }}
     className={`px-8 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${selectedDriverStudio.is_active ? 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100' : 'bg-green-50 text-green-500 hover:bg-green-500 hover:text-white border border-green-100'}`}
   >
     <span className="material-symbols-outlined text-lg">{selectedDriverStudio.is_active ? 'block' : 'check_circle'}</span>

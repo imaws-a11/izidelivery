@@ -48,18 +48,38 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
   // 1. CARREGAR STATUS E RASCUNHO
   const loadInitialData = async () => {
-    if (!userId) return;
+    if (!userId) {
+      console.warn("[DEBUG] userId ausente em OnboardingView. Cancelando load.");
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
+    
     try {
+      console.log("[DEBUG] Iniciando loadInitialData para userId:", userId);
+      
+      // Cria um wrapper com timeout para evitar que requisições Supabase fiquem pendentes infinitamente
+      const withTimeout = <T,>(promise: Promise<T>, ms = 8000): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+        ]);
+      };
+
       // Verifica drivers
-      const { data: driver } = await supabase.from('drivers_delivery').select('id, is_active').eq('id', userId).maybeSingle();
+      const driverReq = supabase.from('drivers_delivery').select('id, is_active').eq('id', userId).maybeSingle();
+      const { data: driver } = await withTimeout(driverReq);
+      
       if (driver?.is_active) {
         onApproved();
         return;
       }
 
       // Verifica candidatura
-      const { data: app } = await supabase.from('driver_applications_delivery').select('*').eq('user_id', userId).maybeSingle();
+      const appReq = supabase.from('driver_applications_delivery').select('*').eq('user_id', userId).maybeSingle();
+      const { data: app } = await withTimeout(appReq);
+      
       if (app) {
         if (app.status === 'pending' || app.status === 'approved') setStep('waiting');
         else if (app.status === 'rejected') setStep('rejected');
@@ -67,7 +87,9 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
       }
 
       // Se não tem candidatura, busca rascunho para sincronização multidispositivo
-      const { data: userData } = await supabase.from('users_delivery').select('onboarding_draft').eq('id', userId).maybeSingle();
+      const userReq = supabase.from('users_delivery').select('onboarding_draft').eq('id', userId).maybeSingle();
+      const { data: userData } = await withTimeout(userReq);
+      
       if (userData?.onboarding_draft && typeof userData.onboarding_draft === 'object') {
         const draft = userData.onboarding_draft as any;
         if (draft.formData) setFormData(draft.formData);
@@ -77,8 +99,11 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
       setStep('welcome');
     } catch (err) {
-      console.error("[DEBUG] Erro no carregamento inicial:", err);
+      console.error("[DEBUG] Erro no carregamento inicial OnboardingView:", err);
+      // Se houver erro, forçamos o step welcome para não prender o usuário
+      setStep('welcome');
     } finally {
+      console.log("[DEBUG] Finalizando loadInitialData (setLoading = false)");
       setLoading(false);
     }
   };
@@ -219,6 +244,9 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
                         {previews.cnh_front ? "Continuar Cadastro" : "Começar Cadastro"}
                     </button>
                     <button onClick={onLogout} className="w-full h-18 bg-white border border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all">Sair da Conta</button>
+                    {onClose && (
+                        <button onClick={onClose} className="w-full h-18 bg-transparent text-zinc-500 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all text-xs">Voltar</button>
+                    )}
                 </div>
             </div>
           </motion.div>
@@ -317,6 +345,9 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
                 <div className="w-full max-w-xs space-y-4">
                     {step === 'rejected' && <button onClick={() => setStep('form')} className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem]">Tentar Novamente</button>}
                     <button onClick={onLogout} className="w-full h-18 bg-white border border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem]">Sair da Conta</button>
+                    {onClose && (
+                        <button onClick={onClose} className="w-full h-18 bg-transparent text-zinc-500 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all text-xs">Voltar</button>
+                    )}
                 </div>
             </motion.div>
         )}

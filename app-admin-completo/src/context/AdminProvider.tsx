@@ -2045,19 +2045,30 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleUpdateDriverStatus = useCallback(async (id: string, newStatus: any) => {
     console.log('--- ADMIN PROVIDER: handleUpdateDriverStatus ---', { id, newStatus });
+    const isBlocking = newStatus !== 'active';
     try {
+      // 1. Atualiza drivers_delivery
       const { error } = await supabase.from('drivers_delivery').update({ 
-        is_active: newStatus === 'active',
+        is_active: !isBlocking,
         status: newStatus 
       }).eq('id', id);
       
       if (error) throw error;
-      
-      toastSuccess('Status do entregador atualizado com sucesso!');
+
+      // 2. Sincroniza driver_applications_delivery para evitar restauração indevida
+      // Ao bloquear: marca candidatura como 'rejected' → syncMissingData não restaurará is_active
+      // Ao desbloquear: volta para 'approved'
+      await supabase
+        .from('driver_applications_delivery')
+        .update({ status: isBlocking ? 'rejected' : 'approved' })
+        .eq('user_id', id)
+        .in('status', isBlocking ? ['approved'] : ['rejected']);
+
+      toastSuccess(isBlocking ? 'Entregador bloqueado com sucesso!' : 'Entregador desbloqueado com sucesso!');
       fetchDrivers();
       
       if (selectedDriverStudio?.id === id) {
-        setSelectedDriverStudio(prev => prev ? ({ ...prev, status: newStatus, is_active: newStatus === 'active' }) : null);
+        setSelectedDriverStudio(prev => prev ? ({ ...prev, status: newStatus, is_active: !isBlocking }) : null);
       }
     } catch (err: any) {
       console.error(err);
