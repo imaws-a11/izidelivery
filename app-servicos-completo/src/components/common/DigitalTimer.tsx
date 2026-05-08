@@ -8,6 +8,9 @@ interface DigitalTimerProps {
 }
 
 const getBoxStyle = (variant: string, isUrgent: boolean) => {
+  if (variant === 'izi-flash') {
+    return `bg-gradient-to-br from-yellow-500 via-orange-500 to-red-600 border border-yellow-300 shadow-[0_0_20px_rgba(234,179,8,0.6),inset_0_2px_10px_rgba(255,255,255,0.4)] relative overflow-hidden before:absolute before:inset-0 before:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMSIvPgo8L3N2Zz4=')] before:opacity-30 ${isUrgent ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''}`;
+  }
   if (variant === 'premium-red') {
     return `bg-[#1a0505] border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4),inset_0_0_20px_rgba(239,68,68,0.2)] backdrop-blur-xl relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent before:z-0 ${isUrgent ? 'animate-pulse' : ''}`;
   }
@@ -18,12 +21,14 @@ const getBoxStyle = (variant: string, isUrgent: boolean) => {
 };
 
 const getTextStyle = (variant: string) => {
+  if (variant === 'izi-flash') return 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]';
   if (variant === 'premium-red') return 'text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.9)]';
   if (variant === 'dark') return 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]';
   return 'text-zinc-800 drop-shadow-sm';
 };
 
 const getSeparatorStyle = (variant: string) => {
+  if (variant === 'izi-flash') return 'text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,1)]';
   if (variant === 'premium-red') return 'text-red-500/60 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]';
   if (variant === 'dark') return 'text-yellow-400/50';
   return 'text-zinc-400';

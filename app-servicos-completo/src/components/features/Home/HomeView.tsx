@@ -542,7 +542,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                       <span className="text-white/60 text-[9px] font-bold uppercase tracking-widest truncate">{f.admin_users?.store_name}</span>
                                       {f.expires_at && (
                                       <div className="ml-auto">
-                                            <DigitalTimer targetDate={f.expires_at} size="sm" variant="premium-red" />
+                                            <DigitalTimer targetDate={f.expires_at} size="sm" variant="izi-flash" />
                                           </div>
                                       )}
                                     </div>

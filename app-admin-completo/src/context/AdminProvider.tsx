@@ -677,6 +677,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .from('drivers_delivery')
         .select('*')
         .eq('is_deleted', false)
+        .is('merchant_id', null)
         .order('is_online', { ascending: false })
         .order('name', { ascending: true });
       if (data) {

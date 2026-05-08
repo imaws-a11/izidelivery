@@ -96,8 +96,8 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
                    <div className="flex items-center gap-2 mb-2">
                        <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest truncate max-w-[120px]">{story.merchant}</span>
                        <div className="size-1 rounded-full bg-zinc-200" />
-                       {/* Timer sem fundo extra */}
-                       <DigitalTimer targetDate={story.offer.expires_at} size="sm" variant="light" />
+                       {/* Timer com variante izi-flash */}
+                       <DigitalTimer targetDate={story.offer.expires_at} size="sm" variant="izi-flash" />
                    </div>
                    
                    <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter leading-tight truncate mb-3 group-hover:text-yellow-600 transition-colors">{story.name}</h3>

@@ -615,6 +615,7 @@ function App() {
         setIsApproved(!!data?.is_active);
     }, []);
     const [appSettings, setAppSettings] = useState<any>(null);
+    const [exclusiveMerchantIds, setExclusiveMerchantIds] = useState<string[]>([]);
     const [dynamicRates, setDynamicRates] = useState<any>(null);
     const [realTimeRoute, setRealTimeRoute] = useState<{distanceText: string, distanceValue: number, durationText: string} | null>(null);
     const [activeBroadcast, setActiveBroadcast] = useState<any>(null);
@@ -719,6 +720,17 @@ function App() {
             if (resRates.ok) {
                 const dataRates = await resRates.json();
                 if (dataRates && dataRates[0]) setDynamicRates(dataRates[0].metadata);
+            }
+
+            // Busca lojas exclusivas
+            const resExclusive = await fetch(`${supabaseUrl}/rest/v1/admin_users?select=id&dispatch_priority=eq.exclusive`, {
+                headers: authHeaders
+            });
+            if (resExclusive.ok) {
+                const dataExclusive = await resExclusive.json();
+                if (dataExclusive) {
+                    setExclusiveMerchantIds(dataExclusive.map((m: any) => m.id));
+                }
             }
         } catch (e) {
             console.error('[SETTINGS] Erro ao buscar configurações:', e);
@@ -1765,7 +1777,7 @@ function App() {
         try {
             const { data: profile, error: profileError } = await supabase
                 .from('drivers_delivery')
-                .select('name, phone, email, vehicle_type, license_plate, document_number, bank_info, avatar_url, preferences, is_active')
+                .select('name, phone, email, vehicle_type, license_plate, document_number, bank_info, avatar_url, preferences, is_active, merchant_id')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -1825,6 +1837,11 @@ function App() {
             console.log('[AUTH] Perfil carregado. is_active:', profile.is_active, '=> isApproved:', active);
             setIsApproved(active);
             localStorage.setItem('izi_driver_approved', active.toString());
+            if (profile.merchant_id) {
+                localStorage.setItem('izi_driver_merchant_id', profile.merchant_id);
+            } else {
+                localStorage.removeItem('izi_driver_merchant_id');
+            }
 
             // Sincroniza isOnline com aprovação: se não aprovado, nunca pode estar online
             if (!active) {
@@ -2693,7 +2710,17 @@ function App() {
             }
 
             const available = data.filter((o: any) => {
+                const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
                 const isMerchantOrder = !!o.merchant_id;
+                
+                if (isMerchantOrder) {
+                    if (myMerchantId) {
+                        if (o.merchant_id !== myMerchantId) return false;
+                    } else {
+                        if (exclusiveMerchantIds.includes(o.merchant_id)) return false;
+                    }
+                }
+
                 // Atualizado para incluir novo e pendente, conforme regra do painel lojista solicitada
                 const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
@@ -2732,7 +2759,7 @@ function App() {
         } finally {
             setIsSyncing(false);
         }
-    }, [isOnline, driverId, fetchFromDB]);
+    }, [isOnline, driverId, fetchFromDB, exclusiveMerchantIds]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
@@ -8259,7 +8286,24 @@ function App() {
                                 </div>
                                 <div className="flex-1">
                                     <span className="text-zinc-900 font-black text-[11px] uppercase tracking-widest opacity-60">Instruções</span>
-                                    <p className="text-zinc-600 text-sm mt-1 leading-relaxed">"{selectedOrder.notes || 'Sem observações especiais dos produtos.'}"</p>
+                                    {(() => {
+                                        const itemNotes = selectedOrder.items
+                                            ?.filter((item: any) => item.observation)
+                                            .map((item: any) => `• ${item.name || item.product_name}:\n  "${item.observation}"`)
+                                            .join('\n\n');
+                                        
+                                        const notesList = [];
+                                        if (selectedOrder.notes) notesList.push(`• Geral:\n  "${selectedOrder.notes}"`);
+                                        if (itemNotes) notesList.push(itemNotes);
+                                        
+                                        const displayNotes = notesList.length > 0 ? notesList.join('\n\n') : 'Sem observações especiais dos produtos.';
+                                        
+                                        return (
+                                            <p className="text-zinc-600 text-sm mt-1.5 leading-relaxed whitespace-pre-line">
+                                                {displayNotes}
+                                            </p>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
