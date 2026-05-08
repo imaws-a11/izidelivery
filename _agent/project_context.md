@@ -1,5 +1,51 @@
 # IZI Delivery - Contexto Técnico (Compacto)
-Atualizado: 2026-05-06
+Atualizado: 2026-05-08
+
+---
+
+## 🔒 REGRAS CRÍTICAS — NÃO ALTERAR SEM REVISÃO
+
+### 🚫 Push Notifications — Configuração Blindada
+> **NUNCA** altere os itens abaixo sem testar em ambos os apps (Entregador + Serviços).
+> Cada item foi debuggado individualmente e representa uma peça essencial da cadeia.
+
+#### Edge Function `broadcast-push`
+- **OBRIGATÓRIO:** Usar `SUPABASE_SERVICE_ROLE_KEY` (NÃO `SUPABASE_ANON_KEY`).
+  - Motivo: A tabela `users_delivery` tem RLS que impede leitura com anon key. A `drivers_delivery` tem RLS aberta (`true`), por isso funcionava antes. Com service_role_key, ambas as tabelas são lidas corretamente.
+- **Canal Android:** `channelId: 'izi_notifications'` — deve ser idêntico ao canal criado no Capacitor.
+- **Firebase Secret:** O secret `FIREBASE_SERVICE_ACCOUNT` deve estar configurado no Supabase Dashboard (Settings > Edge Functions > Secrets). Sem ele, a função retorna `warning` e não envia nada.
+- **Payload:** Sempre incluir `android.notification.priority: 'high'` e `sound: 'default'`.
+
+#### App Entregador (`app-entregador-completo`)
+- **`capacitor.config.ts`:** DEVE conter `PushNotifications: { presentationOptions: ["badge", "sound", "alert"] }`.
+- **Canal Capacitor:** `PushNotifications.createChannel({ id: 'izi_notifications', importance: 5 })`.
+- **Token:** Salvo em `drivers_delivery.push_token` via `supabase.from('drivers_delivery').update(...)`.
+- **Som:** `playIziSound('driver', false)` — segundo parâmetro DEVE ser `false` (sem loop).
+- **Alerta verde:** Removido o `toastSuccess` do listener `pushNotificationReceived` para evitar duplicidade.
+- **`google-services.json`:** Projeto Firebase `izi-delivery-40939`, package `com.izidelivery.entregador`.
+
+#### App Serviços/Cliente (`app-servicos-completo`)
+- **`capacitor.config.ts`:** DEVE conter `PushNotifications: { presentationOptions: ["badge", "sound", "alert"] }`.
+- **Canal Capacitor:** `PushNotifications.createChannel({ id: 'izi_notifications', importance: 5 })`.
+- **Token:** Salvo em `users_delivery.push_token` via `supabase.from('users_delivery').update(...)`.
+- **`AndroidManifest.xml`:** DEVE conter `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />`.
+- **`google-services.json`:** Projeto Firebase `izi-delivery-40939`, package `com.izidelivery.app`.
+
+#### Popup In-App (Notificação do Sistema)
+- Design **minimalista**: fundo branco, borda amarela 2px, sombra sutil.
+- Ícones: SVG inline direto (NÃO usar `<Icon name="..." />` — renderiza texto em vez de ícone no Android).
+- Bell SVG: `<svg width="22" height="22" viewBox="0 0 24 24" ...><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`
+- Close SVG: `<svg width="16" height="16" ...><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+- Auto-hide: 8 segundos via `setTimeout(() => setSystemNotification(null), 8000)`.
+- Trigger: Listener Realtime em `broadcast_notifications` (INSERT) seta `setSystemNotification(...)`.
+
+#### RLS — Políticas Relevantes
+| Tabela | SELECT | Impacto |
+|--------|--------|---------|
+| `drivers_delivery` | `true` (aberto) | Edge Function lê tokens com qualquer key |
+| `users_delivery` | `auth.uid() = id` (restrito) | Edge Function PRECISA de `SERVICE_ROLE_KEY` |
+
+---
 
 ### ✅ Separação de Perfis (Usuário vs Entregador)
 - **Desvinculação:** Implementada a separação total entre contas de Cliente (`users_delivery`) e Entregador (`drivers_delivery`).
@@ -50,15 +96,16 @@ Atualizado: 2026-05-06
 - **Feedback no Admin:** Refatorado `handleApprove` em `DriverApplicationsTab.tsx` para realizar um check prévio de duplicidade e exibir uma mensagem de erro clara, indicando o nome e o ID do motorista que já possui aquele telefone/e-mail.
 - **Limpeza de Dados:** Removidos registros de teste que bloqueavam aprovações reais.
 
-- **Header Ultra-Minimalista:**
-    - Remoção do título "Izi Entregador" e do status de conexão do topo da tela.
-    - Ícones de Perfil e Notificações agora flutuam sem fundos, bordas ou sombras obstrutivas.
-    - Badge de notificação simplificado para um ponto de destaque (*dot indicator*).
-- **UX:** Header focado 100% em navegação rápida, eliminando qualquer ruído visual que compita com os dados operacionais.
+### ✅ Header Ultra-Minimalista (Entregador)
+- Remoção do título "Izi Entregador" e do status de conexão do topo da tela.
+- Ícones de Perfil e Notificações agora flutuam sem fundos, bordas ou sombras obstrutivas.
+- Badge de notificação simplificado para um ponto de destaque (*dot indicator*).
+- Header focado 100% em navegação rápida, eliminando qualquer ruído visual.
 
 ### 📂 Arquivos Modificados
 - `AppContext.tsx`, `ProductDetailView.tsx`, `App.tsx` (Serviços/Cliente)
 - `OnboardingView.tsx`, `App.tsx` (Entregador - UI & Auth)
 - `AdminProvider.tsx`, `DriverApplicationsTab.tsx` (Admin)
-- Edge Functions: `manage-user-auth`, `manage-driver-auth`, `create-admin-user`.
+- Edge Functions: `manage-user-auth`, `manage-driver-auth`, `create-admin-user`, `broadcast-push`.
 - DB: Tabela `cart_sync_delivery`, Índices da tabela `drivers_delivery`, Trigger `handle_new_user_delivery`.
+- Android: `AndroidManifest.xml`, `capacitor.config.ts`, `google-services.json` (ambos os apps).
