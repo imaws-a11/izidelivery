@@ -381,27 +381,18 @@ function App() {
 
   // Registro de Notificacoes Push Nativas (Capacitor)
   useEffect(() => {
-    if (!userId || !user) return;
-
     const setupPush = async () => {
-      if (!Capacitor.isNativePlatform()) {
-        console.log('[PUSH] Pulando: Ambiente Web.');
-        return;
-      }
+      if (!Capacitor.isNativePlatform()) return;
 
       try {
         let permStatus = await PushNotifications.checkPermissions();
-        
         if (permStatus.receive === 'prompt') {
           permStatus = await PushNotifications.requestPermissions();
         }
 
-        if (permStatus.receive !== 'granted') {
-          console.warn('[PUSH] Permissao negada pelo usuario.');
-          return;
-        }
+        if (permStatus.receive !== 'granted') return;
 
-        // Cria canal dedicado no Android para garantir som e vibraÃ§Ã£o
+        // Canal unificado
         if (Capacitor.getPlatform() === 'android') {
           await PushNotifications.createChannel({
             id: 'izi_notifications',
@@ -414,14 +405,18 @@ function App() {
           });
         }
 
-        await PushNotifications.register();
+        // Remove listeners antigos antes de adicionar novos para evitar duplicidade
+        await PushNotifications.removeAllListeners();
 
         PushNotifications.addListener('registration', async (token) => {
           console.log('[PUSH] Token registrado:', token.value);
-          await supabase
-            .from('users_delivery')
-            .update({ push_token: token.value })
-            .eq('id', userId);
+          if (userId) {
+            const { error } = await supabase
+              .from('users_delivery')
+              .update({ push_token: token.value })
+              .eq('id', userId);
+            if (!error) console.log('[PUSH] Token salvo no banco para o usuario:', userId);
+          }
         });
 
         PushNotifications.addListener('registrationError', (error) => {
@@ -430,14 +425,12 @@ function App() {
 
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
           console.log('[PUSH] Recebida:', notification);
-          // Som apenas uma vez
           const audio = new Audio('/sounds/notification.mp3');
           audio.play().catch(() => {});
         });
 
-        PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-          console.log('[PUSH] AÃ§Ã£o do usuÃ¡rio:', notification);
-        });
+        // Registrar o dispositivo
+        await PushNotifications.register();
 
       } catch (err) {
         console.error('[PUSH] Falha na configuracao:', err);
@@ -445,13 +438,7 @@ function App() {
     };
 
     setupPush();
-
-    return () => {
-      if (Capacitor.isNativePlatform()) {
-        PushNotifications.removeAllListeners();
-      }
-    };
-  }, [userId, user]);
+  }, [userId]); // Re-executa se o userId mudar (login/logout)
 
   const handleStartNativeTransferScan = async () => {
     if (!Capacitor.isNativePlatform()) {
