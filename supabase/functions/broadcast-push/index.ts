@@ -84,11 +84,28 @@ serve(async (req) => {
         body: message || '',
         ...(image_url && { image: image_url })
       },
+      android: {
+        notification: {
+          channelId: 'izi_notifications',
+          priority: 'high',
+          sound: 'default'
+        }
+      },
       data: data || { context: "broadcast" },
       tokens: tokens,
     };
 
+    console.log(`Enviando para ${tokens.length} tokens...`);
     const response = await admin.messaging().sendEachForMulticast(payload);
+    console.log(`Resultado: ${response.successCount} sucessos, ${response.failureCount} falhas.`);
+
+    if (response.failureCount > 0) {
+        response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+                console.error(`Erro no token ${tokens[idx]}:`, resp.error);
+            }
+        });
+    }
 
     return new Response(
       JSON.stringify({ success: true, sent: response.successCount, failed: response.failureCount }),

@@ -2659,15 +2659,10 @@ function App() {
                 if (notif.target_type === 'all' || notif.target_type === 'drivers') {
                     playIziSound('driver', false);
                     
-                    // Web Push Notification (Apenas web, no APK já será coberto pelo Capacitor/FCM)
+                    // Web Push Notification (Apenas web)
                     if (!Capacitor.isNativePlatform() && 'Notification' in window) {
                         if (Notification.permission === 'granted') {
                             new Notification(notif.title, { body: notif.message, icon: notif.image_url || '/Favicon.png.png' });
-                        } else if (Notification.permission !== 'denied') {
-                            const permission = await Notification.requestPermission();
-                            if (permission === 'granted') {
-                                new Notification(notif.title, { body: notif.message, icon: notif.image_url || '/Favicon.png.png' });
-                            }
                         }
                     }
 
@@ -2678,6 +2673,23 @@ function App() {
                 }
             })
             .subscribe();
+
+        // Configuração de Push Nativo (Android)
+        if (Capacitor.isNativePlatform()) {
+            PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                console.log('Push recebido nativamente:', notification);
+                // No Android, isso garante que o banner apareça se o canal estiver configurado
+            });
+
+            PushNotifications.createChannel({
+                id: 'izi_notifications',
+                name: 'Notificações IZI',
+                description: 'Canal principal de notificações do IZI Delivery',
+                importance: 5, // Max importance para banner
+                visibility: 1,
+                sound: 'izi_bell.mp3' // Se houver som customizado
+            }).catch(err => console.error('Erro ao criar canal push:', err));
+        }
 
         return () => { 
             supabase.removeChannel(scheduledChannel); 
