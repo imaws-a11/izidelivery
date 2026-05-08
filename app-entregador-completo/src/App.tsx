@@ -920,6 +920,8 @@ function App() {
         }
     }, [driverId]);
 
+    const [systemNotification, setSystemNotification] = useState<{ title: string; message: string; image_url?: string } | null>(null);
+    const [view, setView] = useState<View>('dashboard');
     const [activeTab, setActiveTab] = useState<View>(() => (localStorage.getItem('izi_driver_active_tab') as View) || 'dashboard');
     const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
 
@@ -1602,9 +1604,9 @@ function App() {
 
                   if (Capacitor.getPlatform() === 'android') {
                       await PushNotifications.createChannel({
-                          id: 'mission_calls',
-                          name: 'Chamadas de Missão',
-                          description: 'Canal para alertas de novos pedidos e missões',
+                          id: 'izi_notifications',
+                          name: 'Notificações IZI',
+                          description: 'Canal principal de notificações do IZI Delivery',
                           sound: 'notification',
                           importance: 5,
                           visibility: 1,
@@ -1616,9 +1618,10 @@ function App() {
 
                  // Listeners do registro nativo
                  PushNotifications.addListener('registration', async (token) => {
- 
+                     console.log('Token de push gerado:', token.value);
                      // Atualiza a coluna no supabase
-                     await supabase.from('drivers_delivery').update({ push_token: token.value }).eq('id', driverId);
+                     const { error } = await supabase.from('drivers_delivery').update({ push_token: token.value }).eq('id', driverId);
+                     if (error) console.error('Erro ao salvar push_token:', error);
                  });
 
                  PushNotifications.addListener('registrationError', (error) => {
@@ -2666,9 +2669,16 @@ function App() {
                         }
                     }
 
-                    // In-App Toast
+                    // In-App Popup Premium
                     if (notif.type === 'popup' || notif.type === 'both' || notif.type === 'push') {
-                        toastSuccess(`${notif.title} - ${notif.message}`);
+                        setSystemNotification({
+                            title: notif.title,
+                            message: notif.message,
+                            image_url: notif.image_url
+                        });
+                        
+                        // Auto-hide após 8 segundos
+                        setTimeout(() => setSystemNotification(null), 8000);
                     }
                 }
             })
@@ -9192,6 +9202,49 @@ function App() {
                 {showWithdrawHistory && renderWithdrawHistoryView()}
                 {showWithdrawDetail && renderWithdrawDetailView()}
                 {showHelpModal && renderHelpModal()}
+            </AnimatePresence>
+
+            {/* Popup de Notificação do Sistema Minimalista */}
+            <AnimatePresence>
+                {systemNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -50 }}
+                        animate={{ opacity: 1, y: 16 }}
+                        exit={{ opacity: 0, y: -50 }}
+                        className="fixed top-0 left-0 right-0 z-[9999] px-4 pointer-events-none"
+                    >
+                        <div 
+                            style={{ 
+                                background: '#ffffff',
+                                border: '2px solid #facc15',
+                                borderRadius: '20px',
+                                pointerEvents: 'auto',
+                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)'
+                            }}
+                            className="max-w-md mx-auto p-4 flex items-center gap-4 relative"
+                        >
+                            <div className="bg-yellow-400/10 p-2.5 rounded-xl text-yellow-600">
+                                <Icon name="Bell" size={22} />
+                            </div>
+                            
+                            <div className="flex-1 overflow-hidden">
+                                <h4 className="text-zinc-900 font-bold text-base leading-tight truncate">
+                                    {systemNotification.title}
+                                </h4>
+                                <p className="text-zinc-500 text-xs font-semibold mt-0.5 line-clamp-2">
+                                    {systemNotification.message}
+                                </p>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setSystemNotification(null)}
+                                className="bg-zinc-100 hover:bg-zinc-200 p-2 rounded-lg text-zinc-400 transition-colors flex-shrink-0"
+                            >
+                                <Icon name="X" size={16} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
             </AnimatePresence>
 
             {/* In-App Broadcast Popups */}
