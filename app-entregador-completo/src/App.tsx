@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, supabaseUrl } from './lib/supabase';
 import { playIziSound, stopIziSounds } from './lib/iziSounds';
@@ -7,7 +8,8 @@ import { BespokeIcons } from './lib/BespokeIcons';
 import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+const OverlayPermission = registerPlugin<any>('OverlayPermission');
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
@@ -1041,6 +1043,38 @@ function App() {
     }, [orders, declinedStats, now]);
 
     const announcedOrderIds = useRef<Set<string>>(new Set());
+    const activeOverlayMissionRef = useRef<any>(null);
+    const handleAcceptRef = useRef<any>(null);
+    
+    // Mantém a referência sempre atualizada
+    handleAcceptRef.current = handleAccept;
+
+    // Listener global para ações da janela nativa flutuante
+    useEffect(() => {
+        if (Capacitor.getPlatform() !== 'android') return;
+        const listener = OverlayPermission.addListener('onMissionAction', (data: any) => {
+            const order = activeOverlayMissionRef.current;
+            if (!order) return;
+            
+            stopIziSounds();
+
+            if (data.action === 'accept') {
+                setSelectedOrder(order);
+                if (handleAcceptRef.current) handleAcceptRef.current(order);
+                activeOverlayMissionRef.current = null;
+            } else if (data.action === 'reject') {
+                activeOverlayMissionRef.current = null;
+            } else if (data.action === 'details') {
+                setSelectedOrder(order);
+                setShowOrderModal(true);
+                activeOverlayMissionRef.current = null;
+                ForegroundService.moveToForeground().catch(() => {});
+            }
+        });
+        return () => {
+            listener.remove();
+        };
+    }, []);
 
     useEffect(() => {
         if (!isAuthenticated || !isOnline) return;
@@ -1067,32 +1101,48 @@ function App() {
                 playIziSound('driver', true);
             }
 
-            // 2. Trazer para o primeiro plano (Android) - Saltando sobre outros apps
-            if (Capacitor.getPlatform() === 'android') {
-                ForegroundService.moveToForeground().catch(() => {});
-            }
-
-            // 3. Notificação Nativa
+            // 2. Notificação Nativa
+            const servicePreview = getServicePresentation(latest);
             if (Notification.permission === 'granted') {
-                const servicePreview = getServicePresentation(latest);
                 new Notification('🚀 Nova Missão Izi!', { 
                     body: `${servicePreview.headline} • ${servicePreview.pickupText || latest.pickup_address}`, 
                     icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                 });
             }
 
-            // 4. Popup Flutuante (Uber-style) que permite aceitar/recusar na hora
-            setFloatingOrder(latest);
-            setShowFloatingOrder(true);
-
-            // Auto-dismiss após 30s
-            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
-            floatingOrderTimeoutRef.current = setTimeout(() => {
-                setShowFloatingOrder(false);
-                setFloatingOrder(null);
-            }, 30000);
+            // 3. Overlay Flutuante Nativo (SYSTEM_ALERT_WINDOW)
+            if (Capacitor.getPlatform() === 'android') {
+                const netEarnings = typeof getNetEarnings === 'function' ? getNetEarnings(latest) : 0;
+                const safeNet = isFinite(netEarnings) ? netEarnings : 0;
+                activeOverlayMissionRef.current = latest;
+                OverlayPermission.showMission({
+                    title: servicePreview?.title || servicePreview?.headline || 'Nova Missão',
+                    earnings: `R$ ${safeNet.toFixed(2).replace('.', ',')}`,
+                    distance: latest.distance || '—'
+                }).catch((e: any) => console.log('Overlay não permitido:', e));
+            }
         }
-    }, [visibleOrders, isAuthenticated, isOnline, getServicePresentation]);
+    }, [visibleOrders, isAuthenticated, isOnline]);
+
+    // Loop de reforço de áudio e vibração (Android Foreground)
+    // Garante que o som continue tocando e vibrando enquanto houver missões visíveis
+    useEffect(() => {
+        if (!isAuthenticated || !isOnline || visibleOrders.length === 0 || activeMission) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            // Se o som parou por algum motivo (mão do usuário ou OS), mas a missão ainda está lá, reforçamos
+            if (localStorage.getItem('pref_sound') !== 'false') {
+                playIziSound('driver', true);
+            }
+            if (localStorage.getItem('pref_vibration') !== 'false' && 'vibrate' in navigator) {
+                navigator.vibrate([1000, 500, 1000]);
+            }
+        }, 8000); // Tenta reforçar a cada 8s
+
+        return () => clearInterval(interval);
+    }, [visibleOrders.length, isAuthenticated, isOnline, activeMission]);
 
     // Limpar IDs antigos do announcedOrderIds
     useEffect(() => {
@@ -1134,9 +1184,6 @@ function App() {
     const [audioBlocked, setAudioBlocked] = useState(false);
     const [overlayBlocked, setOverlayBlocked] = useState(false);
     const [overlayBannerDismissed, setOverlayBannerDismissed] = useState(false);
-    const [showFloatingOrder, setShowFloatingOrder] = useState(false);
-    const [floatingOrder, setFloatingOrder] = useState<any>(null);
-    const floatingOrderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Verificar periodicamente se a permissão de sobreposição foi concedida
     useEffect(() => {
@@ -2170,8 +2217,10 @@ function App() {
         if (Capacitor.getPlatform() === 'android' && localWantsOnline) {
              ForegroundService.startForegroundService({
                 id: 1001,
-                title: "Izi Entregador: Online",
-                body: "Buscando novas chamadas em tempo real..."
+                title: "Izi Entregador: Online ✅",
+                body: "Buscando novas chamadas em tempo real...",
+                importance: 5,
+                icon: 'notification_icon'
             }).catch(e => console.error("Erro ao restaurar FS:", e));
         }
 
@@ -2268,8 +2317,10 @@ function App() {
                         if (nextState) {
                             await ForegroundService.startForegroundService({
                                 id: 1001,
-                                title: "Izi Entregador: Online",
-                                body: "Buscando novas chamadas em tempo real..."
+                                title: "Izi Entregador: Online ✅",
+                                body: "Buscando novas chamadas em tempo real...",
+                                importance: 5,
+                                icon: 'notification_icon'
                             });
                         } else {
                             await ForegroundService.stopForegroundService();
@@ -8091,134 +8142,7 @@ function App() {
         );
     };
 
-    const renderFloatingOrderPopup = () => {
-        if (!showFloatingOrder || !floatingOrder) return null;
 
-        const presentation = getServicePresentation(floatingOrder);
-        const grossEarnings = typeof getGrossEarnings === 'function' ? getGrossEarnings(floatingOrder) : 0;
-        const netEarnings = typeof getNetEarnings === 'function' ? getNetEarnings(floatingOrder) : 0;
-
-        const handleAcceptFloating = () => {
-            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
-            setShowFloatingOrder(false);
-            setSelectedOrder(floatingOrder);
-            handleAccept(floatingOrder);
-            setFloatingOrder(null);
-        };
-
-        const handleDeclineFloating = () => {
-            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
-            setShowFloatingOrder(false);
-            setFloatingOrder(null);
-        };
-
-        const handleViewDetails = () => {
-            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
-            setShowFloatingOrder(false);
-            setSelectedOrder(floatingOrder);
-            setShowOrderModal(true);
-            setFloatingOrder(null);
-        };
-
-        // Fallbacks seguros para exibição
-        const displayNet = isFinite(netEarnings) ? netEarnings : 0;
-        const displayGross = isFinite(grossEarnings) ? grossEarnings : 0;
-        const displayColor = presentation.color || '#facc15';
-
-        return (
-            <motion.div
-                key="floating-order-popup"
-                initial={{ opacity: 0, scale: 0.85, y: -40 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                className="fixed inset-0 z-[9999] flex flex-col items-center justify-center font-['Plus_Jakarta_Sans']"
-                style={{ background: 'rgba(0,0,0,0.85)' }}
-            >
-                {/* Card principal */}
-                <div className="w-full max-w-sm mx-4 bg-white rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/20">
-                    {/* Header colorido por tipo */}
-                    <div className="relative overflow-hidden px-6 pt-8 pb-6"
-                        style={{ background: `linear-gradient(135deg, ${displayColor} 0%, ${displayColor}cc 100%)` }}
-                    >
-                        {/* Pulse ring de atenção */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className="animate-ping absolute size-24 rounded-full bg-white/20" />
-                        </div>
-                        <div className="relative z-10 flex items-center gap-4">
-                            <div className="size-16 rounded-[22px] bg-white/30 backdrop-blur flex items-center justify-center shadow-lg">
-                                <Icon name={presentation.icon || 'rocket_launch'} size={32} className="text-zinc-900" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-900/60">Nova Chamada 🔥</p>
-                                <h2 className="text-2xl font-black text-zinc-900 tracking-tighter leading-none">{presentation.title || 'Missão Izi'}</h2>
-                                <p className="text-[11px] font-bold text-zinc-900/70 mt-0.5">{presentation.headline}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Info da missão */}
-                    <div className="px-6 py-5 space-y-4">
-                        {/* Ganhos */}
-                        <div className="flex items-center justify-between bg-zinc-50 rounded-2xl px-4 py-3 border border-zinc-100">
-                            <div>
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Seu Ganho</p>
-                                <p className="text-3xl font-black text-zinc-900 tracking-tighter">R$ {netEarnings.toFixed(2).replace('.', ',')}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Distância</p>
-                                <p className="text-lg font-black text-zinc-700">{floatingOrder.distance || '—'}</p>
-                            </div>
-                        </div>
-
-                        {/* Rota resumida */}
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                                <div className="size-7 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                                    <Icon name="store" size={14} className="text-blue-500" />
-                                </div>
-                                <p className="text-sm font-bold text-zinc-700 truncate">{floatingOrder.merchant_name || floatingOrder.store_name || 'Parceiro Izi'}</p>
-                            </div>
-                            <div className="ml-3.5 w-0.5 h-4 bg-gradient-to-b from-blue-400 to-emerald-400 rounded-full" />
-                            <div className="flex items-center gap-3">
-                                <div className="size-7 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                                    <Icon name="location_on" size={14} className="text-emerald-500" />
-                                </div>
-                                <p className="text-sm font-bold text-zinc-700 truncate">{floatingOrder.delivery_address || 'Endereço de entrega'}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Botões de ação */}
-                    <div className="px-6 pb-6 space-y-3">
-                        <button
-                            onClick={handleAcceptFloating}
-                            className="w-full h-16 bg-zinc-900 text-white rounded-[22px] font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-zinc-900/20"
-                        >
-                            <Icon name="check_circle" size={22} className="text-yellow-400" />
-                            Aceitar Missão
-                        </button>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                onClick={handleViewDetails}
-                                className="h-12 bg-zinc-100 text-zinc-700 rounded-[18px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
-                            >
-                                <Icon name="info" size={16} />
-                                Detalhes
-                            </button>
-                            <button
-                                onClick={handleDeclineFloating}
-                                className="h-12 bg-rose-50 text-rose-500 rounded-[18px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all border border-rose-100"
-                            >
-                                <Icon name="close" size={16} />
-                                Recusar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-        );
-    };
 
     const renderOrderDetailsModal = () => {
 
@@ -9409,10 +9333,8 @@ function App() {
               {renderBroadcastPopup()}
             </AnimatePresence>
 
-            {/* Popup flutuante de nova chamada — sobrepõe tudo */}
-            <AnimatePresence>
-                {showFloatingOrder && renderFloatingOrderPopup()}
-            </AnimatePresence>
+
+
         </div>
     );
 }
