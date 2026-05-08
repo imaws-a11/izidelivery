@@ -343,8 +343,33 @@ function App() {
       })
       .subscribe();
 
+    const broadcastChannel = supabase.channel('broadcast_notifications_user')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcast_notifications' }, async (payload) => {
+        const notif = payload.new as any;
+        if (notif.target_type === 'all' || notif.target_type === 'users') {
+          // Web Push Notification (Apenas web, no APK já será coberto pelo Capacitor/FCM)
+          if (!Capacitor.isNativePlatform() && 'Notification' in window) {
+              if (Notification.permission === 'granted') {
+                  new Notification(notif.title, { body: notif.message, icon: notif.image_url || '/Favicon.png.png' });
+              } else if (Notification.permission !== 'denied') {
+                  const permission = await Notification.requestPermission();
+                  if (permission === 'granted') {
+                      new Notification(notif.title, { body: notif.message, icon: notif.image_url || '/Favicon.png.png' });
+                  }
+              }
+          }
+
+          // In-App Toast
+          if (notif.type === 'popup' || notif.type === 'both' || notif.type === 'push') {
+              toastSuccess(`${notif.title} - ${notif.message}`);
+          }
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(broadcastChannel);
     };
   }, [userId, selectedItem]);
 
