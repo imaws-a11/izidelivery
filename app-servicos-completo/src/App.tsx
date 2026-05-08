@@ -511,17 +511,18 @@ function App() {
     }
   };
 
-  const handleConfirmSavedCardShortcut = async (orderId: string, amount: number, origin: string) => {
-    if (!selectedCard) {
-      setSubView("card_payment");
+  const handleConfirmSavedCardShortcut = async (orderId: string, amount: number, origin: string, cardObj?: any) => {
+    const cardToCharge = cardObj || selectedCard || (savedCards.length > 0 ? savedCards[0] : null);
+    if (!cardToCharge) {
+      setSubView("payments");
       return;
     }
     
     setIsLoading(true);
     try {
       const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
-      const brand = (selectedCard.brand || "Visa").toLowerCase();
-      const token = selectedCard.mp_token || selectedCard.token;
+      const brand = (cardToCharge.brand || "Visa").toLowerCase();
+      const token = cardToCharge.mp_token || cardToCharge.token;
 
       // Mapeamento correto para IDs do Mercado Pago
       let mpMethodId = "master";
@@ -2525,7 +2526,8 @@ function App() {
       }
 
       if (paymentMethod === "cartao") {
-        if (selectedCard) {
+        const cardToUse = selectedCard || (savedCards.length > 0 ? savedCards[0] : null);
+        if (cardToUse) {
            const orderPayload = { ...orderBase, status: "pendente_pagamento" };
            const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderPayload).select().single();
            if (insertError || !order) {
@@ -2533,7 +2535,7 @@ function App() {
               return;
            }
 
-           // DeduÃ§Ã£o de Izi Coins se houver desconto aplicado
+           // Dedução de Izi Coins se houver desconto aplicado
            if (useCoins && iziCoins > 0) {
              const coinValue = globalSettings?.izi_coin_value || 1.0;
              const discountApplied = (iziCoins * coinValue);
@@ -2546,10 +2548,10 @@ function App() {
              setIziCoins(newIziCoins);
            }
 
-           handleConfirmSavedCardShortcut(order.id, total, "checkout");
+           handleConfirmSavedCardShortcut(order.id, total, "checkout", cardToUse);
            return;
         }
-        setSubView("card_payment");
+        setSubView("payments");
         return;
       }
 

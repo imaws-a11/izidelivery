@@ -5,6 +5,7 @@ import { Icon } from "../../common/Icon";
 import pixLogo from "../../../assets/images/pix-logo.png";
 import { supabase } from "../../../lib/supabase";
 import { toastSuccess, toastError } from "../../../lib/useToast";
+import { MercadoPagoCardForm } from "../../MercadoPagoCardForm";
 
 export const PaymentMethodsView = () => {
   const { 
@@ -25,10 +26,6 @@ export const PaymentMethodsView = () => {
     // Log de cartões removido para limpeza de console
 
   const [isAddingCard, setIsAddingCard] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const iziCoinValue = globalSettings?.izi_coin_value || 1.0;
@@ -48,46 +45,17 @@ export const PaymentMethodsView = () => {
     }
   };
 
-  const handleSaveCard = async () => {
-    if (!cardNumber || !cardName || !cardExpiry || !cardCvv || !userId) {
-      toastError("Preencha todos os campos do cartão.");
-      return;
-    }
-
-    setIsSaving(true);
-    const lastFour = cardNumber.replace(/\D/g, "").slice(-4);
-    let brand = "Cartão";
-    if (cardNumber.startsWith("4")) brand = "Visa";
-    else if (cardNumber.startsWith("5")) brand = "Mastercard";
-    else if (cardNumber.startsWith("3")) brand = "Amex";
-
-    try {
-      const { error } = await supabase.from("payment_methods").insert({
-        user_id: userId,
-        brand: brand,
-        last4: lastFour,
-        type: "credit_card",
-        is_default: (savedCards?.length || 0) === 0
-      });
-
-      if (error) {
-        console.error("[PAYMENT] Erro ao salvar no Supabase:", error);
-        toastError("Erro ao salvar o cartão no banco: " + error.message);
-      } else {
-        toastSuccess("Cartão adicionado com sucesso!");
-        setIsAddingCard(false);
-        setCardNumber("");
-        setCardName("");
-        setCardExpiry("");
-        setCardCvv("");
-        fetchSavedCards();
-      }
-    } catch (err: any) {
-      console.error("[PAYMENT] Erro interno:", err);
-      toastError("Erro interno ao processar cartão: " + (err.message || "Erro desconhecido"));
-    } finally {
-      setIsSaving(false);
-    }
+  const handleConfirmNewCard = (token: string, issuer: string, installments: number, brand: string, last4: string) => {
+    setSelectedCard({
+      id: 'temp_' + Date.now(),
+      token: token,
+      brand: brand,
+      last4: last4
+    });
+    setPaymentMethod('cartao');
+    toastSuccess("Cartão temporário gerado com sucesso! Confirme seu pedido.");
+    setIsAddingCard(false);
+    setSubView('checkout');
   };
 
   return (
@@ -120,58 +88,12 @@ export const PaymentMethodsView = () => {
             >
                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] px-2 mb-4">Novo Cartão de Crédito</h3>
                <div className="bg-white rounded-[32px] p-6 shadow-xl border border-zinc-100 space-y-5">
-                 <div className="space-y-2">
-                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Número do Cartão</label>
-                   <input 
-                     type="text" 
-                     placeholder="0000 0000 0000 0000"
-                     value={cardNumber}
-                     onChange={(e) => setCardNumber(e.target.value)}
-                     className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
-                   />
-                 </div>
-                 <div className="space-y-2">
-                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Nome Impresso</label>
-                   <input 
-                     type="text" 
-                     placeholder="Nome como está no cartão"
-                     value={cardName}
-                     onChange={(e) => setCardName(e.target.value)}
-                     className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200 uppercase"
-                   />
-                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Validade</label>
-                     <input 
-                       type="text" 
-                       placeholder="MM/AA"
-                       value={cardExpiry}
-                       onChange={(e) => setCardExpiry(e.target.value)}
-                       className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">CVV</label>
-                     <input 
-                       type="text" 
-                       placeholder="123"
-                       value={cardCvv}
-                       onChange={(e) => setCardCvv(e.target.value)}
-                       className="w-full bg-zinc-50 h-14 rounded-2xl px-4 font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all border border-zinc-200"
-                     />
-                   </div>
-                 </div>
+                 <MercadoPagoCardForm onConfirm={handleConfirmNewCard} publicKey={globalSettings?.mercadopago_public_key} />
                </div>
                
-               <motion.button 
-                 whileTap={{ scale: 0.98 }}
-                 onClick={handleSaveCard}
-                 disabled={isSaving}
-                 className="w-full bg-yellow-400 text-black h-16 rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:translate-y-1 transition-all disabled:opacity-50 mt-6"
-               >
-                 {isSaving ? "Salvando..." : "Salvar Cartão Seguro"}
-               </motion.button>
+               <p className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-4">
+                 Nota: O cartão não ficará salvo na sua conta permanentemente para sua segurança.
+               </p>
             </motion.section>
           ) : (
             <motion.div
