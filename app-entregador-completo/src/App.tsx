@@ -1045,9 +1045,6 @@ function App() {
     const announcedOrderIds = useRef<Set<string>>(new Set());
     const activeOverlayMissionRef = useRef<any>(null);
     const handleAcceptRef = useRef<any>(null);
-    
-    // Mantém a referência sempre atualizada
-    handleAcceptRef.current = handleAccept;
 
     // Listener global para ações da janela nativa flutuante
     useEffect(() => {
@@ -3162,6 +3159,9 @@ function App() {
             setIsAccepting(false);
         }
     };
+    
+    // Atualiza a ref para o overlay nativo sempre ter a versão mais recente
+    handleAcceptRef.current = handleAccept;
 
     const handleDecline = (order: Order) => {
         const targetId = order.realId || order.id;
