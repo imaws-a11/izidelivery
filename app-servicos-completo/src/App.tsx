@@ -164,6 +164,22 @@ function App() {
     savedCards, fetchSavedCards, handleDeleteCard,
     triggerCartAnimation, cartAnimations
   } = useApp();
+  
+  const viewRef = useRef(view);
+  const tabRef = useRef(tab);
+  const navigationSubViewRef = useRef(subView);
+  const userIdRef = useRef(userId);
+  const selectedItemRef = useRef(selectedItem);
+  const cartRef = useRef(cart);
+  const previousSubViewRef = useRef(subView);
+
+  useEffect(() => { viewRef.current = view; }, [view]);
+  useEffect(() => { tabRef.current = tab; }, [tab]);
+  useEffect(() => { navigationSubViewRef.current = subView; }, [subView]);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
+  useEffect(() => { cartRef.current = cart; }, [cart]);
+
 
   // Injeta função global de navegação para componentes modulares
   useEffect(() => {
@@ -183,7 +199,7 @@ function App() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
-  const [aiMessage, setAiMessage] = useState("OlÃ¡! Como posso ajudar vocÃª hoje?");
+  const [aiMessage, setAiMessage] = useState("Olá! Como posso ajudar você hoje?");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
@@ -192,6 +208,7 @@ function App() {
   const sendInternalNotification = async (title: string, body: string, data: any = {}) => {
     if (!userId) return;
     try {
+      // 1. Notificação In-App (Persistida no banco)
       await supabase.from('notifications_delivery').insert({
         user_id: userId,
         title,
@@ -200,8 +217,21 @@ function App() {
         status: 'pending',
         created_at: new Date().toISOString()
       });
+
+      // 2. Notificação Push Real (Via Edge Function)
+      // Isso envia para o Firebase/FCM e chega no celular do usuário
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_id: userId,
+          title,
+          body,
+          data: { ...data, click_action: 'FLUTTER_NOTIFICATION_CLICK' }
+        }
+      });
+
+      console.log("[NOTIFY] Notificação interna e push enviada com sucesso.");
     } catch (e) {
-      console.error("[NOTIFY] Erro ao criar notificação interna:", e);
+      console.error("[NOTIFY] Erro ao criar notificação:", e);
     }
   };
 
@@ -265,7 +295,7 @@ function App() {
 
 
 
-  // As funÃ§Ãµes de endereÃ§o e cartÃµes foram migradas para AddressContext e WalletContext
+  // As funções de endereço e cartões foram migradas para AddressContext e WalletContext
 
   useEffect(() => {
     fetchMarketData();
@@ -294,7 +324,7 @@ function App() {
         table: 'orders_delivery',
         filter: `user_id=eq.${userId}`
       }, (payload) => {
-        console.log("[REALTIME] AtualizaÃ§Ã£o de Pedido:", payload);
+        console.log("[REALTIME] Atualização de Pedido:", payload);
         fetchOrders(); // Atualiza lista global
         
         const newOrder = payload.new as any;
@@ -332,11 +362,21 @@ function App() {
              }
           }
 
-          // ConfirmaÃ§Ã£o de Pagamento Digital (Webhooks do MP/BTCPay)
-          if (newOrder.payment_status === "paid" && oldOrder?.payment_status !== "paid") {
+          // Confirmação de Pagamento Digital (Webhooks do MP/BTCPay)
+          const isPaid = (newOrder.payment_status === "paid" || newOrder.payment_status === "approved");
+          const wasNotPaid = (oldOrder?.payment_status !== "paid" && oldOrder?.payment_status !== "approved");
+          
+          if (isPaid && wasNotPaid) {
              toastSuccess("Pagamento confirmado com sucesso!");
+             
+             // Limpa o carrinho apÃ³s a confirmaÃ§Ã£o do pagamento (para pedidos digitais)
+             if (cartRef.current && cartRef.current.length > 0) {
+               console.log("[REALTIME] Limpando carrinho apÃ³s pagamento confirmado do pedido:", newOrder.id);
+               clearCart(newOrder.id).catch(err => console.error("Erro ao limpar carrinho:", err));
+             }
+
              // Se estava na tela de aguardando pagamento, move para aguardando lojista
-             if (navigationSubViewRef.current === "waiting_payment" || navigationSubViewRef.current === "pix_payment" || navigationSubViewRef.current === "lightning_payment") {
+             if (navigationSubViewRef.current === "waiting_payment" || navigationSubViewRef.current === "pix_payment" || navigationSubViewRef.current === "lightning_payment" || navigationSubViewRef.current === "card_payment") {
                 setSubView("waiting_merchant");
              }
           }
@@ -526,7 +566,6 @@ function App() {
       } else {
          const { data: updatedOrder } = await supabase.from("orders_delivery").select().eq("id", orderId).single();
          setSelectedItem(updatedOrder || { id: orderId });
-         if (cart.length > 0) await clearCart(orderId);
          setTab("orders");
          setSubView("none");
       }
@@ -574,18 +613,18 @@ function App() {
       if (force || isMobility) {
         setUserLocation(prev => ({ ...prev, isManual: false }));
       } else if (userLocation.isManual && !force) {
-        console.log("[GPS] Ignorando atualizaÃ§Ã£o automÃ¡tica pois o endereÃ§o Ã© manual.");
+        console.log("[GPS] Ignorando atualização automática pois o endereço é manual.");
         return;
       }
 
       try {
-        // PROTEÃ‡ÃƒO: Nunca sobrescrever coordenadas boas com piores
-        // Se jÃ¡ temos coords com boa precisÃ£o, rejeita atualizaÃ§Ãµes com precisÃ£o muito pior
+        // PROTEÇÃO: Nunca sobrescrever coordenadas boas com piores
+        // Se já temos coords com boa precisão, rejeita atualizações com precisão muito pior
         setUserLocation(prev => {
           const prevAccuracy = prev.accuracy as number | undefined;
           if (prevAccuracy && accuracy && prevAccuracy < 200 && accuracy > prevAccuracy * 3) {
-            console.log(`[GPS] Ignorando coords ruins (${accuracy.toFixed(0)}m) â€” jÃ¡ temos ${prevAccuracy.toFixed(0)}m`);
-            return prev; // MantÃ©m as coords atuais, melhores
+            console.log(`[GPS] Ignorando coords ruins (${accuracy.toFixed(0)}m) — já temos ${prevAccuracy.toFixed(0)}m`);
+            return prev; // Mantém as coords atuais, melhores
           }
           return { ...prev, lat: latitude, lng: longitude, accuracy, loading: false };
         });
@@ -602,7 +641,7 @@ function App() {
             ...prev,
             origin: isObj 
               ? { ...currentOrigin, lat: latitude, lng: longitude }
-              : { address: currentOrigin || "Minha localizaÃ§Ã£o", lat: latitude, lng: longitude }
+              : { address: currentOrigin || "Minha localização", lat: latitude, lng: longitude }
           };
         });
 
@@ -662,8 +701,8 @@ function App() {
 
         if (!address) address = "LocalizaÃ§Ã£o atual";
 
-        // 3. ATUALIZA APENAS O ENDEREÃ‡O QUANDO CHEGAR
-        // VerificaÃ§Ã£o dupla: se no meio do caminho o endereÃ§o virou manual (ex: carregou endereÃ§o salvo), abortamos.
+        // 3. ATUALIZA APENAS O ENDEREÇO QUANDO CHEGAR
+        // Verificação dupla: se no meio do caminho o endereço virou manual (ex: carregou endereço salvo), abortamos.
         setUserLocation(prev => {
           if (prev.isManual && !force) return prev;
           return { ...prev, address, loading: false };
@@ -698,10 +737,10 @@ function App() {
             });
             await processCoords(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
           } else {
-            setUserLocation({ address: "PermissÃ£o de localizaÃ§Ã£o negada", loading: false });
+            setUserLocation({ address: "Permissão de localização negada", loading: false });
           }
         } catch {
-          setUserLocation({ address: "Erro ao obter localizaÃ§Ã£o", loading: false });
+          setUserLocation({ address: "Erro ao obter localização", loading: false });
         }
       })();
       return;
@@ -709,7 +748,7 @@ function App() {
 
     // --- Caminho Web (Browser via navigator.geolocation) ---
     if (!("geolocation" in navigator)) {
-      setUserLocation({ address: "GeolocalizaÃ§Ã£o nÃ£o disponÃ­vel", loading: false });
+      setUserLocation({ address: "Geolocalização não disponível", loading: false });
       return;
     }
 
@@ -722,7 +761,7 @@ function App() {
         );
         const data = await res.json();
         if (data.location) {
-          console.log(`[GPS] Google Geolocation API: ${data.location.lat}, ${data.location.lng} (precisÃ£o: ${data.accuracy}m)`);
+          console.log(`[GPS] Google Geolocation API: ${data.location.lat}, ${data.location.lng} (precisão: ${data.accuracy}m)`);
           await processCoords(data.location.lat, data.location.lng, data.accuracy);
           return true;
         }
@@ -735,21 +774,21 @@ function App() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude, accuracy } = position.coords;
-        console.log(`[GPS] Browser geolocation: ${latitude}, ${longitude} (precisÃ£o: ${accuracy?.toFixed(0)}m)`);
+        console.log(`[GPS] Browser geolocation: ${latitude}, ${longitude} (precisão: ${accuracy?.toFixed(0)}m)`);
         await processCoords(latitude, longitude, accuracy);
       },
       async (error) => {
         console.warn("[GPS] Browser geolocation falhou:", error.message);
-        // SÃ³ usa Google Geolocation API se NÃƒO temos coordenadas prÃ©vias
+        // Só usa Google Geolocation API se NÃO temos coordenadas prévias
         const hasExistingCoords = userLocation.lat && userLocation.lng;
         if (!hasExistingCoords) {
-          console.log("[GPS] Sem coords prÃ©vias. Tentando Google Geolocation API...");
+          console.log("[GPS] Sem coords prévias. Tentando Google Geolocation API...");
           const ok = await tryGoogleGeolocationAPI();
           if (!ok) {
-            setUserLocation(prev => ({ ...prev, address: "NÃ£o foi possÃ­vel obter localizaÃ§Ã£o", loading: false }));
+            setUserLocation(prev => ({ ...prev, address: "Não foi possível obter localização", loading: false }));
           }
         } else {
-          console.log("[GPS] Mantendo coords existentes (browser timeout mas jÃ¡ temos GPS).");
+          console.log("[GPS] Mantendo coords existentes (browser timeout mas já temos GPS).");
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -765,7 +804,7 @@ function App() {
     let watchId: any = null;
 
     if (mobilityViews.includes(subView)) {
-      console.log("[GEO] Ativando monitoramento contÃ­nuo para subView:", subView);
+      console.log("[GEO] Ativando monitoramento contínuo para subView:", subView);
       if (Capacitor.isNativePlatform()) {
         Geolocation.watchPosition({
           enableHighAccuracy: true,
@@ -851,34 +890,39 @@ function App() {
           // Sempre atualizar a lista local para refletir no F5 ou navegaÃ§Ãµes
           if (userIdRef.current) fetchOrders();
 
-          // Verificar transiÃ§Ãµes de status para Toasts
+          // Verificar transições de status para Toasts
           const statusChanged = oldOrder && oldOrder.status && newOrder.status !== oldOrder.status;
           
           if (statusChanged || !oldOrder) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Pagamento aprovado! O lojista jÃ¡ recebeu seu pedido. âš¡',
-              'pendente_pagamento': 'Aguardando confirmaÃ§Ã£o do pagamento... ðŸ’³',
-              'pendente': 'O lojista recebeu seu pedido! ðŸ¥³',
-              'aceito': 'O estabelecimento aceitou seu pedido! ðŸ¥³',
-              'confirmado': 'Pedido confirmado! O preparo comeÃ§ou. âœ…',
-              'preparando': 'Seu pedido estÃ¡ sendo preparado com carinho! ðŸ¥—',
-              'no_preparo': 'Seu pedido jÃ¡ estÃ¡ no preparo! ðŸ¥—',
-              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para vocÃª. ðŸ›µ',
-              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
-              'saiu_para_coleta': 'O motoboy aceitou e estÃ¡ indo retirar seu pedido! ðŸ›µ',
-              'chegou_coleta': 'O motoboy chegou ao estabelecimento para retirar seu pedido! ðŸ›µ',
-              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para vocÃª. ðŸš€',
-              'a_caminho': 'Motoboy a caminho! Sua entrega estÃ¡ em rota. ðŸ›µ',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
-              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ›µ',
-              'no_local': 'O motoboy chegou ao seu endereÃ§o! ðŸ””',
-              'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
+              'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. ⚡',
+              'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
+              'pendente': 'O lojista recebeu seu pedido! 🥳',
+              'aceito': 'O estabelecimento aceitou seu pedido! 🥳',
+              'confirmado': 'Pedido confirmado! O preparo começou. ✅',
+              'preparando': 'Seu pedido está sendo preparado com carinho! 🥗',
+              'no_preparo': 'Seu pedido já está no preparo! 🥗',
+              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. 🛵',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
+              'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! 🛵',
+              'chegou_coleta': 'O motoboy chegou ao estabelecimento para retirar seu pedido! 🛵',
+              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. 🚀',
+              'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. 🛵',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. 🛵',
+              'no_local': 'O motoboy chegou ao seu endereço! 🔔',
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. ✨',
               'cancelado': 'Ah não! Seu pedido foi cancelado. ⚠️',
               'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. ⚠️'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
             showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
+            
+            // Dispara notificação interna + push para rastreamento em tempo real
+            if (statusChanged) {
+              sendInternalNotification("Acompanhamento Izi", msg, { orderId: newOrder.id, status: newOrder.status });
+            }
           }
 
           // Monitoramento de Sucesso de Pagamento (Bitcoin / Pix / Geral)
@@ -1812,20 +1856,7 @@ function App() {
     { id: 3, title: 'Madrugador Izi', desc: 'PeÃ§a cafÃ© da manhÃ£ antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
   ]);
 
-      // [Comentario Limpo pelo Sistema]
-  const viewRef = useRef(view);
-  const tabRef = useRef(tab);
-  const navigationSubViewRef = useRef(subView);
-  const userIdRef = useRef(userId);
 
-  const selectedItemRef = useRef(selectedItem);
-  const previousSubViewRef = useRef(subView);
-  const cartRef = useRef(cart);
-
-  useEffect(() => { navigationSubViewRef.current = subView; }, [subView]);
-  useEffect(() => { userIdRef.current = userId; }, [userId]);
-  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
-  useEffect(() => { cartRef.current = cart; }, [cart]);
 
   const orderStatusLabels: Record<string, string> = {
     pending: "Aguardando",
@@ -1988,7 +2019,7 @@ function App() {
 
   useEffect(() => { viewRef.current = view; }, [view]);
   useEffect(() => { tabRef.current = tab; }, [tab]);
-  useEffect(() => { navigationSubViewRef.current = subView; }, [subView]);
+
   useEffect(() => { userIdRef.current = userId; }, [userId]);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   useEffect(() => {
@@ -2014,7 +2045,7 @@ function App() {
     };
     fetchPartners();
   }, []);
-  useEffect(() => { navigationSubViewRef.current = subView; }, [subView]);
+
 
       // [Comentario Limpo pelo Sistema]
   useEffect(() => {
@@ -2489,7 +2520,6 @@ function App() {
         setWalletBalance(tempNewWalletBalance);
         setIziCoins(tempNewIziCoins);
         setSelectedItem(order);
-        if (cart.length > 0) await clearCart(order.id);
         navigateSubView("waiting_merchant");
         return;
       }

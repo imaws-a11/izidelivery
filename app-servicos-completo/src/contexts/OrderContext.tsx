@@ -34,7 +34,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (data) {
         setOrders(data);
         const active = data.find((o: any) => 
-          !['completed', 'cancelled', 'rejected'].includes(o.status)
+          !['concluido', 'cancelado', 'rejected'].includes(o.status)
         );
         if (active) setActiveOrder(active);
       }

@@ -351,6 +351,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const heardOrderIds = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
+  // Refs para evitar problemas de dependência em callbacks/realtime
+  const fetchDriversRef = useRef<any>(null);
+  const fetchMyDriversRef = useRef<any>(null);
+  const fetchProductsRef = useRef<any>(null);
+  const fetchMenuCategoriesRef = useRef<any>(null);
+  const fetchStatsRef = useRef<any>(null);
+  const fetchAllOrdersRef = useRef<any>(null);
+  const allOrdersRef = useRef<Order[]>([]);
+  const merchantProfileRef = useRef<MerchantProfile | null>(null);
+  const selectedMerchantPreviewRef = useRef<Merchant | null>(null);
+
+
   useEffect(() => {
     if (userRole !== 'merchant') {
       stopOrderLoop();
@@ -576,6 +588,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [driversList, syncDriverStats]);
 
+
   const logAction = useCallback(async (action: string, module: string, details: any = {}) => {
     await supabase.from('audit_logs_delivery').insert({
       user_id: session?.user?.id,
@@ -606,7 +619,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const onlineDriversCount = countOnlineDrivers((onlineData || []) as Driver[]);
 
       // Garantir que a driversList esteja populada para que o Realtime funcione no Dashboard
-      if (!driversList.length) {
+      if (!driversList.length && fetchDriversRef.current) {
         void fetchDriversRef.current(true);
       }
 
@@ -822,32 +835,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [userRole, merchantProfile, merchantOrdersPage, ordersPage, session?.user?.id]);
 
-  // Mapeamento de refs para funções voláteis usadas no Realtime (evita reconnect do canal)
-  const fetchAllOrdersRef = useRef(fetchAllOrders);
-  const fetchStatsRef = useRef(fetchStats);
-  const fetchDriversRef = useRef(fetchDrivers);
-  const fetchMyDriversRef = useRef(fetchMyDrivers);
-  const fetchProductsRef = useRef(fetchProducts);
-  const fetchMenuCategoriesRef = useRef(fetchMenuCategories);
-
-
-
-  const allOrdersRef = useRef(allOrders);
-
-  useEffect(() => { fetchAllOrdersRef.current = fetchAllOrders; }, [fetchAllOrders]);
+  // Sincronizar Refs (APÓS definição das funções para evitar TDZ)
   useEffect(() => { fetchStatsRef.current = fetchStats; }, [fetchStats]);
   useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
   useEffect(() => { fetchMyDriversRef.current = fetchMyDrivers; }, [fetchMyDrivers]);
   useEffect(() => { fetchProductsRef.current = fetchProducts; }, [fetchProducts]);
   useEffect(() => { fetchMenuCategoriesRef.current = fetchMenuCategories; }, [fetchMenuCategories]);
+  useEffect(() => { fetchAllOrdersRef.current = fetchAllOrders; }, [fetchAllOrders]);
   useEffect(() => { allOrdersRef.current = allOrders; }, [allOrders]);
-
-  
-  const merchantProfileRef = useRef(merchantProfile);
-
   useEffect(() => { merchantProfileRef.current = merchantProfile; }, [merchantProfile]);
-
-  const selectedMerchantPreviewRef = useRef(selectedMerchantPreview);
   useEffect(() => { selectedMerchantPreviewRef.current = selectedMerchantPreview; }, [selectedMerchantPreview]);
 
   // Canal Global de Tempo Real (Admin e Lojista)
@@ -909,8 +905,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             // Atualização de estatísticas após mudança no pedido
             setTimeout(() => {
-              fetchStatsRef.current(true);
-              fetchAllOrdersRef.current(undefined, true);
+              fetchStatsRef.current?.(true);
+              fetchAllOrdersRef.current?.(undefined, true);
             }, 500);
           }
         }
@@ -980,7 +976,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const changedProduct = (payload.new || payload.old) as any;
           if (String(changedProduct?.merchant_id) === targetMID) {
             console.log('⚡ Produto alterado (Realtime):', payload.eventType);
-            fetchProductsRef.current(targetMID, true);
+            fetchProductsRef.current?.(targetMID, true);
           }
         }
       )
@@ -995,7 +991,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const changedCat = (payload.new || payload.old) as any;
           if (String(changedCat?.merchant_id) === targetMID) {
             console.log('⚡ Categoria alterada (Realtime):', payload.eventType);
-            fetchMenuCategoriesRef.current(targetMID);
+            fetchMenuCategoriesRef.current?.(targetMID);
           }
         }
       )
@@ -1012,7 +1008,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { event: '*', schema: 'public', table: 'slot_applications', filter: activeMerchantId ? `merchant_id=eq.${activeMerchantId}` : undefined },
         (payload) => {
           console.log('⚡ MUDANÇA EM CANDIDATURA (Canal Dedicado):', payload);
-          fetchMyDedicatedSlotsRef.current();
+          fetchMyDedicatedSlotsRef.current?.();
           
           if (payload.eventType === 'INSERT') {
             playIziSound('candidate');
@@ -1029,10 +1025,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .subscribe((status) => {
         console.log('[REALTIME-STATUS] Canal Vagas Dedicadas:', status);
       });
-    fetchStatsRef.current(true);
-    fetchAllOrdersRef.current(undefined, true);
+    fetchStatsRef.current?.(true);
+    fetchAllOrdersRef.current?.(undefined, true);
     if (userRole === 'merchant') {
-      fetchMyDriversRef.current(true);
+      fetchMyDriversRef.current?.(true);
     }
 
     const settingsChannel = supabase.channel('global_settings_sync')
@@ -1056,8 +1052,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!session?.user?.id || userRole !== 'merchant' || !merchantProfile?.id) return;
 
     const syncMerchantOrders = () => {
-      fetchAllOrdersRef.current(undefined, true);
-      fetchStatsRef.current(true);
+      fetchAllOrdersRef.current?.(undefined, true);
+      fetchStatsRef.current?.(true);
     };
 
     const handleFocus = () => {
@@ -1627,8 +1623,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Chama a função SQL que força offline entregadores sem heartbeat há +5min
       try { await supabase.rpc('auto_offline_absent_drivers'); } catch (_) {}
       // Atualiza a lista local silenciosamente
-      fetchDriversRef.current(true);
-      fetchStatsRef.current(true);
+      fetchDriversRef.current?.(true);
+      fetchStatsRef.current?.(true);
     };
 
     // Roda imediatamente ao montar

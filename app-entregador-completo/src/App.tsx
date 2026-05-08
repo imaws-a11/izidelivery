@@ -221,7 +221,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
       };
       fetchRoute();
     }
-  }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress, missionPhase]);
+  }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress, missionPhase, driverCoords?.lat, driverCoords?.lng]);
 
   const mapStyle = [
     { "elementType": "geometry", "stylers": [{ "color": "#f1f5f9" }] },
@@ -287,7 +287,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
       >
       {routePolyline && (
         <Polyline 
-          path={window.google.maps.geometry.encoding.decodePath(routePolyline)} 
+          path={window.google?.maps?.geometry?.encoding ? window.google.maps.geometry.encoding.decodePath(routePolyline) : []} 
           options={{ 
             strokeColor: '#3b82f6',
             strokeOpacity: 1.0,
@@ -738,6 +738,21 @@ function App() {
     }, []);
 
     const [orders, setOrders] = useState<Order[]>([]);
+    
+    // Estatísticas de rejeição para lógica de loop inteligente (2x = cooldown 30s, 4x = bloqueio permanente)
+    const [declinedStats, setDeclinedStats] = useState<Record<string, { count: number, lastDecline: number, isPermanent: boolean }>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('Izi_declined_stats') || '{}');
+        } catch {
+            return {};
+        }
+    });
+
+    // Sincronizar stats com localStorage
+    useEffect(() => {
+        localStorage.setItem('Izi_declined_stats', JSON.stringify(declinedStats));
+    }, [declinedStats]);
+
     const [activeMission, setActiveMission] = useState<Order | null>(() => {
         const saved = localStorage.getItem('Izi_active_mission');
         return saved ? JSON.parse(saved) : null;
@@ -922,7 +937,11 @@ function App() {
 
     const [systemNotification, setSystemNotification] = useState<{ title: string; message: string; image_url?: string } | null>(null);
     const [view, setView] = useState<View>('dashboard');
-    const [activeTab, setActiveTab] = useState<View>(() => (localStorage.getItem('izi_driver_active_tab') as View) || 'dashboard');
+    const [activeTab, setActiveTab] = useState<View>(() => {
+        const saved = localStorage.getItem('izi_driver_active_tab') as View;
+        const validTabs: View[] = ['dashboard', 'active_mission', 'history', 'earnings', 'profile', 'missions', 'dedicated', 'scheduled', 'notifications'];
+        return validTabs.includes(saved) ? saved : 'dashboard';
+    });
     const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
 
     useEffect(() => {
@@ -996,50 +1015,62 @@ function App() {
     const heardOrderIds = useRef<Set<string>>(new Set());
     const isFirstLoad = useRef(true);
 
+    // Filtro de pedidos visíveis/auditíveis (respeitando cooldown e bloqueio permanente)
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 5000); // Atualiza a cada 5s para checar fim de cooldown
+        return () => clearInterval(timer);
+    }, []);
+
+    const visibleOrders = useMemo(() => {
+        return orders.filter(o => {
+            const id = o.realId || o.id;
+            const stats = declinedStats[id];
+            if (!stats) return true;
+            if (stats.isPermanent) return false;
+            
+            // Se tiver 2 rejeições, entra em cooldown de 30 segundos
+            if (stats.count === 2) {
+                const cooldownEnd = stats.lastDecline + 30000;
+                return now > cooldownEnd;
+            }
+
+            return true;
+        });
+    }, [orders, declinedStats, now]);
+
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        // Se a lista estiver vazia, apenas desativamos a flag de primeiro carregamento
-        // Isso garante que quando a PRIMEIRA missão chegar, ela toque o som.
-        if (orders.length === 0) {
+        // Se a lista estiver vazia, desativamos o primeiro load e PARAMOS qualquer som residual
+        if (visibleOrders.length === 0) {
             if (isFirstLoad.current) {
                 isFirstLoad.current = false;
-
             }
+            stopIziSounds(); // Garante que o som pare se a lista esvaziar
             return;
         }
 
-        // Se for o primeiro carregamento e já houver pedidos (ex: refresh com pedidos na tela)
-        // apenas absorvemos os IDs para não tocar som de pedidos "velhos"
-        if (isFirstLoad.current) {
-            orders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
-            isFirstLoad.current = false;
-
-            return;
-        }
-
-        // Filtrar apenas o que ainda não ouvimos
-        const newOrders = orders.filter(o => !heardOrderIds.current.has(o.realId || o.id));
+        // Removida a trava de isFirstLoad para garantir que pedidos pendentes toquem ao dar F5
+        const newOrders = visibleOrders.filter(o => !heardOrderIds.current.has(o.realId || o.id));
         
         if (newOrders.length > 0) {
-
-            
             // Marcar como conhecidas imediatamente
             newOrders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
 
-            // Tocar som se estiver online (mesmo com missão ativa)
+            // Tocar som se estiver online
             if (isOnlineRef.current) {
                 playIziSound('driver', true);
                 
                 if (window.Notification && Notification.permission === 'granted') {
-                    new Notification('ðŸš€ Nova Missão Izi!', {
+                    new Notification('🚀 Nova Missão Izi!', {
                         body: `R$ ${newOrders[0].price?.toFixed(2) || '0,00'} • ${newOrders[0].origin || 'Entrega nova'}`,
                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'
                     });
                 }
             }
         }
-    }, [orders, isAuthenticated]);
+    }, [visibleOrders, isAuthenticated]);
 
     const [finishedMissionData, setFinishedMissionData] = useState<{
         show: boolean, 
@@ -2087,10 +2118,12 @@ function App() {
     useEffect(() => {
         if (!driverId || !isAuthenticated || !isProfileLoaded) return;
 
-        // SE O PERFIL NÃO ESTÁ APROVADO, FORÇA OFFLINE.
-        if (!isApproved) {
+        // SE O PERFIL ESTÁ EXPLICITAMENTE DESATIVADO, FORÇA OFFLINE.
+        // Usamos === false para evitar que o estado inicial (null) force offline durante o load.
+        if (isApproved === false) {
             setIsOnline(false);
             localStorage.setItem('izi_driver_online', 'false');
+            stopIziSounds(); // Segurança extra
             return;
         }
 
@@ -2246,165 +2279,7 @@ function App() {
         return () => { supabase.removeChannel(channel); };
     }, [driverId, isAuthenticated]);
 
-    const syncMissionWithDB = useCallback(async () => {
-        if (!driverId || !isAuthenticated) return;
-        setIsSyncingMission(true);
-        setIsSyncing(true); // Ativa o spinner global de sincronização
 
-        try {
-            // 0. Recarregar Pedidos Disponíveis e Dados Financeiros
-            await Promise.all([
-                fetchOrders(),
-                refreshFinanceData()
-            ]);
-
-
-            const dId = String(driverId).trim();
-            const orders = await fetchFromDB('orders_delivery', `driver_id=eq.${dId}&order=created_at.desc&limit=10`);
-
-            const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
-            const allActiveOrders = (orders || []).filter((o: any) => 
-                !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase()) &&
-                !financialTypes.includes(o.service_type) &&
-                o.driver_id === dId
-            );
-            const activeOrder = allActiveOrders[0] || null;
-
-            if (activeOrder) {
-                // NOVO: Buscar endereço oficial e atualizado do Lojista no banco de dados
-                let officialPickupAddress = activeOrder.pickup_address || 'Origem';
-                let officialPickupLat = activeOrder.pickup_lat;
-                let officialPickupLng = activeOrder.pickup_lng;
-
-                if (activeOrder.merchant_id || activeOrder.merchant_name) {
-                    try {
-                        let mData = null;
-                        
-                        // 1. Tentar por ID (Mais preciso)
-                        if (activeOrder.merchant_id) {
-                            const data = await fetchFromDB('admin_users', `select=store_address,latitude,longitude,store_name&id=eq.${activeOrder.merchant_id}&limit=1`);
-                            mData = data && data.length > 0 ? data[0] : null;
-                        }
-                        
-                        // 2. Tentar por Nome (Fallback caso ID falhe ou mude)
-                        if (!mData && activeOrder.merchant_name) {
-                            const encName = encodeURIComponent(`%${activeOrder.merchant_name}%`);
-                            const data = await fetchFromDB('admin_users', `select=store_address,latitude,longitude,store_name&store_name=ilike.${encName}&limit=1`);
-                            mData = data && data.length > 0 ? data[0] : null;
-                        }
-                        
-                        if (mData) {
-                            if (mData.store_address) officialPickupAddress = mData.store_address;
-                            if (mData.latitude && mData.longitude) {
-                                officialPickupLat = Number(mData.latitude);
-                                officialPickupLng = Number(mData.longitude);
-                            }
-                        }
-
-                        // 3. Fallback Crítico para "Paladar" (Segurança contra redirecionamento RS)
-                        if (!officialPickupLat || Math.abs(Number(officialPickupLat)) < 0.1) {
-                            const nameLower = (activeOrder.merchant_name || activeOrder.pickup_address || "").toLowerCase();
-                            if (nameLower.includes('paladar')) {
-
-                                officialPickupLat = -20.1435361;
-                                officialPickupLng = -44.2169737;
-                                officialPickupAddress = "R. Henri Karam, 640 - Presidente Barroca, Brumadinho - MG";
-                            }
-                        }
-                    } catch (mErr) {
-                    }
-                }
-
-                const mission: any = { 
-                    ...activeOrder, 
-                    realId: activeOrder.id, 
-                    type: activeOrder.service_type || 'delivery', 
-                    origin: officialPickupAddress, 
-                    pickup_address: officialPickupAddress,
-                    pickup_lat: officialPickupLat,
-                    pickup_lng: officialPickupLng,
-                    destination: activeOrder.delivery_address || 'Destino', 
-
-                    price: activeOrder.total_price || 0, 
-                    status: activeOrder.status, 
-                    preparation_status: activeOrder.preparation_status || 'preparando',
-                    customer: activeOrder.user_name || 'Cliente Izi' 
-                };
-                // Salvar no localStorage como backup (para recuperação no boot)
-                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-
-                // Mapear TODAS as missões ativas para o array multi-missão
-                const allMissions = await Promise.all(allActiveOrders.map(async (ao: any) => {
-                    let pickup = ao.pickup_address || 'Origem';
-                    let pLat = ao.pickup_lat;
-                    let pLng = ao.pickup_lng;
-                    if (ao.merchant_id) {
-                        try {
-                            const md = await fetchFromDB('admin_users', `select=store_address,latitude,longitude&id=eq.${ao.merchant_id}&limit=1`);
-                            if (md?.[0]) {
-                                if (md[0].store_address) pickup = md[0].store_address;
-                                if (md[0].latitude) { pLat = Number(md[0].latitude); pLng = Number(md[0].longitude); }
-                            }
-                        } catch {}
-                    }
-                    return {
-                        ...ao,
-                        realId: ao.id,
-                        type: ao.service_type || 'delivery',
-                        origin: pickup,
-                        pickup_address: pickup,
-                        pickup_lat: pLat,
-                        pickup_lng: pLng,
-                        destination: ao.delivery_address || 'Destino',
-                        price: ao.total_price || 0,
-                        status: ao.status,
-                        preparation_status: ao.preparation_status || 'preparando',
-                        customer: ao.user_name || 'Cliente Izi'
-                    };
-                }));
-                setActiveMissions(allMissions);
-            } else {
-                
-                const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
-                if (cachedMissionRaw) {
-                    try {
-                        const cachedMission = JSON.parse(cachedMissionRaw);
-                        const s = (cachedMission.status || '').toLowerCase();
-                        const isTerminal = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s);
-                        
-                        if (isTerminal) {
-                            setActiveMission(null);
-                            localStorage.removeItem('Izi_active_mission');
-                            return;
-                        }
-
-                        const createdAt = new Date(cachedMission.created_at || 0).getTime();
-                        const ageMs = Date.now() - createdAt;
-                        
-                        // Se a missão não é terminal e é muito recente (< 15s), mantemos por precaução contra delay de propagação
-                        if (ageMs > 15000) {
-                            setActiveMission(null);
-                            localStorage.removeItem('Izi_active_mission');
-                        }
-                    } catch {
-                        setActiveMission(null);
-                        localStorage.removeItem('Izi_active_mission');
-                    }
-                } else {
-                    setActiveMission(null);
-                }
-            }
-        } catch (err: any) {
-            toastError('Erro ao sincronizar missão.');
-        } finally {
-            setIsSyncingMission(false);
-            setIsSyncing(false);
-        }
-    }, [driverId, isAuthenticated]);
-
-    useEffect(() => {
-        syncMissionWithDB();
-    }, [driverId, isAuthenticated, syncMissionWithDB]);
 
     const fetchDedicatedSlotsRealtimeRef = useRef(fetchDedicatedSlotsRealtime);
     fetchDedicatedSlotsRealtimeRef.current = fetchDedicatedSlotsRealtime;
@@ -2783,13 +2658,12 @@ function App() {
                 
                 if (isMerchantOrder) {
                     if (myMerchantId) {
-                        if (o.merchant_id !== myMerchantId) return false;
+                        if (String(o.merchant_id) !== String(myMerchantId)) return false;
                     } else {
                         if (exclusiveMerchantIds.includes(o.merchant_id)) return false;
                     }
                 }
 
-                // Atualizado para incluir novo e pendente, conforme regra do painel lojista solicitada
                 const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
                 const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
@@ -2797,6 +2671,12 @@ function App() {
                 const notDeclined = !(now - (declinedMap[o.id] || 0) < 5000);
                 const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
                 const notScheduled = !o.scheduled_at || o.driver_id === driverId;
+                
+                const isPaladar = (o.merchant_name || "").toLowerCase().includes('paladar');
+                if (isPaladar) {
+                    console.log("[RADAR] Paladar Detectado! Status:", o.status, "statusOk:", statusOk, "notMyAssignment:", notMyAssignment, "myMerchantId:", myMerchantId);
+                }
+
                 return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled;
             });
 
@@ -2818,9 +2698,15 @@ function App() {
 
             setOrders(prev => {
                 const hasNew = newAvailable.some(no => !prev.find(po => po.realId === no.realId));
-                if (hasNew && isOnlineRef.current && localStorage.getItem('pref_sound') !== 'false') {
+                
+                // Se não há pedidos disponíveis, paramos o som imediatamente
+                if (newAvailable.length === 0) {
+                    stopIziSounds();
+                } else if (hasNew && isOnlineRef.current && localStorage.getItem('pref_sound') !== 'false') {
+                    // Se há novos pedidos, tocamos o som
                     playIziSound('driver', true);
                 }
+                
                 return newAvailable;
             });
         } catch (err) {
@@ -2860,10 +2746,18 @@ function App() {
 
                 // 1. GESTÃƒO DA MISSÃƒO ATIVA DESTE MOTORISTA
                 if (isMyOrder) {
-                    if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(o.status.toLowerCase())) {
-                        setActiveMission(null);
-                        localStorage.removeItem('Izi_active_mission');
-                        if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
+                    const status = o.status.toLowerCase().trim();
+                    const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered', 'rejected', 'recusado'];
+                    
+                    if (terminalStatuses.includes(status)) {
+                        // Limpa a missão selecionada se for esta
+                        if (currentMission && (currentMission.realId === o.id || currentMission.id === o.id)) {
+                            setActiveMission(null);
+                            localStorage.removeItem('Izi_active_mission');
+                            if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
+                        }
+                        // Remove do array de missões múltiplas
+                        setActiveMissions(prev => prev.filter(m => m.realId !== o.id && m.id !== o.id));
                         return;
                     }
 
@@ -3119,10 +3013,17 @@ function App() {
 
         const previousOrders = [...orders];
         const previousActiveMission = activeMission;
+        const previousActiveMissions = [...activeMissions];
         const previousActiveTab = activeTab;
 
         if (!isScheduled) {
             setActiveMission(optimisticMission);
+            // Atualizar também a lista de múltiplas missões
+            setActiveMissions(prev => {
+                const exists = prev.find(m => (m.realId || m.id) === targetId);
+                if (exists) return prev.map(m => (m.realId || m.id) === targetId ? optimisticMission : m);
+                return [...prev, optimisticMission];
+            });
             localStorage.setItem('Izi_active_mission', JSON.stringify(optimisticMission));
             setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
             setActiveTab('active_mission');
@@ -3165,6 +3066,7 @@ function App() {
                 toastError('Este pedido já foi aceito por outro piloto.');
                 setOrders(previousOrders);
                 setActiveMission(previousActiveMission);
+                setActiveMissions(previousActiveMissions);
                 setActiveTab(previousActiveTab);
                 if (!previousActiveMission) localStorage.removeItem('Izi_active_mission');
                 setIsAccepting(false);
@@ -3186,6 +3088,7 @@ function App() {
             toastError('Erro ao confirmar: ' + e.message);
             setOrders(previousOrders);
             setActiveMission(previousActiveMission);
+            setActiveMissions(previousActiveMissions);
             setActiveTab(previousActiveTab);
         } finally {
             setIsAccepting(false);
@@ -3195,18 +3098,39 @@ function App() {
     const handleDecline = (order: Order) => {
         const targetId = order.realId || order.id;
         
-        // Salva no localStorage para ignorar este pedido por 30 minutos (ou até limpar cache)
-        const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-        declinedMap[targetId] = Date.now();
-        localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
+        // Parar o som imediatamente ao recusar
+        stopIziSounds();
+
+        // Lógica de loop inteligente: 2 rejeições = 30s cooldown, 4 rejeições = permanente
+        setDeclinedStats(prev => {
+            const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
+            const newCount = current.count + 1;
+            
+            // Se o contador for resetado pelo fim do cooldown (ou seja, se já estava no 2 e ele rejeitou de novo)
+            // ele vai para 3. Se rejeitar de novo, vai para 4 e bloqueia.
+            
+            const newStats = {
+                count: newCount,
+                lastDecline: Date.now(),
+                isPermanent: newCount >= 4
+            };
+
+            // Se atingiu o ponto de cooldown (2) ou bloqueio (4), removemos do heardOrderIds 
+            // para que o alarme possa ser disparado novamente após o cooldown (no caso do 2)
+            if (newCount === 2) {
+                heardOrderIds.current.delete(targetId);
+            }
+
+            return { ...prev, [targetId]: newStats };
+        });
         
-        // Remove da lista atual
+        // Remove da lista atual para feedback visual imediato
         setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
         
-        toastSuccess('Chamada descartada com sucesso.');
+        toastSuccess(declinedStats[targetId]?.count === 1 ? 'Pedido silenciado por 30s.' : 'Chamada descartada com sucesso.');
     };
 
-    const refreshFinanceData = async () => {
+    const refreshFinanceData = useCallback(async () => {
         if (!driverId) return;
         setIsFinanceLoading(true);
         try {
@@ -3377,7 +3301,135 @@ function App() {
         } finally {
             setIsFinanceLoading(false);
         }
-    };
+    }, [driverId]);
+
+    const syncMissionWithDB = useCallback(async () => {
+        if (!driverId || !isAuthenticated) return;
+        // Só mostra loading se for a primeira vez ou refresh manual para evitar "piscada"
+        setIsSyncingMission(true);
+        // Não resetamos setIsSyncing aqui para não interferir no Radar se não for necessário
+
+        try {
+            await Promise.all([
+                fetchOrders(),
+                refreshFinanceData()
+            ]);
+
+            const dId = String(driverId).trim();
+            // Aumentado o limite para 50 para garantir que não percamos missões ativas em dias movimentados
+            const orders = await fetchFromDB('orders_delivery', `driver_id=eq.${dId}&order=created_at.desc&limit=50`);
+
+            const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
+            const allActiveOrders = (orders || []).filter((o: any) => {
+                const status = (o.status || '').toLowerCase().trim();
+                // Incluindo mais status que podem ser considerados "em andamento"
+                const terminalStatuses = ['concluido', 'cancelado', 'rejected', 'recusado'];
+                const isTerminal = terminalStatuses.includes(status);
+                const isFinancial = financialTypes.includes(o.service_type);
+                const isMine = String(o.driver_id).trim() === dId;
+                
+                return !isTerminal && !isFinancial && isMine;
+            });
+
+            console.log("[SYNC] Total bruto:", orders?.length, "Filtrados:", allActiveOrders.length);
+            if (orders?.length > 0) {
+                const foundPaladar = orders.find((o: any) => (o.merchant_name || "").toLowerCase().includes('paladar'));
+                if (foundPaladar) {
+                    console.log("[SYNC] Paladar Encontrado! Status:", foundPaladar.status, "ID:", foundPaladar.id);
+                }
+            }
+
+            // Helper local para formatar missões
+            const formatMission = async (ao: any) => {
+                let pickup = ao.pickup_address || 'Origem';
+                let pLat = ao.pickup_lat;
+                let pLng = ao.pickup_lng;
+                
+                if (ao.merchant_id) {
+                    try {
+                        const md = await fetchFromDB('admin_users', `select=store_address,latitude,longitude&id=eq.${ao.merchant_id}&limit=1`);
+                        if (md?.[0]) {
+                            if (md[0].store_address) pickup = md[0].store_address;
+                            if (md[0].latitude) { pLat = Number(md[0].latitude); pLng = Number(md[0].longitude); }
+                        }
+                    } catch {}
+                }
+
+                if (!pLat || Math.abs(Number(pLat)) < 0.1) {
+                    const nameLower = (ao.merchant_name || ao.pickup_address || "").toLowerCase();
+                    if (nameLower.includes('paladar')) {
+                        pLat = -20.1435361; pLng = -44.2169737;
+                        pickup = "R. Henri Karam, 640 - Presidente Barroca, Brumadinho - MG";
+                    }
+                }
+
+                return {
+                    ...ao,
+                    realId: ao.id,
+                    type: ao.service_type || 'delivery',
+                    origin: pickup,
+                    pickup_address: pickup,
+                    pickup_lat: pLat,
+                    pickup_lng: pLng,
+                    destination: ao.delivery_address || 'Destino',
+                    price: ao.total_price || 0,
+                    status: ao.status,
+                    preparation_status: ao.preparation_status || 'preparando',
+                    customer: ao.user_name || 'Cliente Izi'
+                };
+            };
+
+            // Formatar TODAS as missões ativas
+            const formattedMissions = await Promise.all(allActiveOrders.map(o => formatMission(o)));
+            setActiveMissions(formattedMissions);
+
+            const currentActiveId = activeMissionRef.current?.realId || activeMissionRef.current?.id;
+            const updatedSelectedMission = formattedMissions.find((o: any) => (o.id === currentActiveId || o.realId === currentActiveId));
+
+            if (updatedSelectedMission) {
+                setActiveMission(updatedSelectedMission);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(updatedSelectedMission));
+            } else if (formattedMissions.length === 1 && !currentActiveId) {
+                // Auto-seleciona se houver apenas uma missão e nada selecionado
+                setActiveMission(formattedMissions[0]);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(formattedMissions[0]));
+            } else if (currentActiveId && !updatedSelectedMission) {
+                // Se a missão selecionada não está mais ativa, limpa a seleção
+                setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
+            } else if (formattedMissions.length > 1 && !currentActiveId) {
+                // Se houver múltiplas e nenhuma selecionada, garante que mostre a lista
+                setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
+            } else if (formattedMissions.length === 0) {
+                setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
+            }
+
+            if (isSyncing) {
+                if (formattedMissions.length > 0) {
+                    toastSuccess(`${formattedMissions.length} missões ativas encontradas!`);
+                } else {
+                    toastSuccess("Sincronizado. Nenhuma missão ativa.");
+                }
+            }
+
+        } catch (err: any) {
+            console.error("[SYNC-MISSION] Erro:", err);
+            // Fallback para cache se der erro de rede
+            const cached = localStorage.getItem('Izi_active_mission');
+            if (cached && !activeMissionRef.current) {
+                try { setActiveMission(JSON.parse(cached)); } catch {}
+            }
+        } finally {
+            setIsSyncingMission(false);
+            setIsSyncing(false);
+        }
+    }, [driverId, isAuthenticated, fetchOrders, refreshFinanceData, fetchFromDB]);
+
+    useEffect(() => {
+        syncMissionWithDB();
+    }, [driverId, isAuthenticated, syncMissionWithDB]);
 
     const handleUpdateStatus = async (newStatus: string) => {
         if (!activeMission) return;
@@ -3404,10 +3456,11 @@ function App() {
         if (isFinishing) {
             // Se for finalizar, limpamos a missão ativa IMEDIATAMENTE para liberar o driver
             setActiveMission(null);
+            setActiveMissions(prev => prev.filter(m => (m.realId || m.id) !== missionId));
             localStorage.removeItem('Izi_active_mission');
             setActiveTab('dashboard');
             
-            // Calculamos ganhos para mostrar o modal de sucesso otimista
+            // ... (rest of finishing logic)
             const missionForCalc = { ...activeMission };
             if (paymentConfirmedMode === 'dinheiro') missionForCalc.payment_method = 'dinheiro';
             else if (paymentConfirmedMode === 'pix_cartao') missionForCalc.payment_method = 'pix';
@@ -3428,6 +3481,7 @@ function App() {
         } else {
             // Status intermediário: atualiza UI na hora
             setActiveMission(updatedMission);
+            setActiveMissions(prev => prev.map(m => (m.realId || m.id) === missionId ? updatedMission : m));
             localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
             toastSuccess(`Status: ${newStatus === 'chegou_coleta' ? 'Na Coleta' : newStatus === 'saiu_para_entrega' ? 'Em Rota' : newStatus}`);
         }
@@ -3902,7 +3956,7 @@ function App() {
                                 {[
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
                                     { id: 'missions', label: 'Bônus', icon: 'stars' },
-                                    { id: 'active_mission', label: 'Entrega', icon: 'route' },
+                                    { id: 'active_mission', label: 'Entrega', icon: 'route', badge: activeMissions.length },
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'scheduled', label: 'Escalas', icon: 'event', badge: scheduledOrders.length },
                                     { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active && !myApplications.some(app => String(app.slot_id) === String(s.id))).length },
@@ -4070,7 +4124,8 @@ function App() {
         try {
             await Promise.all([
                 refreshFinanceData(),
-                fetchOrders()
+                fetchOrders(),
+                syncMissionWithDB()
             ]);
         } catch (e) {}
         setIsRefreshing(false);
@@ -4156,6 +4211,58 @@ function App() {
                             </button>
                         </motion.div>
                     )}
+
+                {/* CARROSSEL DE MISSÕES ATIVAS - MOVIDO PARA O TOPO PARA MÁXIMA VISIBILIDADE */}
+                {activeMissions.length > 0 && (
+                    <section className="mb-8 mt-2">
+                        <div className="flex items-center gap-3 px-2 mb-4">
+                            <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                            <h3 className="text-xs font-black text-zinc-400 tracking-[0.2em] uppercase">Missões em Andamento</h3>
+                            <div className="bg-zinc-900 px-2 py-0.5 rounded-md">
+                                <span className="text-[9px] font-black text-yellow-400">{activeMissions.length}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex overflow-x-auto pb-4 gap-4 no-scrollbar -mx-6 px-6">
+                            {activeMissions.map((m) => {
+                                const st = getStatusLabel(m.status || '');
+                                return (
+                                    <motion.button
+                                        key={m.realId || m.id}
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => {
+                                            setActiveMission(m);
+                                            setActiveTab('active_mission');
+                                            localStorage.setItem('Izi_active_mission', JSON.stringify(m));
+                                        }}
+                                        className="flex-shrink-0 w-[260px] p-5 rounded-[28px] bg-white border border-zinc-100 shadow-[0_15px_35px_rgba(0,0,0,0.04)] text-left flex flex-col gap-3 relative overflow-hidden active:bg-zinc-50 transition-colors"
+                                    >
+                                        <div className="absolute top-0 right-0 p-3 opacity-[0.03] pointer-events-none">
+                                            <Icon name={st.icon} size={48} />
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2">
+                                            <div className={`size-1.5 rounded-full ${st.bg.replace('/10', '')}`} />
+                                            <span className={`text-[8px] font-black uppercase tracking-widest ${st.color}`}>{st.label}</span>
+                                        </div>
+                                        
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-black text-zinc-950 truncate">{(m as any).merchant_name || (m as any).store_name || 'Loja Parceira'}</p>
+                                            <p className="text-[10px] text-zinc-400 font-bold truncate mt-0.5">{cleanAddressText((m as any).delivery_address || (m as any).destination || '') || 'Destino'}</p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between mt-1 pt-3 border-t border-zinc-50">
+                                            <span className="text-[10px] font-black text-yellow-600 tracking-tight">R$ {Number((m as any).price || (m as any).total_price || 0).toFixed(2)}</span>
+                                            <div className="size-7 rounded-lg bg-yellow-400 flex items-center justify-center shadow-sm">
+                                                <Icon name="arrow_forward" size={16} className="text-zinc-950" />
+                                            </div>
+                                        </div>
+                                    </motion.button>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
 
                 <header className={`bg-zinc-900 rounded-[2.5rem] overflow-hidden relative ${isCardExpanded ? 'p-8' : 'p-6'} flex flex-col items-center text-center transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/5`}>
                     
@@ -4253,6 +4360,8 @@ function App() {
                         )}
                     </AnimatePresence>
                 </header>
+
+
 
 
 
@@ -8656,10 +8765,10 @@ function App() {
                             <div className="flex-1 relative overflow-hidden flex flex-col bg-zinc-50">
                                 <main className="flex-1 overflow-y-auto no-scrollbar relative">
                                     <AnimatePresence mode="wait">
-                                        {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderDashboard()}</motion.div>}
-                                        {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderActiveMissionView()}</motion.div>}
-                                        {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderHistoryView()}</motion.div>}
-                                        {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderEarningsView()}</motion.div>}
+                                        {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderDashboard()}</motion.div>}
+                                        {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderActiveMissionView()}</motion.div>}
+                                        {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderHistoryView()}</motion.div>}
+                                        {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderEarningsView()}</motion.div>}
                                         {activeTab === 'profile' && (
                                             <motion.div 
                                                 key="prof" 
@@ -8717,25 +8826,26 @@ function App() {
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
-
-                                    {!activeMission && (
-                                        <motion.button 
-                                            initial={{ scale: 0, y: 50 }} 
-                                            animate={{ scale: 1, y: 0 }} 
-                                            whileTap={{ scale: 0.9 }} 
-                                            onClick={handleToggleOnline} 
-                                            className={`fixed bottom-40 right-6 z-[90] size-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
-                                                isOnline ? 'bg-emerald-500' : 'bg-zinc-900'
-                                            }`}
-                                        >
-                                            <Icon 
-                                                name="power_settings_new" 
-                                                size={32} 
-                                                className="text-white" 
-                                            />
-                                        </motion.button>
-                                    )}
                                 </main>
+
+                                {!activeMission && (
+                                    <motion.button 
+                                        initial={{ scale: 0, y: 50 }} 
+                                        animate={{ scale: 1, y: 0 }} 
+                                        whileTap={{ scale: 0.9 }} 
+                                        onClick={handleToggleOnline} 
+                                        className={`fixed bottom-40 right-6 z-[200] size-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
+                                            isOnline ? 'bg-emerald-500' : 'bg-zinc-900'
+                                        }`}
+                                    >
+                                        <Icon 
+                                            name="power_settings_new" 
+                                            size={32} 
+                                            className="text-white" 
+                                        />
+                                    </motion.button>
+                                )}
+
                                 {renderBottomNavigation()}
                             </div>
                         </div>

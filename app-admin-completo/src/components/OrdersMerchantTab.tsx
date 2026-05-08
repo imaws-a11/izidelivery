@@ -139,6 +139,46 @@ export default function OrdersMerchantTab() {
     }
   };
 
+  const handleResendNotification = async (orderId: string, merchantId: string) => {
+    toastInfo('Reenviando notificação para entregadores...');
+    try {
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          driver_id: 'all',
+          merchant_id: merchantId,
+          title: '🛵 Entrega Pendente!',
+          body: 'Um pedido ainda aguarda um entregador. Você está disponível?',
+          data: { orderId }
+        }
+      });
+      toastSuccess('Notificação reenviada com sucesso!');
+    } catch (err) {
+      console.error('Erro ao reenviar push:', err);
+      toastError('Erro ao reenviar notificação');
+    }
+  };
+
+  const handleReleaseToGlobalFleet = async (orderId: string) => {
+    if (!confirm('Deseja realmente liberar este pedido para TODOS os entregadores da rede IZI? Isso ignorará sua frota exclusiva para esta entrega.')) return;
+    
+    toastInfo('Liberando para frota geral IZI...');
+    try {
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          driver_id: 'all',
+          // Ao não passar merchant_id, a Edge Function ignora o filtro de exclusividade
+          title: '🛵 Entrega IZI (Frota Geral)!',
+          body: 'Um novo pedido foi liberado para toda a frota. Aproveite!',
+          data: { orderId }
+        }
+      });
+      toastSuccess('Pedido liberado para frota geral!');
+    } catch (err) {
+      console.error('Erro ao liberar para frota geral:', err);
+      toastError('Erro ao liberar para frota geral');
+    }
+  };
+
   const parseOrderAddress = (fullAddress: string) => {
     const parts = (fullAddress || '').split('| ITENS:');
     const rawItems = parts[1] ? parts[1].split(',').map(i => i.trim()).filter(Boolean) : [];
@@ -1052,6 +1092,23 @@ export default function OrdersMerchantTab() {
                                      <div className="flex items-center justify-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
                                          <span className="material-symbols-outlined text-blue-500 animate-spin mr-3 text-xs">autorenew</span>
                                          <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Buscando entregador IZI...</p>
+                                     </div>
+
+                                     <div className="grid grid-cols-2 gap-2">
+                                        <button 
+                                            onClick={() => handleResendNotification(selectedOrderDetails.id, selectedOrderDetails.merchant_id || merchantProfile?.id)}
+                                            className="py-3 rounded-2xl bg-white dark:bg-slate-800 text-blue-500 border border-blue-100 dark:border-blue-500/20 font-black text-[9px] uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">notifications_active</span>
+                                            Reenviar Push
+                                        </button>
+                                        <button 
+                                            onClick={() => handleReleaseToGlobalFleet(selectedOrderDetails.id)}
+                                            className="py-3 rounded-2xl bg-white dark:bg-slate-800 text-orange-500 border border-orange-100 dark:border-orange-500/20 font-black text-[9px] uppercase tracking-widest hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">public</span>
+                                            Frota Geral
+                                        </button>
                                      </div>
                                  </div>
                                </>

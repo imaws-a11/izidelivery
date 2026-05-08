@@ -121,6 +121,12 @@ Atualizado: 2026-05-08
 - **Source of Truth**: `loadProfileAndEnforceOnboarding` is the single point of synchronization between Supabase and the application state.
 - **Fonte de Verdade:** O `loadProfileAndEnforceOnboarding` Ã© o Ãºnico responsÃ¡vel por sincronizar o banco -> estado -> localStorage. NÃ£o use `useEffect` paralelos para ler do localStorage no preenchimento de formulÃ¡rios.
 
+### 🔄 Lógica de Loop e Rejeição de Pedidos (Driver App)
+- **Loop Inteligente**: O sistema de notificação agora rastreia rejeições por `order_id` no `localStorage` (`Izi_declined_stats`).
+- **Cooldown (2 Rejeições)**: Após a 2ª recusa, o pedido entra em cooldown de **30 segundos**, ficando invisível e em silêncio. Após esse tempo, ele reaparece e toca o alarme novamente se ainda disponível.
+- **Bloqueio Permanente (4 Rejeições)**: Após a 4ª recusa total, o pedido é **banido permanentemente** para o entregador específico.
+- **Implementação**: Gerenciado via estado derivado `visibleOrders` e limpeza do `heardOrderIds` no momento do cooldown.
+
 ### 📂 Arquivos Modificados
 - `AppContext.tsx`, `ProductDetailView.tsx`, `App.tsx` (Serviços/Cliente)
 - `OnboardingView.tsx`, `App.tsx` (Entregador - UI & Auth)
