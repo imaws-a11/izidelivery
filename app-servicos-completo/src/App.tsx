@@ -215,6 +215,7 @@ function App() {
         body,
         data,
         status: 'pending',
+        app_type: 'customer',
         created_at: new Date().toISOString()
       });
 

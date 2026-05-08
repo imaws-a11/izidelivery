@@ -38,6 +38,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .from('notifications_delivery')
         .select('*')
         .eq('user_id', user.id)
+        .eq('app_type', 'customer')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -111,7 +112,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             event: '*',
             schema: 'public',
             table: 'notifications_delivery',
-            filter: `user_id=eq.${user.id}`
+            filter: `user_id=eq.${user.id}&app_type=eq.customer`
           },
           (payload) => {
             if (payload.eventType === 'INSERT') {

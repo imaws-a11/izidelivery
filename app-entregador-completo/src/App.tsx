@@ -393,20 +393,20 @@ const normalizeServiceType = (raw: string | undefined | null): string => {
 const getTypeDetails = (rawType: string) => {
     const type = normalizeServiceType(rawType);
     switch (type) {
-        case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Envio Express', isFood: false };
-        case 'mototaxi': return { icon: 'motorcycle', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
-        case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro', isFood: false };
-        case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto', isFood: false };
-        case 'van': return { icon: 'local_shipping', color: 'text-sky-400', bg: 'bg-sky-400/10', label: 'Van', isFood: false };
-        case 'utilitario': return { icon: 'local_shipping', color: 'text-indigo-400', bg: 'bg-indigo-400/10', label: 'Utilitario', isFood: false };
-        case 'logistica': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Logistica', isFood: false };
-        case 'restaurant': return { icon: 'package_2', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Comida', isFood: true };
-        case 'market': return { icon: 'package_2', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Mercado', isFood: false };
-        case 'pharmacy': return { icon: 'package_2', color: 'text-rose-400', bg: 'bg-rose-400/10', label: 'Farmacia', isFood: false };
-        case 'beverages': return { icon: 'package_2', color: 'text-zinc-950 font-black', bg: 'bg-zinc-50', label: 'Bebidas', isFood: false };
-        case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
-        case 'motoboy': return { icon: 'motorcycle', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
-        default: return { icon: 'motorcycle', color: 'text-primary', bg: 'bg-primary/10', label: 'Servico Express', isFood: false };
+        case 'package': return { icon: 'package_2', color: 'text-primary', hex: '#facc15', bg: 'bg-primary/10', label: 'Envio Express', isFood: false };
+        case 'mototaxi': return { icon: 'motorcycle', color: 'text-emerald-400', hex: '#10b981', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
+        case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', hex: '#60a5fa', bg: 'bg-blue-400/10', label: 'Carro', isFood: false };
+        case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', hex: '#fb923c', bg: 'bg-orange-400/10', label: 'Frete/Carreto', isFood: false };
+        case 'van': return { icon: 'local_shipping', color: 'text-sky-400', hex: '#38bdf8', bg: 'bg-sky-400/10', label: 'Van', isFood: false };
+        case 'utilitario': return { icon: 'local_shipping', color: 'text-indigo-400', hex: '#818cf8', bg: 'bg-indigo-400/10', label: 'Utilitario', isFood: false };
+        case 'logistica': return { icon: 'local_shipping', color: 'text-orange-400', hex: '#fb923c', bg: 'bg-orange-400/10', label: 'Logistica', isFood: false };
+        case 'restaurant': return { icon: 'package_2', color: 'text-yellow-400', hex: '#facc15', bg: 'bg-yellow-400/10', label: 'Comida', isFood: true };
+        case 'market': return { icon: 'package_2', color: 'text-blue-400', hex: '#60a5fa', bg: 'bg-blue-400/10', label: 'Mercado', isFood: false };
+        case 'pharmacy': return { icon: 'package_2', color: 'text-rose-400', hex: '#fb7185', bg: 'bg-rose-400/10', label: 'Farmacia', isFood: false };
+        case 'beverages': return { icon: 'package_2', color: 'text-zinc-950 font-black', hex: '#09090b', bg: 'bg-zinc-50', label: 'Bebidas', isFood: false };
+        case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', hex: '#facc15', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
+        case 'motoboy': return { icon: 'motorcycle', color: 'text-emerald-400', hex: '#10b981', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
+        default: return { icon: 'motorcycle', color: 'text-primary', hex: '#facc15', bg: 'bg-primary/10', label: 'Servico Express', isFood: false };
     }
 };
 
@@ -575,6 +575,7 @@ const getServicePresentation = (order: any) => {
         destinationText,
         title: headline,
         icon,
+        color: details.hex || '#facc15',
     };
 };
 
@@ -954,7 +955,7 @@ function App() {
                 const token = await getSecureToken();
                 
                 // Usando Prefer: count=exact e limit=0 para obter apenas o total sem dados
-                const response = await fetch(`${sUrl}/rest/v1/notifications_delivery?user_id=eq.${driverId}&status=eq.pending&select=id`, {
+                const response = await fetch(`${sUrl}/rest/v1/notifications_delivery?user_id=eq.${driverId}&app_type=eq.driver&status=eq.pending&select=id`, {
                     headers: {
                         'apikey': sKey,
                         'Authorization': `Bearer ${token}`,
@@ -987,7 +988,7 @@ function App() {
                 event: '*',
                 schema: 'public',
                 table: 'notifications_delivery',
-                filter: `user_id=eq.${driverId}`
+                filter: `user_id=eq.${driverId}&app_type=eq.driver`
             }, () => {
                 syncUnreadCount();
             })
@@ -1039,38 +1040,71 @@ function App() {
         });
     }, [orders, declinedStats, now]);
 
+    const announcedOrderIds = useRef<Set<string>>(new Set());
+
     useEffect(() => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || !isOnline) return;
 
         // Se a lista estiver vazia, desativamos o primeiro load e PARAMOS qualquer som residual
         if (visibleOrders.length === 0) {
-            if (isFirstLoad.current) {
-                isFirstLoad.current = false;
-            }
-            stopIziSounds(); // Garante que o som pare se a lista esvaziar
+            if (isFirstLoad.current) isFirstLoad.current = false;
+            stopIziSounds(); 
             return;
         }
 
-        // Removida a trava de isFirstLoad para garantir que pedidos pendentes toquem ao dar F5
-        const newOrders = visibleOrders.filter(o => !heardOrderIds.current.has(o.realId || o.id));
+        // Detectar ordens que ainda não foram anunciadas (som + popup + foreground)
+        const newOrders = visibleOrders.filter(o => !announcedOrderIds.current.has(o.realId || o.id));
         
         if (newOrders.length > 0) {
-            // Marcar como conhecidas imediatamente
-            newOrders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
+            const latest = newOrders[0];
+            const id = latest.realId || latest.id;
+            
+            // Marcar como anunciado
+            newOrders.forEach(o => announcedOrderIds.current.add(o.realId || o.id));
 
-            // Tocar som se estiver online
-            if (isOnlineRef.current) {
+            // 1. Som (se permitido)
+            if (localStorage.getItem('pref_sound') !== 'false') {
                 playIziSound('driver', true);
-                
-                if (window.Notification && Notification.permission === 'granted') {
-                    new Notification('🚀 Nova Missão Izi!', {
-                        body: `R$ ${newOrders[0].price?.toFixed(2) || '0,00'} • ${newOrders[0].origin || 'Entrega nova'}`,
-                        icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'
-                    });
-                }
             }
+
+            // 2. Trazer para o primeiro plano (Android) - Saltando sobre outros apps
+            if (Capacitor.getPlatform() === 'android') {
+                ForegroundService.moveToForeground().catch(() => {});
+            }
+
+            // 3. Notificação Nativa
+            if (Notification.permission === 'granted') {
+                const servicePreview = getServicePresentation(latest);
+                new Notification('🚀 Nova Missão Izi!', { 
+                    body: `${servicePreview.headline} • ${servicePreview.pickupText || latest.pickup_address}`, 
+                    icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
+                });
+            }
+
+            // 4. Popup Flutuante (Uber-style) que permite aceitar/recusar na hora
+            setFloatingOrder(latest);
+            setShowFloatingOrder(true);
+
+            // Auto-dismiss após 30s
+            if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
+            floatingOrderTimeoutRef.current = setTimeout(() => {
+                setShowFloatingOrder(false);
+                setFloatingOrder(null);
+            }, 30000);
         }
-    }, [visibleOrders, isAuthenticated]);
+    }, [visibleOrders, isAuthenticated, isOnline, getServicePresentation]);
+
+    // Limpar IDs antigos do announcedOrderIds
+    useEffect(() => {
+        if (visibleOrders.length === 0) {
+            announcedOrderIds.current.clear();
+            return;
+        }
+        const currentIds = new Set(visibleOrders.map(o => o.realId || o.id));
+        announcedOrderIds.current.forEach(id => {
+            if (!currentIds.has(id)) announcedOrderIds.current.delete(id);
+        });
+    }, [visibleOrders]);
 
     const [finishedMissionData, setFinishedMissionData] = useState<{
         show: boolean, 
@@ -2880,25 +2914,8 @@ function App() {
                     }
                     
                     if (isOnlineRef.current && shouldSound) {
-                        playIziSound('driver', true);
-                        if (Capacitor.getPlatform() === 'android') {
-                            ForegroundService.moveToForeground().catch(() => {});
-                        }
-                        if (Notification.permission === 'granted') {
-                            new Notification('🚀 Nova Missão Izi!', { 
-                                body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
-                                icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
-                            });
-                        }
-                        // Dispara popup flutuante de nova chamada
-                        setFloatingOrder(mappedOrder);
-                        setShowFloatingOrder(true);
-                        // Auto-dismiss após 30s se não interagir
-                        if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
-                        floatingOrderTimeoutRef.current = setTimeout(() => {
-                            setShowFloatingOrder(false);
-                            setFloatingOrder(null);
-                        }, 30000);
+                        // O alerta agora é disparado pelo useEffect de monitoramento de 'orders'
+                        // que centraliza a lógica de som, moveToForeground e popup flutuante.
                     }
                     return [mappedOrder, ...prev].slice(0, 20);
                 });
@@ -3198,7 +3215,7 @@ function App() {
                 txs.forEach((t: any) => {
                     if (t.type === 'pagamento') return;
                     const amount = Number(t.amount);
-                    const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback'].includes(t.type);
+                    const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback', 'loan_deposit', 'credit'].includes(t.type);
                     balance = isCredit ? balance + amount : balance - amount;
 
                     const isEarning = ['venda', 'vaga_dedicada', 'bonus', 'deposito'].includes(t.type);
@@ -8053,7 +8070,7 @@ function App() {
                         {authMode === 'login' && (
                             <a 
                                 href="https://wa.me/5511999999999?text=Ol%C3%A1%21%20Sou%20entregador%20Izi%20e%20esqueci%20minha%20senha.%20Pode%20me%20ajudar%3F" 
-                                target="_blank" 
+                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-[11px] font-black text-primary uppercase tracking-wider"
                             >
@@ -8078,8 +8095,8 @@ function App() {
         if (!showFloatingOrder || !floatingOrder) return null;
 
         const presentation = getServicePresentation(floatingOrder);
-        const grossEarnings = getGrossEarnings(floatingOrder);
-        const netEarnings = getNetEarnings(floatingOrder);
+        const grossEarnings = typeof getGrossEarnings === 'function' ? getGrossEarnings(floatingOrder) : 0;
+        const netEarnings = typeof getNetEarnings === 'function' ? getNetEarnings(floatingOrder) : 0;
 
         const handleAcceptFloating = () => {
             if (floatingOrderTimeoutRef.current) clearTimeout(floatingOrderTimeoutRef.current);
@@ -8103,6 +8120,11 @@ function App() {
             setFloatingOrder(null);
         };
 
+        // Fallbacks seguros para exibição
+        const displayNet = isFinite(netEarnings) ? netEarnings : 0;
+        const displayGross = isFinite(grossEarnings) ? grossEarnings : 0;
+        const displayColor = presentation.color || '#facc15';
+
         return (
             <motion.div
                 key="floating-order-popup"
@@ -8111,13 +8133,13 @@ function App() {
                 exit={{ opacity: 0, scale: 0.9, y: -20 }}
                 transition={{ type: 'spring', damping: 20, stiffness: 300 }}
                 className="fixed inset-0 z-[9999] flex flex-col items-center justify-center font-['Plus_Jakarta_Sans']"
-                style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)' }}
+                style={{ background: 'rgba(0,0,0,0.85)' }}
             >
                 {/* Card principal */}
-                <div className="w-full max-w-sm mx-4 bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <div className="w-full max-w-sm mx-4 bg-white rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/20">
                     {/* Header colorido por tipo */}
                     <div className="relative overflow-hidden px-6 pt-8 pb-6"
-                        style={{ background: `linear-gradient(135deg, ${presentation.color || '#facc15'} 0%, ${presentation.color || '#facc15'}cc 100%)` }}
+                        style={{ background: `linear-gradient(135deg, ${displayColor} 0%, ${displayColor}cc 100%)` }}
                     >
                         {/* Pulse ring de atenção */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -8640,7 +8662,7 @@ function App() {
                     <>
                         <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
                             {/* Popup flutuante de nova chamada — sobrepõe tudo */}
-                            <AnimatePresence>{showFloatingOrder && renderFloatingOrderPopup()}</AnimatePresence>
+                            
                             <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
                             <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
                             <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
@@ -9385,6 +9407,11 @@ function App() {
             {/* In-App Broadcast Popups */}
             <AnimatePresence>
               {renderBroadcastPopup()}
+            </AnimatePresence>
+
+            {/* Popup flutuante de nova chamada — sobrepõe tudo */}
+            <AnimatePresence>
+                {showFloatingOrder && renderFloatingOrderPopup()}
             </AnimatePresence>
         </div>
     );

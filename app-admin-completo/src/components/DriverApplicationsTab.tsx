@@ -109,7 +109,8 @@ const DriverApplicationsTab = () => {
         user_id: app.user_id,
         title: '🎊 Cadastro Aprovado!',
         body: `Parabéns, ${app.full_name.split(' ')[0]}! Sua conta de entregador foi ativada.`,
-        status: 'pending'
+        status: 'pending',
+        app_type: 'driver'
       });
 
       alert('Candidatura aprovada com sucesso!');

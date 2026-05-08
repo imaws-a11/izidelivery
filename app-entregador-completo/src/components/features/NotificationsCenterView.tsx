@@ -35,7 +35,7 @@ const NotificationsCenterView: React.FC<NotificationsCenterViewProps> = ({ drive
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             const authToken = await getSecureToken();
 
-            const response = await fetch(`${supabaseUrl}/rest/v1/notifications_delivery?user_id=eq.${driverId}&order=created_at.desc`, {
+            const response = await fetch(`${supabaseUrl}/rest/v1/notifications_delivery?user_id=eq.${driverId}&app_type=eq.driver&order=created_at.desc`, {
                 headers: {
                     'apikey': supabaseKey,
                     'Authorization': `Bearer ${authToken}`,
@@ -67,7 +67,7 @@ const NotificationsCenterView: React.FC<NotificationsCenterViewProps> = ({ drive
                 event: '*',
                 schema: 'public',
                 table: 'notifications_delivery',
-                filter: `user_id=eq.${driverId}`
+                filter: `user_id=eq.${driverId}&app_type=eq.driver`
             }, (payload) => {
                 if (payload.eventType === 'INSERT') {
                     setNotifications(prev => [payload.new as Notification, ...prev]);
