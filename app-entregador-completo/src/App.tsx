@@ -1630,7 +1630,8 @@ function App() {
 
                  PushNotifications.addListener('pushNotificationReceived', async (notification) => {
  
-                     playIziSound('driver', true);
+                     // Toca o som apenas uma vez (false para loop)
+                     playIziSound('driver', false);
                      
                      // Se receber notificação de novo pedido ou chamada, trazer o app para o primeiro plano (Pop-up)
                      if (notification.data?.type === 'new_order' || notification.title?.toLowerCase().includes('chamada') || notification.body?.toLowerCase().includes('chamada')) {
@@ -1639,10 +1640,6 @@ function App() {
                                  // Tenta trazer o app para frente
                                  await ForegroundService.moveToForeground();
  
-                                 
-                                 // Garante que o som toque mesmo que o sistema de notificações demore
-                                 const audio = new Audio('/sounds/notification.mp3');
-                                 audio.play().catch(e => console.warn('Erro ao tocar som manual:', e));
                              } catch (err) {
                                  console.warn('[PUSH] Falha ao trazer para o primeiro plano. Talvez falte permissão de sobreposição:', err);
                              }
@@ -9224,7 +9221,7 @@ function App() {
                             className="max-w-md mx-auto p-4 flex items-center gap-4 relative"
                         >
                             <div className="bg-yellow-400/10 p-2.5 rounded-xl text-yellow-600">
-                                <Icon name="Bell" size={22} />
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
                             </div>
                             
                             <div className="flex-1 overflow-hidden">
@@ -9240,7 +9237,7 @@ function App() {
                                 onClick={() => setSystemNotification(null)}
                                 className="bg-zinc-100 hover:bg-zinc-200 p-2 rounded-lg text-zinc-400 transition-colors flex-shrink-0"
                             >
-                                <Icon name="X" size={16} />
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
                     </motion.div>

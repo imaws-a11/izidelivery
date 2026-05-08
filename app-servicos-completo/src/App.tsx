@@ -187,6 +187,7 @@ function App() {
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
+  const [systemNotification, setSystemNotification] = useState<{ title: string; message: string; image_url?: string } | null>(null);
   
   const sendInternalNotification = async (title: string, body: string, data: any = {}) => {
     if (!userId) return;
@@ -359,9 +360,14 @@ function App() {
               }
           }
 
-          // In-App Toast
+          // In-App Popup Premium (Minimalista)
           if (notif.type === 'popup' || notif.type === 'both' || notif.type === 'push') {
-              toastSuccess(`${notif.title} - ${notif.message}`);
+              setSystemNotification({
+                  title: notif.title,
+                  message: notif.message,
+                  image_url: notif.image_url
+              });
+              setTimeout(() => setSystemNotification(null), 8000);
           }
         }
       })
@@ -395,12 +401,12 @@ function App() {
           return;
         }
 
-        // Cria canal dedicado no Android 8+ para garantir som e vibraÃ§Ã£o
+        // Cria canal dedicado no Android para garantir som e vibraÃ§Ã£o
         if (Capacitor.getPlatform() === 'android') {
           await PushNotifications.createChannel({
-            id: 'order_updates',
-            name: 'AtualizaÃ§Ãµes de Pedidos',
-            description: 'NotificaÃ§Ãµes sobre status de pedidos e entregas',
+            id: 'izi_notifications',
+            name: 'Notificações IZI',
+            description: 'Canal principal de notificações do IZI Delivery',
             sound: 'notification',
             importance: 5,
             visibility: 1,
@@ -424,7 +430,9 @@ function App() {
 
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
           console.log('[PUSH] Recebida:', notification);
-          showToast(`${notification.title}: ${notification.body}`, 'info');
+          // Som apenas uma vez
+          const audio = new Audio('/sounds/notification.mp3');
+          audio.play().catch(() => {});
         });
 
         PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
@@ -5103,6 +5111,49 @@ const navigateSubView = (target: string) => {
           {showSplash && (
             <SplashScreenComponent key="splash-screen" finishLoading={() => setShowSplash(false)} />
           )}
+        </AnimatePresence>
+
+        {/* Popup de Notificação do Sistema Minimalista */}
+        <AnimatePresence>
+            {systemNotification && (
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    animate={{ opacity: 1, y: 16 }}
+                    exit={{ opacity: 0, y: -50 }}
+                    className="fixed top-0 left-0 right-0 z-[9999] px-4 pointer-events-none"
+                >
+                    <div 
+                        style={{ 
+                            background: '#ffffff',
+                            border: '2px solid #facc15',
+                            borderRadius: '20px',
+                            pointerEvents: 'auto',
+                            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)'
+                        }}
+                        className="max-w-md mx-auto p-4 flex items-center gap-4 relative"
+                    >
+                        <div className="bg-yellow-400/10 p-2.5 rounded-xl text-yellow-600 flex-shrink-0">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+                        </div>
+                        
+                        <div className="flex-1 overflow-hidden">
+                            <h4 className="text-zinc-900 font-bold text-base leading-tight truncate">
+                                {systemNotification.title}
+                            </h4>
+                            <p className="text-zinc-500 text-xs font-semibold mt-0.5 line-clamp-2">
+                                {systemNotification.message}
+                            </p>
+                        </div>
+                        
+                        <button 
+                            onClick={() => setSystemNotification(null)}
+                            className="bg-zinc-100 hover:bg-zinc-200 p-2 rounded-lg text-zinc-400 transition-colors flex-shrink-0"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </motion.div>
+            )}
         </AnimatePresence>
       </div>
     </>
