@@ -84,6 +84,9 @@ export default function OrdersMerchantTab() {
       
       const { data, error } = await supabase.from('orders_delivery').update(updateData).eq('id', id).select();
       
+      const targetOrder = allOrders.find(o => o.id === id);
+      const targetMerchantId = targetOrder?.merchant_id || merchantProfile?.id;
+
       if (error) {
         console.error('Erro detalhado Supabase:', error);
         toastError('Erro ao processar pedido: ' + error.message);
@@ -101,7 +104,7 @@ export default function OrdersMerchantTab() {
           supabase.functions.invoke('send-push-notification', {
             body: {
               driver_id: 'all',
-              merchant_id: merchantProfile?.id,
+              merchant_id: targetMerchantId,
               title: '🛵 Nova Entrega IZI!',
               body: 'Um novo pedido aguarda um entregador na região. Seja rápido!',
               data: { orderId: id }
@@ -114,7 +117,7 @@ export default function OrdersMerchantTab() {
              supabase.functions.invoke('send-push-notification', {
                 body: {
                   driver_id: 'all',
-                  merchant_id: merchantProfile?.id,
+                  merchant_id: targetMerchantId,
                   title: '🔔 Novo Pedido IZI',
                   body: 'Um novo pedido acabou de ser recebido, prepare-se!',
                   data: { orderId: id }

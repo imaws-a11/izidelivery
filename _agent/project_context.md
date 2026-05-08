@@ -111,10 +111,14 @@ Atualizado: 2026-05-08
 - Badge de notificação simplificado para um ponto de destaque (*dot indicator*).
 - Header focado 100% em navegação rápida, eliminando qualquer ruído visual.
 
-### ✅ ProteÃ§Ã£o de SessÃ£o e Integridade de Dados (Anti-Cache)
-> **REGRA DE OURO:** NUNCA confie apenas no `localStorage` para exibir dados sensÃ­veis ou documentos (CPF, Email, Telefone).
-- **Limpeza de Logout:** A funÃ§Ã£o `clearDriverSessionState` no App Entregador DEVE remover todas as chaves de perfil (`phone`, `email`, `plate`, `cpf`, `pix`, `bank`) alÃ©m dos tokens de auth.
-- **Refresh ForÃ§ado:** Sempre que o modal de "Meus Dados" for aberto, o sistema dispara um `loadProfileAndEnforceOnboarding` para garantir que o estado `editProfileData` venha direto do banco de dados, ignorando qualquer cache anterior.
+### **Fleet Exclusivity & Dispatch Logic**
+- **Trigger Source**: Notifications for new orders to drivers are triggered in `OrdersMerchantTab.tsx` when a merchant (or admin) accepts an order (status `waiting_driver`).
+- **Merchant ID Integrity**: Fixed a bug where accepting an order as a Master Admin would send an `undefined` merchant ID, bypassing the exclusivity filter. Now the `merchant_id` is extracted directly from the order object before the push call.
+- **Edge Function Enforcement**: The `send-push-notification` function now explicitly logs the dispatch priority and prevents global broadcasts if a merchant is set to `exclusive` mode.
+
+### **Session Protection & Data Integrity**
+- **Anti-Cache Measures**: The Driver App now performs a full purge of `localStorage` on logout and forces a database re-fetch before opening sensitive profile modals.
+- **Source of Truth**: `loadProfileAndEnforceOnboarding` is the single point of synchronization between Supabase and the application state.
 - **Fonte de Verdade:** O `loadProfileAndEnforceOnboarding` Ã© o Ãºnico responsÃ¡vel por sincronizar o banco -> estado -> localStorage. NÃ£o use `useEffect` paralelos para ler do localStorage no preenchimento de formulÃ¡rios.
 
 ### 📂 Arquivos Modificados
