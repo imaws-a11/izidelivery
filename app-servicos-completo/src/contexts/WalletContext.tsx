@@ -16,6 +16,14 @@ interface WalletContextData {
   handleDeleteCard: (id: string) => Promise<void>;
   setUserXP: React.Dispatch<React.SetStateAction<number>>;
   setIziCoins: React.Dispatch<React.SetStateAction<number>>;
+  processCardPayment: (params: { 
+    orderId: string, 
+    amount: number, 
+    cardObj?: any,
+    email: string,
+    onSuccess?: () => void,
+    onError?: (msg: string) => void
+  }) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextData>({} as WalletContextData);
@@ -102,6 +110,43 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const processCardPayment = async ({ orderId, amount, cardObj, email, onSuccess, onError }: any) => {
+    try {
+      const brand = (cardObj.brand || "Visa").toLowerCase();
+      const token = cardObj.mp_token || cardObj.token;
+
+      // Mapeamento correto para IDs do Mercado Pago
+      let mpMethodId = "master";
+      if (brand.includes("visa")) mpMethodId = "visa";
+      else if (brand.includes("master")) mpMethodId = "master";
+      else if (brand.includes("amex")) mpMethodId = "amex";
+      else if (brand.includes("elo")) mpMethodId = "elo";
+      else if (brand.includes("hiper")) mpMethodId = "hipercard";
+
+      const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
+        body: {
+          amount: Number(amount.toFixed(2)),
+          orderId: orderId,
+          payment_method_id: mpMethodId,
+          token: token,
+          email: email,
+          installments: 1
+        },
+      });
+
+      if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process'))) {
+         const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
+         onError?.(mpMsg);
+         return;
+      }
+
+      onSuccess?.();
+    } catch (err: any) {
+      console.error("Card processing error:", err);
+      onError?.("Erro ao processar pagamento");
+    }
+  };
+
   useEffect(() => {
     if (!userId) {
       setWalletBalance(0);
@@ -181,7 +226,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       fetchSavedCards,
       handleDeleteCard,
       setUserXP,
-      setIziCoins
+      setIziCoins,
+      processCardPayment
     }}>
       {children}
     </WalletContext.Provider>

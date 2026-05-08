@@ -4450,7 +4450,13 @@ const navigateSubView = (target: string) => {
                       onOpenDepositModal={() => setShowDepositModal(true)}
                       onReturnToPayment={(order) => {
                         setSelectedItem(order);
-                        setShowDepositModal(true);
+                        const tech = (order.payment_method || 'pix').toLowerCase();
+                        const targetView = (tech.includes('bitcoin') || tech.includes('lightning')) 
+                          ? 'lightning_payment' 
+                          : (tech.includes('cartao') || tech.includes('card'))
+                            ? 'payments'
+                            : 'pix_payment';
+                        setSubView(targetView);
                       }}
                       onOpenCoinTracking={(order) => {
                         setSelectedItem(order);

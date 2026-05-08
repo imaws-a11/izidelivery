@@ -217,7 +217,11 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 if (!isPending || isOffline) return null;
                 
                 const tech = (selectedItem.payment_method || 'pix').toLowerCase();
-                const targetView = tech.includes('bitcoin') || tech.includes('lightning') ? 'lightning_payment' : 'pix_payment';
+                const targetView = (tech.includes('bitcoin') || tech.includes('lightning')) 
+                  ? 'lightning_payment' 
+                  : (tech.includes('cartao') || tech.includes('card'))
+                    ? 'payments'
+                    : 'pix_payment';
 
                 return (
                   <motion.div 

@@ -20,13 +20,21 @@ export const PaymentMethodsView = () => {
     walletBalance, 
     iziCoins,
     userId,
-    fetchSavedCards
+    fetchSavedCards,
+    selectedItem,
+    setSelectedItem,
+    processCardPayment,
+    user,
+    loginEmail
   } = useApp();
 
     // Log de cartões removido para limpeza de console
 
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const isPendingOrder = selectedItem && (selectedItem.status === 'pendente_pagamento' || selectedItem.status === 'novo');
 
   const iziCoinValue = globalSettings?.izi_coin_value || 1.0;
 
@@ -52,10 +60,45 @@ export const PaymentMethodsView = () => {
       brand: brand,
       last4: last4
     });
-    setPaymentMethod('cartao');
-    toastSuccess("Cartão temporário gerado com sucesso! Confirme seu pedido.");
+    setPaymentMethod('credit_card');
+    toastSuccess("Cartão temporário gerado com sucesso! Agora confirme o pagamento.");
     setIsAddingCard(false);
-    setSubView('checkout');
+  };
+
+  const handlePayOrder = async () => {
+    if (!selectedItem || (!selectedCard && paymentMethod === 'credit_card')) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      const email = user?.email || loginEmail || "cliente@izidelivery.com";
+      
+      if (paymentMethod === 'credit_card') {
+        await processCardPayment({
+          orderId: selectedItem.id,
+          amount: selectedItem.total_price,
+          cardObj: selectedCard,
+          email,
+          onSuccess: async () => {
+            toastSuccess("Pagamento aprovado!");
+            const { data: updated } = await supabase.from('orders_delivery').select().eq('id', selectedItem.id).single();
+            setSelectedItem(updated || selectedItem);
+            setSubView('active_order');
+          },
+          onError: (msg: any) => {
+            toastError(`Erro: ${msg}`);
+          }
+        });
+      } else {
+        // Se mudou o método para Pix ou Lightning, redireciona
+        setSubView(paymentMethod === 'pix' ? 'pix_payment' : 'lightning_payment');
+      }
+    } catch (e) {
+      console.error("Pay Order Error:", e);
+      toastError("Falha ao processar pagamento");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -206,6 +249,26 @@ export const PaymentMethodsView = () => {
           )}
         </AnimatePresence>
       </main>
+
+      {isPendingOrder && !isAddingCard && (
+        <div className="fixed bottom-0 inset-x-0 p-6 bg-white/80 backdrop-blur-xl border-t border-zinc-100 z-[100]">
+           <motion.button
+             whileTap={{ scale: 0.95 }}
+             disabled={isProcessing || (paymentMethod === 'credit_card' && !selectedCard)}
+             onClick={handlePayOrder}
+             className="w-full h-16 bg-yellow-400 rounded-[28px] shadow-xl shadow-yellow-400/20 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+           >
+              {isProcessing ? (
+                <div className="size-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-black text-xl">check_circle</span>
+                  <span className="text-black font-black text-xs uppercase tracking-[0.2em]">Confirmar Pagamento • R$ {selectedItem.total_price.toFixed(2).replace('.', ',')}</span>
+                </>
+              )}
+           </motion.button>
+        </div>
+      )}
     </div>
   );
 };

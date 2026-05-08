@@ -156,6 +156,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
               const method = order.payment_method;
               if (method === 'pix') navigateSubView('pix_payment');
               else if (method === 'lightning') navigateSubView('lightning_payment');
+              else if (method?.includes('cartao') || method?.includes('card')) navigateSubView('payments');
               else navigateSubView('checkout');
             }}
             className="w-full py-4 bg-yellow-400 text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-yellow-200 flex items-center justify-center gap-2 mt-3 active:scale-95 transition-all"

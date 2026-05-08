@@ -81,8 +81,8 @@ export const OrderStatusView = () => {
               </button>
            </div>
 
-           {status === 'pendente' && (
-             <button 
+           {(status === 'pendente' || status === 'pendente_pagamento') && (
+             <button
                onClick={async () => {
                  const confirm = await showConfirm({ message: "Deseja cancelar seu pedido?", danger: true });
                  if(confirm) {

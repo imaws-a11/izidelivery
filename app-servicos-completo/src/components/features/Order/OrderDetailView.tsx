@@ -72,7 +72,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const isCancelled = ['cancelado', 'cancelled'].includes(order.status);
   const isActive = !isPending && !isCompleted && !isCancelled;
   const canDelete = isCompleted || isCancelled;
-  const canCancelStatus = ['novo', 'pendente', 'waiting_driver', 'waiting_merchant', 'aceito', 'confirmado', 'a_caminho_coleta'].includes(order.status);
+  const canCancelStatus = ['novo', 'pendente', 'pendente_pagamento', 'waiting_driver', 'waiting_merchant', 'aceito', 'confirmado', 'a_caminho_coleta'].includes(order.status);
 
   const handleCancel = async () => {
     if (!onCancelOrder) return;
@@ -173,7 +173,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     if (isCoin) {
                       (window as any).izi_navigate?.('izi_black_purchase', order);
                     } else {
-                      (window as any).izi_navigate?.(method === 'pix' ? 'pix_payment' : method === 'lightning' ? 'lightning_payment' : 'checkout', order);
+                      (window as any).izi_navigate?.(method === 'pix' ? 'pix_payment' : method === 'lightning' ? 'lightning_payment' : 'payments', order);
                     }
                 }}
                 className="w-full py-4 bg-yellow-400 text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-yellow-200/50 active:scale-95 transition-all"
