@@ -1065,7 +1065,7 @@ function App() {
                 setSelectedOrder(order);
                 setShowOrderModal(true);
                 activeOverlayMissionRef.current = null;
-                ForegroundService.moveToForeground().catch(() => {});
+                OverlayPermission.bringAppToFront().catch(() => {});
             }
         });
         return () => {
@@ -1107,17 +1107,8 @@ function App() {
                 });
             }
 
-            // 3. Overlay Flutuante Nativo (SYSTEM_ALERT_WINDOW)
-            if (Capacitor.getPlatform() === 'android') {
-                const netEarnings = typeof getNetEarnings === 'function' ? getNetEarnings(latest) : 0;
-                const safeNet = isFinite(netEarnings) ? netEarnings : 0;
-                activeOverlayMissionRef.current = latest;
-                OverlayPermission.showMission({
-                    title: servicePreview?.title || servicePreview?.headline || 'Nova Missão',
-                    earnings: `R$ ${safeNet.toFixed(2).replace('.', ',')}`,
-                    distance: latest.distance || '—'
-                }).catch((e: any) => console.log('Overlay não permitido:', e));
-            }
+            // 3. Overlay nativo removido temporariamente a pedido do usuário
+            // A permissão continua existindo, mas o popup nativo não será mais desenhado.
         }
     }, [visibleOrders, isAuthenticated, isOnline]);
 
@@ -1737,18 +1728,9 @@ function App() {
                      // Toca o som apenas uma vez (false para loop)
                      playIziSound('driver', false);
                      
-                     // Se receber notificação de novo pedido ou chamada, trazer o app para o primeiro plano (Pop-up)
+                     // O moveToForeground causava tela branca no Android. Deixando apenas o som e a notificação.
+                     
                      if (notification.data?.type === 'new_order' || notification.title?.toLowerCase().includes('chamada') || notification.body?.toLowerCase().includes('chamada')) {
-                         if (Capacitor.getPlatform() === 'android') {
-                             try {
-                                 // Tenta trazer o app para frente
-                                 await ForegroundService.moveToForeground();
- 
-                             } catch (err) {
-                                 console.warn('[PUSH] Falha ao trazer para o primeiro plano. Talvez falte permissão de sobreposição:', err);
-                             }
-                         }
-
                          setOrders(prev => {
                             // lógica para adicionar o pedido se não estiver na lista ou disparar refresh
                             return prev;

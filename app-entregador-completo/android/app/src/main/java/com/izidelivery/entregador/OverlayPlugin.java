@@ -137,6 +137,14 @@ public class OverlayPlugin extends Plugin {
         });
     }
 
+    @PluginMethod
+    public void bringAppToFront(PluginCall call) {
+        Intent intent = new Intent(getContext(), getActivity().getClass());
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        getContext().startActivity(intent);
+        call.resolve();
+    }
+
     private void hideMissionOverlay() {
         if (overlayView != null && windowManager != null) {
             try {
