@@ -1725,41 +1725,78 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { 
         is_available,
         title,
+        email: rawEmail,
+        password,
         ...cleanData 
       } = editingItem;
 
-      // Abordagem Sênior: Verificar se já existe um entregador com este e-mail ou telefone
-      // para evitar duplicidade e apenas vincular ao lojista atual.
-      let existingId = cleanData.id;
+      const email = rawEmail?.trim().toLowerCase();
+      const phone = cleanData.phone?.trim();
 
-      if (!existingId) {
-        if (cleanData.email) {
-          const { data } = await supabase.from('drivers_delivery')
-            .select('id')
-            .eq('email', cleanData.email)
+      let authUserId = cleanData.id;
+
+      // 1. Verificação de Segurança Sênior: Impedir colisão de E-mail ou Telefone
+      if (!authUserId) {
+        if (email) {
+          const { data: emailCheck } = await supabase
+            .from('drivers_delivery')
+            .select('id, merchant_id')
+            .eq('email', email)
             .maybeSingle();
-          if (data) existingId = data.id;
+          
+          if (emailCheck) {
+            throw new Error('Este e-mail já está cadastrado para outro entregador no sistema.');
+          }
         }
         
-        if (!existingId && cleanData.phone) {
-          const { data } = await supabase.from('drivers_delivery')
-            .select('id')
-            .eq('phone', cleanData.phone)
+        if (phone) {
+          const { data: phoneCheck } = await supabase
+            .from('drivers_delivery')
+            .select('id, merchant_id')
+            .eq('phone', phone)
             .maybeSingle();
-          if (data) existingId = data.id;
+            
+          if (phoneCheck) {
+            throw new Error('Este telefone já está cadastrado para outro entregador no sistema.');
+          }
         }
       }
 
+      // 2. Se for um novo motoboy e tiver e-mail/senha, cria a conta de acesso primeiro
+      if (!authUserId && email && password) {
+        console.log('[DRIVER_AUTH] Criando conta de acesso para:', email);
+        const { data: authData, error: authError } = await supabase.functions.invoke('create-admin-user', {
+          body: { 
+            email, 
+            password, 
+            role: 'driver',
+            metadata: { 
+              merchant_id: merchantProfile.id,
+              name: cleanData.name 
+            }
+          }
+        });
+
+        if (authError) throw new Error('Erro ao criar conta de acesso: ' + authError.message);
+        if (authData?.error) throw new Error(authData.error);
+        
+        authUserId = authData.user.id;
+        console.log('[DRIVER_AUTH] Conta criada com sucesso ID:', authUserId);
+      }
+
+      // 3. Upsert na tabela drivers_delivery
       const { error } = await supabase.from('drivers_delivery').upsert({
         ...cleanData,
-        id: existingId, // Se encontrou, atualiza. Se não, o Supabase gera um novo.
+        id: authUserId, 
+        email: email || cleanData.email,
+        phone: phone || cleanData.phone,
         merchant_id: merchantProfile.id,
         is_deleted: false,
         is_active: true
       });
 
       if (error) throw error;
-      toastSuccess(existingId ? 'Vínculo do entregador atualizado!' : 'Seu entregador foi salvo!');
+      toastSuccess(cleanData.id ? 'Vínculo do entregador atualizado!' : 'Seu entregador foi salvo com sucesso!');
       setEditingItem(null);
       setEditType(null);
       fetchMyDrivers();

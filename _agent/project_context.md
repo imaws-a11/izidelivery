@@ -77,6 +77,15 @@ Atualizado: 2026-05-08
 - **Visual:** Estilo "Flat" no ProductDetailView, removendo sombras e gradientes obstrutivos.
 - **Feedback:** Overlay premium de "Produto Adicionado" com AnimatePresence e ícones dinâmicos.
 
+### **Despacho Exclusivo (Merchant Fleet)**
+- **Configuração:** O lojista define em "Minha Frota" se deseja priorizar seus próprios motoboys.
+- **Regra de Negócio:** Se `dispatch_priority === 'exclusive'`, as notificações de novos pedidos são filtradas no backend para atingir apenas entregadores com o `merchant_id` correspondente.
+- **Autenticação:** Motoboys próprios possuem conta no `auth.users` criada pelo lojista. O `id` na tabela `drivers_delivery` é sincronizado com o `id` do Auth.
+
+### **Notificações Push**
+- **Edge Function:** `send-push-notification` centraliza a lógica de roteamento (Global vs Exclusivo).
+- **Android:** Utiliza o canal `izi_notifications` com prioridade alta para garantir o "toque" sonoro mesmo em background.
+
 ### ✅ Sincronização Multidispositivos
 - **Banco:** Criada tabela `cart_sync_delivery` para persistência global.
 - **Escopo:** Sincronização em tempo real (Supabase Realtime) de:
@@ -102,10 +111,17 @@ Atualizado: 2026-05-08
 - Badge de notificação simplificado para um ponto de destaque (*dot indicator*).
 - Header focado 100% em navegação rápida, eliminando qualquer ruído visual.
 
+### ✅ ProteÃ§Ã£o de SessÃ£o e Integridade de Dados (Anti-Cache)
+> **REGRA DE OURO:** NUNCA confie apenas no `localStorage` para exibir dados sensÃ­veis ou documentos (CPF, Email, Telefone).
+- **Limpeza de Logout:** A funÃ§Ã£o `clearDriverSessionState` no App Entregador DEVE remover todas as chaves de perfil (`phone`, `email`, `plate`, `cpf`, `pix`, `bank`) alÃ©m dos tokens de auth.
+- **Refresh ForÃ§ado:** Sempre que o modal de "Meus Dados" for aberto, o sistema dispara um `loadProfileAndEnforceOnboarding` para garantir que o estado `editProfileData` venha direto do banco de dados, ignorando qualquer cache anterior.
+- **Fonte de Verdade:** O `loadProfileAndEnforceOnboarding` Ã© o Ãºnico responsÃ¡vel por sincronizar o banco -> estado -> localStorage. NÃ£o use `useEffect` paralelos para ler do localStorage no preenchimento de formulÃ¡rios.
+
 ### 📂 Arquivos Modificados
 - `AppContext.tsx`, `ProductDetailView.tsx`, `App.tsx` (Serviços/Cliente)
 - `OnboardingView.tsx`, `App.tsx` (Entregador - UI & Auth)
 - `AdminProvider.tsx`, `DriverApplicationsTab.tsx` (Admin)
-- Edge Functions: `manage-user-auth`, `manage-driver-auth`, `create-admin-user`, `broadcast-push`.
+- `AdminProvider.tsx`, `MyDriversTab.tsx`, `MyStudioTab.tsx` (Merchant Fleet)
+- Edge Functions: `manage-user-auth`, `manage-driver-auth`, `create-admin-user`, `broadcast-push`, `send-push-notification`.
 - DB: Tabela `cart_sync_delivery`, Índices da tabela `drivers_delivery`, Trigger `handle_new_user_delivery`.
 - Android: `AndroidManifest.xml`, `capacitor.config.ts`, `google-services.json` (ambos os apps).

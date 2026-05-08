@@ -13,6 +13,24 @@ export default function MyDriversTab() {
     handleUpdateDispatchSettings
   } = useAdmin();
 
+  const [localPriority, setLocalPriority] = React.useState(merchantProfile?.dispatch_priority || 'global');
+  const [isSavingPriority, setIsSavingPriority] = React.useState(false);
+
+  React.useEffect(() => {
+    if (merchantProfile?.dispatch_priority) {
+      setLocalPriority(merchantProfile.dispatch_priority);
+    }
+  }, [merchantProfile?.dispatch_priority]);
+
+  const onSavePriority = async () => {
+    setIsSavingPriority(true);
+    try {
+      await handleUpdateDispatchSettings('dispatch_priority', localPriority);
+    } finally {
+      setIsSavingPriority(false);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-20">
       {/* Header */}
@@ -44,11 +62,11 @@ export default function MyDriversTab() {
                     { id: 'exclusive', label: 'Meus Motoboys Primeiro', desc: 'O pedido toca primeiro para sua frota' },
                     { id: 'global', label: 'Todos os Motoboys', desc: 'Toca simultâneo para todos (Padrão)' },
                   ].map((opt) => {
-                    const isSelected = merchantProfile?.dispatch_priority === opt.id || (!merchantProfile?.dispatch_priority && opt.id === 'global');
+                    const isSelected = localPriority === opt.id;
                     return (
                       <button
                         key={opt.id}
-                        onClick={() => handleUpdateDispatchSettings('dispatch_priority', opt.id)}
+                        onClick={() => setLocalPriority(opt.id)}
                         className={`p-4 rounded-2xl border text-left transition-all ${
                           isSelected 
                             ? 'bg-primary/20 border-primary text-primary' 
@@ -65,6 +83,28 @@ export default function MyDriversTab() {
                   })}
                 </div>
               </div>
+
+              <button
+                onClick={onSavePriority}
+                disabled={isSavingPriority || localPriority === merchantProfile?.dispatch_priority}
+                className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${
+                  localPriority === merchantProfile?.dispatch_priority
+                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                    : 'bg-primary text-slate-900 hover:brightness-110 shadow-lg shadow-primary/20'
+                }`}
+              >
+                {isSavingPriority ? (
+                  <>
+                    <div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm">save</span>
+                    Salvar Regras
+                  </>
+                )}
+              </button>
             </div>
           </section>
         </div>

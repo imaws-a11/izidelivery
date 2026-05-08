@@ -30,17 +30,28 @@ serve(async (req) => {
     }
 
     // 1. Verificar se o usuário já existe no Auth por email
-    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    const { data: { users: existingUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers()
     if (listError) throw listError
 
-    const existingAuthUser = existingUsers.users.find(u => u.email === email)
+    const existingAuthUser = existingUsers.find(u => u.email === email)
 
     let authUser;
 
-    if (existingAuthUser) {
-      // Se existe, apenas atualizamos a senha e metadados
+    // Se o usuário já existe e não informamos um userId (intenção de novo cadastro)
+    if (existingAuthUser && !userId) {
+      throw new Error('Este e-mail já está em uso por outra conta no sistema.')
+    }
+
+    // Se o usuário existe e informamos um userId diferente do dono do e-mail
+    if (existingAuthUser && userId && existingAuthUser.id !== userId) {
+      throw new Error('Este e-mail já está vinculado a outro usuário.')
+    }
+
+    if (existingAuthUser || userId) {
+      // Se existe (ou informamos o userId para editar), atualizamos
+      const targetId = userId || existingAuthUser?.id
       const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        existingAuthUser.id,
+        targetId,
         { 
           password: password,
           user_metadata: { role, ...metadata }

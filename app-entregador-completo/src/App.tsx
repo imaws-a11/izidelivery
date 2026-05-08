@@ -1231,19 +1231,8 @@ function App() {
     });
     const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-    // Efeito para importar dados automaticamente para o formulário de edição
-    useEffect(() => {
-        if (isAuthenticated && driverId) {
-            setEditProfileData({
-                name: driverName || '',
-                phone: localStorage.getItem('izi_driver_phone') || '',
-                email: localStorage.getItem('izi_driver_email') || '',
-                vehicle_type: localStorage.getItem('izi_driver_vehicle') || '',
-                plate: localStorage.getItem('izi_driver_plate') || '',
-                cpf: localStorage.getItem('izi_driver_cpf') || ''
-            });
-        }
-    }, [isAuthenticated, driverId, driverName, showPersonalDataModal]);
+    // O formulário de edição (editProfileData) é alimentado via loadProfileAndEnforceOnboarding
+    // garantindo que apenas dados frescos do banco de dados sejam exibidos.
 
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [showWithdrawHistory, setShowWithdrawHistory] = useState(false);
@@ -1340,21 +1329,27 @@ function App() {
         setShowReceipt(false);
         setSelectedReceiptUrl('');
 
-        // Remove chaves críticas de sessão
+        // Remove chaves críticas de sessão e perfil
         const keysToRemove = [
             'izi_driver_authenticated',
             'izi_driver_uid',
             'izi_driver_name',
-            'izi_driver_pix',
-            'izi_driver_avatar',
+            'izi_driver_phone',
+            'izi_driver_email',
             'izi_driver_vehicle',
+            'izi_driver_plate',
+            'izi_driver_cpf',
+            'izi_driver_pix',
+            'izi_driver_bank_name',
+            'izi_driver_avatar',
             'izi_driver_active_tab',
             'Izi_active_mission',
             'Izi_declined_slots',
             'Izi_declined_timed',
             'izi_driver_online',
             'izi_driver_approved',
-            'izi_audio_unlocked'
+            'izi_audio_unlocked',
+            'last_izi_broadcast_driver'
         ];
 
         if (currentUid) {
@@ -1369,7 +1364,7 @@ function App() {
 
         keysToRemove.forEach(k => localStorage.removeItem(k));
         
-        // Limpeza agressiva de qualquer chave remanescente do Supabase (opcional mas recomendado)
+        // Limpeza agressiva de qualquer chave remanescente do Supabase
         Object.keys(localStorage).forEach(key => {
             if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
                 localStorage.removeItem(key);
@@ -1774,6 +1769,8 @@ function App() {
     // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
     const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
         console.log('[AUTH] loadProfileAndEnforceOnboarding chamada para:', userId);
+        if (!userId) return;
+
         try {
             const { data: profile, error: profileError } = await supabase
                 .from('drivers_delivery')
@@ -1783,12 +1780,10 @@ function App() {
 
             if (profileError) {
                 console.error('[AUTH] Erro ao buscar perfil:', profileError);
-                toastError('Falha de conexão. Tente atualizar a tela.');
                 return;
             }
 
             if (!profile) {
-                // Novo usuário sem perfil
                 setIsProfileNotFound(true);
                 setIsApproved(false);
                 setIsOnline(false);
@@ -1798,22 +1793,40 @@ function App() {
                 return;
             }
 
-            // Preenche estado com dados do perfil
-            if (profile.name) {
-                setDriverName(profile.name);
-                localStorage.setItem('izi_driver_name', profile.name);
-            }
+            // --- SINCRONIZAÃ‡ÃƒO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
+            
+            // 1. Nome e Avatar
+            const currentName = profile.name || userName || 'Entregador Izi';
+            setDriverName(currentName);
+            localStorage.setItem('izi_driver_name', currentName);
+            
             if (profile.avatar_url) {
                 setDriverAvatar(profile.avatar_url);
                 localStorage.setItem('izi_driver_avatar', profile.avatar_url);
             }
+
+            // 2. VeÃ­culo e Placa
             if (profile.vehicle_type) {
                 setDriverVehicle(profile.vehicle_type);
                 localStorage.setItem('izi_driver_vehicle', profile.vehicle_type);
             }
-            if (profile.license_plate) setDriverPlate(profile.license_plate);
-            if (profile.bank_info?.pix_key) setPixKey(profile.bank_info.pix_key);
+            if (profile.license_plate) {
+                setDriverPlate(profile.license_plate);
+                localStorage.setItem('izi_driver_plate', profile.license_plate);
+            }
 
+            // 3. Documentos e Contato
+            if (profile.phone) localStorage.setItem('izi_driver_phone', profile.phone);
+            if (profile.email) localStorage.setItem('izi_driver_email', profile.email);
+            if (profile.document_number) localStorage.setItem('izi_driver_cpf', profile.document_number);
+            
+            // 4. Dados BancÃ¡rios
+            if (profile.bank_info?.pix_key) {
+                setPixKey(profile.bank_info.pix_key);
+                localStorage.setItem('izi_driver_pix', profile.bank_info.pix_key);
+            }
+
+            // 5. Alimentar formulÃ¡rio de ediÃ§Ã£o com dados GARANTIDOS do banco
             setEditProfileData({
                 name: profile.name || '',
                 phone: profile.phone || '',
@@ -1823,32 +1836,38 @@ function App() {
                 cpf: profile.document_number || ''
             });
 
+            // 6. PreferÃªncias
             if (profile.preferences) {
                 const p = profile.preferences as any;
-                if (p.pref_sound !== undefined) setPrefSoundEnabled(p.pref_sound);
-                if (p.pref_vibration !== undefined) setPrefVibrationEnabled(p.pref_vibration);
-                if (p.pref_nav_app !== undefined) setPrefNavApp(p.pref_nav_app);
-                if (p.pref_max_radius !== undefined) setPrefMaxRadius(p.pref_max_radius);
-                if (p.pref_vehicle) setPrefVehicleTypes(p.pref_vehicle);
-                if (p.pref_services) setPrefServiceTypes(p.pref_services);
+                if (p.pref_sound !== undefined) {
+                    setPrefSoundEnabled(p.pref_sound);
+                    localStorage.setItem('pref_sound', p.pref_sound.toString());
+                }
+                if (p.pref_vibration !== undefined) {
+                    setPrefVibrationEnabled(p.pref_vibration);
+                    localStorage.setItem('pref_vibration', p.pref_vibration.toString());
+                }
+                if (p.pref_nav_app !== undefined) {
+                    setPrefNavApp(p.pref_nav_app);
+                    localStorage.setItem('pref_nav_app', p.pref_nav_app);
+                }
+                // ... outras preferÃªncias se necessÃ¡rio
             }
 
+            // 7. Status de AprovaÃ§Ã£o e VÃ­nculo
             const active = !!profile.is_active;
-            console.log('[AUTH] Perfil carregado. is_active:', profile.is_active, '=> isApproved:', active);
             setIsApproved(active);
             localStorage.setItem('izi_driver_approved', active.toString());
+            
             if (profile.merchant_id) {
                 localStorage.setItem('izi_driver_merchant_id', profile.merchant_id);
             } else {
                 localStorage.removeItem('izi_driver_merchant_id');
             }
 
-            // Sincroniza isOnline com aprovação: se não aprovado, nunca pode estar online
             if (!active) {
                 setIsOnline(false);
                 localStorage.setItem('izi_driver_online', 'false');
-                // Removed setShowOnboarding(true) so users aren't forced into the onboarding screen on every refresh.
-                // They can use the "Detalhes" button on the dashboard card to open it manually.
             }
 
             refreshFinanceData();
@@ -6270,7 +6289,16 @@ function App() {
                         <button 
                             key={i} 
                             onClick={() => {
-                                if (item.label === 'Meus Dados') setShowPersonalDataModal(true);
+                                if (item.label === 'Meus Dados') {
+                                    // Forçar recarregamento do perfil para garantir que não há cache de outra conta
+                                    if (driverId) {
+                                        const user = supabase.auth.getUser(); // Apenas para pegar o email se necessário
+                                        supabase.auth.getUser().then(({ data: { user } }) => {
+                                            if (user) loadProfileAndEnforceOnboarding(user.id, user.email || '', driverName);
+                                        });
+                                    }
+                                    setShowPersonalDataModal(true);
+                                }
                                 if (item.label === 'Dados Bancários') setShowBankDetails(true);
                                 if (item.label === 'Veículo & Placa') setShowPlateModal(true);
                                 if (item.label === 'Preferências') setShowPreferences(true);

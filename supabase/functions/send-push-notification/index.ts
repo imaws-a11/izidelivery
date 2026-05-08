@@ -28,7 +28,7 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!; // ou SERVICE_ROLE_KEY dependendo das politicas RLS
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!; // Usar SERVICE_ROLE para ignorar RLS
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { driver_id, user_id, merchant_id, title, body, data } = await req.json()
@@ -45,23 +45,47 @@ serve(async (req) => {
 
     if (driver_id) {
       if (driver_id === 'all') {
-        const { data: driversData, error: driversError } = await supabase
-          .from('drivers_delivery')
-          .select('push_token')
-          .not('push_token', 'is', null);
+        let query = supabase.from('drivers_delivery').select('push_token').not('push_token', 'is', null);
+
+        // Lógica de Despacho Exclusivo
+        if (merchant_id) {
+          const { data: mData } = await supabase
+            .from('admin_users')
+            .select('dispatch_priority')
+            .eq('id', merchant_id)
+            .single();
+
+          if (mData?.dispatch_priority === 'exclusive') {
+            console.log(`[EXCLUSIVE_DISPATCH] Filtrando apenas motoboys do lojista: ${merchant_id}`);
+            query = query.eq('merchant_id', merchant_id);
+          }
+        }
+
+        const { data: driversData, error: driversError } = await query;
 
         if (driversError || !driversData || driversData.length === 0) {
-          throw new Error("Nenhum entregador com push_token encontrado.");
+          throw new Error("Nenhum entregador com push_token encontrado para este despacho.");
         }
 
         const tokens = driversData.map((d: any) => d.push_token).filter(Boolean);
         const message = {
-          notification: { title: title || 'Nova Missão Izi!', body: body || 'Temos uma nova entrega disponível.' },
+          notification: { 
+            title: title || '🛵 Nova Entrega IZI!', 
+            body: body || 'Um novo pedido aguarda um entregador na região. Seja rápido!' 
+          },
+          android: {
+            notification: {
+              channelId: 'izi_notifications',
+              priority: 'high',
+              sound: 'default'
+            }
+          },
           data: data || { context: "geral" },
           tokens: tokens,
         };
         const response = await admin.messaging().sendEachForMulticast(message);
-        return new Response(JSON.stringify({ success: true, message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        console.log(`[PUSH] Enviado para ${response.successCount} motoboys.`);
+        return new Response(JSON.stringify({ success: true, sent: response.successCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const { data: dData } = await supabase.from('drivers_delivery').select('push_token').eq('id', driver_id).single();

@@ -73,6 +73,7 @@ export default function OrdersAdminTab() {
            supabase.functions.invoke('send-push-notification', {
              body: {
                driver_id: 'all',
+               merchant_id: data?.[0]?.merchant_id,
                title: '🛵 Nova Entrega IZI!',
                body: 'Um novo pedido aguarda um entregador na região. Seja rápido!',
                data: { orderId: id }
@@ -84,6 +85,7 @@ export default function OrdersAdminTab() {
              supabase.functions.invoke('send-push-notification', {
                 body: {
                   driver_id: 'all',
+                  merchant_id: data?.[0]?.merchant_id,
                   title: '🔔 Novo Pedido IZI',
                   body: 'Um novo pedido acabou de ser recebido, prepare-se!',
                   data: { orderId: id }

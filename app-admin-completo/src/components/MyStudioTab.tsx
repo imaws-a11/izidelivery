@@ -2257,15 +2257,45 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
   )}
 
   {(editType === 'user' || editType === 'driver' || editType === 'my_driver') && (
-    <div className="space-y-1">
-      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Telefone / WhatsApp</label>
-      <input
-        type="text"
-        required
-        value={editingItem.phone || ''}
-        onChange={e => setEditingItem({ ...editingItem, phone: e.target.value })}
-        className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-      />
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Telefone / WhatsApp</label>
+        <input
+          type="text"
+          required
+          value={editingItem.phone || ''}
+          onChange={e => setEditingItem({ ...editingItem, phone: e.target.value })}
+          placeholder="(00) 00000-0000"
+          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
+      {editType === 'my_driver' && !editingItem.id && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-4">E-mail de Acesso</label>
+            <input
+              type="email"
+              required
+              value={editingItem.email || ''}
+              onChange={e => setEditingItem({ ...editingItem, email: e.target.value })}
+              placeholder="motoboy@exemplo.com"
+              className="w-full bg-primary/5 border border-primary/10 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-4">Senha de Acesso</label>
+            <input
+              type="text"
+              required
+              value={editingItem.password || ''}
+              onChange={e => setEditingItem({ ...editingItem, password: e.target.value })}
+              placeholder="Mínimo 6 caracteres"
+              className="w-full bg-primary/5 border border-primary/10 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )}
 
