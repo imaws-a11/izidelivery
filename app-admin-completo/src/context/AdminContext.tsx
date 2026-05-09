@@ -178,6 +178,9 @@ export interface AdminContextType {
   handleRequestPartnerWithdrawal: (partnerId: string, amount: number, pixKey: string) => Promise<void>;
   handleUpdateMerchantBankInfo: (bankInfo: any) => Promise<void>;
   handleSyncMerchantBalance: () => Promise<void>;
+  handleApplyCredit: (userId: string, amount: number, description?: string) => Promise<void>;
+  handleApplyMerchantCredit: (merchantId: string, amount: number, description?: string) => Promise<void>;
+  handleApplyDriverCredit: (driverId: string, amount: number, description?: string) => Promise<void>;
   handleSettlePayout: (entityId: string, entityType: 'merchant' | 'partner', amount: number, orderIds: string[]) => Promise<void>;
 
   // Dynamic rates / map
@@ -242,6 +245,8 @@ export interface AdminContextType {
   handleRequestMerchantRecharge: (amount: number) => Promise<void>;
   handleAddCredit: () => Promise<void>;
   handleApplyCredit: (userId: string, amount: number, description?: string) => Promise<void>;
+  handleApplyMerchantCredit: (merchantId: string, amount: number, description?: string) => Promise<void>;
+  handleApplyDriverCredit: (driverId: string, amount: number, description?: string) => Promise<void>;
   handleUpdateDriver: (e: React.FormEvent) => Promise<void>;
   handleUpdateCategory: (e: React.FormEvent) => Promise<void>;
   handleUpdateMyDriver: (e: React.FormEvent) => Promise<void>;

@@ -13,6 +13,7 @@ export const useAuth = () => {
   const [loginError, setLoginError] = useState("");
   const [authInitLoading, setAuthInitLoading] = useState(true);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [adminProfile, setAdminProfile] = useState<any>(null);
 
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -74,6 +75,7 @@ export const useAuth = () => {
         setUser(null);
         setUserId(null);
         setIsUserAdmin(false);
+        setAdminProfile(null);
       } else {
         const u = session?.user || null;
         setUser(u);
@@ -83,6 +85,7 @@ export const useAuth = () => {
           checkRoles(u.id);
         } else {
           setIsUserAdmin(false);
+          setAdminProfile(null);
         }
       }
       setAuthInitLoading(false);
@@ -95,8 +98,9 @@ export const useAuth = () => {
   }, []);
 
   const checkRoles = async (uid: string) => {
-    const { data: admin } = await supabase.from("admin_users").select("id").eq("id", uid).maybeSingle();
+    const { data: admin } = await supabase.from("admin_users").select("*").eq("id", uid).maybeSingle();
     setIsUserAdmin(!!admin);
+    setAdminProfile(admin);
   };
 
   const handleLogin = async () => {
@@ -203,6 +207,7 @@ export const useAuth = () => {
   const logout = async () => {
     try {
       setIsUserAdmin(false);
+      setAdminProfile(null);
       await supabase.auth.signOut();
       
       // Limpeza de chaves de "Lembrar-me"
@@ -253,7 +258,7 @@ export const useAuth = () => {
     handleLogin,
     handleSignUp,
     logout,
-    isAdmin: isUserAdmin
+    isAdmin: isUserAdmin,
+    adminProfile
   };
 };
-

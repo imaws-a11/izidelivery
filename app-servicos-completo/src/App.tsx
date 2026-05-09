@@ -4517,7 +4517,7 @@ const navigateSubView = (target: string) => {
                 )}
                 {tab === "profile" && (
                   <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                     <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} setSubView={navigateSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
+                     <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} setSubView={navigateSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} isAdmin={isAdmin} />
                   </motion.div>
                 )}
                 {tab === "busca" && (
@@ -4798,6 +4798,7 @@ const navigateSubView = (target: string) => {
                     <ExploreClickCollectView transitData={transitData} setTransitData={setTransitData} onBack={() => setSubView("explore_envios")} />
                   </motion.div>
                 )}
+
 
                 {(subView === "product" || subView === "product_detail") && (
                   <motion.div 

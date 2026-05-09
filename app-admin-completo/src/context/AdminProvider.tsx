@@ -1151,10 +1151,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .order('created_at', { ascending: false });
         
       if (error) throw error;
+      
+      // Para motoristas, buscar o saldo real da coluna wallet_balance
+      const { data: driverData } = await supabase
+        .from('drivers_delivery')
+        .select('wallet_balance')
+        .eq('id', partnerId)
+        .maybeSingle();
+
       if (data) {
         setPartnerTransactions(data as WalletTransaction[]);
-        const balance = data.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0);
-        setPartnerBalance(balance);
+        if (driverData) {
+          setPartnerBalance(Number(driverData.wallet_balance));
+        } else {
+          const balance = data.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0);
+          setPartnerBalance(balance);
+        }
       }
     } catch (err: any) {
       console.error('Error fetching partner finance:', err);
@@ -1760,6 +1772,70 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsSaving(false);
     }
   }, [fetchUsers, logAction]);
+
+  const handleApplyMerchantCredit = useCallback(async (merchantId: string, amount: number, description: string = 'Crédito administrativo') => {
+    if (amount <= 0) return toastError('O valor deve ser positivo.');
+    setIsSaving(true);
+    try {
+      const { data: txs, error: txsErr } = await supabase
+        .from('wallet_transactions_delivery')
+        .select('amount, type')
+        .eq('user_id', merchantId);
+      
+      if (txsErr) throw txsErr;
+      
+      const currentBalance = txs?.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0) || 0;
+      const newBalance = currentBalance + amount;
+
+      const { error: insertErr } = await supabase.from('wallet_transactions_delivery').insert({
+        user_id: merchantId,
+        amount,
+        type: 'credit',
+        description,
+        balance_after: newBalance
+      });
+      if (insertErr) throw insertErr;
+
+      toastSuccess(`Crédito de R$ ${amount.toLocaleString('pt-BR')} aplicado ao parceiro!`);
+      fetchMerchants();
+      fetchPartnerFinance(merchantId);
+      logAction('Apply Merchant Credit', 'Finance', { merchantId, amount });
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchMerchants, fetchPartnerFinance, logAction]);
+
+  const handleApplyDriverCredit = useCallback(async (driverId: string, amount: number, description: string = 'Crédito administrativo') => {
+    if (amount <= 0) return toastError('O valor deve ser positivo.');
+    setIsSaving(true);
+    try {
+      const { data: driver, error: fetchErr } = await supabase.from('drivers_delivery').select('wallet_balance').eq('id', driverId).maybeSingle();
+      if (fetchErr) throw fetchErr;
+
+      const newBalance = (Number(driver?.wallet_balance) || 0) + amount;
+      const { error: updateErr } = await supabase.from('drivers_delivery').update({ wallet_balance: newBalance }).eq('id', driverId);
+      if (updateErr) throw updateErr;
+
+      await supabase.from('wallet_transactions_delivery').insert({
+        user_id: driverId,
+        amount,
+        type: 'credit',
+        description,
+        balance_after: newBalance
+      });
+
+      toastSuccess(`Crédito de R$ ${amount.toLocaleString('pt-BR')} aplicado ao entregador!`);
+      fetchDrivers();
+      fetchPartnerFinance(driverId);
+      logAction('Apply Driver Credit', 'Wallet', { driverId, amount });
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchDrivers, logAction]);
   
 
   const handleUpdateDriver = useCallback(async (e: React.FormEvent) => {
@@ -1856,6 +1932,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log('[DRIVER_AUTH] Criando conta de acesso para:', email);
         const { data: authData, error: authError } = await supabase.functions.invoke('create-admin-user', {
           body: { 
+            action: 'create',
             email, 
             password, 
             role: 'driver',
@@ -2065,11 +2142,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!finalId || (typeof finalId === 'string' && finalId.startsWith('new-'))) {
         const { data: authData, error: authError } = await supabase.functions.invoke('create-admin-user', {
           body: {
+            action: 'create',
             email: editingItem.email,
             password: editingItem.password,
             role: 'merchant',
             metadata: {
-              store_name: editingItem.store_name
+              store_name: editingItem.name || editingItem.store_name
             }
           }
         });
@@ -2082,16 +2160,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const merchantData: any = {
         id: finalId,
-        store_name: editingItem.store_name,
-        store_description: editingItem.store_description,
-        store_address: editingItem.store_address,
-        store_phone: editingItem.store_phone,
-        store_type: editingItem.store_type || 'restaurant',
+        store_name: editingItem.name || editingItem.store_name,
+        store_description: editingItem.store_description || editingItem.description,
+        store_address: editingItem.store_address || editingItem.address,
+        store_phone: editingItem.store_phone || editingItem.phone,
+        store_type: editingItem.store_type || editingItem.type || 'restaurant',
         food_category: Array.isArray(editingItem.food_category) 
           ? editingItem.food_category 
           : [editingItem.food_category || 'all'],
-        store_logo: editingItem.store_logo,
-        store_banner: editingItem.store_banner,
+        store_logo: editingItem.store_logo || editingItem.logo_url,
+        store_banner: editingItem.store_banner || editingItem.banner_url,
         email: editingItem.email,
         document: editingItem.document,
         commission_percent: editingItem.commission_percent,
@@ -2100,6 +2178,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         latitude: editingItem.latitude,
         longitude: editingItem.longitude,
         google_place_id: editingItem.google_place_id,
+        bank_info: editingItem.bank_info || { holder_name: '', pix_key: '' },
         metadata: editingItem.metadata || {},
         role: 'merchant',
         payment_enabled: editingItem.payment_enabled ?? true,
@@ -2507,6 +2586,55 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           status: 'concluido',
           balance_after: newBalance
         });
+      }
+
+      // 4. Inserir transação na carteira do entregador (Motoboy) se houver
+      if (order.driver_id && Number(order.delivery_fee || 0) > 0) {
+        const { data: driver } = await supabase.from('drivers_delivery').select('wallet_balance').eq('id', order.driver_id).maybeSingle();
+        const currentBalance = Number(driver?.wallet_balance) || 0;
+        const driverEarning = Number(order.delivery_fee);
+        const newBalance = currentBalance + driverEarning;
+        
+        await supabase.from('drivers_delivery').update({ wallet_balance: newBalance }).eq('id', order.driver_id);
+        
+        await supabase.from('wallet_transactions_delivery').insert({
+          user_id: order.driver_id,
+          amount: driverEarning,
+          type: 'corrida',
+          description: `Entrega Pedido #${order.id.slice(0,8).toUpperCase()}`,
+          status: 'concluido',
+          balance_after: newBalance
+        });
+      }
+
+      // 5. Inserir transação na carteira do parceiro (Entrega Avulsa / Ponto de Retirada) se for ele o responsável
+      if (order.partner_id && !order.driver_id) {
+        // Se a entrega foi feita por um "Parceiro" e não por um "Motorista" específico
+        const deliveryFee = Number(order.delivery_fee || 0);
+        const serviceFee = Number(order.service_fee || 0);
+        const partnerEarning = deliveryFee + serviceFee;
+        
+        if (partnerEarning > 0) {
+          const { data: currentWallet } = await supabase
+            .from('wallet_transactions_delivery')
+            .select('balance_after')
+            .eq('user_id', order.partner_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          const currentBalance = currentWallet?.balance_after || 0;
+          const newBalance = currentBalance + partnerEarning;
+
+          await supabase.from('wallet_transactions_delivery').insert({
+            user_id: order.partner_id,
+            amount: partnerEarning,
+            type: 'venda',
+            description: `Entrega Avulsa Pedido #${order.id.slice(0,8).toUpperCase()}`,
+            status: 'concluido',
+            balance_after: newBalance
+          });
+        }
       }
 
       toastSuccess('Pedido concluído e saldo creditado!');
@@ -3045,7 +3173,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchStats, fetchUsers, fetchDrivers, fetchMyDrivers, fetchProducts, fetchMenuCategories, 
     fetchAllOrders, fetchSubscriptionOrders, fetchCategories, fetchDynamicRates, 
     fetchPromotions, fetchAuditLogs, fetchMerchants, fetchPartners, fetchAppSettings, saveGlobalSettings, fetchMyDedicatedSlots, 
-    openMerchantPreview, handleRequestMerchantRecharge, handleAddCredit, handleApplyCredit, handleUpdateDriver, 
+    openMerchantPreview, handleRequestMerchantRecharge, handleAddCredit, handleApplyCredit, 
+    handleApplyMerchantCredit, handleApplyDriverCredit, handleUpdateDriver, 
     handleUpdateCategory, handleUpdateMyDriver, handleDeleteMyDriver, handleUpdateUser, 
     handleUpdateMyProduct, handleUpdateMenuCategory, handleDeleteMenuCategory, handleDeleteProduct, handleCreateNewProduct, 
     handleUpdatePromotion, handleUpdateMerchant, handleUpdateMerchantStatus, handleDeleteMerchant, 
@@ -3060,7 +3189,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     handleSaveAppSettings,
     handleUpdateMerchantProfile,
     fetchMerchantFinance, handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance,
-    partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal, handleSettlePayout
+    partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal, handleSettlePayout,
+    handleApplyCredit, handleApplyMerchantCredit, handleApplyDriverCredit
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

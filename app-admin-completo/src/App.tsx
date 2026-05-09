@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { useAdmin } from './context/AdminContext';
 import NavTab from './components/NavTab';
+import { QRCodeSVG } from 'qrcode.react';
+import { toastSuccess } from './lib/useToast';
 
 // Tabs
 import DashboardTab from './components/DashboardTab';
@@ -23,6 +25,7 @@ import MyStoreTab from './components/MyStoreTab';
 import MyDriversTab from './components/MyDriversTab';
 import MyStudioTab from './components/MyStudioTab';
 import MerchantStudio from './components/MerchantStudio';
+import PartnerStudio from './components/PartnerStudio';
 
 import FinancialTab from './components/FinancialTab';
 import IziBlackTab from './components/IziBlackTab';
@@ -37,17 +40,14 @@ import StandaloneDeliveryTab from './components/StandaloneDeliveryTab';
 
 
 
-function App() {
-  const {
-    session,
-    userRole,
-    isInitialLoading,
-    activeTab,
-    merchantProfile,
-    handleLogout,
-    editType,
-    showActiveOrdersModal,
-    setShowActiveOrdersModal
+export default function App() {
+  const { 
+    activeTab, setActiveTab, userRole, merchantProfile, isInitialLoading, session,
+    showAddCreditModal, setShowAddCreditModal, pixData, setPixData,
+    creditToAdd, setCreditToAdd, isAddingCredit, handleRequestMerchantRecharge,
+    showRechargeSuccessModal, setShowRechargeSuccessModal, rechargeSuccessData,
+    fetchMerchantFinance, handleLogout,
+    editType, setEditType, setEditingItem, showActiveOrdersModal, setShowActiveOrdersModal 
   } = useAdmin();
 
 
@@ -216,7 +216,11 @@ function App() {
 
                    {/* Plano Avulso (Apenas Entrega) */}
                    {merchantProfile?.subscription_plan === 'avulso' && (
-                     <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
+                     <>
+                       <NavTab id="dashboard" icon="dashboard" label="Métricas" />
+                       <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
+                       <NavTab id="settings" icon="settings" label="Config" />
+                     </>
                    )}
 
                    {/* Tabs comuns (exceto avulso que é ultra restrito) */}
@@ -229,10 +233,7 @@ function App() {
                      </>
                    )}
                    
-                   {/* Fallback para Avulso ver Config/Logout */}
-                   {merchantProfile?.subscription_plan === 'avulso' && (
-                      <NavTab id="settings" icon="settings" label="Config" />
-                   )}
+                   {/* Fallback para Avulso ver Config/Logout - Removido pois agora está acima */}
                </>
              ) : (
                <>
@@ -283,7 +284,7 @@ function App() {
               className="space-y-8"
             >
               {activeTab === 'dashboard' && userRole === 'admin' && <DashboardTab />}
-              {activeTab === 'dashboard' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MerchantDashboardTab />}
+              {activeTab === 'dashboard' && userRole === 'merchant' && <MerchantDashboardTab />}
               {activeTab === 'merchants' && userRole !== 'merchant' && <MerchantsTab />}
               {activeTab === 'partners' && userRole === 'admin' && <PartnersTab />}
               {activeTab === 'tracking' && userRole !== 'merchant' && <TrackingTab />}
@@ -298,11 +299,12 @@ function App() {
               {activeTab === 'dynamic_rates' && userRole === 'admin' && <DynamicRatesTab />}
               {activeTab === 'audit_logs' && userRole === 'admin' && <AuditLogsTab />}
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
-              {activeTab === 'settings' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyStoreTab />}
+              {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyDriversTab />}
               {activeTab === 'merchant_studio' && <MerchantStudio />}
               {activeTab === 'establishment_types' && <TaxonomyCenter initialMode="global" />}
-              {(activeTab === 'financial' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso') && <MyStudioTab />}
+              {(activeTab === 'finance' && userRole === 'merchant') && <MyStudioTab initialTab="financial" />}
+              {(activeTab === 'my_studio' && userRole === 'merchant') && <MyStudioTab initialTab="info" />}
               {activeTab === 'categories' && userRole === 'admin' && <TaxonomyCenter initialMode="assignment" />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}
@@ -313,13 +315,21 @@ function App() {
           </AnimatePresence>
         </main>
 
-        {/* Global Studios & Modals Provider (Absolute/Fixed elements only) */}
-        <MyStudioTab />
 
-        {/* Estúdio de Novo Lojista (Overlay) */}
+        {/* Estúdios de Gestão (Overlay) */}
         {editType === 'new_merchant' && (
           <div className="fixed inset-0 z-[120]">
             <MerchantStudio />
+          </div>
+        )}
+        {editType === 'merchant' && (
+          <div className="fixed inset-0 z-[120]">
+            <MerchantStudio />
+          </div>
+        )}
+        {editType === 'partner' && (
+          <div className="fixed inset-0 z-[120]">
+            <PartnerStudio onClose={() => { setEditingItem(null); setEditType(null); }} />
           </div>
         )}
       </div>
@@ -338,8 +348,142 @@ function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal Adicionar Créditos (Global) */}
+      <AnimatePresence>
+        {showAddCreditModal && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowAddCreditModal(false)}></div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[40px] p-10 shadow-2xl relative z-10 border border-slate-100 dark:border-slate-800"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-emerald-500">add_circle</span>
+                  Novo Aporte
+                </h3>
+                <button onClick={() => setShowAddCreditModal(false)} className="size-10 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="space-y-6">
+                {!pixData ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Valor (R$)</label>
+                      <div className="relative">
+                        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                        <input 
+                          type="number"
+                          step="0.01" 
+                          value={creditToAdd}
+                          onChange={(e) => setCreditToAdd(e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl pl-14 pr-6 py-5 font-black text-xl focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleRequestMerchantRecharge(Number(creditToAdd))}
+                      disabled={isAddingCredit || !creditToAdd || Number(creditToAdd) <= 0}
+                      className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                    >
+                      {isAddingCredit ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : <span className="material-symbols-outlined">qr_code_2</span>}
+                      {isAddingCredit ? 'Gerando PIX...' : 'Gerar PIX para Recarga'}
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-300">
+                    <div className="p-6 bg-white rounded-[32px] shadow-inner border border-slate-100 flex items-center justify-center">
+                      {pixData.qrCodeBase64 ? (
+                        <img src={`data:image/png;base64,${pixData.qrCodeBase64}`} alt="QR Code PIX" className="size-48" />
+                      ) : (
+                        <QRCodeSVG value={pixData.qrCode} size={192} />
+                      )}
+                    </div>
+                    
+                    <div className="w-full space-y-4">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center mb-2">Pix Copia e Cola</p>
+                        <p className="text-[10px] font-mono break-all text-slate-600 dark:text-slate-300 line-clamp-2 text-center">{pixData.copyPaste}</p>
+                      </div>
+                      
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(pixData.copyPaste);
+                          toastSuccess('Código copiado!');
+                        }}
+                        className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-95 transition-all"
+                      >
+                        Copiar Código PIX
+                      </button>
+                      
+                      <p className="text-center text-[10px] text-slate-400 font-bold px-6">Após o pagamento, o saldo será creditado automaticamente em sua conta.</p>
+                      
+                      <button 
+                        onClick={() => {
+                          setPixData(null);
+                          setShowAddCreditModal(false);
+                          fetchMerchantFinance();
+                        }}
+                        className="w-full py-4 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:text-slate-600 transition-all"
+                      >
+                        Já paguei / Fechar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Sucesso Recarga (Global) */}
+      <AnimatePresence>
+        {showRechargeSuccessModal && (
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setShowRechargeSuccessModal(false)}></div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[48px] p-12 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] relative z-10 border border-emerald-100 dark:border-emerald-900/30 overflow-hidden"
+            >
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 size-32 bg-emerald-500/10 blur-3xl -mr-16 -mt-16 rounded-full"></div>
+              <div className="absolute bottom-0 left-0 size-32 bg-emerald-500/5 blur-3xl -ml-16 -mb-16 rounded-full"></div>
+              
+              <div className="flex flex-col items-center text-center relative z-10">
+                <div className="size-24 rounded-[32px] bg-emerald-500 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/40 mb-8 animate-bounce">
+                  <span className="material-symbols-outlined text-5xl font-black">check_circle</span>
+                </div>
+                
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Recarga Concluída!</h3>
+                <p className="text-slate-500 dark:text-slate-400 font-bold text-sm mb-8">Seu saldo foi atualizado com sucesso.</p>
+                
+                <div className="w-full bg-emerald-50 dark:bg-emerald-500/10 rounded-3xl p-6 mb-8 border border-emerald-100 dark:border-emerald-500/20">
+                  <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Valor Creditado</p>
+                  <p className="text-3xl font-black text-emerald-700 dark:text-emerald-300">
+                    R$ {rechargeSuccessData?.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                
+                <button 
+                  onClick={() => setShowRechargeSuccessModal(false)}
+                  className="w-full h-16 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs uppercase tracking-widest rounded-[24px] shadow-xl active:scale-95 transition-all"
+                >
+                  Entendido
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-export default App;

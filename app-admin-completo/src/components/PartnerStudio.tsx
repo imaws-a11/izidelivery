@@ -13,6 +13,7 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
   const { 
     editingItem, setEditingItem, handleUpdatePartner, isSaving, handleFileUpload,
     partnerBalance, partnerTransactions, fetchPartnerFinance, handleRequestPartnerWithdrawal,
+    handleApplyMerchantCredit,
     appSettings
   } = useAdmin();
 
@@ -632,27 +633,19 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                       <span className="material-symbols-outlined text-emerald-500 text-3xl mb-4">account_balance_wallet</span>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Disponível</p>
                       <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic flex items-center justify-between">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(partnerBalance)}
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(partnerBalance || 0)}
                         <button 
                           type="button"
                           disabled={!editingItem.id || editingItem.id.toString().startsWith('new-')}
                           onClick={async () => {
-                            const amount = prompt("Quanto deseja simular (R$)?", "50");
-                            if (amount && !isNaN(parseFloat(amount))) {
-                               // Simulação direta para fins de teste do desenvolvedor
-                               const { error } = await supabase.from('wallet_transactions_delivery').insert({
-                                  user_id: editingItem.id,
-                                  amount: parseFloat(amount),
-                                  type: 'credito',
-                                  description: 'Simulação de Recebimento de Pacote',
-                                  status: 'concluido',
-                                  balance_after: partnerBalance + parseFloat(amount)
-                               });
-                               if (!error) {
-                                  toastSuccess("Crédito simulado com sucesso!");
-                                  fetchPartnerFinance(editingItem.id);
-                               }
-                            }
+                            const amountStr = prompt("Quanto de crédito deseja aplicar ao parceiro (R$)?", "0");
+                            if (!amountStr) return;
+                            const amount = parseFloat(amountStr.replace(',', '.'));
+                            if (isNaN(amount) || amount <= 0) return toastError("Valor inválido.");
+                            
+                            const desc = prompt("Descrição do crédito:", "Ajuste administrativo");
+                            if (!editingItem?.id) return;
+                            await handleApplyMerchantCredit(editingItem.id, amount, desc || undefined);
                           }}
                           className="size-8 rounded-lg bg-emerald-500/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all ml-2"
                         >

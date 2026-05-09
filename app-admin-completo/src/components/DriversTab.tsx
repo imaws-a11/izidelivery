@@ -10,7 +10,8 @@ export default function DriversTab() {
   const {
     setSelectedDriverStudio, handleUpdateDriverStatus, handleDeleteDriver, 
     selectedDriverStudio, activeStudioTab, setActiveStudioTab, 
-    isSaving, setIsSaving, session, fetchMyDrivers
+    isSaving, setIsSaving, session, fetchMyDrivers,
+    handleApplyDriverCredit, partnerBalance = 0, partnerTransactions = [], fetchPartnerFinance
   } = useAdmin();
 
   // Estado próprio — não depende do AdminProvider para o status online
@@ -117,6 +118,12 @@ export default function DriversTab() {
 
     syncMissingData();
   }, [selectedDriverStudio?.id]);
+
+  useEffect(() => {
+    if (activeStudioTab === 'finance' && selectedDriverStudio?.id && !selectedDriverStudio.id.toString().startsWith('new-')) {
+      fetchPartnerFinance(selectedDriverStudio.id);
+    }
+  }, [activeStudioTab, selectedDriverStudio?.id, fetchPartnerFinance]);
 
   return (
     <div className="space-y-8">
@@ -465,58 +472,119 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 
     {activeStudioTab === 'finance' && (
       <div className="space-y-8 max-w-4xl mx-auto">
-        <div className="p-10 rounded-[48px] bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 shadow-inner space-y-8">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="size-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-600">
-              <span className="material-symbols-outlined text-2xl font-bold">account_balance</span>
+        {/* Card de Saldo Premium */}
+        <div className="relative overflow-hidden p-10 rounded-[48px] bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-2xl shadow-emerald-500/20">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <span className="material-symbols-outlined text-[120px]">payments</span>
+          </div>
+          
+          <div className="relative z-10 space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="size-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 text-emerald-50">Saldo em Carteira</p>
+                <h4 className="text-sm font-bold opacity-90">Gestão de Crédito Admin</h4>
+              </div>
+            </div>
+
+            <div className="flex items-end justify-between gap-8">
+              <div>
+                <h3 className="text-5xl font-black tracking-tighter italic">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(partnerBalance || 0)}
+                </h3>
+                <p className="text-xs font-bold text-emerald-100 mt-2 flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-white animate-pulse" />
+                  Sincronizado com a base de dados em tempo real
+                </p>
+              </div>
+
+              <button 
+                type="button"
+                onClick={async () => {
+                  const amountStr = prompt("Quanto de crédito deseja aplicar ao entregador (R$)?", "0");
+                  if (!amountStr) return;
+                  const amount = parseFloat(amountStr.replace(',', '.'));
+                  if (isNaN(amount) || amount <= 0) return alert("Valor inválido.");
+                  
+                  const desc = prompt("Descrição do crédito:", "Ajuste administrativo");
+                  await handleApplyDriverCredit(selectedDriverStudio.id, amount, desc || "Ajuste manual via Painel Admin");
+                }}
+                className="px-8 py-5 rounded-3xl bg-white text-emerald-600 font-black uppercase text-xs tracking-widest hover:scale-105 transition-all shadow-xl flex items-center gap-3"
+              >
+                <span className="material-symbols-outlined font-black">add</span>
+                Aplicar Crédito
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Dados Bancários */}
+        <div className="p-10 rounded-[48px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+          <div className="flex items-center gap-4">
+            <div className="size-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+              <span className="material-symbols-outlined text-2xl">account_balance</span>
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Dados para Repasse</h4>
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest italic">Pagamentos & Conciliação</p>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Informações de Repasse</h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Banco & Chave PIX</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Instituição Bancária</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Instituição</label>
                <input 
-                 type="text" 
+                 className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-5 font-bold text-sm"
                  value={selectedDriverStudio.bank_info?.bank || ''}
-                 onChange={e => setSelectedDriverStudio({...selectedDriverStudio, bank_info: { ...selectedDriverStudio.bank_info, bank: e.target.value }})}
-                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-emerald-500 dark:text-white"
-                 placeholder="Nome do Banco"
+                 placeholder="Ex: Nubank, Itaú..."
+                 onChange={e => setSelectedDriverStudio({...selectedDriverStudio, bank_info: {...selectedDriverStudio.bank_info, bank: e.target.value}})}
                />
              </div>
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Chave PIX (Principal)</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Chave PIX</label>
                <input 
-                 type="text" 
+                 className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-5 font-bold text-sm"
                  value={selectedDriverStudio.bank_info?.pix_key || ''}
-                 onChange={e => setSelectedDriverStudio({...selectedDriverStudio, bank_info: { ...selectedDriverStudio.bank_info, pix_key: e.target.value }})}
-                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-emerald-500 dark:text-white"
-                 placeholder="CPF, E-mail ou Telefone"
+                 placeholder="CPF, E-mail ou Celular"
+                 onChange={e => setSelectedDriverStudio({...selectedDriverStudio, bank_info: {...selectedDriverStudio.bank_info, pix_key: e.target.value}})}
                />
              </div>
-             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Número da Agência</label>
-               <input 
-                 type="text" 
-                 value={selectedDriverStudio.bank_info?.agency || ''}
-                 onChange={e => setSelectedDriverStudio({...selectedDriverStudio, bank_info: { ...selectedDriverStudio.bank_info, agency: e.target.value }})}
-                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-emerald-500 dark:text-white"
-                 placeholder="0001"
-               />
-             </div>
-             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Conta & Dígito</label>
-               <input 
-                 type="text" 
-                 value={selectedDriverStudio.bank_info?.account || ''}
-                 onChange={e => setSelectedDriverStudio({...selectedDriverStudio, bank_info: { ...selectedDriverStudio.bank_info, account: e.target.value }})}
-                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-emerald-500 dark:text-white"
-                 placeholder="00000000-0"
-               />
-             </div>
+          </div>
+        </div>
+
+        {/* Histórico de Transações */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between px-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Movimentações Recentes</h4>
+            <div className="h-px flex-1 bg-slate-100 dark:bg-white/5 mx-8" />
+          </div>
+
+          <div className="space-y-3">
+            {partnerTransactions.length > 0 ? partnerTransactions.map((t, idx) => (
+              <div key={idx} className="bg-white dark:bg-slate-900/50 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-emerald-500/30 transition-all">
+                <div className="flex items-center gap-5">
+                  <div className={`size-12 rounded-2xl flex items-center justify-center ${t.type === 'saque' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                    <span className="material-symbols-outlined">{t.type === 'saque' ? 'account_balance_wallet' : 'add_card'}</span>
+                  </div>
+                  <div>
+                    <p className="font-black text-sm uppercase tracking-tight dark:text-white">{t.description || 'Movimentação'}</p>
+                    <p className="text-[10px] font-bold text-slate-400">{new Date(t.created_at).toLocaleDateString()} às {new Date(t.created_at).toLocaleTimeString()}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`text-lg font-black tracking-tighter ${t.type === 'saque' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {t.type === 'saque' ? '-' : '+'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.amount))}
+                  </p>
+                </div>
+              </div>
+            )) : (
+              <div className="py-20 flex flex-col items-center gap-4 opacity-20">
+                <span className="material-symbols-outlined text-6xl">receipt_long</span>
+                <p className="text-[10px] font-black uppercase tracking-widest">Sem histórico financeiro</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

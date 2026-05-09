@@ -74,7 +74,6 @@ export default function PartnersTab() {
                   bank_info: { holder_name: '', pix_key: '' }
                 });
                 setEditType('partner');
-                setActiveTab('my_studio');
              }}
              className="h-16 px-10 bg-primary text-slate-900 rounded-[28px] shadow-2xl shadow-primary/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all group overflow-hidden relative"
           >
@@ -171,7 +170,7 @@ export default function PartnersTab() {
               <AnimatePresence mode="popLayout">
                 {filteredPartners.length > 0 ? filteredPartners.map((p) => (
                   <motion.tr 
-                    key={p.id}
+                    key={`${p._isMerchant ? 'merchant' : 'partner'}-${p.id}`}
                     layout
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -230,7 +229,6 @@ export default function PartnersTab() {
                            onClick={() => {
                              setEditingItem(p);
                              setEditType(p._isMerchant ? 'merchant' : 'partner');
-                             setActiveTab('my_studio');
                            }}
                            className="size-11 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm flex items-center justify-center"
                            title="Editar Parceiro"

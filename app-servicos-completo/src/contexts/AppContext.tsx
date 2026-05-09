@@ -822,7 +822,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showDatePicker, setShowDatePicker, showTimePicker, setShowTimePicker, showLojistasModal, setShowLojistasModal,
       marketConditions, fetchMarketData, routePolyline, setRoutePolyline, distanceValueKm, setDistanceValueKm,
       nearbyDrivers, setNearbyDrivers, nearbyDriversCount, setNearbyDriversCount,
-      handleConfirmMobility, selectedCard, setSelectedCard, walletBalance, setWalletBalance, iziCoins, setIziCoins,
+      handleConfirmMobility,
+      selectedCard, setSelectedCard, walletBalance, setWalletBalance, iziCoins, setIziCoins,
       paymentMethod, setPaymentMethod, triggerCartAnimation, cartAnimations,
       mobilityStep, setMobilityStep
     }}>

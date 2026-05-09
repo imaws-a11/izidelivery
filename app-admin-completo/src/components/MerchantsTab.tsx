@@ -230,7 +230,7 @@ export default function MerchantsTab() {
                       <div 
                         onClick={() => { 
                           openMerchantPreview(m);
-                          setActiveTab('my_studio'); 
+                          setEditType('merchant'); 
                         }}
                         className="flex items-center gap-5 cursor-pointer group/item"
                       >
@@ -283,7 +283,7 @@ export default function MerchantsTab() {
                          <button 
                            onClick={() => { 
                              openMerchantPreview(m);
-                             setActiveTab('my_studio'); 
+                             setEditType('merchant'); 
                            }}
                            className="size-11 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm flex items-center justify-center border border-transparent hover:border-primary/20"
                            title="Acessar Estúdio"

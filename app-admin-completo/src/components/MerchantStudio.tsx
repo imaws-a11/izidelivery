@@ -7,13 +7,20 @@ import { toastSuccess, toastError } from '../lib/useToast';
 export default function MerchantStudio() {
   const { 
     editingItem, setEditingItem, handleUpdateMerchant, isSaving, handleFileUpload,
-    establishmentTypes, appSettings, setActiveTab, setEditType
+    establishmentTypes, appSettings, setActiveTab, setEditType,
+    handleApplyMerchantCredit, partnerBalance, partnerTransactions, fetchPartnerFinance
   } = useAdmin();
 
 
 
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState<'logo' | 'banner' | null>(null);
+
+  React.useEffect(() => {
+    if (step === 5 && editingItem?.id && !editingItem.id.toString().startsWith('new-')) {
+      fetchPartnerFinance(editingItem.id);
+    }
+  }, [step, editingItem?.id, fetchPartnerFinance]);
 
   if (!editingItem) return (
     <div className="flex flex-col items-center justify-center h-full gap-6 opacity-50">
@@ -105,6 +112,10 @@ export default function MerchantStudio() {
     { id: 3, label: 'Localização', icon: 'distance' },
     { id: 4, label: 'Acesso e Taxas', icon: 'key' },
   ];
+
+  if (editingItem?.id && !editingItem.id.toString().startsWith('new-')) {
+    steps.push({ id: 5, label: 'Financeiro', icon: 'account_balance_wallet' });
+  }
 
   const canGoNext = () => {
     if (step === 1) return editingItem.store_name && editingItem.store_type;
@@ -539,6 +550,92 @@ export default function MerchantStudio() {
                   </div>
                 </motion.div>
               )}
+
+              {step === 5 && (
+                <motion.div
+                  key="step5"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-8"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 p-8 rounded-[40px] border border-emerald-100 dark:border-emerald-500/20 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-all">
+                        <span className="material-symbols-outlined text-6xl">payments</span>
+                      </div>
+                      <span className="material-symbols-outlined text-emerald-500 text-3xl mb-4">account_balance_wallet</span>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo do Lojista</p>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic flex items-center justify-between">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(partnerBalance)}
+                        <button 
+                          type="button"
+                          onClick={async () => {
+                            const amountStr = prompt("Quanto de crédito deseja aplicar ao lojista (R$)?", "0");
+                            if (!amountStr) return;
+                            const amount = parseFloat(amountStr.replace(',', '.'));
+                            if (isNaN(amount) || amount <= 0) return toastError("Valor inválido.");
+                            
+                            const desc = prompt("Descrição do crédito:", "Ajuste administrativo");
+                            await handleApplyMerchantCredit(editingItem.id, amount, desc || undefined);
+                          }}
+                          className="size-8 rounded-lg bg-emerald-500/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all ml-2"
+                        >
+                          <span className="material-symbols-outlined text-sm">add</span>
+                        </button>
+                      </h3>
+                      <p className="text-[10px] font-bold text-slate-400 mt-2">Saldo calculado com base no histórico de transações.</p>
+                    </div>
+
+                    <div className="bg-indigo-50 dark:bg-indigo-950/20 p-8 rounded-[40px] border border-indigo-100 dark:border-indigo-500/20">
+                      <span className="material-symbols-outlined text-indigo-500 text-3xl mb-4">account_balance</span>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Chave PIX Registrada</p>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+                        {editingItem.bank_info?.pix_key || 'Não cadastrada'}
+                      </h3>
+                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Titular: {editingItem.bank_info?.holder_name || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-indigo-500">history</span>
+                          <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest italic">Histórico de Movimentações</h4>
+                       </div>
+                       <div className="h-px flex-1 bg-slate-100 dark:bg-white/5 mx-6" />
+                    </div>
+
+                    <div className="space-y-3">
+                      {partnerTransactions.length > 0 ? partnerTransactions.map((t, idx) => (
+                        <div key={idx} className="bg-slate-50 dark:bg-slate-800/40 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:bg-white transition-all">
+                           <div className="flex items-center gap-5">
+                              <div className={`size-12 rounded-2xl flex items-center justify-center ${t.type === 'saque' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                 <span className="material-symbols-outlined">{t.type === 'saque' ? 'upload_file' : 'download_done'}</span>
+                              </div>
+                              <div>
+                                 <p className="font-black text-sm dark:text-white uppercase italic tracking-tight">{t.description || (t.type === 'saque' ? 'Saque Solicitado' : 'Comissão Recebida')}</p>
+                                 <p className="text-[10px] font-bold text-slate-400 mt-0.5">{new Date(t.created_at).toLocaleDateString()} às {new Date(t.created_at).toLocaleTimeString()}</p>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <p className={`text-lg font-black tracking-tighter italic ${t.type === 'saque' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                 {t.type === 'saque' ? '-' : '+'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.amount))}
+                              </p>
+                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${t.status === 'pendente' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                 {t.status || 'concluído'}
+                              </span>
+                           </div>
+                        </div>
+                      )) : (
+                        <div className="py-12 flex flex-col items-center gap-4 opacity-20">
+                           <span className="material-symbols-outlined text-6xl">query_stats</span>
+                           <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma transação registrada</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
 
@@ -554,7 +651,7 @@ export default function MerchantStudio() {
               </button>
             )}
             
-            {step < 4 ? (
+            {step < steps.length ? (
               <button 
                 onClick={() => setStep(step + 1)}
                 disabled={!canGoNext()}
