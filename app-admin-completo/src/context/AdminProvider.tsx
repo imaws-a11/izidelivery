@@ -1479,7 +1479,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         _isMerchant: true
       })) as PartnerStore[];
 
-      setPartnersList([...partners, ...avulsoMerchants]);
+      const allPartners = [...partners, ...avulsoMerchants];
+      const uniquePartners = allPartners.filter((p, index, self) => 
+        index === self.findIndex((t) => t.id === p.id)
+      );
+      setPartnersList(uniquePartners);
     } catch (err: any) {
       toastError('Erro ao buscar parceiros: ' + err.message);
     } finally {

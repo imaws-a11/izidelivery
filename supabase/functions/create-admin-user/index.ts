@@ -23,7 +23,17 @@ serve(async (req) => {
       }
     )
 
-    const { email, password, role, metadata, userId } = await req.json()
+    const { email, password, role, metadata, userId, action } = await req.json()
+
+    // Caso de deleção
+    if (action === 'delete' && userId) {
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+      if (deleteError) throw deleteError
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
 
     if (!email || !password) {
       throw new Error('Email e senha são obrigatórios')
