@@ -7,7 +7,8 @@ import type { PartnerStore } from '../lib/types';
 export default function PartnersTab() {
   const {
     partnersList, isLoadingList, setEditingItem, setEditType, 
-    handleUpdatePartnerStatus, handleDeletePartner, fetchPartners, setActiveTab
+    handleUpdatePartnerStatus, handleDeletePartner, fetchPartners, setActiveTab,
+    handleDeleteMerchant, handleUpdateMerchantStatus
   } = useAdmin();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -206,7 +207,10 @@ export default function PartnersTab() {
 
                     <td className="px-10 py-7 text-center">
                       <button 
-                        onClick={() => handleUpdatePartnerStatus(p.id, !p.is_active)}
+                        onClick={() => p._isMerchant 
+                          ? handleUpdateMerchantStatus(p.id, p.is_active ? 'inactive' : 'active')
+                          : handleUpdatePartnerStatus(p.id, !p.is_active)
+                        }
                         className={`inline-flex items-center gap-3 px-5 py-2.5 rounded-full border transition-all ${
                           p.is_active 
                           ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' 
@@ -225,7 +229,7 @@ export default function PartnersTab() {
                          <button 
                            onClick={() => {
                              setEditingItem(p);
-                             setEditType('partner');
+                             setEditType(p._isMerchant ? 'merchant' : 'partner');
                              setActiveTab('my_studio');
                            }}
                            className="size-11 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm flex items-center justify-center"
@@ -234,7 +238,7 @@ export default function PartnersTab() {
                            <span className="material-symbols-outlined text-xl">edit</span>
                          </button>
                          <button 
-                           onClick={() => handleDeletePartner(p.id)}
+                           onClick={() => p._isMerchant ? handleDeleteMerchant(p.id) : handleDeletePartner(p.id)}
                            className="size-11 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all shadow-sm flex items-center justify-center border border-rose-100 dark:border-rose-500/20"
                            title="Remover Parceiro"
                          >

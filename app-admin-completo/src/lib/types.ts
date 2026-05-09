@@ -116,6 +116,8 @@ export interface Merchant {
     pix_key?: string;
   };
   payment_enabled?: boolean;
+  subscription_plan?: 'market' | 'full' | 'avulso';
+  monthly_fee?: number;
   created_at: string;
   updated_at?: string;
   metadata?: any;
@@ -153,6 +155,8 @@ export interface MerchantProfile {
   monthly_goal?: number;
   commission_percent?: number;
   payment_enabled?: boolean;
+  subscription_plan?: 'market' | 'full' | 'avulso';
+  monthly_fee?: number;
   metadata?: any;
 }
 
@@ -372,8 +376,11 @@ export interface PartnerStore {
     holder_name?: string;
     pix_key?: string;
   };
+  subscription_plan?: 'market' | 'full' | 'avulso' | 'click_retire';
+  monthly_fee?: number;
   created_at: string;
   updated_at?: string;
+  _isMerchant?: boolean;
 }
 
 export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |
@@ -416,6 +423,10 @@ export interface AppSettings {
   p2p_transfer_fee?: number;
   maintenance_mode?: boolean;
   global_announcement?: string;
+  plan_fee_market: number;
+  plan_fee_full: number;
+  plan_fee_avulso: number;
+  plan_fee_click_retire: number;
   created_at?: string;
   updated_at?: string;
 }

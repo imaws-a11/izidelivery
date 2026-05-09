@@ -195,13 +195,44 @@ function App() {
           <div className="flex-1 flex items-center overflow-x-auto scrollbar-hide gap-1">
              {userRole === 'merchant' ? (
                <>
-                  <NavTab id="dashboard" icon="dashboard" label="Métricas" />
-                 <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
-                  <NavTab id="order_center" icon="local_shipping" label="Central de Pedidos" />
-                 <NavTab id="my_studio" icon="inventory_2" label="Minha Loja" />
-                 <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
-                 <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
-                 <NavTab id="settings" icon="settings" label="Config" />
+                   {/* Planos normais (Market/Full) veem tudo */}
+                   {merchantProfile?.subscription_plan !== 'avulso' && merchantProfile?.subscription_plan !== 'click_retire' && (
+                     <>
+                       <NavTab id="dashboard" icon="dashboard" label="Métricas" />
+                       <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
+                       <NavTab id="my_studio" icon="inventory_2" label="Minha Loja" />
+                       <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
+                     </>
+                   )}
+
+                   {/* Plano Click & Retire (Parceiros) */}
+                   {merchantProfile?.subscription_plan === 'click_retire' && (
+                     <>
+                       <NavTab id="dashboard" icon="dashboard" label="Métricas" />
+                       <NavTab id="order_center" icon="local_shipping" label="Entregas" />
+                       <NavTab id="my_studio" icon="inventory_2" label="Meu Ponto" />
+                     </>
+                   )}
+
+                   {/* Plano Avulso (Apenas Entrega) */}
+                   {merchantProfile?.subscription_plan === 'avulso' && (
+                     <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
+                   )}
+
+                   {/* Tabs comuns (exceto avulso que é ultra restrito) */}
+                   {merchantProfile?.subscription_plan !== 'avulso' && (
+                     <>
+                        {merchantProfile?.subscription_plan !== 'click_retire' && (
+                          <NavTab id="order_center" icon="local_shipping" label="Central de Pedidos" />
+                        )}
+                        <NavTab id="settings" icon="settings" label="Config" />
+                     </>
+                   )}
+                   
+                   {/* Fallback para Avulso ver Config/Logout */}
+                   {merchantProfile?.subscription_plan === 'avulso' && (
+                      <NavTab id="settings" icon="settings" label="Config" />
+                   )}
                </>
              ) : (
                <>
@@ -252,12 +283,12 @@ function App() {
               className="space-y-8"
             >
               {activeTab === 'dashboard' && userRole === 'admin' && <DashboardTab />}
-              {activeTab === 'dashboard' && userRole === 'merchant' && <MerchantDashboardTab />}
+              {activeTab === 'dashboard' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MerchantDashboardTab />}
               {activeTab === 'merchants' && userRole !== 'merchant' && <MerchantsTab />}
               {activeTab === 'partners' && userRole === 'admin' && <PartnersTab />}
               {activeTab === 'tracking' && userRole !== 'merchant' && <TrackingTab />}
               {activeTab === 'orders' && userRole === 'admin' && <OrdersAdminTab />}
-              {activeTab === 'orders' && userRole === 'merchant' && <OrdersMerchantTab />}
+              {activeTab === 'orders' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <OrdersMerchantTab />}
               {activeTab === 'order_center' && <OrderCenterTab />}
               {activeTab === 'standalone_delivery' && <StandaloneDeliveryTab />}
               {activeTab === 'drivers' && userRole === 'admin' && <DriversTab />}
@@ -267,11 +298,11 @@ function App() {
               {activeTab === 'dynamic_rates' && userRole === 'admin' && <DynamicRatesTab />}
               {activeTab === 'audit_logs' && userRole === 'admin' && <AuditLogsTab />}
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
-              {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
-              {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
+              {activeTab === 'settings' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyStoreTab />}
+              {activeTab === 'my_drivers' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyDriversTab />}
               {activeTab === 'merchant_studio' && <MerchantStudio />}
               {activeTab === 'establishment_types' && <TaxonomyCenter initialMode="global" />}
-              {(activeTab === 'financial' && userRole === 'merchant') && <MyStudioTab />}
+              {(activeTab === 'financial' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso') && <MyStudioTab />}
               {activeTab === 'categories' && userRole === 'admin' && <TaxonomyCenter initialMode="assignment" />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}

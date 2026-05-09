@@ -255,7 +255,15 @@ export default function MyStudioTab() {
           { id: 'access', label: 'Dados de Acesso', icon: 'lock_person' },
           { id: 'dedicated_slots', label: 'Vagas Dedicadas', icon: 'stars' },
           { id: 'candidates', label: 'Candidatos', icon: 'group' },
-        ].map(t => (
+        ].filter(t => {
+          if (userRole === 'merchant') {
+            if (merchantProfile?.subscription_plan === 'avulso') return false; // Avulso não vê nada no Studio por enquanto
+            if (merchantProfile?.subscription_plan === 'click_retire') {
+              return ['info', 'sales', 'financial', 'access'].includes(t.id);
+            }
+          }
+          return true;
+        }).map(t => (
           <button
             key={t.id}
             onClick={() => setActivePreviewTab(t.id as any)}
@@ -268,6 +276,20 @@ export default function MyStudioTab() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-[#F8F9FA]/50 dark:bg-slate-950/20">
+        {userRole === 'merchant' && merchantProfile?.subscription_plan === 'avulso' && (
+          <div className="h-full flex flex-col items-center justify-center text-center p-12">
+            <div className="size-24 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 mb-6">
+              <span className="material-symbols-outlined text-5xl">lock</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-4">Acesso Restrito</h2>
+            <p className="text-slate-500 max-w-md font-bold uppercase text-[10px] tracking-widest leading-relaxed">
+              Seu plano atual é o <span className="text-orange-500">Plano Avulso</span>. 
+              Este estúdio está disponível apenas para parceiros nos planos Marketplace ou Full.
+              <br/><br/>
+              Utilize a aba <span className="text-primary italic">"Entrega Avulsa"</span> para solicitar seus motoboys.
+            </p>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           <motion.div
             key={activePreviewTab}

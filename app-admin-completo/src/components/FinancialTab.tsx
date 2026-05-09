@@ -1134,6 +1134,78 @@ function MasterFinancialControl() {
                <span className="text-[10px] text-slate-400 font-bold">%</span>
              </div>
           </div>
+
+          <div className="pt-6 border-t border-slate-100 dark:border-white/5 space-y-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-2">Mensalidades dos Planos</p>
+            
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-3">
+                  <div className="size-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500">
+                     <span className="material-symbols-outlined text-base">storefront</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Market (R$)</span>
+               </div>
+               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                 <input 
+                   type="number" step="0.01"
+                   value={appSettings.plan_fee_market || 0}
+                   onChange={(e) => handleUpdate('plan_fee_market', parseFloat(e.target.value))}
+                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                 />
+               </div>
+            </div>
+
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-3">
+                  <div className="size-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-500">
+                     <span className="material-symbols-outlined text-base">workspace_premium</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Full (R$)</span>
+               </div>
+               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                 <input 
+                   type="number" step="0.01"
+                   value={appSettings.plan_fee_full || 0}
+                   onChange={(e) => handleUpdate('plan_fee_full', parseFloat(e.target.value))}
+                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                 />
+               </div>
+            </div>
+
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-3">
+                  <div className="size-8 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500">
+                     <span className="material-symbols-outlined text-base">auto_transmission</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Avulso (R$)</span>
+               </div>
+               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                 <input 
+                   type="number" step="0.01"
+                   value={appSettings.plan_fee_avulso || 0}
+                   onChange={(e) => handleUpdate('plan_fee_avulso', parseFloat(e.target.value))}
+                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                 />
+               </div>
+            </div>
+
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-3">
+                  <div className="size-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                     <span className="material-symbols-outlined text-base">handshake</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Click & Retire (R$)</span>
+               </div>
+               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                 <input 
+                   type="number" step="0.01"
+                   value={appSettings.plan_fee_click_retire || 0}
+                   onChange={(e) => handleUpdate('plan_fee_click_retire', parseFloat(e.target.value))}
+                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                 />
+               </div>
+            </div>
+          </div>
        </div>
 
        {/* WITHDRAWAL RULES */}

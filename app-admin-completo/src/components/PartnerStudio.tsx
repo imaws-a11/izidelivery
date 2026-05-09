@@ -12,7 +12,8 @@ interface PartnerStudioProps {
 export default function PartnerStudio({ onClose }: PartnerStudioProps) {
   const { 
     editingItem, setEditingItem, handleUpdatePartner, isSaving, handleFileUpload,
-    partnerBalance, partnerTransactions, fetchPartnerFinance, handleRequestPartnerWithdrawal
+    partnerBalance, partnerTransactions, fetchPartnerFinance, handleRequestPartnerWithdrawal,
+    appSettings
   } = useAdmin();
 
   const [activeTab, setActiveTab] = useState<'geral' | 'imagens' | 'localizacao' | 'access' | 'financial'>('geral');
@@ -55,7 +56,7 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
     { id: 'geral', label: 'Dados Gerais', icon: 'info' },
     { id: 'imagens', label: 'Identidade Visual', icon: 'image' },
     { id: 'localizacao', label: 'Localização', icon: 'distance' },
-    { id: 'access', label: 'Dados de Acesso', icon: 'lock_person' },
+    { id: 'access', label: 'Acesso e Planos', icon: 'lock_person' },
     { id: 'financial', label: 'Repasses & Financeiro', icon: 'payments' },
   ];
 
@@ -547,6 +548,69 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                         >
                           {editingItem.is_active ? 'Ativo na Rede' : 'Suspenso'}
                         </button>
+                      </div>
+                    </div>
+
+                    {/* SEÇÃO DE PLANOS E ASSINATURA */}
+                    <div className="pt-8 border-t border-white/5 space-y-8">
+                      <div className="flex items-center gap-4">
+                        <div className="size-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500">
+                          <span className="material-symbols-outlined text-2xl">star</span>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-white uppercase tracking-widest">Plano de Assinatura</h4>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Defina o nível de acesso e mensalidade do parceiro</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Selecionar Plano</label>
+                          <div className="relative">
+                            <select
+                              value={editingItem.subscription_plan || 'click_retire'}
+                              onChange={e => {
+                                const newPlan = e.target.value as any;
+                                let newFee = editingItem.monthly_fee;
+                                
+                                // Se o valor for 0 ou nulo, preenche com o padrão do sistema
+                                if (!newFee || newFee === 0) {
+                                  if (newPlan === 'market') newFee = appSettings.plan_fee_market;
+                                  else if (newPlan === 'full') newFee = appSettings.plan_fee_full;
+                                  else if (newPlan === 'avulso') newFee = appSettings.plan_fee_avulso;
+                                  else if (newPlan === 'click_retire') newFee = 0; // Padrão para Click & Retire se não houver taxa global ainda
+                                }
+                                
+                                setEditingItem({ 
+                                  ...editingItem, 
+                                  subscription_plan: newPlan,
+                                  monthly_fee: newFee
+                                });
+                              }}
+                              className="w-full bg-slate-800 dark:bg-slate-950 border-none rounded-2xl px-6 py-5 font-black text-sm focus:ring-2 focus:ring-primary text-white appearance-none cursor-pointer"
+                            >
+                              <option value="click_retire">Ponto de Retirada (Padrão)</option>
+                              <option value="avulso">Entrega Avulsa (Restrito)</option>
+                              <option value="market">Marketplace + Entrega</option>
+                              <option value="full">Plano Full (Acesso Total)</option>
+                            </select>
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                              <span className="material-symbols-outlined font-black">expand_more</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Mensalidade (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editingItem.monthly_fee || 0}
+                            onChange={e => setEditingItem({ ...editingItem, monthly_fee: parseFloat(e.target.value) })}
+                            className="w-full bg-slate-800 dark:bg-slate-950 border-none rounded-2xl px-6 py-5 font-black text-lg focus:ring-2 focus:ring-primary text-white"
+                            placeholder="0,00"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

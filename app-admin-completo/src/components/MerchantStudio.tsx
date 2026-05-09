@@ -469,7 +469,7 @@ export default function MerchantStudio() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Comissão (%)</label>
                           <input
@@ -480,12 +480,47 @@ export default function MerchantStudio() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa Fixa (R$)</label>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Plano de Assinatura</label>
+                          <div className="relative">
+                            <select
+                              value={editingItem.subscription_plan || 'market'}
+                              onChange={e => {
+                                const newPlan = e.target.value as any;
+                                let newFee = editingItem.monthly_fee;
+                                
+                                // Auto-populate fee if it's currently 0 or empty
+                                if (!newFee || newFee === 0) {
+                                  if (newPlan === 'market') newFee = appSettings.plan_fee_market;
+                                  else if (newPlan === 'full') newFee = appSettings.plan_fee_full;
+                                  else if (newPlan === 'avulso') newFee = appSettings.plan_fee_avulso;
+                                }
+                                
+                                setEditingItem({ 
+                                  ...editingItem, 
+                                  subscription_plan: newPlan,
+                                  monthly_fee: newFee
+                                });
+                              }}
+                              className="w-full bg-white dark:bg-slate-800 border-none rounded-2xl px-6 py-5 font-black text-sm focus:ring-2 focus:ring-primary dark:text-white appearance-none cursor-pointer"
+                            >
+                              <option value="market">Marketplace + Entrega</option>
+                              <option value="full">Plano Premium (Full)</option>
+                              <option value="avulso">Apenas Entrega Avulsa</option>
+                            </select>
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <span className="material-symbols-outlined font-black">expand_more</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Mensalidade (R$)</label>
                           <input
                             type="number"
-                            value={editingItem.service_fee || 0}
-                            onChange={e => setEditingItem({ ...editingItem, service_fee: parseFloat(e.target.value) })}
+                            step="0.01"
+                            value={editingItem.monthly_fee || 0}
+                            onChange={e => setEditingItem({ ...editingItem, monthly_fee: parseFloat(e.target.value) })}
                             className="w-full bg-white dark:bg-slate-800 border-none rounded-2xl px-6 py-5 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white"
+                            placeholder="0,00"
                           />
                         </div>
                       </div>

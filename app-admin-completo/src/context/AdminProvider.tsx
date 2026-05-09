@@ -538,15 +538,20 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             store_type: data.store_type || 'restaurant',
             food_category: Array.isArray(data.food_category) ? data.food_category : [data.food_category || 'all'],
             payment_enabled: data.payment_enabled ?? true,
+            subscription_plan: data.subscription_plan || 'market',
             metadata: data.metadata || {}
           };
           setMerchantProfile(profile);
           localStorage.setItem('izi_admin_profile', JSON.stringify(profile));
           
           setActiveTab(prev => {
-            const validMerchantTabs = ['orders', 'my_studio', 'my_drivers', 'promotions', 'financial', 'settings', 'support'];
+            const isAvulso = profile.subscription_plan === 'avulso';
+            const validMerchantTabs = isAvulso 
+              ? ['standalone_delivery', 'order_center', 'my_drivers', 'financial', 'settings', 'support']
+              : ['orders', 'my_studio', 'my_drivers', 'promotions', 'financial', 'settings', 'support', 'dashboard'];
+            
             if (!prev || !validMerchantTabs.includes(prev)) {
-              return 'orders';
+              return isAvulso ? 'standalone_delivery' : 'orders';
             }
             return prev;
           });
@@ -1453,12 +1458,28 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchPartners = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      const { data, error } = await supabase
-        .from('partner_stores_delivery')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      setPartnersList(data || []);
+      const [partnersRes, avulsoRes] = await Promise.all([
+        supabase.from('partner_stores_delivery').select('*').order('name'),
+        supabase.from('admin_users').select('*').eq('subscription_plan', 'avulso').eq('is_deleted', false).order('store_name')
+      ]);
+
+      if (partnersRes.error) throw partnersRes.error;
+      
+      const partners = (partnersRes.data || []) as PartnerStore[];
+      const avulsoMerchants = (avulsoRes.data || []).map(m => ({
+        id: m.id,
+        name: m.store_name,
+        email: m.email,
+        phone: m.store_phone,
+        address: m.store_address,
+        logo_url: m.store_logo,
+        type: 'Plano Avulso',
+        is_active: m.is_active,
+        created_at: m.created_at,
+        _isMerchant: true
+      })) as PartnerStore[];
+
+      setPartnersList([...partners, ...avulsoMerchants]);
     } catch (err: any) {
       toastError('Erro ao buscar parceiros: ' + err.message);
     } finally {
@@ -1497,6 +1518,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           p2p_transfer_fee: data.p2p_transfer_fee !== undefined ? Number(data.p2p_transfer_fee) : appSettings.p2p_transfer_fee,
           maintenance_mode: data.maintenance_mode ?? appSettings.maintenance_mode,
           global_announcement: data.global_announcement || appSettings.global_announcement,
+          paymentmethodsactive: data.payment_methods_active || appSettings.paymentmethodsactive,
+          plan_fee_market: data.plan_fee_market !== undefined ? Number(data.plan_fee_market) : appSettings.plan_fee_market,
+          plan_fee_full: data.plan_fee_full !== undefined ? Number(data.plan_fee_full) : appSettings.plan_fee_full,
+          plan_fee_avulso: data.plan_fee_avulso !== undefined ? Number(data.plan_fee_avulso) : appSettings.plan_fee_avulso,
+          plan_fee_click_retire: data.plan_fee_click_retire !== undefined ? Number(data.plan_fee_click_retire) : appSettings.plan_fee_click_retire,
         };
         setAppSettings(mergedSettings);
         setLastSavedHash(JSON.stringify(mergedSettings));
@@ -1546,7 +1572,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data } = await supabase.from('dedicated_slots_delivery').select('*').eq('merchant_id', targetId);
       if (data) setMyDedicatedSlots(data as DedicatedSlot[]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar vagas dedicadas:', err);
     }
   }, [userRole, merchantProfile?.merchant_id, selectedMerchantPreview?.id]);
@@ -1571,7 +1597,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Trigger finance fetch for the newly selected merchant
       // fetchMerchantFinance uses selectedMerchantPreview which we just set
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao carregar preview do lojista:', err);
     }
   }, []);
@@ -2066,7 +2092,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         google_place_id: editingItem.google_place_id,
         metadata: editingItem.metadata || {},
         role: 'merchant',
-        payment_enabled: editingItem.payment_enabled ?? true
+        payment_enabled: editingItem.payment_enabled ?? true,
+        subscription_plan: editingItem.subscription_plan || 'market',
+        monthly_fee: editingItem.monthly_fee || 0
       };
 
       if (editingItem.password && editingItem.password.trim() !== '') {
@@ -2254,6 +2282,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         latitude:           editingItem.latitude  != null ? Number(editingItem.latitude)  : null,
         longitude:          editingItem.longitude != null ? Number(editingItem.longitude) : null,
         google_place_id:    editingItem.google_place_id   || null,
+        subscription_plan:  editingItem.subscription_plan || 'click_retire',
+        monthly_fee:        editingItem.monthly_fee       != null ? Number(editingItem.monthly_fee) : 0,
+        email:              editingItem.email             || null,
+        password:           editingItem.password          || null,
       };
 
       // Inclui id apenas se for edição de registro existente
@@ -2261,11 +2293,37 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         partnerPayload.id = id;
       }
 
-      const { error } = await supabase
+      const { data: upsertedPartner, error } = await supabase
         .from('partner_stores_delivery')
-        .upsert(partnerPayload);
+        .upsert(partnerPayload)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Sincroniza com admin_users para permitir login no painel
+      if (upsertedPartner && partnerPayload.email && partnerPayload.password) {
+        const adminUserPayload = {
+          id:                upsertedPartner.id,
+          email:             partnerPayload.email,
+          password:          partnerPayload.password,
+          store_name:        partnerPayload.name,
+          role:              'merchant',
+          subscription_plan: partnerPayload.subscription_plan,
+          monthly_fee:       partnerPayload.monthly_fee,
+          is_active:         partnerPayload.is_active,
+          updated_at:        new Date().toISOString()
+        };
+
+        const { error: adminError } = await supabase
+          .from('admin_users')
+          .upsert(adminUserPayload);
+        
+        if (adminError) {
+          console.error('Erro ao sincronizar acesso do parceiro:', adminError);
+          // Não lançamos erro aqui para não travar a criação do parceiro base
+        }
+      }
       toastSuccess(id ? 'Parceiro atualizado!' : 'Novo parceiro adicionado!');
       setEditingItem(null);
       setEditType(null);
@@ -2637,6 +2695,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         sms_notifications:                 Boolean(appSettings.smsNotifications ?? true),
         email_notifications:               Boolean(appSettings.emailNotifications ?? true),
         payment_methods_active:            appSettings.paymentmethodsactive || { pix: true, card: true, lightning: false, wallet: true },
+        plan_fee_market:                   Number(appSettings.plan_fee_market ?? 0),
+        plan_fee_full:                     Number(appSettings.plan_fee_full ?? 0),
+        plan_fee_avulso:                   Number(appSettings.plan_fee_avulso ?? 0),
+        plan_fee_click_retire:             Number(appSettings.plan_fee_click_retire ?? 0),
         updated_at:                        new Date().toISOString()
       };
 
