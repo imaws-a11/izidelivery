@@ -63,25 +63,51 @@ serve(async (req) => {
 
     // Verificação de Recarga de Saldo Lojista (Wallet Recharge)
     if (payment.metadata?.type === 'wallet_recharge') {
+      console.log(`[RECHARGE] Processando recarga para MerchantID: ${payment.metadata.user_id}, Status: ${payment.status}`);
+      
       if (payment.status === 'approved') {
         const merchantId = payment.metadata.user_id;
         const amount = payment.transaction_amount;
 
+        // Buscar saldo atual para calcular balance_after
+        const { data: txs } = await supabaseAdmin
+          .from('wallet_transactions_delivery')
+          .select('amount, type, status')
+          .eq('user_id', merchantId);
+        
+        const currentBalance = txs?.reduce((acc, t) => {
+          if (t.status === 'cancelado' || t.status === 'estornado') return acc;
+          const amt = Math.abs(Number(t.amount) || 0);
+          return acc + (t.type === 'saque' || t.type === 'debit' ? -amt : amt);
+        }, 0) || 0;
+
+        const newBalance = currentBalance + amount;
+
+        console.log(`[RECHARGE] Saldo Atual: ${currentBalance}, Novo Saldo: ${newBalance}`);
+
         // Inserir transação de depósito
-        await supabaseAdmin.from('wallet_transactions_delivery').insert({
+        const { error: insErr } = await supabaseAdmin.from('wallet_transactions_delivery').insert({
           user_id: merchantId,
           amount: amount,
           type: 'deposito',
           description: `Recarga via PIX #${String(payment.id).slice(-6)}`,
           status: 'concluido',
+          balance_after: newBalance,
           metadata: { mp_payment_id: payment.id }
         });
+
+        if (insErr) {
+          console.error('[RECHARGE] Erro ao inserir transação:', insErr);
+          throw insErr;
+        }
 
         await supabaseAdmin.from('audit_logs_delivery').insert({
           action: 'Recarga Saldo Lojista',
           module: 'Wallet',
-          metadata: { merchantId, amount, paymentId: payment.id },
+          metadata: { merchantId, amount, paymentId: payment.id, balanceAfter: newBalance },
         });
+
+        console.log(`[RECHARGE] Sucesso! Merchant ${merchantId} recarregado com R$ ${amount}`);
       }
       return new Response(JSON.stringify({ received: true, type: 'wallet_recharge' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }

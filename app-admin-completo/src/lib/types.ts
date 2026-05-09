@@ -162,6 +162,7 @@ export interface MerchantProfile {
   payment_enabled?: boolean;
   subscription_plan?: 'market' | 'full' | 'avulso';
   monthly_fee?: number;
+  document?: string;
   metadata?: any;
 }
 

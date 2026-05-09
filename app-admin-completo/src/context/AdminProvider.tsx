@@ -538,6 +538,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             store_type: data.store_type || 'restaurant',
             food_category: Array.isArray(data.food_category) ? data.food_category : [data.food_category || 'all'],
             payment_enabled: data.payment_enabled ?? true,
+            document: data.document || '',
             subscription_plan: data.subscription_plan || 'market',
             metadata: data.metadata || {}
           };
@@ -1709,6 +1710,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Isso garante que o depósito via webhook caia no mesmo user_id que o fetchMerchantFinance busca
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     if (!idToUse) return toastError('Lojista não identificado.');
+    
+    // Validação de Documento (CPF/CNPJ) para Mercado Pago
+    const doc = merchantProfile?.document || '';
+    if (!doc || doc.replace(/\D/g, '').length < 11) {
+      return toastError('CPF ou CNPJ inválido ou não cadastrado. Por favor, atualize seus dados nas Configurações antes de recarregar.');
+    }
+
     if (amount < 10) return toastError('O valor mínimo de recarga é R$ 10,00');
 
     setIsAddingCredit(true);

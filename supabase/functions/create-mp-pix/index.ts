@@ -29,7 +29,11 @@ serve(async (req) => {
         last_name: customer?.name?.split(' ').slice(1).join(' ') || 'IziDelivery',
         identification: {
           type: 'CPF',
-          number: customer?.cpf?.replace(/\D/g, '') || '00000000000',
+          number: (() => {
+            const num = customer?.cpf?.replace(/\D/g, '') || '';
+            if (!num) console.warn(`[WARNING] CPF ausente para orderId: ${orderId}. Usando fallback 00000000000`);
+            return num || '00000000000';
+          })(),
         },
       },
       date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
