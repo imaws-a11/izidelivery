@@ -677,6 +677,67 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                     </div>
                   </div>
 
+                  {/* NOVA FERRAMENTA DE SALDO PRÉ-PAGO */}
+                  <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-10 rounded-[40px] shadow-xl shadow-indigo-500/20 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                      <span className="material-symbols-outlined text-9xl">monetization_on</span>
+                    </div>
+                    
+                    <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center justify-between">
+                      <div className="text-white space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <span className="material-symbols-outlined">payments</span>
+                          </div>
+                          <h4 className="text-lg font-black uppercase tracking-widest italic">Saldo Pré-Pago</h4>
+                        </div>
+                        <p className="text-xs font-bold text-indigo-100 uppercase tracking-widest max-w-sm">
+                          Gerencie os créditos do parceiro utilizados para solicitar pedidos de entrega avulsa.
+                        </p>
+                      </div>
+
+                      <div className="flex gap-4 w-full md:w-auto">
+                        <button
+                          type="button"
+                          disabled={!editingItem.id || editingItem.id.toString().startsWith('new-')}
+                          onClick={async () => {
+                            const amountStr = prompt("Valor do CRÉDITO Pré-Pago a adicionar (R$):", "50");
+                            if (!amountStr) return;
+                            const amount = parseFloat(amountStr.replace(',', '.'));
+                            if (isNaN(amount) || amount <= 0) return toastError("Valor inválido.");
+                            
+                            const desc = prompt("Descrição do crédito:", "Recarga de Saldo Pré-Pago");
+                            if (!editingItem?.id) return;
+                            await handleApplyMerchantCredit(editingItem.id, amount, desc || "Recarga de Saldo Pré-Pago");
+                          }}
+                          className="flex-1 md:flex-none bg-white text-indigo-600 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-base">add_circle</span>
+                          Adicionar
+                        </button>
+                        
+                        <button
+                          type="button"
+                          disabled={!editingItem.id || editingItem.id.toString().startsWith('new-')}
+                          onClick={async () => {
+                            const amountStr = prompt("Valor a DEDUZIR do Saldo Pré-Pago (R$):", "0");
+                            if (!amountStr) return;
+                            const amount = parseFloat(amountStr.replace(',', '.'));
+                            if (isNaN(amount) || amount <= 0) return toastError("Valor inválido.");
+                            
+                            const desc = prompt("Descrição do débito:", "Ajuste de Saldo Pré-Pago");
+                            if (!editingItem?.id) return;
+                            await handleApplyMerchantCredit(editingItem.id, -amount, desc || "Ajuste de Saldo Pré-Pago");
+                          }}
+                          className="flex-1 md:flex-none bg-indigo-900/40 text-white border border-white/20 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-900/60 active:scale-95 transition-all flex items-center justify-center gap-2 backdrop-blur-sm"
+                        >
+                          <span className="material-symbols-outlined text-base">remove_circle</span>
+                          Deduzir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="bg-slate-50 dark:bg-slate-800/30 p-10 rounded-[40px] border border-slate-100 dark:border-slate-800 space-y-8">
                      <div className="flex items-center gap-4">
                       <div className="size-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-500">

@@ -36,6 +36,7 @@ import NotificationsTab from './components/NotificationsTab';
 import GamificationTab from './components/GamificationTab';
 import OrderCenterTab from './components/OrderCenterTab';
 import StandaloneDeliveryTab from './components/StandaloneDeliveryTab';
+import WalletHistoryTab from './components/WalletHistoryTab';
 // import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
 
@@ -219,6 +220,7 @@ export default function App() {
                      <>
                        <NavTab id="dashboard" icon="dashboard" label="Métricas" />
                        <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
+                       <NavTab id="financial" icon="account_balance_wallet" label="Financeiro" />
                        <NavTab id="settings" icon="settings" label="Config" />
                      </>
                    )}
@@ -307,6 +309,8 @@ export default function App() {
               {(activeTab === 'my_studio' && userRole === 'merchant') && <MyStudioTab initialTab="info" />}
               {activeTab === 'categories' && userRole === 'admin' && <TaxonomyCenter initialMode="assignment" />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
+              {activeTab === 'financial' && userRole === 'merchant' && merchantProfile?.subscription_plan === 'avulso' && <WalletHistoryTab />}
+              {activeTab === 'financial' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyStudioTab initialTab="financial" />}
               {activeTab === 'izi_black' && <IziBlackTab />}
               {activeTab === 'support' && <SupportTab />}
               {activeTab === 'notifications' && <NotificationsTab />}

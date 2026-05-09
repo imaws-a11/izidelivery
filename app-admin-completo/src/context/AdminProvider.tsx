@@ -1104,7 +1104,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [activeTab, merchantProfile?.id, session?.user?.id, userRole]);
 
   const fetchMerchantFinance = useCallback(async () => {
-    const idToUse = userRole === 'merchant' ? session?.user?.id : selectedMerchantPreview?.id;
+    // CORREÇÃO CRÍTICA: O parceiro/lojista tem DOIS IDs:
+    //   1. session?.user?.id  → UUID do Supabase Auth (login)
+    //   2. merchantProfile?.id → UUID do admin_users (operações financeiras)
+    // Os créditos são gravados com admin_users.id, então DEVEMOS usar merchantProfile.id
+    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     if (!idToUse) {
       setMerchantBalance(0);
       setMerchantTransactions([]);
@@ -1125,7 +1129,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const balance = data.reduce((acc, t) => {
           if (t.status === 'cancelado' || t.status === 'estornado') return acc;
           const amt = Number(t.amount) || 0;
-          return acc + (t.type === 'saque' ? -amt : amt);
+          return acc + (t.type === 'saque' || t.type === 'debit' ? -Math.abs(amt) : amt);
         }, 0);
         setMerchantBalance(balance);
       } else {
@@ -1164,7 +1168,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (driverData) {
           setPartnerBalance(Number(driverData.wallet_balance));
         } else {
-          const balance = data.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0);
+          const balance = data.reduce((acc, t) => acc + (t.type === 'saque' || t.type === 'debit' ? -Math.abs(Number(t.amount)) : Number(t.amount)), 0);
           setPartnerBalance(balance);
         }
       }
@@ -1701,7 +1705,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const handleRequestMerchantRecharge = useCallback(async (amount: number) => {
-    const idToUse = userRole === 'merchant' ? session?.user?.id : selectedMerchantPreview?.id;
+    // CORREÇÃO: Usar merchantProfile.id (admin_users UUID), não session.user.id (Auth UUID)
+    // Isso garante que o depósito via webhook caia no mesmo user_id que o fetchMerchantFinance busca
+    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     if (!idToUse) return toastError('Lojista não identificado.');
     if (amount < 10) return toastError('O valor mínimo de recarga é R$ 10,00');
 
@@ -1774,38 +1780,49 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchUsers, logAction]);
 
   const handleApplyMerchantCredit = useCallback(async (merchantId: string, amount: number, description: string = 'Crédito administrativo') => {
-    if (amount <= 0) return toastError('O valor deve ser positivo.');
+    if (amount === 0) return toastError('O valor não pode ser zero.');
     setIsSaving(true);
     try {
+      // Calcula saldo atual a partir do histórico de transações
       const { data: txs, error: txsErr } = await supabase
         .from('wallet_transactions_delivery')
-        .select('amount, type')
+        .select('amount, type, status')
         .eq('user_id', merchantId);
       
       if (txsErr) throw txsErr;
       
-      const currentBalance = txs?.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0) || 0;
+      const currentBalance = txs?.reduce((acc, t) => {
+        if (t.status === 'cancelado' || t.status === 'estornado') return acc;
+        const amt = Math.abs(Number(t.amount) || 0);
+        return acc + (t.type === 'saque' || t.type === 'debit' ? -amt : amt);
+      }, 0) || 0;
       const newBalance = currentBalance + amount;
 
+      // Insere a transação com valor absoluto; o tipo (credit/debit) determina o sinal
       const { error: insertErr } = await supabase.from('wallet_transactions_delivery').insert({
         user_id: merchantId,
-        amount,
-        type: 'credit',
+        amount: Math.abs(amount),
+        type: amount > 0 ? 'credit' : 'debit',
         description,
-        balance_after: newBalance
+        balance_after: newBalance,
+        status: 'concluido'
       });
       if (insertErr) throw insertErr;
 
-      toastSuccess(`Crédito de R$ ${amount.toLocaleString('pt-BR')} aplicado ao parceiro!`);
+      const label = amount > 0 ? 'Crédito' : 'Débito';
+      toastSuccess(`${label} de R$ ${Math.abs(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} aplicado!`);
+      
+      // Atualiza ambas as views: admin vendo parceiro e o próprio parceiro logado
       fetchMerchants();
+      fetchPartners();
       fetchPartnerFinance(merchantId);
-      logAction('Apply Merchant Credit', 'Finance', { merchantId, amount });
+      fetchMerchantFinance();
     } catch (err: any) {
-      toastError(err.message);
+      toastError('Erro ao aplicar crédito: ' + err.message);
     } finally {
       setIsSaving(false);
     }
-  }, [fetchMerchants, fetchPartnerFinance, logAction]);
+  }, [fetchMerchants, fetchPartners, fetchPartnerFinance, fetchMerchantFinance]);
 
   const handleApplyDriverCredit = useCallback(async (driverId: string, amount: number, description: string = 'Crédito administrativo') => {
     if (amount <= 0) return toastError('O valor deve ser positivo.');
