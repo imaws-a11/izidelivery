@@ -244,9 +244,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshSettings = async () => {
     try {
-      const { data: gData } = await supabase.from('admin_settings_delivery').select('*').eq('key', 'global').single();
+      const { data: gData } = await supabase.from('admin_settings_delivery').select('*').eq('key', 'global').maybeSingle();
       if (gData?.value) setGlobalSettings(gData.value);
-      const { data: aData } = await supabase.from('app_settings_delivery').select('*').single();
+      const { data: aData } = await supabase.from('app_settings_delivery').select('*').maybeSingle();
       if (aData) setAppSettings(aData);
     } catch (e) { console.error("Error refreshing settings:", e); }
   };
@@ -620,9 +620,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .from('cart_sync_delivery')
           .select('items')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') throw error;
+        if (error) throw error;
         
         if (data?.items) {
           const { 
@@ -712,7 +712,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .from('users_delivery')
           .select('wallet_balance, izi_coins, is_izi_black')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
         if (data) {

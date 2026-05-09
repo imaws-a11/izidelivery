@@ -115,6 +115,7 @@ export interface Merchant {
     account?: string;
     pix_key?: string;
   };
+  payment_enabled?: boolean;
   created_at: string;
   updated_at?: string;
   metadata?: any;

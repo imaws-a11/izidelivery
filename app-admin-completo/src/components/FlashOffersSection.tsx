@@ -87,7 +87,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
       .from('admin_users')
       .select('id, store_name')
       .eq('id', merchantId)
-      .single();
+      .maybeSingle();
 
     if (data) setMerchants([data]);
   }, [merchantId, userRole]);

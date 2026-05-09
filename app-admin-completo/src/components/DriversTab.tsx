@@ -706,7 +706,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                .from('admin_users')
                .select('id')
                .eq('email', session.user.email)
-               .single();
+               .maybeSingle();
              if (adminData) mId = adminData.id;
            }
 

@@ -566,9 +566,9 @@ export default function MyStudioTab() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-1 bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group border-b-4 border-b-primary">
                     <div className="flex flex-col items-center text-center">
-                      <div className={`p-4 rounded-3xl mb-6 ring-8 transition-all ${merchantProfile?.payment_enabled ? 'bg-primary/10 ring-primary/5 opacity-100' : 'bg-slate-100 ring-slate-100/5 opacity-30 grayscale'}`}>
+                      <div className={`p-4 rounded-3xl mb-6 ring-8 transition-all ${targetItem.payment_enabled ?? true ? 'bg-primary/10 ring-primary/5 opacity-100' : 'bg-slate-100 ring-slate-100/5 opacity-30 grayscale'}`}>
                         <QRCodeSVG 
-                          value={merchantProfile?.payment_enabled ? `izipay:merchant:${merchantProfile?.merchant_id}` : 'izipay:disabled'}
+                          value={targetItem.payment_enabled ?? true ? `izipay:merchant:${(targetItem as any).merchant_id || targetItem.id}` : 'izipay:disabled'}
                           size={180}
                           level="H"
                           includeMargin={false}
@@ -577,36 +577,41 @@ export default function MyStudioTab() {
                       </div>
                       <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">Seu QR Code IZI</h4>
                       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-4 mb-6">
-                        {merchantProfile?.payment_enabled 
+                        {targetItem.payment_enabled ?? true 
                           ? "Apresente este código para que o cliente realize o pagamento instantâneo via App IZI."
                           : "Recebimentos via Izi Pay estão desativados no momento."}
                       </p>
 
                       <div className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 rounded-3xl flex items-center justify-between mb-8">
                          <div className="flex items-center gap-3">
-                            <div className={`size-10 rounded-xl flex items-center justify-center ${merchantProfile?.payment_enabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
-                               <span className="material-symbols-outlined text-sm font-black">{merchantProfile?.payment_enabled ? 'check' : 'close'}</span>
+                            <div className={`size-10 rounded-xl flex items-center justify-center ${targetItem.payment_enabled ?? true ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                               <span className="material-symbols-outlined text-sm font-black">{targetItem.payment_enabled ?? true ? 'check' : 'close'}</span>
                             </div>
                             <div className="text-left">
                                <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tight">Receber Izi Pay</p>
-                               <p className="text-[8px] font-bold text-slate-400 uppercase">{merchantProfile?.payment_enabled ? 'Habilitado' : 'Desabilitado'}</p>
+                               <p className="text-[8px] font-bold text-slate-400 uppercase">{targetItem.payment_enabled ?? true ? 'Habilitado' : 'Desabilitado'}</p>
                             </div>
                          </div>
                          <button 
-                           onClick={async () => {
-                             const newVal = !merchantProfile?.payment_enabled;
+                            onClick={async () => {
+                             const newVal = !(targetItem.payment_enabled ?? true);
+                             const validId = (targetItem as any).merchant_id || targetItem.id;
+                             if (!validId || validId === 'undefined') {
+                               toastError("ID do lojista não encontrado.");
+                               return;
+                             }
                              try {
-                               const { error } = await supabase.from('admin_users').update({ payment_enabled: newVal }).eq('id', merchantProfile?.merchant_id);
+                               const { error } = await supabase.from('admin_users').update({ payment_enabled: newVal }).eq('id', validId);
                                if (error) throw error;
-                               setMerchantProfile({...merchantProfile!, payment_enabled: newVal});
+                               updateItem({...targetItem, payment_enabled: newVal});
                                toastSuccess(newVal ? "Pagamentos habilitados!" : "Pagamentos desabilitados.");
                              } catch (err: any) {
                                toastError("Erro ao atualizar: " + err.message);
                              }
                            }}
-                           className={`w-12 h-6 rounded-full relative transition-all ${merchantProfile?.payment_enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                           className={`w-12 h-6 rounded-full relative transition-all ${targetItem.payment_enabled ?? true ? 'bg-emerald-500' : 'bg-slate-300'}`}
                          >
-                            <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${merchantProfile?.payment_enabled ? 'left-7' : 'left-1'}`} />
+                            <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${targetItem.payment_enabled ?? true ? 'left-7' : 'left-1'}`} />
                          </button>
                       </div>
                       
@@ -678,7 +683,7 @@ export default function MyStudioTab() {
                     { 
                       label: 'Comissão IZI', 
                       val: `R$ ${(dashboardData.totalCommission || 0).toFixed(2).replace('.', ',')}`, 
-                      trend: `${(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}% de taxa`, 
+                      trend: `${(targetItem?.commission_percent ?? appSettings.appCommission ?? 12)}% de taxa`, 
                       icon: 'percent', 
                       color: 'bg-red-50 text-red-500' 
                     },
@@ -3205,7 +3210,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                .from('admin_users')
                .select('id')
                .eq('email', session.user.email)
-               .single();
+               .maybeSingle();
              if (adminData) mId = adminData.id;
            }
 

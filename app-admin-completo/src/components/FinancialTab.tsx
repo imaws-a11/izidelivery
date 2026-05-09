@@ -503,7 +503,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
         .from('users_delivery')
         .select('izi_coins')
         .eq('id', loan.user_id)
-        .single();
+        .maybeSingle();
         
       const newBalance = (userData?.izi_coins || 0) + finalAmount;
 
@@ -847,7 +847,7 @@ function PreApprovedLimitsSection() {
     const { data } = await supabase
       .from('app_settings_delivery')
       .select('global_pre_approved_limit')
-      .single();
+      .maybeSingle();
     if (data) setGlobalLimit(data.global_pre_approved_limit || 0);
   };
 

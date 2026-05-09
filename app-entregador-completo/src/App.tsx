@@ -1065,7 +1065,6 @@ function App() {
                 setSelectedOrder(order);
                 setShowOrderModal(true);
                 activeOverlayMissionRef.current = null;
-                OverlayPermission.bringAppToFront().catch(() => {});
             }
         });
         return () => {

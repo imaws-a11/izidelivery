@@ -532,6 +532,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             estimated_time: data.estimated_time || '30-45 min',
             store_type: data.store_type || 'restaurant',
             food_category: Array.isArray(data.food_category) ? data.food_category : [data.food_category || 'all'],
+            payment_enabled: data.payment_enabled ?? true,
             metadata: data.metadata || {}
           };
           setMerchantProfile(profile);
@@ -1456,7 +1457,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchAppSettings = useCallback(async () => {
     setIsFetchingSettings(true);
     try {
-      const { data } = await supabase.from('app_settings_delivery').select('*').single();
+      const { data } = await supabase.from('app_settings_delivery').select('*').maybeSingle();
       if (data) {
         const mergedSettings: AppSettings = {
           ...appSettings,
@@ -1643,7 +1644,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (amount <= 0) return toastError('O valor deve ser positivo.');
     setIsSaving(true);
     try {
-      const { data: user, error: fetchErr } = await supabase.from('users_delivery').select('izi_coins').eq('id', userId).single();
+      const { data: user, error: fetchErr } = await supabase.from('users_delivery').select('izi_coins').eq('id', userId).maybeSingle();
       if (fetchErr) throw fetchErr;
 
       const newBalance = (user?.izi_coins || 0) + amount;
@@ -2008,7 +2009,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         longitude: editingItem.longitude,
         google_place_id: editingItem.google_place_id,
         metadata: editingItem.metadata || {},
-        role: 'merchant'
+        role: 'merchant',
+        payment_enabled: editingItem.payment_enabled ?? true
       };
 
       if (editingItem.password && editingItem.password.trim() !== '') {
@@ -2328,7 +2330,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .from('orders_delivery')
         .select('*')
         .eq('id', orderId)
-        .single();
+        .maybeSingle();
       
       if (fetchErr) throw fetchErr;
       if (order.status === 'concluido') return toastWarning('Este pedido já estava concluído.');
@@ -2355,7 +2357,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .eq('user_id', order.merchant_id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
         
         const currentBalance = currentWallet?.balance_after || 0;
         const newBalance = currentBalance + netAmount;

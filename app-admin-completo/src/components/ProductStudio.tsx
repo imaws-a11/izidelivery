@@ -375,7 +375,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           .from('products_delivery')
           .insert([productData])
           .select()
-          .single();
+          .maybeSingle();
         if (error) {
           console.error('Erro ao inserir novo produto:', error);
           throw error;
@@ -437,7 +437,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
               sort_order: group.sort_order || 0
             }])
             .select()
-            .single();
+            .maybeSingle();
 
           if (groupError) throw groupError;
 
