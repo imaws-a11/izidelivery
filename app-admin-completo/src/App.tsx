@@ -36,6 +36,7 @@ import NotificationsTab from './components/NotificationsTab';
 import GamificationTab from './components/GamificationTab';
 import OrderCenterTab from './components/OrderCenterTab';
 import StandaloneDeliveryTab from './components/StandaloneDeliveryTab';
+import MerchantProfileTab from './components/MerchantProfileTab';
 import WalletHistoryTab from './components/WalletHistoryTab';
 // import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
@@ -221,6 +222,7 @@ export default function App() {
                        <NavTab id="dashboard" icon="dashboard" label="Métricas" />
                        <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
                        <NavTab id="financial" icon="account_balance_wallet" label="Financeiro" />
+                       <NavTab id="merchant_profile" icon="person" label="Perfil" />
                        <NavTab id="settings" icon="settings" label="Config" />
                      </>
                    )}
@@ -231,6 +233,7 @@ export default function App() {
                         {merchantProfile?.subscription_plan !== 'click_retire' && (
                           <NavTab id="order_center" icon="local_shipping" label="Central de Pedidos" />
                         )}
+                        <NavTab id="merchant_profile" icon="person" label="Perfil" />
                         <NavTab id="settings" icon="settings" label="Config" />
                      </>
                    )}
@@ -302,6 +305,7 @@ export default function App() {
               {activeTab === 'audit_logs' && userRole === 'admin' && <AuditLogsTab />}
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
               {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
+              {activeTab === 'merchant_profile' && userRole === 'merchant' && <MerchantProfileTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyDriversTab />}
               {activeTab === 'merchant_studio' && <MerchantStudio />}
               {activeTab === 'establishment_types' && <TaxonomyCenter initialMode="global" />}
