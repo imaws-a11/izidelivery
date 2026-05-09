@@ -1473,8 +1473,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         phone: m.store_phone,
         address: m.store_address,
         logo_url: m.store_logo,
+        banner_url: m.store_banner,
         type: 'Plano Avulso',
         is_active: m.is_active,
+        commission_percent: m.commission_percent,
+        service_fee: m.service_fee,
+        bank_info: m.bank_info,
+        subscription_plan: m.subscription_plan,
+        monthly_fee: m.monthly_fee,
         created_at: m.created_at,
         _isMerchant: true
       })) as PartnerStore[];
@@ -2290,6 +2296,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         monthly_fee:        editingItem.monthly_fee       != null ? Number(editingItem.monthly_fee) : 0,
         email:              editingItem.email             || null,
         password:           editingItem.password          || null,
+        // Novos campos para persistência
+        type:               editingItem.type              || 'Ponto de Retirada',
+        commission_percent: editingItem.commission_percent != null ? Number(editingItem.commission_percent) : 15,
+        service_fee:        editingItem.service_fee        != null ? Number(editingItem.service_fee) : 0,
+        logo_url:           editingItem.logo_url          || null,
+        banner_url:         editingItem.banner_url        || null,
+        bank_info:          editingItem.bank_info         || {},
       };
 
       // Inclui id apenas se for edição de registro existente
@@ -2316,6 +2329,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           subscription_plan: partnerPayload.subscription_plan,
           monthly_fee:       partnerPayload.monthly_fee,
           is_active:         partnerPayload.is_active,
+          // Sincroniza dados financeiros e visuais também no admin_users
+          commission_percent: partnerPayload.commission_percent,
+          service_fee:        partnerPayload.service_fee,
+          bank_info:          partnerPayload.bank_info,
+          store_logo:         partnerPayload.logo_url,
+          store_banner:       partnerPayload.banner_url,
           updated_at:        new Date().toISOString()
         };
 
