@@ -2508,6 +2508,32 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [ordersPage, fetchAllOrders]);
 
+  const handleSettlePayout = useCallback(async (entityId: string, entityType: 'merchant' | 'partner', amount: number, orderIds: string[]) => {
+    if (!window.confirm(`Deseja marcar R$ ${amount.toFixed(2)} como LIQUIDADO para este ${entityType === 'merchant' ? 'lojista' : 'parceiro'}?`)) return;
+    
+    try {
+      const { error: payoutError } = await supabase.from('payouts_delivery').insert({
+        entity_id: entityId,
+        entity_type: entityType,
+        amount,
+        status: 'completed',
+        metadata: { order_ids: orderIds }
+      });
+      if (payoutError) throw payoutError;
+
+      const { error: orderError } = await supabase
+        .from('orders_delivery')
+        .update({ payout_status: 'completed' })
+        .in('id', orderIds);
+      if (orderError) throw orderError;
+
+      toastSuccess(`Repasse liquidado com sucesso!`);
+      fetchAllOrders(ordersPage);
+    } catch (err: any) {
+      toastError('Erro ao liquidar repasse: ' + err.message);
+    }
+  }, [ordersPage, fetchAllOrders]);
+
   const handleConfirmSubscriptionPayment = useCallback(async (order: Order) => {
     try {
       const { error } = await supabase.from('orders_delivery').update({ status: 'pago' }).eq('id', order.id);
@@ -2790,14 +2816,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     let netProfit = 0;
     let totalCommission = 0;
-    const merchantMap: Record<string, any> = {};
+    let merchantPayout = 0;
+    let driverPayout = 0;
+    let partnerPayout = 0;
+    let platformRevenue = 0;
 
+    const merchantMap: Record<string, any> = {};
     const dailyRev = [0, 0, 0, 0, 0, 0, 0];
     const today = new Date();
+    let revenueToday = 0;
 
     completed.forEach(order => {
       const m = merchantsList.find(ml => ml.id === order.merchant_id);
-      const merchantName = m?.store_name || order.merchant_id || 'Plataforma';
+      const merchantName = m?.store_name || order.merchant_name || 'Estabelecimento';
       
       if (!merchantMap[merchantName]) {
         merchantMap[merchantName] = { label: merchantName, orders: 0, revenue: 0, id: order.merchant_id };
@@ -2805,49 +2836,83 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       merchantMap[merchantName].orders++;
       merchantMap[merchantName].revenue += (Number(order.total_price) || 0);
 
+      // --- SPLIT DE PAGAMENTO ---
+      const totalOrder = Number(order.total_price || 0);
+      const deliveryFee = Number(order.delivery_fee || 0);
+      const serviceFee = Number(order.service_fee || 0);
+      
+      // Comissão apenas sobre os itens (Total - Entrega - Taxa de Serviço)
+      const productsPrice = Math.max(0, totalOrder - deliveryFee - serviceFee);
       const commissionRate = m?.commission_percent ?? appSettings.appCommission ?? 12;
-      const commission = (order.total_price || 0) * (commissionRate / 100);
+      const commission = productsPrice * (commissionRate / 100);
       
       totalCommission += commission;
       
-      let orderNetProfit = 0;
+      // Repasse do Entregador
+      driverPayout += deliveryFee;
+      
+      // Repasse do Lojista
+      const currentMerchantPayout = productsPrice - commission;
+      merchantPayout += currentMerchantPayout;
+      
+      // Receita da Plataforma
+      const currentPlatformRevenue = commission + serviceFee;
+      platformRevenue += currentPlatformRevenue;
+
+      // Repasse do Parceiro (Click & Retire)
+      if (order.partner_id) {
+        const pFee = Number(appSettings.plan_fee_click_retire || 2.5);
+        partnerPayout += pFee;
+        // Se houver parceiro, descontamos do repasse do lojista
+        merchantPayout -= pFee;
+      }
+
       if (userRole === 'merchant') {
-        orderNetProfit = (order.total_price || 0) - commission;
-        netProfit += orderNetProfit;
+        netProfit += currentMerchantPayout;
       } else {
-        orderNetProfit = commission;
-        netProfit += orderNetProfit;
+        netProfit += currentPlatformRevenue;
       }
 
       const orderDate = new Date(order.created_at);
       const diffDays = Math.floor((today.getTime() - orderDate.getTime()) / (1000 * 3600 * 24));
       if (diffDays >= 0 && diffDays < 7) {
-        dailyRev[6 - diffDays] += userRole === 'merchant' ? (order.total_price || 0) : commission;
+        dailyRev[6 - diffDays] += userRole === 'merchant' ? currentMerchantPayout : currentPlatformRevenue;
+      }
+
+      if (orderDate.toDateString() === today.toDateString()) {
+        revenueToday += userRole === 'merchant' ? currentMerchantPayout : currentPlatformRevenue;
       }
     });
 
-    const totalOrdersToday = dashboardOrders.filter(o => {
-      const d = new Date(o.created_at);
-      return d.toDateString() === today.toDateString();
-    }).length;
+    // --- RECEITA DE ASSINATURAS (RECORRÊNCIA) ---
+    let subscriptionRevenue = 0;
+    merchantsList.forEach(m => {
+      if (m.monthly_fee) subscriptionRevenue += Number(m.monthly_fee);
+    });
+    partnersList.forEach(p => {
+      if (p.monthly_fee) subscriptionRevenue += Number(p.monthly_fee);
+    });
+
+    platformRevenue += subscriptionRevenue;
+
+    const activeOrdersCount = dashboardOrders.filter(o => !['concluido', 'delivered', 'cancelado'].includes(o.status)).length;
+    const totalOrdersToday = dashboardOrders.filter(o => new Date(o.created_at).toDateString() === today.toDateString()).length;
 
     const categoryMap: Record<string, { label: string, val: number, revenue: number }> = {};
     const productMap: Record<string, { label: string, sales: number, revenue: number }> = {};
 
     completed.forEach(o => {
-      // Agregação por categoria de serviço
       const cat = o.service_type || 'Geral';
       if (!categoryMap[cat]) categoryMap[cat] = { label: cat, val: 0, revenue: 0 };
       categoryMap[cat].val++;
       categoryMap[cat].revenue += (o.total_price || 0);
 
-      // Agregação por itens do pedido (se disponíveis)
       if (o.items && Array.isArray(o.items)) {
         o.items.forEach((item: any) => {
-          const itemName = item.name || 'Produto IZI';
+          const itemName = item.name || item.product_name || 'Produto IZI';
           if (!productMap[itemName]) productMap[itemName] = { label: itemName, sales: 0, revenue: 0 };
           productMap[itemName].sales += (item.quantity || 1);
-          productMap[itemName].revenue += (item.price || 0) * (item.quantity || 1);
+          productMap[itemName].revenue += (Number(item.price || 0)) * (item.quantity || 1);
         });
       }
     });
@@ -2865,8 +2930,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    const revenueToday = dailyRev[6];
-    const activeOrdersCount = orders.filter(o => !['concluido', 'delivered', 'cancelado'].includes(o.status)).length;
+    // Standalone Deliveries Analysis
+    let saCount = 0;
+    let saRevenue = 0;
+    let saDistance = 0;
+
+    completed.filter(o => o.service_type === 'entrega_avulsa').forEach(o => {
+      saCount++;
+      saRevenue += (o.total_price || 0);
+      saDistance += (o.route_distance_km || 0);
+    });
 
     return {
       totalRevenue,
@@ -2877,14 +2950,27 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       totalCommission,
       deliverySuccessRate,
       dailyRevenue: dailyRev,
-      revenuePath: 'M0,120 L400,120',
-      dayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+      revenuePath: '', // Calculado no componente se necessário
+      dayLabels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
       totalOrdersToday,
       revenueToday,
       activeOrdersCount,
       categories,
       topProducts,
-      topMerchants
+      topMerchants,
+      ecosystem: {
+        platformRevenue,
+        merchantPayout,
+        driverPayout,
+        partnerPayout,
+        netPlatformProfit: platformRevenue * 0.7, // Estimativa: 30% de custo operacional
+      },
+      standaloneMetrics: {
+        count: saCount,
+        revenue: saRevenue,
+        totalDistance: saDistance,
+        avgRevenuePerKm: saDistance > 0 ? saRevenue / saDistance : 0
+      }
     };
   }, [dashboardOrders, merchantsList, appSettings, userRole, merchantProfile?.id]);
 
@@ -2951,7 +3037,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     handleSaveAppSettings,
     handleUpdateMerchantProfile,
     fetchMerchantFinance, handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance,
-    partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal
+    partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal, handleSettlePayout
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

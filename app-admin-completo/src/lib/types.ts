@@ -12,10 +12,15 @@ export interface Order {
   total_price: number;
   delivery_address: string;
   payment_method?: string;
+  partner_id?: string;
+  payout_status?: 'pending' | 'processing' | 'completed' | 'cancelled';
   created_at: string;
   updated_at?: string;
   user_name?: string;
   scheduled_at?: string;
+  route_distance_km?: number;
+  delivery_fee?: number;
+  service_fee?: number;
   user?: User;
 }
 
@@ -448,4 +453,18 @@ export interface DashboardData {
   categories: any[];
   topProducts?: any[];
   topMerchants: any[];
+  // Ecosystem Financial Metrics
+  ecosystem?: {
+    platformRevenue: number;    // Commissions + Fees
+    merchantPayout: number;     // What goes to stores
+    driverPayout: number;       // Delivery fees
+    partnerPayout: number;      // Click & Retire fees
+    netPlatformProfit: number;  // platformRevenue - operatingCosts
+  };
+  standaloneMetrics: {
+    count: number;
+    revenue: number;
+    totalDistance: number;
+    avgRevenuePerKm: number;
+  };
 }

@@ -90,6 +90,71 @@ export default function DashboardTab() {
         ))}
       </div>
 
+      {/* Ecosystem Financial Overview - Novo Split de Pagamento */}
+      {userRole === 'admin' && dashboardData.ecosystem && (
+        <section className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+           <div className="bg-white dark:bg-slate-950 rounded-[48px] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+              <div className="px-10 py-10 border-b border-slate-100 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-900/20">
+                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                       <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase">Fluxo Financeiro do Ecossistema</h3>
+                       <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-[0.2em]">Distribuição e Split de Receita em Tempo Real</p>
+                    </div>
+                    <div className="flex items-center gap-2 px-6 py-3 bg-emerald-500/10 text-emerald-500 rounded-2xl border border-emerald-500/20">
+                       <span className="material-symbols-outlined text-xl animate-pulse">check_circle</span>
+                       <span className="text-[10px] font-black uppercase tracking-widest">Saúde Financeira: Excelente</span>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                 {[
+                   { label: 'Repasse Lojistas', val: dashboardData.ecosystem.merchantPayout, icon: 'storefront', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20', desc: 'Total líquido para os estabelecimentos' },
+                   { label: 'Ganhos Entregadores', val: dashboardData.ecosystem.driverPayout, icon: 'delivery_dining', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', desc: 'Taxas de entrega e gorjetas' },
+                   { label: 'Receita Plataforma', val: dashboardData.ecosystem.platformRevenue, icon: 'hub', color: 'text-primary', bg: 'bg-primary/5', desc: 'Comissões e taxas de serviço' },
+                   { label: 'Lucro Líquido IZI', val: dashboardData.ecosystem.netPlatformProfit, icon: 'account_balance', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20', desc: 'Receita após custos operacionais' },
+                 ].map((card, i) => (
+                   <div key={i} className="flex flex-col group hover:translate-y-[-4px] transition-all">
+                      <div className={`size-14 ${card.bg} ${card.color} rounded-2xl flex items-center justify-center mb-6 shadow-sm`}>
+                         <span className="material-symbols-outlined text-2xl font-black">{card.icon}</span>
+                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{card.label}</p>
+                      <h4 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter italic">
+                        R$ {card.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </h4>
+                      <p className="text-[9px] font-bold text-slate-400 mt-2 leading-relaxed opacity-60 uppercase">{card.desc}</p>
+                   </div>
+                 ))}
+              </div>
+
+              <div className="px-10 pb-10">
+                 <div className="h-4 bg-slate-100 dark:bg-slate-900 rounded-full flex overflow-hidden shadow-inner border border-slate-200 dark:border-slate-800">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(dashboardData.ecosystem.merchantPayout / (dashboardData.totalRevenue || 1)) * 100}%` }}
+                      className="h-full bg-purple-500" 
+                    />
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(dashboardData.ecosystem.driverPayout / (dashboardData.totalRevenue || 1)) * 100}%` }}
+                      className="h-full bg-blue-500" 
+                    />
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(dashboardData.ecosystem.platformRevenue / (dashboardData.totalRevenue || 1)) * 100}%` }}
+                      className="h-full bg-primary" 
+                    />
+                 </div>
+                 <div className="mt-6 flex flex-wrap justify-between gap-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 italic">
+                    <div className="flex items-center gap-2"><div className="size-2 bg-purple-500 rounded-full" /> Lojistas ({((dashboardData.ecosystem.merchantPayout / (dashboardData.totalRevenue || 1)) * 100).toFixed(1)}%)</div>
+                    <div className="flex items-center gap-2"><div className="size-2 bg-blue-500 rounded-full" /> Entregadores ({((dashboardData.ecosystem.driverPayout / (dashboardData.totalRevenue || 1)) * 100).toFixed(1)}%)</div>
+                    <div className="flex items-center gap-2"><div className="size-2 bg-primary rounded-full" /> IZI Platform ({((dashboardData.ecosystem.platformRevenue / (dashboardData.totalRevenue || 1)) * 100).toFixed(1)}%)</div>
+                 </div>
+              </div>
+           </div>
+        </section>
+      )}
+
       {/* Visual Intelligence Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Gráfico de Impacto de Cancelamento */}

@@ -178,6 +178,7 @@ export interface AdminContextType {
   handleRequestPartnerWithdrawal: (partnerId: string, amount: number, pixKey: string) => Promise<void>;
   handleUpdateMerchantBankInfo: (bankInfo: any) => Promise<void>;
   handleSyncMerchantBalance: () => Promise<void>;
+  handleSettlePayout: (entityId: string, entityType: 'merchant' | 'partner', amount: number, orderIds: string[]) => Promise<void>;
 
   // Dynamic rates / map
   isAddingPeakRule: boolean;

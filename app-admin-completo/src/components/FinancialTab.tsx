@@ -154,6 +154,78 @@ export default function FinancialTab() {
         ))}
       </div>
 
+      {/* Monitor de Split do Ecossistema - Visão Admin Master */}
+      {userRole === 'admin' && !isMerchantPreview && effectiveDashboardData.ecosystem && (
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden mt-8 mb-8"
+        >
+          <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+             <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">hub</span>
+                  Monitor de Split do Ecossistema
+                </h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Detalhamento de Repasses e Receita IZI</p>
+             </div>
+             <div className="flex gap-2">
+                <div className="px-4 py-2 rounded-xl bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-widest">Faturamento: R$ {effectiveDashboardData.totalRevenue.toLocaleString('pt-BR')}</div>
+             </div>
+          </div>
+
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+             {[
+               { label: 'O QUE VAI PARA LOJISTAS', val: effectiveDashboardData.ecosystem.merchantPayout, sub: 'Líquido de Vendas Marketplace', icon: 'storefront', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+               { label: 'O QUE VAI PARA ENTREGADORES', val: effectiveDashboardData.ecosystem.driverPayout, sub: 'Taxas de Entrega e Gorjetas', icon: 'delivery_dining', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+               { label: 'O QUE VAI PARA PARCEIROS', val: effectiveDashboardData.ecosystem.partnerPayout, sub: 'Taxas de Retirada (Click & Retire)', icon: 'handshake', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+               { label: 'RECEITA BRUTA IZI DELIVERY', val: effectiveDashboardData.ecosystem.platformRevenue, sub: 'Comissões + Taxas de Serviço', icon: 'logo_dev', color: 'text-primary', bg: 'bg-primary/5' },
+             ].map((item, i) => (
+               <div key={i} className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all group">
+                  <div className={`size-12 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                     <span className="material-symbols-outlined font-black">{item.icon}</span>
+                  </div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                  <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter italic">R$ {item.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h4>
+                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1 opacity-60">{item.sub}</p>
+               </div>
+             ))}
+          </div>
+
+          <div className="px-8 pb-8 pt-4">
+             <div className="bg-slate-900 dark:bg-black rounded-[24px] p-6 flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5">
+                <div className="flex-1 space-y-2">
+                   <div className="flex justify-between items-center mb-1">
+                      <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">Composição da Liquidez</p>
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Lucro Estimado: R$ {effectiveDashboardData.ecosystem.netPlatformProfit.toLocaleString('pt-BR')}</p>
+                   </div>
+                   <div className="h-3 bg-white/5 rounded-full flex overflow-hidden border border-white/5">
+                      <div className="h-full bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]" style={{ width: `${(effectiveDashboardData.ecosystem.merchantPayout / (effectiveDashboardData.totalRevenue || 1)) * 100}%` }} />
+                      <div className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]" style={{ width: `${(effectiveDashboardData.ecosystem.driverPayout / (effectiveDashboardData.totalRevenue || 1)) * 100}%` }} />
+                      <div className="h-full bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]" style={{ width: `${(effectiveDashboardData.ecosystem.partnerPayout / (effectiveDashboardData.totalRevenue || 1)) * 100}%` }} />
+                      <div className="h-full bg-primary shadow-[0_0_15px_rgba(255,217,0,0.4)]" style={{ width: `${(effectiveDashboardData.ecosystem.platformRevenue / (effectiveDashboardData.totalRevenue || 1)) * 100}%` }} />
+                   </div>
+                </div>
+                <div className="shrink-0 flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                   <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                      <span className="material-symbols-outlined font-black">verified_user</span>
+                   </div>
+                   <div>
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Saldo Bloqueado</p>
+                      <p className="text-sm font-black text-white italic">R$ {(effectiveDashboardData.totalRevenue * 0.05).toLocaleString('pt-BR')} <span className="text-[10px] text-slate-500 font-bold ml-1">(Reserva Cautelar)</span></p>
+                   </div>
+                </div>
+             </div>
+          </div>
+        </motion.section>
+      )}
+
+      {/* Monitor de Entregas Avulsas - Estratégico Admin */}
+      {userRole === 'admin' && !isMerchantPreview && <StandaloneDeliveriesMonitor />}
+
+      {/* Conciliação & Repasses em Lote - Visão Admin Master */}
+      {userRole === 'admin' && !isMerchantPreview && <BatchPayoutManager />}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Economy Management Card - Replacing Divisão de Taxas */}
         <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
@@ -314,6 +386,262 @@ export default function FinancialTab() {
         </div>
       </div>
     </div>
+  );
+}
+
+function StandaloneDeliveriesMonitor() {
+  const { dashboardData, setActiveTab } = useAdmin();
+  const metrics = dashboardData.standaloneMetrics;
+
+  if (!metrics || metrics.count === 0) return null;
+
+  return (
+    <motion.section 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden mt-8 mb-8"
+    >
+      <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-blue-500/5">
+         <div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+               <span className="material-symbols-outlined text-blue-500 font-fill">local_shipping</span>
+               Monitor de Entregas Avulsas
+            </h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Análise Estratégica de Volume e Eficiência por KM</p>
+         </div>
+         <div className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase tracking-widest">
+            {metrics.count} Entregas Realizadas
+         </div>
+      </div>
+      <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+         {[
+            { label: 'Volume Total (Pedidos)', val: metrics.count, sub: 'Chamadas Avulsas', icon: 'numbers', color: 'text-slate-900 dark:text-white' },
+            { label: 'Receita Total Avulsa', val: `R$ ${metrics.revenue.toLocaleString('pt-BR')}`, sub: 'Faturamento Bruto', icon: 'payments', color: 'text-emerald-500' },
+            { label: 'Kilometragem Total', val: `${metrics.totalDistance.toFixed(1)} KM`, sub: 'Distância Percorrida', icon: 'distance', color: 'text-blue-500' },
+            { label: 'Eficiência (Receita / KM)', val: `R$ ${metrics.avgRevenuePerKm.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, sub: 'Ticket Médio por KM', icon: 'query_stats', color: 'text-primary' },
+         ].map((item, i) => (
+            <div key={i} className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-all">
+               <div className="size-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 flex items-center justify-center mb-4 text-slate-400">
+                  <span className="material-symbols-outlined font-black text-lg">{item.icon}</span>
+               </div>
+               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+               <h4 className={`text-xl font-black ${item.color} tracking-tight`}>{item.val}</h4>
+               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1 opacity-60">{item.sub}</p>
+            </div>
+         ))}
+      </div>
+      <div className="px-8 pb-8 pt-4">
+         <div className="p-6 rounded-[24px] bg-blue-500/5 border border-blue-500/10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+               <div className="size-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <span className="material-symbols-outlined font-black">insights</span>
+               </div>
+               <div>
+                  <p className="text-sm font-black text-slate-900 dark:text-white">Insight Estratégico</p>
+                  <p className="text-xs text-slate-500">Seu ticket por KM está em <span className="font-bold text-blue-500">R$ {metrics.avgRevenuePerKm.toFixed(2)}</span>. Considere ajustar a Taxa por KM nas configurações caso queira otimizar a lucratividade.</p>
+               </div>
+            </div>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className="h-10 px-6 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shrink-0"
+            >
+               Ajustar Taxas
+            </button>
+         </div>
+      </div>
+    </motion.section>
+  );
+}
+
+function BatchPayoutManager() {
+  const { allOrders, merchantsList, partnersList, handleSettlePayout, appSettings, userRole } = useAdmin();
+  
+  const pendingByMerchant = React.useMemo(() => {
+    const map: Record<string, { amount: number, orderIds: string[], merchant: Merchant }> = {};
+    
+    allOrders.filter(o => (o.status === 'concluido' || o.status === 'delivered') && o.payout_status !== 'completed' && o.merchant_id).forEach(order => {
+      const m = merchantsList.find(ml => ml.id === order.merchant_id);
+      if (!m) return;
+      
+      if (!map[m.id]) map[m.id] = { amount: 0, orderIds: [], merchant: m };
+      
+      const productsPrice = (Number(order.total_price) || 0) - (Number(order.delivery_fee) || 0) - (Number(order.service_fee) || 0);
+      const commRate = m.commission_percent ?? appSettings.appCommission ?? 12;
+      const commission = productsPrice * (commRate / 100);
+      let payout = productsPrice - commission;
+
+      if (order.partner_id) {
+        payout -= Number(appSettings.plan_fee_click_retire || 2.5);
+      }
+
+      map[m.id].amount += payout;
+      map[m.id].orderIds.push(order.id);
+    });
+    
+    return Object.values(map).sort((a, b) => b.amount - a.amount);
+  }, [allOrders, merchantsList, appSettings]);
+
+  const pendingByPartner = React.useMemo(() => {
+    const map: Record<string, { amount: number, orderIds: string[], partner: PartnerStore }> = {};
+    
+    allOrders.filter(o => (o.status === 'concluido' || o.status === 'delivered') && o.payout_status !== 'completed' && o.partner_id).forEach(order => {
+      const p = partnersList.find(pl => pl.id === order.partner_id);
+      if (!p) return;
+      
+      if (!map[p.id]) map[p.id] = { amount: 0, orderIds: [], partner: p };
+      
+      map[p.id].amount += Number(appSettings.plan_fee_click_retire || 2.5);
+      map[p.id].orderIds.push(order.id);
+    });
+    
+    return Object.values(map).sort((a, b) => b.amount - a.amount);
+  }, [allOrders, partnersList, appSettings]);
+
+  const handleExportCSV = () => {
+    const rows = [
+      ['Nome', 'Tipo', 'Valor', 'Chave PIX', 'Banco', 'Agencia', 'Conta']
+    ];
+
+    pendingByMerchant.forEach(item => {
+      const bank = (item.merchant as any).bank_info || {};
+      rows.push([
+        item.merchant.store_name || '',
+        'Lojista',
+        item.amount.toFixed(2).replace('.', ','),
+        bank.pix_key || '',
+        bank.bank || '',
+        bank.agency || '',
+        bank.account || ''
+      ]);
+    });
+
+    pendingByPartner.forEach(item => {
+      const bank = (item.partner as any).bank_info || {};
+      rows.push([
+        item.partner.name || '',
+        'Parceiro',
+        item.amount.toFixed(2).replace('.', ','),
+        bank.pix_key || '',
+        bank.bank || '',
+        bank.agency || '',
+        bank.account || ''
+      ]);
+    });
+
+    const csvString = rows.map(r => r.join(';')).join('\n');
+    const blob = new Blob(["\ufeff" + csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `lote_pagamento_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toastSuccess('Arquivo de lote gerado com sucesso!');
+  };
+
+  if (pendingByMerchant.length === 0 && pendingByPartner.length === 0) return null;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden mt-8 mb-12"
+    >
+      <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-emerald-500/5">
+         <div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+               <span className="material-symbols-outlined text-emerald-500 font-fill">account_balance_wallet</span>
+               Conciliação & Liquidação em Lote
+            </h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gerencie repasses pendentes de forma consolidada</p>
+         </div>
+         <div className="flex items-center gap-6">
+            <div className="flex flex-col items-end">
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Geral Pendente</span>
+               <span className="text-xl font-black text-emerald-500">
+                  R$ {(pendingByMerchant.reduce((a, b) => a + b.amount, 0) + pendingByPartner.reduce((a, b) => a + b.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+               </span>
+            </div>
+            <button 
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 h-12 px-6 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
+            >
+               <span className="material-symbols-outlined text-sm">download</span>
+               Gerar Arquivo de Lote
+            </button>
+         </div>
+      </div>
+      <div className="p-8 space-y-12">
+         {pendingByMerchant.length > 0 && (
+           <section>
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                 <span className="size-1.5 rounded-full bg-purple-500"></span>
+                 Repasses para Lojistas (Marketplace)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {pendingByMerchant.map(item => (
+                   <div key={item.merchant.id} className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex flex-col justify-between group hover:border-primary/30 transition-all relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                         <span className="material-symbols-outlined text-4xl">storefront</span>
+                      </div>
+                      <div>
+                         <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate pr-8">{item.merchant.store_name}</p>
+                         <p className="text-[10px] font-bold text-slate-400 mt-1">{item.orderIds.length} pedidos pendentes</p>
+                      </div>
+                      <div className="mt-8 flex items-end justify-between">
+                         <div>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Líquido</p>
+                            <h5 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h5>
+                         </div>
+                         <button 
+                           onClick={() => handleSettlePayout(item.merchant.id, 'merchant', item.amount, item.orderIds)}
+                           className="h-11 px-6 rounded-2xl bg-primary text-slate-900 text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+                         >
+                            Liquidar
+                         </button>
+                      </div>
+                   </div>
+                 ))}
+              </div>
+           </section>
+         )}
+
+         {pendingByPartner.length > 0 && (
+           <section>
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                 <span className="size-1.5 rounded-full bg-orange-500"></span>
+                 Repasses para Parceiros (Pontos de Retirada)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {pendingByPartner.map(item => (
+                   <div key={item.partner.id} className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex flex-col justify-between group hover:border-primary/30 transition-all relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                         <span className="material-symbols-outlined text-4xl">handshake</span>
+                      </div>
+                      <div>
+                         <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate pr-8">{item.partner.name}</p>
+                         <p className="text-[10px] font-bold text-slate-400 mt-1">{item.orderIds.length} retiradas pendentes</p>
+                      </div>
+                      <div className="mt-8 flex items-end justify-between">
+                         <div>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Taxas de Retirada</p>
+                            <h5 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h5>
+                         </div>
+                         <button 
+                           onClick={() => handleSettlePayout(item.partner.id, 'partner', item.amount, item.orderIds)}
+                           className="h-11 px-6 rounded-2xl bg-primary text-slate-900 text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+                         >
+                            Liquidar
+                         </button>
+                      </div>
+                   </div>
+                 ))}
+              </div>
+           </section>
+         )}
+      </div>
+    </motion.div>
   );
 }
 
