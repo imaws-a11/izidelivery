@@ -567,23 +567,44 @@ export default function MerchantStudio() {
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo do Lojista</p>
                       <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic flex items-center justify-between">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(partnerBalance)}
-                        <button 
-                          type="button"
-                          onClick={async () => {
-                            const amountStr = prompt("Quanto de crédito deseja aplicar ao lojista (R$)?", "0");
-                            if (!amountStr) return;
-                            const amount = parseFloat(amountStr.replace(',', '.'));
-                            if (isNaN(amount) || amount <= 0) return toastError("Valor inválido.");
-                            
-                            const desc = prompt("Descrição do crédito:", "Ajuste administrativo");
-                            await handleApplyMerchantCredit(editingItem.id, amount, desc || undefined);
-                          }}
-                          className="size-8 rounded-lg bg-emerald-500/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all ml-2"
-                        >
-                          <span className="material-symbols-outlined text-sm">add</span>
-                        </button>
+                        <div className="flex gap-2 ml-2">
+                          <button 
+                            type="button"
+                            onClick={async () => {
+                              const amountStr = prompt("Quanto de crédito deseja ADICIONAR (R$)?", "0");
+                              if (!amountStr) return;
+                              const amount = parseFloat(amountStr.replace(',', '.'));
+                              if (isNaN(amount) || amount <= 0) return toastError("Valor inválido.");
+                              
+                              const desc = prompt("Descrição do crédito:", "Ajuste administrativo (Crédito)");
+                              await handleApplyMerchantCredit(editingItem.id, amount, desc || undefined);
+                            }}
+                            className="size-8 rounded-lg bg-emerald-500/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                            title="Adicionar Crédito"
+                          >
+                            <span className="material-symbols-outlined text-sm font-black">add</span>
+                          </button>
+                          
+                          <button 
+                            type="button"
+                            onClick={async () => {
+                              const amountStr = prompt("Quanto de saldo deseja REMOVER/DEBITAR (R$)?", "0");
+                              if (!amountStr) return;
+                              const amount = parseFloat(amountStr.replace(',', '.'));
+                              if (isNaN(amount) || amount <= 0) return toastError("Valor inválido.");
+                              
+                              const desc = prompt("Motivo do débito:", "Ajuste administrativo (Débito)");
+                              // Passamos o valor negativo para a função que já trata o sinal
+                              await handleApplyMerchantCredit(editingItem.id, -amount, desc || undefined);
+                            }}
+                            className="size-8 rounded-lg bg-rose-500/20 text-rose-600 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                            title="Remover Saldo (Débito)"
+                          >
+                            <span className="material-symbols-outlined text-sm font-black">remove</span>
+                          </button>
+                        </div>
                       </h3>
-                      <p className="text-[10px] font-bold text-slate-400 mt-2">Saldo calculado com base no histórico de transações.</p>
+                      <p className="text-[10px] font-bold text-slate-400 mt-2">Gestão de saldo e histórico de transações.</p>
                     </div>
 
                     <div className="bg-indigo-50 dark:bg-indigo-950/20 p-8 rounded-[40px] border border-indigo-100 dark:border-indigo-500/20">

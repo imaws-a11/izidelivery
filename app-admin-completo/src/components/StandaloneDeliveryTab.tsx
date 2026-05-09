@@ -86,6 +86,10 @@ export default function StandaloneDeliveryTab() {
     try {
       const trackingCode = `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
+      const finalNotes = needsChange 
+        ? `${notes ? notes + ' | ' : ''}TROCO: ${needsChange}`
+        : notes;
+
       const payload = {
         user_id: session?.user?.id || merchantProfile?.id, // Assumindo que o admin/lojista é o "criador"
         merchant_id: merchantProfile?.id,
@@ -96,7 +100,7 @@ export default function StandaloneDeliveryTab() {
         total_price: estimatedFee, // O valor do "pedido" aqui é apenas a taxa de entrega
         delivery_fee: estimatedFee,
         payment_method: 'entrega_avulsa', // Identificador interno
-        notes: notes,
+        notes: finalNotes,
         
         // Novos campos
         customer_name: customerName,
@@ -106,11 +110,11 @@ export default function StandaloneDeliveryTab() {
         delivery_payment_method: deliveryPaymentMethod,
         pickup_time: pickupTime === 'agendado' ? scheduledPickupTime : new Date().toISOString(),
         order_readiness: orderReadiness,
-        needs_card_machine: needsCardMachine,
-        customer_pays_cash: customerPaysCash,
-        needs_change: needsChange,
-        is_fragile: isFragile,
-        has_beverage: hasBeverage,
+        needs_card_machine: !!needsCardMachine,
+        customer_pays_cash: !!customerPaysCash,
+        needs_change: !!needsChange,
+        is_fragile: !!isFragile,
+        has_beverage: !!hasBeverage,
         tracking_code: trackingCode
       };
 

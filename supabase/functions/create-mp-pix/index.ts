@@ -28,10 +28,13 @@ serve(async (req) => {
         first_name: customer?.name?.split(' ')[0] || 'Cliente',
         last_name: customer?.name?.split(' ').slice(1).join(' ') || 'IziDelivery',
         identification: {
-          type: 'CPF',
+          type: (() => {
+            const num = customer?.cpf?.replace(/\D/g, '') || '';
+            return num.length > 11 ? 'CNPJ' : 'CPF';
+          })(),
           number: (() => {
             const num = customer?.cpf?.replace(/\D/g, '') || '';
-            if (!num) console.warn(`[WARNING] CPF ausente para orderId: ${orderId}. Usando fallback 00000000000`);
+            if (!num) console.warn(`[WARNING] Documento ausente para orderId: ${orderId}. Usando fallback 00000000000`);
             return num || '00000000000';
           })(),
         },
@@ -39,7 +42,7 @@ serve(async (req) => {
       date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       notification_url: 'https://cmkylgblkiceiclbewxr.supabase.co/functions/v1/mp-webhook',
     }
-    console.log(`[DEBUG] Enviando pedido para MP: OrderID=${orderId}, Amount=${amount}, NotifyURL=${payload.notification_url}`);
+    console.log(`[DEBUG] Payload MP:`, JSON.stringify(payload));
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
@@ -50,11 +53,12 @@ serve(async (req) => {
       body: JSON.stringify(payload),
     })
     const data = await response.json()
-    console.log(`[DEBUG] Resposta MP: ID=${data.id}, Status=${data.status}`);
+    
     if (!response.ok) {
-      console.error('MP error:', JSON.stringify(data))
+      console.error('[CRITICAL] MP Error Response:', JSON.stringify(data));
       return new Response(JSON.stringify({ error: 'Erro ao criar PIX', details: data }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
+    console.log(`[DEBUG] Resposta MP: ID=${data.id}, Status=${data.status}`);
     const qrCode = data.point_of_interaction?.transaction_data?.qr_code
     const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })

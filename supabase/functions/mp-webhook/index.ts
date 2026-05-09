@@ -108,6 +108,27 @@ serve(async (req) => {
         });
 
         console.log(`[RECHARGE] Sucesso! Merchant ${merchantId} recarregado com R$ ${amount}`);
+
+        // Enviar Broadcast Realtime para notificar o frontend
+        try {
+          const channelId = `recharge_confirm_${merchantId}`;
+          console.log(`[RECHARGE] Enviando broadcast para canal: ${channelId}`);
+          
+          await supabaseAdmin.channel(channelId).send({
+            type: 'broadcast',
+            event: 'confirmed',
+            payload: { 
+              merchantId, 
+              amount, 
+              paymentId: payment.id,
+              balanceAfter: newBalance,
+              timestamp: new Date().toISOString()
+            }
+          });
+          console.log(`[RECHARGE] Broadcast enviado com sucesso!`);
+        } catch (broadcastErr: any) {
+          console.error('[RECHARGE] Falha ao enviar broadcast:', broadcastErr.message);
+        }
       }
       return new Response(JSON.stringify({ received: true, type: 'wallet_recharge' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }

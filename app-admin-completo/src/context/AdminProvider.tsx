@@ -1070,6 +1070,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!session?.user?.id || userRole !== 'merchant' || !merchantProfile?.id) return;
 
+    // Canal para confirmação de recarga via Broadcast
+    const rechargeChannel = supabase.channel(`recharge_confirm_${merchantProfile.id}`)
+      .on('broadcast', { event: 'confirmed' }, (payload) => {
+        console.log('? RECARGA CONFIRMADA VIA BROADCAST:', payload);
+        setRechargeSuccessData({ amount: payload.amount });
+        setShowRechargeSuccessModal(true);
+        fetchMerchantFinance(); // Atualiza o saldo na tela
+      })
+      .subscribe((status) => {
+        console.log(`[REALTIME-STATUS] Canal Recarga (${merchantProfile.id}):`, status);
+      });
+
     const syncMerchantOrders = () => {
       fetchAllOrdersRef.current?.(undefined, true);
       fetchStatsRef.current?.(true);
@@ -1101,6 +1113,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       window.clearInterval(intervalId);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      supabase.removeChannel(rechargeChannel);
     };
   }, [activeTab, merchantProfile?.id, session?.user?.id, userRole]);
 
@@ -1708,13 +1721,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleRequestMerchantRecharge = useCallback(async (amount: number) => {
     // CORREÇÃO: Usar merchantProfile.id (admin_users UUID), não session.user.id (Auth UUID)
     // Isso garante que o depósito via webhook caia no mesmo user_id que o fetchMerchantFinance busca
-    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
-    if (!idToUse) return toastError('Lojista não identificado.');
+    const targetProfile = userRole === 'merchant' ? merchantProfile : selectedMerchantPreview;
+    const idToUse = targetProfile?.id;
+    if (!idToUse || !targetProfile) return toastError('Lojista não identificado.');
     
     // Validação de Documento (CPF/CNPJ) para Mercado Pago
-    const doc = merchantProfile?.document || '';
+    const doc = targetProfile?.document || '';
     if (!doc || doc.replace(/\D/g, '').length < 11) {
-      return toastError('CPF ou CNPJ inválido ou não cadastrado. Por favor, atualize seus dados nas Configurações antes de recarregar.');
+      return toastError('CPF ou CNPJ inválido ou não cadastrado. Por favor, atualize os dados do lojista antes de recarregar.');
     }
 
     if (amount < 10) return toastError('O valor mínimo de recarga é R$ 10,00');
@@ -1728,10 +1742,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         body: {
           amount,
           orderId: txId,
-          email: merchantProfile?.email || 'contato@izidelivery.com',
+          email: targetProfile?.email || 'contato@izidelivery.com',
           customer: {
-            name: merchantProfile?.store_name || 'Lojista IZI',
-            cpf: merchantProfile?.document || ''
+            name: targetProfile?.store_name || targetProfile?.name || 'Lojista IZI',
+            cpf: targetProfile?.document || ''
           },
           meta: {
             type: 'wallet_recharge',
