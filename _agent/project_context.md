@@ -127,6 +127,18 @@ Atualizado: 2026-05-08
 - **Bloqueio Permanente (4 Rejeições)**: Após a 4ª recusa total, o pedido é **banido permanentemente** para o entregador específico.
 - **Implementação**: Gerenciado via estado derivado `visibleOrders` e limpeza do `heardOrderIds` no momento do cooldown.
 
+### 🚚 Izi Entrega Avulsa (EM PROGRESSO)
+- **Migration aplicada**: Novos campos em `orders_delivery`: `customer_phone`, `customer_name`, `neighborhood`, `reference_point`, `delivery_payment_method`, `pickup_time`, `order_readiness`, `needs_card_machine`, `customer_pays_cash`, `needs_change`, `is_fragile`, `has_beverage`, `tracking_code`.
+- **Índice único**: `idx_orders_tracking_code` criado.
+- **Arquitetura**: Reutiliza `orders_delivery` com `service_type = 'entrega_avulsa'` — zero alterações no app entregador e no despacho.
+- **Decisões confirmadas pelo usuário**:
+  - Comissão: variável por lojista (campo `commission_percent` em `admin_users`)
+  - Taxa de entrega: calculada automaticamente por distância
+  - WhatsApp: apenas API base (sem Twilio/Meta por enquanto)
+  - Rastreio público: sem rastreio por enquanto
+- **PRÓXIMO PASSO**: Criar `StandaloneDeliveryTab.tsx` no `app-admin-completo/src/components/` e integrar no `App.tsx` como nova aba do menu merchant com id `standalone_delivery`.
+- **Plano completo**: Ver artifact `izi_entrega_avulsa_plan.md` na conversa `838bfe57-13a4-4de8-ab05-38b5756a7691`.
+
 ### 📂 Arquivos Modificados
 - `AppContext.tsx`, `ProductDetailView.tsx`, `App.tsx` (Serviços/Cliente)
 - `OnboardingView.tsx`, `App.tsx` (Entregador - UI & Auth)

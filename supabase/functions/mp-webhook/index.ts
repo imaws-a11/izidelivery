@@ -61,6 +61,31 @@ serve(async (req) => {
       return new Response(JSON.stringify({ received: true, type: 'loan_payment' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Verificação de Recarga de Saldo Lojista (Wallet Recharge)
+    if (payment.metadata?.type === 'wallet_recharge') {
+      if (payment.status === 'approved') {
+        const merchantId = payment.metadata.user_id;
+        const amount = payment.transaction_amount;
+
+        // Inserir transação de depósito
+        await supabaseAdmin.from('wallet_transactions_delivery').insert({
+          user_id: merchantId,
+          amount: amount,
+          type: 'deposito',
+          description: `Recarga via PIX #${String(payment.id).slice(-6)}`,
+          status: 'concluido',
+          metadata: { mp_payment_id: payment.id }
+        });
+
+        await supabaseAdmin.from('audit_logs_delivery').insert({
+          action: 'Recarga Saldo Lojista',
+          module: 'Wallet',
+          metadata: { merchantId, amount, paymentId: payment.id },
+        });
+      }
+      return new Response(JSON.stringify({ received: true, type: 'wallet_recharge' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     if (!orderId) {
       console.error('Webhook: external_reference (orderId) missing in payment', paymentId)
       return new Response(JSON.stringify({ error: 'orderId missing' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

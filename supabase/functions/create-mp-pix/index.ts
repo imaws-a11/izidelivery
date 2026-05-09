@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
@@ -54,7 +55,7 @@ serve(async (req) => {
     const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
     
-    if (meta?.type !== 'loan_payment') {
+    if (meta?.type !== 'loan_payment' && meta?.type !== 'wallet_recharge') {
       await supabaseAdmin.from('orders_delivery').update({ payment_intent_id: String(data.id) }).eq('id', orderId)
     }
     return new Response(JSON.stringify({

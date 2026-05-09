@@ -321,6 +321,7 @@ export default function DynamicRatesTab() {
               { title: 'MotoTáxi', minKey: 'mototaxi_min', kmKey: 'mototaxi_km' },
               { title: 'Carro Executivo', minKey: 'carro_min', kmKey: 'carro_km' },
               { title: 'Van de Transporte', minKey: 'van_min', kmKey: 'van_km' },
+              { title: 'Entrega Avulsa (Standalone)', minKey: 'standalone_min', kmKey: 'standalone_km' },
               { 
                 title: 'Logística / Frete', 
                 minKey: 'logistica_min', 

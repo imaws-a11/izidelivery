@@ -111,6 +111,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       bau_g_km: '10,00',
       aberto_min: '50,00',
       aberto_km: '5,00',
+      standalone_min: '10,00',
+      standalone_km: '2,00',
       isDynamicActive: true
     },
     shippingPriorities: {
@@ -328,8 +330,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [partnerBalance, setPartnerBalance] = useState(0);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
+  const [showRechargeSuccessModal, setShowRechargeSuccessModal] = useState(false);
+  const [rechargeSuccessData, setRechargeSuccessData] = useState<{ amount: number } | null>(null);
   const [creditToAdd, setCreditToAdd] = useState('');
-  const [isAddingCredit] = useState(false);
+  const [isAddingCredit, setIsAddingCredit] = useState(false);
+  const [pixData, setPixData] = useState<{ qrCode: string; qrCodeBase64: string; copyPaste: string } | null>(null);
   const [showWalletStatementModal, setShowWalletStatementModal] = useState(false);
 
   // Dynamic Rates & Map
@@ -963,6 +968,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             toastSuccess(`Pagamento Recebido: R$ ${parseFloat(newTx.amount).toFixed(2)}`);
             fetchMerchantFinance();
             playIziSound('payment');
+            
+            if (newTx.type === 'deposito') {
+              setPixData(null);
+              setShowAddCreditModal(false);
+              setRechargeSuccessData({ amount: Number(newTx.amount) });
+              setShowRechargeSuccessModal(true);
+            }
           }
         }
       )
@@ -1087,7 +1099,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [activeTab, merchantProfile?.id, session?.user?.id, userRole]);
 
   const fetchMerchantFinance = useCallback(async () => {
-    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+    const idToUse = userRole === 'merchant' ? session?.user?.id : selectedMerchantPreview?.id;
     if (!idToUse) {
       setMerchantBalance(0);
       setMerchantTransactions([]);
@@ -1639,6 +1651,50 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleAddCredit = async () => {
     setShowAddCreditModal(true);
   };
+
+  const handleRequestMerchantRecharge = useCallback(async (amount: number) => {
+    const idToUse = userRole === 'merchant' ? session?.user?.id : selectedMerchantPreview?.id;
+    if (!idToUse) return toastError('Lojista não identificado.');
+    if (amount < 10) return toastError('O valor mínimo de recarga é R$ 10,00');
+
+    setIsAddingCredit(true);
+    setPixData(null);
+    try {
+      const txId = `recharge_${idToUse.slice(0,8)}_${Date.now()}`;
+      
+      const { data, error } = await supabase.functions.invoke('create-mp-pix', {
+        body: {
+          amount,
+          orderId: txId,
+          email: merchantProfile?.email || 'contato@izidelivery.com',
+          customer: {
+            name: merchantProfile?.store_name || 'Lojista IZI',
+            cpf: merchantProfile?.document || ''
+          },
+          meta: {
+            type: 'wallet_recharge',
+            user_id: idToUse
+          }
+        }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setPixData({
+        qrCode: data.qrCode,
+        qrCodeBase64: data.qrCodeBase64,
+        copyPaste: data.copyPaste
+      });
+      
+      toastSuccess('PIX gerado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao gerar PIX:', err);
+      toastError('Falha ao gerar cobrança PIX: ' + err.message);
+    } finally {
+      setIsAddingCredit(false);
+    }
+  }, [userRole, merchantProfile, selectedMerchantPreview]);
 
   const handleApplyCredit = useCallback(async (userId: string, amount: number, description: string = 'Crédito administrativo') => {
     if (amount <= 0) return toastError('O valor deve ser positivo.');
@@ -2801,9 +2857,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, 
     setPromoForm, promoSaving, promoSaveStatus, expandedLogId, setExpandedLogId, 
     isCompletingOrder, setIsCompletingOrder, newOrderNotification, setNewOrderNotification, 
-    isWalletLoading, showAddCreditModal, setShowAddCreditModal, walletTransactions,
+    isWalletLoading, showAddCreditModal, setShowAddCreditModal, 
+    showRechargeSuccessModal, setShowRechargeSuccessModal, rechargeSuccessData, setRechargeSuccessData,
+    walletTransactions,
     merchantTransactions, merchantBalance,
-    isAddingCredit, creditToAdd, setCreditToAdd, showWalletStatementModal, 
+    isAddingCredit, setIsAddingCredit, pixData, setPixData, creditToAdd, setCreditToAdd, showWalletStatementModal, 
     setShowWalletStatementModal, isAddingPeakRule, setIsAddingPeakRule, newPeakRule, 
     setNewPeakRule, newZoneData, setNewZoneData, mapSearch, setMapSearch, isGeolocating, 
     setIsGeolocating, mapCenterView, setMapCenterView, fixedGridCenter, setFixedGridCenter, 
@@ -2816,7 +2874,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchStats, fetchUsers, fetchDrivers, fetchMyDrivers, fetchProducts, fetchMenuCategories, 
     fetchAllOrders, fetchSubscriptionOrders, fetchCategories, fetchDynamicRates, 
     fetchPromotions, fetchAuditLogs, fetchMerchants, fetchPartners, fetchAppSettings, saveGlobalSettings, fetchMyDedicatedSlots, 
-    openMerchantPreview, handleAddCredit, handleApplyCredit, handleUpdateDriver, 
+    openMerchantPreview, handleRequestMerchantRecharge, handleAddCredit, handleApplyCredit, handleUpdateDriver, 
     handleUpdateCategory, handleUpdateMyDriver, handleDeleteMyDriver, handleUpdateUser, 
     handleUpdateMyProduct, handleUpdateMenuCategory, handleDeleteMenuCategory, handleDeleteProduct, handleCreateNewProduct, 
     handleUpdatePromotion, handleUpdateMerchant, handleUpdateMerchantStatus, handleDeleteMerchant, 

@@ -334,6 +334,8 @@ export interface DynamicRatesState {
     bau_g_km: string;
     aberto_min: string;
     aberto_km: string;
+    standalone_min: string;
+    standalone_km: string;
     isDynamicActive: boolean;
   };
   shippingPriorities: {
@@ -376,7 +378,7 @@ export interface PartnerStore {
 
 export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |
   'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' | 'notifications' | 'gamification' |
-  'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black' | 'partners' | 'merchant_studio' | 'establishment_types' | 'driver_applications';
+  'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black' | 'partners' | 'merchant_studio' | 'establishment_types' | 'driver_applications' | 'order_center' | 'standalone_delivery';
 
 export type UserRole = 'admin' | 'merchant';
 

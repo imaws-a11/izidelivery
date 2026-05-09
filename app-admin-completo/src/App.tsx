@@ -32,6 +32,7 @@ import TaxonomyCenter from './components/TaxonomyCenter';
 import NotificationsTab from './components/NotificationsTab';
 import GamificationTab from './components/GamificationTab';
 import OrderCenterTab from './components/OrderCenterTab';
+import StandaloneDeliveryTab from './components/StandaloneDeliveryTab';
 // import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
 
@@ -199,6 +200,7 @@ function App() {
                   <NavTab id="order_center" icon="local_shipping" label="Central de Pedidos" />
                  <NavTab id="my_studio" icon="inventory_2" label="Minha Loja" />
                  <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
+                 <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
                  <NavTab id="settings" icon="settings" label="Config" />
                </>
              ) : (
@@ -257,6 +259,7 @@ function App() {
               {activeTab === 'orders' && userRole === 'admin' && <OrdersAdminTab />}
               {activeTab === 'orders' && userRole === 'merchant' && <OrdersMerchantTab />}
               {activeTab === 'order_center' && <OrderCenterTab />}
+              {activeTab === 'standalone_delivery' && <StandaloneDeliveryTab />}
               {activeTab === 'drivers' && userRole === 'admin' && <DriversTab />}
               {activeTab === 'driver_applications' && userRole === 'admin' && <DriverApplicationsTab />}
               {activeTab === 'users' && userRole === 'admin' && <UsersTab />}

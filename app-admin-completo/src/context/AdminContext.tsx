@@ -158,9 +158,16 @@ export interface AdminContextType {
   isWalletLoading: boolean;
   showAddCreditModal: boolean;
   setShowAddCreditModal: (s: boolean) => void;
+  showRechargeSuccessModal: boolean;
+  setShowRechargeSuccessModal: (show: boolean) => void;
+  rechargeSuccessData: { amount: number } | null;
+  setRechargeSuccessData: (data: { amount: number } | null) => void;
   creditToAdd: string;
   setCreditToAdd: (v: string) => void;
   isAddingCredit: boolean;
+  setIsAddingCredit: (s: boolean) => void;
+  pixData: { qrCode: string; qrCodeBase64: string; copyPaste: string } | null;
+  setPixData: (d: any) => void;
   showWalletStatementModal: boolean;
   setShowWalletStatementModal: (s: boolean) => void;
 
@@ -231,6 +238,7 @@ export interface AdminContextType {
   openMerchantPreview: (merchant: any) => Promise<void>;
 
   // Handlers
+  handleRequestMerchantRecharge: (amount: number) => Promise<void>;
   handleAddCredit: () => Promise<void>;
   handleApplyCredit: (userId: string, amount: number, description?: string) => Promise<void>;
   handleUpdateDriver: (e: React.FormEvent) => Promise<void>;

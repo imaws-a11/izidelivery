@@ -32,25 +32,39 @@ export default function FinancialTab() {
     const today = new Date();
 
     completed.forEach(order => {
-      const commRate = selectedMerchantPreview.commission_percent ?? appSettings.appCommission ?? 12;
-      totalCommission += (Number(order.total_price) || 0) * (commRate / 100);
+      const isStandalone = order.service_type === 'entrega_avulsa';
+      const orderPrice = Number(order.total_price) || 0;
+
+      if (isStandalone) {
+        // Se for avulsa, a plataforma ganha 100% (taxa de entrega)
+        totalCommission += orderPrice;
+      } else {
+        // Se for marketplace, a plataforma ganha a comissão pactuada
+        const commRate = selectedMerchantPreview?.commission_percent ?? appSettings.appCommission ?? 12;
+        totalCommission += orderPrice * (commRate / 100);
+      }
 
       const orderDate = new Date(order.created_at);
       const diffDays = Math.floor((today.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
       if (diffDays >= 0 && diffDays < 7) {
         const dayIdx = orderDate.getDay();
-        dailyRev[dayIdx] += (Number(order.total_price) || 0);
+        dailyRev[dayIdx] += orderPrice;
       }
     });
 
+    // Se for um lojista vendo seu próprio painel, o totalRevenue deve ignorar as entregas avulsas (que são custos)
+    const effectiveRevenue = activeMerchant 
+      ? completed.filter(o => o.service_type !== 'entrega_avulsa').reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0)
+      : totalRevenue;
+
     return {
       ...globalDashboardData,
-      totalRevenue,
+      totalRevenue: effectiveRevenue,
       completedOrdersCount,
-      avgTicket,
+      avgTicket: completedOrdersCount > 0 ? effectiveRevenue / completedOrdersCount : 0,
       deliverySuccessRate,
       totalCommission,
-      netProfit: totalRevenue - totalCommission,
+      netProfit: effectiveRevenue - totalCommission,
       dailyRevenue: dailyRev
     };
   }, [isMerchantPreview, selectedMerchantPreview, dashboardOrders, globalDashboardData, appSettings.appCommission]);
@@ -268,7 +282,7 @@ export default function FinancialTab() {
                     <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">
                       <p className="line-clamp-1">{clientName || 'Cliente IZI'}</p>
                       <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">
-                        {tr.service_type === 'coin_purchase' ? '🛒 App' : tr.service_type || 'Pedido'}
+                        {tr.service_type === 'coin_purchase' ? '🛒 App' : tr.service_type === 'entrega_avulsa' ? '📦 Entrega Avulsa' : tr.service_type || 'Pedido'}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">R$ {tr.total_price?.toFixed(2).replace('.', ',')}</td>

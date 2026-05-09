@@ -27,12 +27,16 @@ export default function OrdersAdminTab() {
   const [orderToCancel, setOrderToCancel] = React.useState<any>(null);
   const [cancelReason, setCancelReason] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('todos');
+  const [serviceTypeFilter, setServiceTypeFilter] = React.useState('todos');
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredOrders = React.useMemo(() => {
     let result = allOrders;
     if (statusFilter !== 'todos') {
       result = result.filter(o => o.status === statusFilter);
+    }
+    if (serviceTypeFilter !== 'todos') {
+      result = result.filter(o => o.service_type === serviceTypeFilter);
     }
     if (searchQuery) {
       const lowSearch = searchQuery.toLowerCase();
@@ -43,7 +47,7 @@ export default function OrdersAdminTab() {
       );
     }
     return result;
-  }, [allOrders, statusFilter, searchQuery]);
+  }, [allOrders, statusFilter, serviceTypeFilter, searchQuery]);
 
   const handleAction = async (id: string, newStatus: string, reason?: string) => {
     setLocalProcessingId(id);
@@ -251,7 +255,23 @@ export default function OrdersAdminTab() {
             />
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex bg-white dark:bg-slate-800 rounded-2xl p-1 border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
+            {[
+              { id: 'todos', label: 'Todos' },
+              { id: 'marketplace', label: 'Lojas' },
+              { id: 'entrega_avulsa', label: 'Avulsas' },
+              { id: 'coin_purchase', label: 'Moedas' }
+            ].map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setServiceTypeFilter(s.id)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${serviceTypeFilter === s.id ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
           <div className="flex bg-white dark:bg-slate-800 rounded-2xl p-1 border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
             {['todos', 'novo', 'cancelado'].map((s) => (
               <button
