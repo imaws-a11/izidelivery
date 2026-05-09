@@ -583,9 +583,39 @@ const getServicePresentation = (order: any) => {
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
+// Error Boundary Minimalista para evitar Tela Branca Fatal
+class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+    constructor(props: any) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError() { return { hasError: true }; }
+    componentDidCatch(error: any, errorInfo: any) {
+        console.error('[FATAL-ERROR]', error, errorInfo);
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="h-screen w-full bg-zinc-900 flex flex-col items-center justify-center p-10 text-center">
+                    <div className="size-20 rounded-[32px] bg-yellow-400 flex items-center justify-center mb-8">
+                        <span className="material-symbols-outlined text-4xl text-black">error</span>
+                    </div>
+                    <h1 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Ops! Algo deu errado</h1>
+                    <p className="text-zinc-500 text-sm font-bold mb-10 leading-relaxed uppercase tracking-widest">A interface encontrou um erro inesperado. Clique abaixo para reiniciar.</p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="w-full max-w-xs h-16 bg-white text-zinc-900 font-black uppercase tracking-widest rounded-2xl shadow-xl active:scale-95 transition-all"
+                    >
+                        Reiniciar App
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
-
-function App() {
+function MainApp() {
     const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
     const { isLoaded } = useJsApiLoader({ id: GOOGLE_MAPS_ID, googleMapsApiKey: mapsKey, libraries: GOOGLE_MAPS_LIBRARIES, language: 'pt-BR', region: 'BR' });
 
@@ -6889,7 +6919,7 @@ function App() {
                     </div>
                 </div>
 
-                <div className="p-8 pb-12 bg-white">
+                <div className="p-8 pb-12 bg-white/95 backdrop-blur-md">
                     <button 
                         onClick={handleUpdateProfile}
                         disabled={isSavingProfile || !editProfileData.name}
@@ -6915,7 +6945,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[20000] bg-zinc-900/60 backdrop-blur-xl flex items-center justify-center p-6"
+                    className="fixed inset-0 z-[180] bg-zinc-900/60 backdrop-blur-xl flex items-center justify-center p-6"
                     onClick={() => setShowPendingApprovalModal(false)}
                 >
                     <motion.div
@@ -8464,7 +8494,7 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-zinc-900/40 backdrop-blur-md"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-zinc-900/60 backdrop-blur-xl"
           >
              <motion.div 
                initial={{ scale: 0.9, y: 20 }}
@@ -8512,7 +8542,7 @@ function App() {
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     onClick={enableAudioManually}
-                    className="fixed top-20 left-4 right-4 z-[9999] bg-amber-400/95 backdrop-blur-xl p-4 rounded-2xl border border-white shadow-[0_20px_40px_rgba(0,0,0,0.1)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform"
+                    className="fixed top-20 left-4 right-4 z-[200] bg-amber-400/95 backdrop-blur-xl p-4 rounded-2xl border border-white shadow-[0_20px_40px_rgba(0,0,0,0.1)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform"
                 >
                     <div className="flex items-center gap-4">
                         <div className="size-10 rounded-full bg-white/40 flex items-center justify-center">
@@ -8534,7 +8564,7 @@ function App() {
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     onClick={openOverlaySettings}
-                    className="fixed top-0 left-0 right-0 z-[9999] bg-orange-400/95 backdrop-blur-xl px-4 py-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform shadow-[0_8px_30px_rgba(0,0,0,0.1)]"
+                    className="fixed top-0 left-0 right-0 z-[200] bg-orange-400/95 backdrop-blur-xl px-4 py-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform shadow-[0_8px_30px_rgba(0,0,0,0.1)]"
                     style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
                 >
                     <div className="flex items-center gap-3">
@@ -8586,7 +8616,7 @@ function App() {
                                     initial={{ opacity: 0 }} 
                                     animate={{ opacity: 1 }} 
                                     exit={{ opacity: 0 }}
-                                    className="fixed inset-0 z-[300] bg-white flex flex-col items-center justify-center p-8 text-center"
+                                    className="fixed inset-0 z-[150] bg-zinc-900/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center"
                                 >
                                     <motion.div 
                                         initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
@@ -9320,7 +9350,13 @@ function App() {
     );
 }
 
-export default App;
+export default function App() {
+    return (
+        <GlobalErrorBoundary>
+            <MainApp />
+        </GlobalErrorBoundary>
+    );
+}
 
 
 

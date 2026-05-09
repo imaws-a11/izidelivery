@@ -213,7 +213,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
   if (loading && step === 'welcome') {
     return (
-      <div className="fixed inset-0 bg-white z-[20000] flex flex-col items-center justify-center p-10 text-center">
+      <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-xl z-[150] flex flex-col items-center justify-center p-10 text-center">
         <motion.div 
             animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}
@@ -227,7 +227,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
   }
 
   return (
-    <div className="fixed inset-0 bg-white z-[15000] flex flex-col font-display overflow-y-auto">
+    <div className="fixed inset-0 bg-white z-[150] flex flex-col font-display overflow-y-auto">
       <AnimatePresence mode="wait">
         {step === 'welcome' && (
           <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-screen">

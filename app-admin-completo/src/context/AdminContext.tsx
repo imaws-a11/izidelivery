@@ -112,6 +112,10 @@ export interface AdminContextType {
   setSelectedTrackingItem: (i: any) => void;
   selectedMenuCategory: string;
   setSelectedMenuCategory: (id: string) => void;
+  selectedOrder: Order | null;
+  setSelectedOrder: (o: Order | null) => void;
+  draftStandaloneOrder: any | null;
+  setDraftStandaloneOrder: (d: any | null) => void;
 
   // Edit state
   editingItem: any;

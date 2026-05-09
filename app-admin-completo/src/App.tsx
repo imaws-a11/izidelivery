@@ -38,6 +38,7 @@ import OrderCenterTab from './components/OrderCenterTab';
 import StandaloneDeliveryTab from './components/StandaloneDeliveryTab';
 import MerchantProfileTab from './components/MerchantProfileTab';
 import WalletHistoryTab from './components/WalletHistoryTab';
+import GlobalOrderDetailsModal from './components/GlobalOrderDetailsModal';
 // import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
 
@@ -450,6 +451,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Modais Globais */}
+      <GlobalOrderDetailsModal />
+      
       {/* Modal Sucesso Recarga (Global) */}
       <AnimatePresence>
         {showRechargeSuccessModal && (

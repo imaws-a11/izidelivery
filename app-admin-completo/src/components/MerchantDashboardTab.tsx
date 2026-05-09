@@ -5,7 +5,8 @@ import { useAdmin } from '../context/AdminContext';
 export default function MerchantDashboardTab() {
   const {
     allOrders, merchantProfile, dashboardData, fetchAllOrders,
-    merchantBalance, isWalletLoading, setActiveTab, setActivePreviewTab
+    merchantBalance, isWalletLoading, setActiveTab, setActivePreviewTab,
+    setSelectedOrder, setDraftStandaloneOrder
   } = useAdmin();
 
   const goToFinancial = () => {
@@ -317,14 +318,22 @@ export default function MerchantDashboardTab() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {merchantOrders.slice(0, 5).map((o, i) => (
-                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all group">
+                          <tr 
+                            key={i} 
+                            onClick={() => setSelectedOrder(o)}
+                            className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all group cursor-pointer"
+                          >
                               <td className="px-10 py-6 font-display">
                                   <span className="text-slate-400 text-[10px] font-black uppercase block mb-1">ID</span>
                                   <span className="text-sm font-black text-slate-900 dark:text-slate-100">#{o.id.slice(0, 8).toUpperCase()}</span>
                               </td>
                               <td className="px-10 py-6">
-                                  <span className="text-sm font-black text-slate-900 dark:text-slate-100 italic">#{o.user_id.slice(0, 6)}</span>
-                                  <span className="text-[10px] font-bold text-slate-400 block mt-1 uppercase">Via App IZI</span>
+                                  <span className="text-sm font-black text-slate-900 dark:text-slate-100 italic">
+                                    {o.user_id ? `#${o.user_id.slice(0, 6)}` : (o.user_name || 'Externo')}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-400 block mt-1 uppercase">
+                                    {o.user_id ? 'Via App IZI' : 'Entrega Avulsa'}
+                                  </span>
                               </td>
                               <td className="px-10 py-6">
                                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${
@@ -340,10 +349,23 @@ export default function MerchantDashboardTab() {
                                       {o.status}
                                   </div>
                               </td>
-                              <td className="px-10 py-6 text-right">
+                              <td className="px-10 py-6 text-left">
                                   <span className="text-lg font-black text-slate-900 dark:text-white italic tracking-tighter">
                                       R$ {o.total_price.toFixed(2).replace('.', ',')}
                                   </span>
+                              </td>
+                              <td className="px-10 py-6 text-center">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDraftStandaloneOrder(o);
+                                      setActiveTab('standalone_delivery');
+                                    }}
+                                    className="p-3 rounded-2xl bg-primary/10 text-primary hover:bg-primary hover:text-slate-900 transition-all group/btn"
+                                    title="Repetir Entrega (Chamar Entregador)"
+                                  >
+                                    <span className="material-symbols-outlined text-xl">reorder</span>
+                                  </button>
                               </td>
                           </tr>
                       ))}

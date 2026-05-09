@@ -300,6 +300,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedCategoryStudio, setSelectedCategoryStudio] = useState<Category | null>(null);
   const [selectedZoneForMap, setSelectedZoneForMap] = useState<any>(null);
   const [selectedTrackingItem, setSelectedTrackingItem] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [draftStandaloneOrder, setDraftStandaloneOrder] = useState<any | null>(null);
   const [selectedMenuCategory, setSelectedMenuCategory] = useState<string>('all');
 
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -3187,6 +3189,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     selectedDriverStudio, setSelectedDriverStudio, selectedUserStudio, setSelectedUserStudio, 
     selectedCategoryStudio, setSelectedCategoryStudio, selectedHexagons, setSelectedHexagons, 
     selectedZoneForMap, setSelectedZoneForMap, 
+    selectedOrder, setSelectedOrder,
+    draftStandaloneOrder, setDraftStandaloneOrder,
     selectedTrackingItem, setSelectedTrackingItem, selectedMenuCategory, setSelectedMenuCategory, 
     editingItem, setEditingItem, editType, setEditType, editingSlotId, setEditingSlotId, 
     isSaving, setIsSaving, activePreviewTab, setActivePreviewTab, activeStudioTab, 

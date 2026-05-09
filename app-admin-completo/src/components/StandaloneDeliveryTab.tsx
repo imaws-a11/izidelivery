@@ -5,8 +5,14 @@ import { useAdmin } from '../context/AdminContext';
 import { toastSuccess, toastError, toastInfo } from '../lib/useToast';
 import { AddressSearchInput } from './AddressSearchInput';
 
+import MerchantOrdersTracking from './MerchantOrdersTracking';
+
 export default function StandaloneDeliveryTab() {
-  const { merchantProfile, appSettings, session, userRole, merchantBalance, fetchMerchantFinance, setShowAddCreditModal } = useAdmin();
+  const { 
+    merchantProfile, appSettings, session, userRole, merchantBalance, 
+    fetchMerchantFinance, setShowAddCreditModal, dynamicRatesState,
+    draftStandaloneOrder, setDraftStandaloneOrder
+  } = useAdmin();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
@@ -15,6 +21,27 @@ export default function StandaloneDeliveryTab() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
   const [referencePoint, setReferencePoint] = useState('');
+
+  // Pre-fill from draft
+  React.useEffect(() => {
+    if (draftStandaloneOrder) {
+      setCustomerName(draftStandaloneOrder.customer_name || draftStandaloneOrder.user_name || '');
+      setCustomerPhone(draftStandaloneOrder.customer_phone || '');
+      setDeliveryAddress(draftStandaloneOrder.delivery_address?.split('| ITENS:')[0]?.trim() || '');
+      setNeighborhood(draftStandaloneOrder.neighborhood || '');
+      setReferencePoint(draftStandaloneOrder.reference_point || '');
+      setDeliveryPaymentMethod(draftStandaloneOrder.delivery_payment_method || 'loja');
+      
+      // Se tiver endereço, já calcula o frete
+      if (draftStandaloneOrder.delivery_address) {
+        calculateFee(draftStandaloneOrder.delivery_address.split('| ITENS:')[0]?.trim());
+      }
+
+      // Limpa o rascunho para não preencher de novo se sair e voltar
+      setDraftStandaloneOrder(null);
+      toastInfo('Dados do pedido anterior carregados.');
+    }
+  }, [draftStandaloneOrder]);
   const [deliveryPaymentMethod, setDeliveryPaymentMethod] = useState<'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'pix' | 'loja' | 'cliente'>('loja');
   const [needsCardMachine, setNeedsCardMachine] = useState(false);
   const [customerPaysCash, setCustomerPaysCash] = useState(false);
@@ -91,7 +118,7 @@ export default function StandaloneDeliveryTab() {
         : notes;
 
       const payload = {
-        user_id: session?.user?.id || merchantProfile?.id, // Assumindo que o admin/lojista é o "criador"
+        user_id: null, // Entregas avulsas não obrigatoriamente possuem um "usuário/cliente" cadastrado na tabela users_delivery
         merchant_id: merchantProfile?.id,
         merchant_name: merchantProfile?.store_name,
         service_type: 'entrega_avulsa',
@@ -100,6 +127,7 @@ export default function StandaloneDeliveryTab() {
         total_price: estimatedFee, // O valor do "pedido" aqui é apenas a taxa de entrega
         delivery_fee: estimatedFee,
         payment_method: 'entrega_avulsa', // Identificador interno
+        user_name: customerName, // Usamos o nome do cliente final como user_name para exibição nas listas
         notes: finalNotes,
         
         // Novos campos
@@ -474,6 +502,11 @@ export default function StandaloneDeliveryTab() {
            </div>
         </div>
       </div>
+
+      <hr className="border-slate-100 dark:border-slate-800 my-8" />
+
+      {/* Seção de Acompanhamento */}
+      <MerchantOrdersTracking />
     </div>
   );
 }
