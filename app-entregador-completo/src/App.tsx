@@ -1966,7 +1966,13 @@ function MainApp() {
             if (profile.email) localStorage.setItem('izi_driver_email', profile.email);
             if (profile.document_number) localStorage.setItem('izi_driver_cpf', profile.document_number);
             
-            // 4. Dados BancÃ¡rios
+            // 4. Dados Bancários e Vínculos
+            if (profile.merchant_id) {
+                localStorage.setItem('izi_driver_merchant_id', profile.merchant_id);
+            } else {
+                localStorage.removeItem('izi_driver_merchant_id');
+            }
+
             if (profile.bank_info?.pix_key) {
                 setPixKey(profile.bank_info.pix_key);
                 localStorage.setItem('izi_driver_pix', profile.bank_info.pix_key);
@@ -2067,29 +2073,28 @@ function MainApp() {
         // Listener de eventos de autenticação — SÓ age em SIGNED_IN (novo login)
         // INITIAL_SESSION é ignorado pois checkSession já tratou acima.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('[AUTH] onAuthStateChange:', event);
-            
-            if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+            if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
                 setIsAuthenticated(false);
                 setDriverId(null);
                 localStorage.removeItem('izi_driver_id');
-                setIsProfileLoaded(true);
-                setAuthInitLoading(false);
                 return;
             }
 
-            // Só carrega perfil em login novo, NÃO em INITIAL_SESSION
-            if (event === 'SIGNED_IN' && !hasBootedRef.current) {
-                const user = session?.user;
-                if (user) {
-                    console.log('[AUTH] onAuthStateChange SIGNED_IN novo login:', user.email);
-                    hasBootedRef.current = true;
-                    setDriverId(user.id);
-                    localStorage.setItem('izi_driver_id', user.id);
-                    setIsAuthenticated(true);
-                    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                    await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
-                }
+            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
+                const user = session.user;
+                setDriverId(user.id);
+                localStorage.setItem('izi_driver_id', user.id);
+                setIsAuthenticated(true);
+
+                // Carregamento otimista do LocalStorage
+                const cachedName = localStorage.getItem('izi_driver_name');
+                if (cachedName) setDriverName(cachedName);
+                
+                const cachedAvatar = localStorage.getItem('izi_driver_avatar');
+                if (cachedAvatar) setDriverAvatar(cachedAvatar);
+
+                const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
+                await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
             }
         });
 
@@ -2781,11 +2786,21 @@ function MainApp() {
         }
         setIsSyncing(true);
         try {
-            const [data, exclusiveRes] = await Promise.all([
-                fetchFromDB('orders_delivery', 'select=*&status=not.in.(concluido,cancelado,finalizado,entregue)&order=created_at.desc&limit=50'),
-                supabase.from('admin_users').select('id').eq('dispatch_priority', 'exclusive'),
-                new Promise(resolve => setTimeout(resolve, 600)) 
+            // Buscar pedidos e lojistas exclusivos em paralelo usando o cliente oficial
+            const [ordersRes, exclusiveRes] = await Promise.all([
+                supabase.from('orders_delivery')
+                    .select('*')
+                    .not('status', 'in', '(concluido,cancelado,finalizado,entregue)')
+                    .order('created_at', { ascending: false })
+                    .limit(50),
+                supabase.from('admin_users')
+                    .select('id')
+                    .eq('dispatch_priority', 'exclusive'),
+                new Promise(resolve => setTimeout(resolve, 600))
             ]);
+
+            const data = ordersRes.data || [];
+            const error = ordersRes.error;
             
             const exclusiveIds = (exclusiveRes?.data || []).map(m => m.id);
             exclusiveMerchantIdsRef.current = exclusiveIds;
@@ -2815,83 +2830,36 @@ function MainApp() {
                 // setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             }
-
-            const available = data.filter((o: any) => {
-                const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
-                const isMerchantOrder = !!o.merchant_id;
-                
-                if (isMerchantOrder) {
-                    if (myMerchantId) {
-                        if (String(o.merchant_id) !== String(myMerchantId)) return false;
-                    } else {
-                        if (exclusiveIds.includes(o.merchant_id)) return false;
-                    }
-                }
-
-                const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
-                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
-                const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
+            const available = (data || []).filter((o: any) => {
+                const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted', 'confirmado', 'confirmed'];
+                const statusOk = o.status && actionableStatuses.includes(o.status);
                 const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
                 const notDeclined = !(now - (declinedMap[o.id] || 0) < 5000);
                 const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
                 const notScheduled = !o.scheduled_at || o.driver_id === driverId;
                 
-                const isPaladar = (o.merchant_name || "").toLowerCase().includes('paladar') || o.merchant_id === '6dd87fb5-9711-4d47-bda0-9f6cec948609';
-                if (isPaladar) {
-                    console.log("[RADAR-DEBUG] Paladar Detectado!", {
-                        status: o.status,
-                        statusOk,
-                        notMyAssignment,
-                        notDeclined,
-                        myMerchantId,
-                        isMerchantOrder,
-                        isExclusive: exclusiveMerchantIds.includes(o.merchant_id),
-                        serviceType: o.service_type
-                    });
-                }
-
-                const type = normalizeServiceType(o.service_type);
-                const pServices = prefServiceTypesRef.current || [];
-                const myVehicle = driverVehicleRef.current?.toLowerCase() || 'moto';
-                const allServicesEnabled = pServices.includes('all_services');
-                const isDelivery = ['restaurant', 'market', 'pharmacy', 'beverages', 'package', 'motoboy', 'entrega_avulsa'].includes(type);
-                const isMobility = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'van', 'utilitario'].includes(type);
-
-                let isCompatible = true;
-                
-                // Regra de Delivery
-                if (isDelivery) {
-                    const vehicleOk = ['moto', 'bike', 'bicicleta', 'carro'].includes(myVehicle);
-                    isCompatible = vehicleOk && allServicesEnabled;
-                } 
-                // Regras de Mobilidade/Frete
-                else if (type === 'mototaxi') {
-                    isCompatible = ['moto', 'mototaxi'].includes(myVehicle) && pServices.includes('mototaxi');
-                } else if (type === 'car_ride' || type === 'motorista_particular') {
-                    isCompatible = ['carro'].includes(myVehicle) && pServices.includes('motorista');
-                } else if (type === 'frete' || type === 'van' || type === 'utilitario') {
-                    isCompatible = (['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g', 'carro'].includes(myVehicle)) && pServices.includes('frete');
-                }
-
-                // FIX BUG 1: 'result' não estava declarado — substituído pelos filtros corretos
-                const baseResult = statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled;
-                const finalResult = baseResult && isCompatible;
-
-                if (isPaladar) {
-                    if (!finalResult) {
-                        console.warn("[RADAR-DEBUG] Paladar Incompatível ou Filtrado:", { 
-                            result, isCompatible, type, myVehicle, pServices, allServicesEnabled 
-                        });
+                // Trava de Exclusividade Segura
+                const isMerchantOrder = !!o.merchant_id;
+                let merchantOk = true;
+                if (isMerchantOrder) {
+                    const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
+                    const isOrderExclusive = (exclusiveIds || []).includes(o.merchant_id);
+                    
+                    if (isOrderExclusive) {
+                        // Pedido EXCLUSIVO: só vê quem é da mesma loja
+                        if (!myMerchantId || String(o.merchant_id) !== String(myMerchantId)) {
+                            merchantOk = false;
+                        }
                     } else {
-                        console.log("[RADAR-DEBUG] Paladar APROVADO para exibição!");
+                        // Pedido GLOBAL: todos veem (independentes e exclusivos de outras lojas)
+                        merchantOk = true;
                     }
                 }
 
-                return finalResult;
+                return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled && merchantOk;
             });
 
-            if (error || !available) {
-                console.error('[FETCH-ORDERS] Erro ou dados nulos:', error);
+            if (!available) {
                 return;
             }
 
@@ -2925,6 +2893,7 @@ function MainApp() {
                 return newAvailable;
             });
         } catch (err) {
+            console.error('[FETCH-ORDERS-CRASH]:', err);
         } finally {
             setIsSyncing(false);
         }
@@ -3012,44 +2981,27 @@ function MainApp() {
                 }
 
                 // 2. GESTÃO DO RADAR (Pedidos disponíveis)
-                if (o.scheduled_at && o.driver_id !== dId) return;
-                
-                const isMerchantOrder = !!o.merchant_id;
-                
-                // Trava de Exclusividade (Sync com fetchOrders)
-                if (isMerchantOrder) {
-                    const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
-                    const isExclusive = exclusiveMerchantIdsRef.current.includes(o.merchant_id);
-                    const isPaladar = o.merchant_id === '6dd87fb5-9711-4d47-bda0-9f6cec948609';
-
-                    if (isPaladar) {
-                        console.log("[REALTIME-DEBUG] Paladar via Realtime!", { myMerchantId, isExclusive, status: o.status });
-                    }
-
-                    if (myMerchantId) {
-                        if (String(o.merchant_id) !== String(myMerchantId)) {
-                            if (isPaladar) console.warn("[REALTIME-DEBUG] Paladar bloqueado: Driver vinculado a outro merchant:", myMerchantId);
-                            return;
-                        }
-                    } else {
-                        if (isExclusive) {
-                            if (isPaladar) console.warn("[REALTIME-DEBUG] Paladar bloqueado: Merchant exclusivo e driver sem vínculo.");
-                            return;
-                        }
-                    }
-                }
-
                 const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted', 'confirmado', 'confirmed'];
                 const isAcceptable = o.status && actionableStatuses.includes(o.status);
 
                 if (!isAcceptable || (o.driver_id && String(o.driver_id).trim() !== dId)) {
-                    setOrders(prev => {
-                        const orderIdToRemove = o?.id;
-                        if (!orderIdToRemove) return prev;
-                        const newOrders = prev.filter(x => x.realId !== orderIdToRemove);
-                        return newOrders;
-                    });
+                    setOrders(prev => prev.filter(x => x.realId !== o.id));
                     return;
+                }
+
+                // Trava de Exclusividade Segura (Sync com fetchOrders)
+                const isMerchantOrder = !!o.merchant_id;
+                if (isMerchantOrder) {
+                    const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
+                    const isOrderExclusive = (exclusiveMerchantIdsRef.current || []).includes(o.merchant_id);
+                    
+                    if (isOrderExclusive) {
+                        // Pedido EXCLUSIVO: só vê quem é da mesma loja
+                        if (!myMerchantId || String(o.merchant_id) !== String(myMerchantId)) {
+                            return;
+                        }
+                    }
+                    // Se for GLOBAL, o fluxo segue normalmente
                 }
 
                 if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
@@ -3057,54 +3009,8 @@ function MainApp() {
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                 if (financialTypes.includes(o.service_type)) return;
 
-                // 2.1 FILTRAGEM POR PREFERÃŠNCIAS E VEÃ CULOS
-                const isCompatible = () => {
-                    const type = normalizeServiceType(o.service_type);
-                    const pServices = prefServiceTypesRef.current;
-                    const myVehicle = driverVehicleRef.current?.toLowerCase() || 'moto';
-
-                    const allServicesEnabled = pServices.includes('all_services');
-                    const isDelivery = ['restaurant', 'market', 'pharmacy', 'beverages', 'package', 'motoboy', 'entrega_avulsa'].includes(type);
-                    const isMobility = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'van', 'utilitario'].includes(type);
-
-                    // Filtro de ServiÃ§os
-                    if (isDelivery && !allServicesEnabled) return false;
-                    if (isMobility) {
-                        const mapping: Record<string, string> = {
-                            'mototaxi': 'mototaxi', 'car_ride': 'motorista', 'motorista_particular': 'motorista',
-                            'frete': 'frete', 'van': 'frete', 'utilitario': 'frete'
-                        };
-                        const prefKey = mapping[type];
-                        if (prefKey && !pServices.includes(prefKey)) return false;
-                    }
-
-                    // Filtro de VeÃ­culos
-                    const canDoMoto = ['moto', 'mototaxi'].includes(myVehicle);
-                    const canDoBike = ['bike', 'bicicleta'].includes(myVehicle);
-                    const canDoCar = ['carro'].includes(myVehicle);
-                    const canDoLarge = ['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g'].includes(myVehicle);
-
-                    const result = isDelivery ? (canDoMoto || canDoBike || canDoCar) : (type === 'mototaxi' ? canDoMoto : (type === 'car_ride' || type === 'motorista_particular' ? canDoCar : (type === 'frete' || type === 'van' || type === 'utilitario' ? (canDoLarge || canDoCar) : true)));
-                    
-                    if (isPaladar && !result) {
-                        console.warn("[COMPATIBILITY-DEBUG] Paladar Incompatível!", { type, myVehicle, isDelivery, pServices, allServicesEnabled });
-                    }
-                    return result;
-                };
-
-                if (!isCompatible()) return;
-
-                // const actionableStatuses já declarado acima no mesmo escopo de efeito
-                const pStatus = String(o.payment_status || '').toLowerCase();
-                const pMethod = String(o.payment_method || '').toLowerCase();
-                const isPaidOrCash = ['cash', 'dinheiro', 'entrega_avulsa'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus) || o.service_type === 'entrega_avulsa';
-                const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
-                const servicePreview = getServicePresentation(o);
-
-                // FIX BUG 2: shouldSound estava calculado mas nunca usado
-                // O som agora é disparado aqui no Realtime (não apenas pelo visibleOrders watcher)
-                // Isso garante que novos pedidos tocam imediatamente ao chegar, sem esperar o poll
-                if (shouldSound && localStorage.getItem('pref_sound') !== 'false') {
+                // Som de novo pedido
+                if (localStorage.getItem('pref_sound') !== 'false') {
                     playIziSound('driver', true);
                 }
 
