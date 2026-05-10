@@ -4450,6 +4450,7 @@ function MainApp() {
                     </div>
                     <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar -mx-6 px-6">
                         {filteredOrders.map((order) => {
+                                const isAvulsa = (order.service_type || order.type || '').toLowerCase() === 'entrega_avulsa';
                                 const presentation = getServicePresentation(order);
                                 const isAcceptingThis = isAccepting && (selectedOrder?.realId === (order.realId || order.id) || selectedOrder?.id === order.id);
                                 
@@ -4472,8 +4473,8 @@ function MainApp() {
                                             </div>
 
                                             <div className="mt-8 w-full">
-                                                <div className={`inline-block px-4 py-1.5 rounded-full ${presentation.details.bg} ${presentation.details.color} text-[10px] font-bold uppercase tracking-widest mb-2`}>
-                                                    {presentation.isMobility ? 'NOVA CORRIDA' : 'NOVA OPORTUNIDADE'}
+                                                <div className={`inline-block px-4 py-1.5 rounded-full ${isAvulsa ? 'bg-emerald-50 text-emerald-600' : presentation.details.bg + ' ' + presentation.details.color} text-[10px] font-bold uppercase tracking-widest mb-2`}>
+                                                    {isAvulsa ? '📦 ENTREGA AVULSA' : presentation.isMobility ? 'NOVA CORRIDA' : 'NOVA OPORTUNIDADE'}
                                                 </div>
 
                                                 {/* Feedback de Preparo */}
@@ -4495,10 +4496,10 @@ function MainApp() {
                                                 )}
 
                                                 <h1 className="text-xl sm:text-2xl font-black text-zinc-900 leading-tight tracking-tight mb-2 uppercase">
-                                                    {presentation.isMobility ? 'Nova Corrida Disponível' : 'Nova Entrega Disponível'}
+                                                    {isAvulsa ? 'Entrega Avulsa Disponível' : presentation.isMobility ? 'Nova Corrida Disponível' : 'Nova Entrega Disponível'}
                                                 </h1>
                                                 <p className="text-zinc-400 text-[10px] sm:text-[11px] mb-6 sm:mb-8 px-2 leading-relaxed font-bold uppercase tracking-widest">
-                                                    {presentation.isMobility ? 'Um passageiro está aguardando por você.' : 'Uma missão de entrega de alta prioridade disponível.'}
+                                                    {isAvulsa ? 'Lojista parceiro precisa de um entregador.' : presentation.isMobility ? 'Um passageiro está aguardando por você.' : 'Uma missão de entrega de alta prioridade disponível.'}
                                                 </p>
 
                                                 {/* Payment Box */}
@@ -4515,7 +4516,7 @@ function MainApp() {
                                                         <Icon name={presentation.isMobility ? 'electric_bolt' : 'local_fire_department'} className={`${presentation.isMobility ? 'text-indigo-500' : 'text-yellow-500'} text-2xl sm:text-3xl`} />
                                                     </div>
                                                     <p className="text-zinc-300 text-[8px] sm:text-[9px] mt-2 font-bold uppercase tracking-tighter">
-                                                        {presentation.isMobility ? '+ Adicionais da corrida' : '+ Gorjeta do cliente'}
+                                                        {isAvulsa ? 'Taxa paga pela loja' : presentation.isMobility ? '+ Adicionais da corrida' : '+ Gorjeta do cliente'}
                                                     </p>
                                                 </div>
 
@@ -4531,6 +4532,7 @@ function MainApp() {
                                                                if (st === 'van') return 'Van Express';
                                                                if (st === 'utilitario') return 'Utilitário';
                                                                if (st === 'frete' || st === 'logistica') return 'Serviço de Frete';
+                                                               if (st === 'entrega_avulsa') return 'Entrega Avulsa';
                                                                if (st === 'motoboy' || st === 'package') return 'Serviço de Motoboy';
                                                                if (st === 'restaurant') return 'Restaurante';
                                                                if (st === 'market') return 'Mercado';
