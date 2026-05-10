@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import admin from 'npm:firebase-admin@11.11.1'
+import { checkRateLimit } from '../_shared/rate-limiter.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,6 +31,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!; // Usar SERVICE_ROLE para ignorar RLS
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    await checkRateLimit(req, supabase, 'send-push-notification', 30, 60);
 
     const { driver_id, user_id, merchant_id, title, body, data } = await req.json()
 

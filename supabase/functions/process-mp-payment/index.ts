@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rate-limiter.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,9 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
+    await checkRateLimit(req, supabaseAdmin, 'process-mp-payment', 20, 60)
+
     const { amount, orderId, email, token, payment_method_id, installments, issuer_id, customer } = await req.json()
 
     if (!amount || !orderId || !payment_method_id) {
@@ -73,12 +77,6 @@ serve(async (req) => {
         code: data.error || 'mp_error' 
       }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
 
     // Atualiza o pedido com o ID do pagamento do MP
     await supabaseAdmin

@@ -20,7 +20,7 @@ const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry")[] = ['places', 'geometry'];
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session, logout, isLoading: isAuthLoading } = useAuth();
-  const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string || 'swmcapital@gmail.com').trim().toLowerCase();
+  const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string || '').trim().toLowerCase();
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string || '';
 
   const { isLoaded, loadError: mapsLoadError } = useJsApiLoader({

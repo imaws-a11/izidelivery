@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Compacto)
-Atualizado: 2026-05-08
+Atualizado: 2026-05-10
 
 ---
 
@@ -139,11 +139,36 @@ Atualizado: 2026-05-08
 - **PRÓXIMO PASSO**: Criar `StandaloneDeliveryTab.tsx` no `app-admin-completo/src/components/` e integrar no `App.tsx` como nova aba do menu merchant com id `standalone_delivery`.
 - **Plano completo**: Ver artifact `izi_entrega_avulsa_plan.md` na conversa `838bfe57-13a4-4de8-ab05-38b5756a7691`.
 
+### 🛡️ Auditoria de Segurança e Hardening (Concluído)
+**Status: 15/15 Vulnerabilidades Resolvidas**
+
+#### 1. Edge Functions — Autenticação e Proteção
+- **JWT + Role Validation**: Funções administrativas (`create-admin-user`, `broadcast-push`, `reset-password`) agora validam o token do usuário e confirmam `role = 'admin'` no banco.
+- **HMAC Signature Validation**: Webhooks externos (Mercado Pago, OpenNode, PagBank) agora verificam a assinatura criptográfica no header antes de processar.
+- **Internal Webhook Secret**: `process-refund` protegido por secret compartilhado com Database Webhooks.
+- **Rate Limiting**: Implementado em todas as funções (20 req/min p/ pagamentos, 10-30 req/min p/ admin/push).
+- **CORS Restrito**: Bloqueio de origens não autorizadas em funções financeiras.
+
+#### 2. Banco de Dados — RLS e Controle de Acesso
+- **RLS Full Coverage**: Todas as 43 tabelas do schema público possuem Row Level Security ativo e políticas granulares.
+- **Correção de IDOR**: `orders_delivery` agora exige explicitamente `driver_id = auth.uid()` ou `merchant_id = auth.uid()`.
+- **Is Admin Helper**: Criada função SQL `is_admin()` que centraliza a verificação de privilégios.
+
+#### 3. Frontend — Hardening
+- **AdminProvider**: Removida a leitura de `izi_admin_role` do `localStorage`. A fonte de verdade agora é exclusivamente o banco de dados via `fetchUserRole()` após o login.
+- **Proteção de Estado**: `userRole` e `merchantProfile` inicializam como `null`.
+
+#### 4. Infraestrutura e Git
+- **Limpeza de Histórico**: 768 commits reescritos com `git filter-repo` para remover arquivos sensíveis (.vercel/, logs de sessão, caminhos do SO, secrets hardcoded).
+- **Gitignore**: Atualizado para prevenir novos commits de pastas sensíveis e scripts temporários.
+- **Secrets Configurados**: `MP_WEBHOOK_SECRET`, `OPENNODE_API_KEY`, `WEBHOOK_SECRET`, `FCM_SERVICE_ACCOUNT`, etc., todos injetados via Supabase Secrets.
+
+
 ### 📂 Arquivos Modificados
 - `AppContext.tsx`, `ProductDetailView.tsx`, `App.tsx` (Serviços/Cliente)
 - `OnboardingView.tsx`, `App.tsx` (Entregador - UI & Auth)
-- `AdminProvider.tsx`, `DriverApplicationsTab.tsx` (Admin)
+- `AdminProvider.tsx`, `DriverApplicationsTab.tsx` (Admin/Security)
 - `AdminProvider.tsx`, `MyDriversTab.tsx`, `MyStudioTab.tsx` (Merchant Fleet)
-- Edge Functions: `manage-user-auth`, `manage-driver-auth`, `create-admin-user`, `broadcast-push`, `send-push-notification`.
-- DB: Tabela `cart_sync_delivery`, Índices da tabela `drivers_delivery`, Trigger `handle_new_user_delivery`.
-- Android: `AndroidManifest.xml`, `capacitor.config.ts`, `google-services.json` (ambos os apps).
+- `create-mp-pix.ts`, `mp-webhook.ts`, `lightning-webhook.ts`, `pagbank-webhook.ts`, `process-refund.ts`, `reset-password.ts`, `send-push-notification.ts` (Edge Functions Security)
+- `.gitignore` (Raiz e Admin)
+- DB: Migrations de RLS Full e IDOR Fix.

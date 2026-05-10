@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rate-limiter.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'userId ou userEmail obrigatorio' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
+    
+    await checkRateLimit(req, supabaseAdmin, 'reset-password', 10, 60)
+
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Nao autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rate-limiter.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,11 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
   try {
+    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
+    
+    // Check persistente: 20 requisições por 60 segundos
+    await checkRateLimit(req, supabaseAdmin, 'create-mp-pix', 20, 60)
+
     const { amount, orderId, email, customer, meta } = await req.json()
     if (!amount || !orderId) {
       return new Response(JSON.stringify({ error: 'amount e orderId obrigatorios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -61,7 +67,7 @@ serve(async (req) => {
     console.log(`[DEBUG] Resposta MP: ID=${data.id}, Status=${data.status}`);
     const qrCode = data.point_of_interaction?.transaction_data?.qr_code
     const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
-    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
+    
     
     if (meta?.type !== 'loan_payment' && meta?.type !== 'wallet_recharge') {
       await supabaseAdmin.from('orders_delivery').update({ payment_intent_id: String(data.id) }).eq('id', orderId)
