@@ -2,12 +2,48 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '*', // webhook externo — chamado pelo servidor do OpenNode
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Valida a assinatura HMAC-SHA256 enviada pelo OpenNode
+// O OpenNode envia o campo "hashed_order" no body, que é o HMAC-SHA256
+// do charge_id usando a API key como secret
+// Docs: https://developers.opennode.com/docs/signing-webhooks
+async function assertOpenNodeSignature(payload: Record<string, any>): Promise<void> {
+  const apiKey = Deno.env.get('OPENNODE_API_KEY') ?? ''
+  if (!apiKey) {
+    throw new Error('OPENNODE_API_KEY não configurada. Requisição bloqueada.')
+  }
+
+  const receivedHash = payload.hashed_order ?? ''
+  if (!receivedHash) {
+    throw new Error('Campo hashed_order ausente no payload do OpenNode.')
+  }
+
+  const chargeId = String(payload.id ?? '')
+  if (!chargeId) {
+    throw new Error('Campo id ausente no payload do OpenNode.')
+  }
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(apiKey),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(chargeId))
+  const computedHash = Array.from(new Uint8Array(signatureBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+
+  if (computedHash !== receivedHash) {
+    throw new Error('Assinatura OpenNode inválida. Requisição rejeitada.')
+  }
+}
+
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -23,26 +59,27 @@ serve(async (req) => {
       payload = await req.json()
     }
 
-    console.log('OpenNode webhook recebido. Content-Type:', contentType)
-    console.log('Payload:', JSON.stringify(payload))
+    console.log('[lightning-webhook] Payload recebido. Status:', payload.status)
 
-    // OpenNode envia status: 'paid' quando confirmado
+    // ── GUARD: valida assinatura HMAC do OpenNode ──
+    await assertOpenNodeSignature(payload)
+
     if (payload.status !== 'paid') {
-      console.log('Status não é "paid", ignorando:', payload.status)
-      return new Response(JSON.stringify({ message: `Status '${payload.status}' ignorado` }), { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      console.log('[lightning-webhook] Status ignorado:', payload.status)
+      return new Response(JSON.stringify({ message: `Status '${payload.status}' ignorado` }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const openNodeChargeId = payload.id
-    const internalOrderId = payload.order_id // ID que enviamos na criação (order.id)
+    const internalOrderId = payload.order_id
 
     if (!openNodeChargeId && !internalOrderId) {
-      console.error('Dados de identificação ausentes no payload (id/order_id)')
-      return new Response(JSON.stringify({ error: 'Missing charge/order identification' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      console.error('[lightning-webhook] Dados de identificação ausentes (id/order_id)')
+      return new Response(JSON.stringify({ error: 'Missing charge/order identification' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -57,77 +94,71 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
-    console.log(`[LN-WEBHOOK] Tentando confirmar pagamento. ChargeID: ${openNodeChargeId}, InternalID: ${internalOrderId}`);
+    console.log(`[lightning-webhook] Confirmando pagamento. ChargeID: ${openNodeChargeId}, InternalID: ${internalOrderId}`)
 
-    // Tentativa 1: Localizar pelo payment_intent_id (ID da cobrança OpenNode)
-    let query = db.from('orders_delivery').update({ 
-      payment_status: 'paid', 
+    // Tentativa 1: localizar pelo payment_intent_id (charge ID do OpenNode)
+    let query = db.from('orders_delivery').update({
+      payment_status: 'paid',
       status: 'waiting_merchant',
       updated_at: new Date().toISOString()
     })
 
-    if (openNodeChargeId) {
-      query = query.eq('payment_intent_id', openNodeChargeId)
-    } else {
-      query = query.eq('id', internalOrderId)
-    }
+    query = openNodeChargeId
+      ? query.eq('payment_intent_id', openNodeChargeId)
+      : query.eq('id', internalOrderId)
 
     const { data: updateData, error: updateError } = await query.select('*')
 
     if (updateError) {
-      console.error('Erro ao atualizar pedido:', updateError)
+      console.error('[lightning-webhook] Erro ao atualizar pedido:', updateError)
       throw updateError
     }
 
-    // Tentativa 2: Se falhou na primeira e temos o internalOrderId, tentamos por ele diretamente caso o intent_id não tenha batido
+    // Tentativa 2: fallback pelo ID interno se o intent não bateu
     if ((!updateData || updateData.length === 0) && internalOrderId && openNodeChargeId) {
-       console.log(`[LN-WEBHOOK] IntentID não encontrado, tentando por ID interno: ${internalOrderId}`);
-       const { data: retryData, error: retryError } = await db
-         .from('orders_delivery')
-         .update({ 
-           payment_status: 'paid', 
-           status: 'waiting_merchant',
-           payment_intent_id: openNodeChargeId, // Força o vínculo se não estava vinculado
-           updated_at: new Date().toISOString()
-         })
-         .eq('id', internalOrderId)
-         .select('*')
-       
-       if (retryError) {
-         console.error('Erro no retry do webhook:', retryError)
-         throw retryError
-       }
+      console.log(`[lightning-webhook] Tentando por ID interno: ${internalOrderId}`)
+      const { data: retryData, error: retryError } = await db
+        .from('orders_delivery')
+        .update({
+          payment_status: 'paid',
+          status: 'waiting_merchant',
+          payment_intent_id: openNodeChargeId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', internalOrderId)
+        .select('*')
 
-       if (retryData && retryData.length > 0) {
-         console.log('Pedido confirmado via ID interno com sucesso!', internalOrderId)
-         return new Response(JSON.stringify({ message: 'OK', method: 'retry_internal_id', updated: 1 }), { 
-           status: 200, 
-           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-         })
-       }
+      if (retryError) throw retryError
+
+      if (retryData && retryData.length > 0) {
+        console.log('[lightning-webhook] Confirmado via ID interno:', internalOrderId)
+        return new Response(JSON.stringify({ message: 'OK', method: 'retry_internal_id', updated: 1 }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     if (!updateData || updateData.length === 0) {
-      console.warn(`[LN-WEBHOOK] Nenhum pedido encontrado para atualizar. IDs: ${openNodeChargeId} / ${internalOrderId}`);
-      return new Response(JSON.stringify({ message: 'No order found', updated: 0 }), { 
-        status: 200, // Retornamos 200 para o OpenNode não ficar tentando reenviar se o pedido sumiu
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      console.warn(`[lightning-webhook] Nenhum pedido encontrado. IDs: ${openNodeChargeId} / ${internalOrderId}`)
+      return new Response(JSON.stringify({ message: 'No order found', updated: 0 }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('Pedido confirmado via IntentID com sucesso!', openNodeChargeId, updateData)
-
-    return new Response(JSON.stringify({ message: 'OK', method: 'intent_id', updated: updateData.length }), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    console.log('[lightning-webhook] Confirmado via IntentID:', openNodeChargeId)
+    return new Response(JSON.stringify({ message: 'OK', method: 'intent_id', updated: updateData.length }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
   } catch (err: any) {
-    console.error('Erro crítico no lightning-webhook:', err.message)
-    return new Response(JSON.stringify({ error: err.message }), { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    const status = err.message.includes('inválida') || err.message.includes('ausente') || err.message.includes('bloqueada') ? 403 : 500
+    console.error('[lightning-webhook] Erro:', err.message)
+    return new Response(JSON.stringify({ error: err.message }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
-

@@ -1,23 +1,43 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Webhooks internos do Supabase (Database Webhooks) enviam um secret fixo
+// Configure o secret em: Supabase Dashboard > Database > Webhooks > Secret
+// Salve o valor como SUPABASE_WEBHOOK_SECRET nos Edge Function Secrets
+const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET') ?? ''
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '*', // webhook interno — não é chamado pelo browser
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  // ── GUARD: valida o secret do Supabase Database Webhook ──
+  if (WEBHOOK_SECRET) {
+    const incomingSecret = req.headers.get('x-webhook-secret') ?? ''
+    if (incomingSecret !== WEBHOOK_SECRET) {
+      console.error('[process-refund] Secret inválido. Requisição rejeitada.')
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
   try {
     const { record } = await req.json()
     const order = record
-    
+
     if (!order || order.status !== 'cancelado') {
-      return new Response(JSON.stringify({ message: 'Not a cancellation' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ message: 'Not a cancellation' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    console.log(`Iniciando estorno para o pedido: ${order.id}, Método: ${order.payment_method}, Valor: ${order.total_price}`)
+    console.log(`[process-refund] Iniciando estorno. Pedido: ${order.id}, Método: ${order.payment_method}, Valor: ${order.total_price}`)
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -25,7 +45,7 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // 1. Idempotência: Verificar se já houve estorno para este pedido
+    // Idempotência: verifica se já houve estorno para este pedido
     const { data: existingRefund } = await supabaseAdmin
       .from('wallet_transactions_delivery')
       .select('id')
@@ -34,8 +54,11 @@ serve(async (req) => {
       .maybeSingle()
 
     if (existingRefund) {
-      console.log(`Pedido ${order.id} já possui registro de reembolso. Abortando.`)
-      return new Response(JSON.stringify({ message: 'Already refunded' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      console.log(`[process-refund] Pedido ${order.id} já possui reembolso. Abortando.`)
+      return new Response(JSON.stringify({ message: 'Already refunded' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     let refundSuccess = false
@@ -45,7 +68,6 @@ serve(async (req) => {
     const paymentMethod = order.payment_method?.toLowerCase()
 
     if (paymentMethod === 'wallet' || paymentMethod === 'saldo' || paymentMethod === 'izi pay') {
-      // ESTORNO CARTEIRA INTERNA
       const { data: userData, error: userError } = await supabaseAdmin
         .from('users_delivery')
         .select('wallet_balance')
@@ -56,7 +78,6 @@ serve(async (req) => {
 
       const newBalance = Number(userData.wallet_balance || 0) + Number(order.total_price)
 
-      // Atualiza saldo do usuário
       const { error: updateBalanceError } = await supabaseAdmin
         .from('users_delivery')
         .update({ wallet_balance: newBalance })
@@ -64,7 +85,6 @@ serve(async (req) => {
 
       if (updateBalanceError) throw updateBalanceError
 
-      // Registra transação
       const { error: transError } = await supabaseAdmin
         .from('wallet_transactions_delivery')
         .insert({
@@ -78,12 +98,11 @@ serve(async (req) => {
         })
 
       if (transError) throw transError
-      
+
       refundSuccess = true
       refundMessage = 'Estorno realizado com sucesso na carteira Izi Pay.'
-    } 
+    }
     else if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'credit_card') {
-      // ESTORNO MERCADO PAGO (PIX ou CARTÃO)
       const paymentId = order.payment_intent_id
       if (!paymentId) {
         refundMessage = 'Erro: payment_intent_id não encontrado para estorno no gateway.'
@@ -91,7 +110,7 @@ serve(async (req) => {
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
         const mpRefundRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}/refunds`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
             'X-Idempotency-Key': `refund_${order.id}`
@@ -103,20 +122,14 @@ serve(async (req) => {
           refundSuccess = true
           refundMessage = `Estorno ${paymentMethod.toUpperCase()} processado via Mercado Pago.`
           metadata = { refund_id: refundData.id }
-          
-          // Atualiza status do pagamento no banco
           await supabaseAdmin.from('orders_delivery').update({ payment_status: 'refunded' }).eq('id', order.id)
         } else {
           refundMessage = `Erro no Mercado Pago: ${refundData.message || 'Desconhecido'}`
-          console.error('Erro MP Refund:', refundData)
+          console.error('[process-refund] Erro MP Refund:', refundData)
         }
       }
     }
     else if (paymentMethod === 'lightning' || paymentMethod === 'bitcoin') {
-      // ESTORNO BITCOIN LIGHTNING (Via OpenNode ou Manual)
-      // OpenNode refunds dependem de saldo e geralmente requerem interação ou LNURL.
-      // Por padrão, marcamos para revisão manual ou creditamos na carteira se o usuário preferir.
-      // Neste MVP, vamos logar a necessidade de ação manual para segurança.
       refundMessage = 'Estorno Lightning: Requer processamento manual ou fatura de devolução do cliente.'
       metadata = { note: 'Aguardando implementação de LNURL-withdraw ou devolução manual' }
     }
@@ -124,34 +137,30 @@ serve(async (req) => {
       refundMessage = `Método de pagamento ${paymentMethod} não suporta estorno automatizado ou é 'Dinheiro'.`
     }
 
-    // REGISTRO DE AUDITORIA
     await supabaseAdmin.from('audit_logs_delivery').insert({
       user_id: order.user_id,
       action: refundSuccess ? 'Estorno Automático Sucesso' : 'Estorno Automático Falha/Manual',
       module: 'Financeiro',
-      metadata: { 
-        orderId: order.id, 
-        method: paymentMethod, 
-        amount: order.total_price, 
+      metadata: {
+        orderId: order.id,
+        method: paymentMethod,
+        amount: order.total_price,
         message: refundMessage,
         success: refundSuccess,
-        ...metadata 
+        ...metadata
       }
     })
 
-    return new Response(JSON.stringify({ 
-      success: refundSuccess, 
-      message: refundMessage 
-    }), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    return new Response(JSON.stringify({ success: refundSuccess, message: refundMessage }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
   } catch (err: any) {
-    console.error('Erro no process-refund:', err.message)
-    return new Response(JSON.stringify({ error: err.message }), { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    console.error('[process-refund] Erro:', err.message)
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
