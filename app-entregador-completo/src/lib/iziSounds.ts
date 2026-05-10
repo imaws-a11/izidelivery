@@ -49,6 +49,12 @@ const playTone = (
 let audioGeneration = 0; // Previne sons "fantasmas" iniciados concorrentemente
 
 export const playIziSound = async (role: 'merchant' | 'driver' | 'success', loop: boolean = false) => {
+  // Se já existe um som de loop ativo para o driver, não reiniciamos (evita cortes no áudio)
+  if (role === 'driver' && (window as any)._iziActiveSource && (window as any)._iziActiveSource.loop) {
+      console.log('[AUDIO] Loop de driver já ativo. Ignorando nova chamada.');
+      return;
+  }
+
   console.log(`[AUDIO] Chamada para: ${role} no APK/Web`);
   
   if (role === 'driver') stopIziSounds();

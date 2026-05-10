@@ -367,29 +367,32 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
 // Normaliza aliases variados de service_type que vêm do banco de dados para os tipos canónicos
 const normalizeServiceType = (raw: string | undefined | null): string => {
     if (!raw) return 'delivery';
-    const t = raw.toLowerCase().trim();
-    // Tipos de comida / restaurante
-    if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
-         'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
-         'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
-    // Mercado / supermercado
-    if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
-    // Farmácia / saúde
-    if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
-    // Bebidas
-    if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
-    // Mobilidade
-    if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
-    if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
-    if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
-    // Logística
-    if (['van'].includes(t)) return 'van';
-    if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
-    if (['logistica', 'logistics'].includes(t)) return 'logistica';
-    if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
-    if (['motoboy', 'courier', 'moto', 'motoboy_express', 'entrega_avulsa'].includes(t)) return 'motoboy';
-    if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
-    return t; // retorna o tipo original se não houver mapeamento
+    try {
+        const t = String(raw).toLowerCase().trim();
+        // Tipos de comida / restaurante
+        if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
+             'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
+             'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
+        // Mercado / supermercado
+        if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
+        // Farmácia / saúde
+        if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
+        if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
+        // Mobilidade
+        if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
+        if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
+        if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
+        // Logística
+        if (['van'].includes(t)) return 'van';
+        if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
+        if (['logistica', 'logistics'].includes(t)) return 'logistica';
+        if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
+        if (['motoboy', 'courier', 'moto', 'motoboy_express', 'entrega_avulsa'].includes(t)) return 'motoboy';
+        if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
+        return t; 
+    } catch (e) {
+        return 'delivery';
+    }
 };
 
 const getTypeDetails = (rawType: string) => {
@@ -545,7 +548,7 @@ const getServicePresentation = (order: any) => {
 
     let summary = '';
     if (itemCount > 0) {
-        summary = itemNames.slice(0, 2).join(' Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ ');
+        summary = itemNames.slice(0, 2).join(' • ');
         if (itemCount > 2) summary += ` +${itemCount - 2}`;
     } else if (addressMeta) {
         summary = addressMeta
@@ -649,13 +652,15 @@ function MainApp() {
     }, []);
     const [appSettings, setAppSettings] = useState<any>(null);
     const [exclusiveMerchantIds, setExclusiveMerchantIds] = useState<string[]>([]);
+    const exclusiveMerchantIdsRef = useRef<string[]>([]);
+    useEffect(() => { exclusiveMerchantIdsRef.current = exclusiveMerchantIds; }, [exclusiveMerchantIds]);
     const [dynamicRates, setDynamicRates] = useState<any>(null);
     const [realTimeRoute, setRealTimeRoute] = useState<{distanceText: string, distanceValue: number, durationText: string} | null>(null);
     const [activeBroadcast, setActiveBroadcast] = useState<any>(null);
     const [showSplash, setShowSplash] = useState(true);
 
     const ensureDriverRecord = useCallback(async (userId: string, email: string, name: string) => {
-        const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online, vehicle_type, preferences, avatar_url').eq('id', userId).maybeSingle();
+        const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online, vehicle_type, preferences, avatar_url, merchant_id').eq('id', userId).maybeSingle();
         if (!data) {
             await supabase.from('drivers_delivery').upsert({
                 id: userId, 
@@ -674,6 +679,11 @@ function MainApp() {
                     localStorage.setItem('izi_driver_vehicle', data.vehicle_type);
                 }
                 localStorage.setItem('izi_driver_name', data.name);
+            }
+            if (data.merchant_id) {
+                localStorage.setItem('izi_driver_merchant_id', String(data.merchant_id));
+            } else {
+                localStorage.removeItem('izi_driver_merchant_id');
             }
             if (data.avatar_url) {
                 setDriverAvatar(data.avatar_url);
@@ -1036,12 +1046,8 @@ function MainApp() {
         activeTabRef.current = activeTab; 
     }, [activeTab]);
 
+    const [isOnline, setIsOnline] = useState(false);
     const isOnlineRef = useRef(false);
-    const [isOnline, setIsOnline] = useState(() => {
-        const val = localStorage.getItem('izi_driver_online') === 'true';
-        isOnlineRef.current = val;
-        return val;
-    });
     useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
     // Vigilante de Som (Padrão Lojista - Alta Confiabilidade)
@@ -1144,22 +1150,33 @@ function MainApp() {
     // Loop de reforço de áudio e vibração (Android Foreground)
     // Garante que o som continue tocando e vibrando enquanto houver missões visíveis
     useEffect(() => {
-        if (!isAuthenticated || !isOnline || visibleOrders.length === 0 || activeMission) {
+        const hasOrders = visibleOrders.length > 0 && !activeMission;
+        
+        if (!isAuthenticated || !isOnline || !hasOrders) {
+            stopIziSounds();
             return;
         }
 
+        // Disparo imediato se não houver som ativo
+        if (localStorage.getItem('pref_sound') !== 'false') {
+            playIziSound('driver', true);
+        }
+
         const interval = setInterval(() => {
-            // Se o som parou por algum motivo (mão do usuário ou OS), mas a missão ainda está lá, reforçamos
             if (localStorage.getItem('pref_sound') !== 'false') {
                 playIziSound('driver', true);
             }
             if (localStorage.getItem('pref_vibration') !== 'false' && 'vibrate' in navigator) {
                 navigator.vibrate([1000, 500, 1000]);
             }
-        }, 8000); // Tenta reforçar a cada 8s
+        }, 8000);
 
-        return () => clearInterval(interval);
-    }, [visibleOrders.length, isAuthenticated, isOnline, activeMission]);
+        return () => {
+            clearInterval(interval);
+            // Se a lista ficou vazia, paramos o som no cleanup
+            if (visibleOrders.length === 0) stopIziSounds();
+        };
+    }, [visibleOrders.length, isAuthenticated, isOnline, !!activeMission]);
 
     // Limpar IDs antigos do announcedOrderIds
     useEffect(() => {
@@ -1974,16 +1991,21 @@ function MainApp() {
                 // ... outras preferÃªncias se necessÃ¡rio
             }
 
-            // 7. Status de AprovaÃ§Ã£o e VÃ­nculo
+            // 7. Status de Aprovação e Vínculo
             const active = !!profile.is_active;
             setIsApproved(active);
-            localStorage.setItem('izi_driver_approved', active.toString());
             
+            // Sincroniza Status Online autoritativo do Banco
+            const onlineFromDB = !!profile.is_online;
+            setIsOnline(onlineFromDB);
+            localStorage.setItem('izi_driver_online', String(onlineFromDB));
+
             if (profile.merchant_id) {
-                localStorage.setItem('izi_driver_merchant_id', profile.merchant_id);
+                localStorage.setItem('izi_driver_merchant_id', String(profile.merchant_id));
             } else {
                 localStorage.removeItem('izi_driver_merchant_id');
             }
+            localStorage.setItem('izi_driver_approved', active.toString());
 
             if (!active) {
                 setIsOnline(false);
@@ -2086,6 +2108,41 @@ function MainApp() {
     useEffect(() => {
         localStorage.setItem('izi_driver_active_tab', activeTab);
     }, [activeTab]);
+
+    // SINCRONIZAÇÃO MULTIDISPOSITIVO (Perfil, Status e Vínculo)
+    useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+
+        console.log('[SYNC] Iniciando listener de perfil para:', driverId);
+        const channel = supabase.channel(`driver_profile_${driverId}`)
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'drivers_delivery',
+                filter: `id=eq.${driverId}`
+            }, (payload) => {
+                const updated = payload.new as any;
+                console.log('[SYNC] Perfil atualizado no DB:', updated.is_online, updated.merchant_id);
+                
+                // Sincroniza Status Online
+                if (updated.is_online !== undefined) {
+                    setIsOnline(!!updated.is_online);
+                    localStorage.setItem('izi_driver_online', String(updated.is_online));
+                }
+                
+                // Sincroniza Vínculo de Lojista
+                if (updated.merchant_id !== undefined) {
+                    if (updated.merchant_id) {
+                        localStorage.setItem('izi_driver_merchant_id', String(updated.merchant_id));
+                    } else {
+                        localStorage.removeItem('izi_driver_merchant_id');
+                    }
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [isAuthenticated, driverId]);
 
     // Effect dedicado para Transmissões Administrativas (Popups)
     useEffect(() => {
@@ -2715,10 +2772,15 @@ function MainApp() {
         }
         setIsSyncing(true);
         try {
-            const [data] = await Promise.all([
-                fetchFromDB('orders_delivery', 'select=*&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20'),
-                new Promise(resolve => setTimeout(resolve, 600)) // Atraso artificial mínimo para feedback visual fluido (Girar o ícone)
+            const [data, exclusiveRes] = await Promise.all([
+                fetchFromDB('orders_delivery', 'select=*&status=not.in.(concluido,cancelado,finalizado,entregue)&order=created_at.desc&limit=50'),
+                supabase.from('admin_users').select('id').eq('dispatch_priority', 'exclusive'),
+                new Promise(resolve => setTimeout(resolve, 600)) 
             ]);
+            
+            const exclusiveIds = (exclusiveRes?.data || []).map(m => m.id);
+            exclusiveMerchantIdsRef.current = exclusiveIds;
+            setExclusiveMerchantIds(exclusiveIds);
             
             const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
             const now = Date.now();
@@ -2753,7 +2815,7 @@ function MainApp() {
                     if (myMerchantId) {
                         if (String(o.merchant_id) !== String(myMerchantId)) return false;
                     } else {
-                        if (exclusiveMerchantIds.includes(o.merchant_id)) return false;
+                        if (exclusiveIds.includes(o.merchant_id)) return false;
                     }
                 }
 
@@ -2765,41 +2827,90 @@ function MainApp() {
                 const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
                 const notScheduled = !o.scheduled_at || o.driver_id === driverId;
                 
-                const isPaladar = (o.merchant_name || "").toLowerCase().includes('paladar');
+                const isPaladar = (o.merchant_name || "").toLowerCase().includes('paladar') || o.merchant_id === '6dd87fb5-9711-4d47-bda0-9f6cec948609';
                 if (isPaladar) {
-                    console.log("[RADAR] Paladar Detectado! Status:", o.status, "statusOk:", statusOk, "notMyAssignment:", notMyAssignment, "myMerchantId:", myMerchantId);
+                    console.log("[RADAR-DEBUG] Paladar Detectado!", {
+                        status: o.status,
+                        statusOk,
+                        notMyAssignment,
+                        notDeclined,
+                        myMerchantId,
+                        isMerchantOrder,
+                        isExclusive: exclusiveMerchantIds.includes(o.merchant_id),
+                        serviceType: o.service_type
+                    });
                 }
 
-                return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled;
+                const type = normalizeServiceType(o.service_type);
+                const pServices = prefServiceTypesRef.current || [];
+                const myVehicle = driverVehicleRef.current?.toLowerCase() || 'moto';
+                const allServicesEnabled = pServices.includes('all_services');
+                const isDelivery = ['restaurant', 'market', 'pharmacy', 'beverages', 'package', 'motoboy', 'entrega_avulsa'].includes(type);
+                const isMobility = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'van', 'utilitario'].includes(type);
+
+                let isCompatible = true;
+                
+                // Regra de Delivery
+                if (isDelivery) {
+                    const vehicleOk = ['moto', 'bike', 'bicicleta', 'carro'].includes(myVehicle);
+                    isCompatible = vehicleOk && allServicesEnabled;
+                } 
+                // Regras de Mobilidade/Frete
+                else if (type === 'mototaxi') {
+                    isCompatible = ['moto', 'mototaxi'].includes(myVehicle) && pServices.includes('mototaxi');
+                } else if (type === 'car_ride' || type === 'motorista_particular') {
+                    isCompatible = ['carro'].includes(myVehicle) && pServices.includes('motorista');
+                } else if (type === 'frete' || type === 'van' || type === 'utilitario') {
+                    isCompatible = (['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g', 'carro'].includes(myVehicle)) && pServices.includes('frete');
+                }
+
+                const finalResult = result && isCompatible;
+
+                if (isPaladar) {
+                    if (!finalResult) {
+                        console.warn("[RADAR-DEBUG] Paladar Incompatível ou Filtrado:", { 
+                            result, isCompatible, type, myVehicle, pServices, allServicesEnabled 
+                        });
+                    } else {
+                        console.log("[RADAR-DEBUG] Paladar APROVADO para exibição!");
+                    }
+                }
+
+                return finalResult;
             });
 
-            const newAvailable = available.map((o: any) => ({
-                ...o,
-                id: o.id.slice(0, 8).toUpperCase(), 
-                realId: o.id, 
-                type: o.service_type, 
-                origin: o.pickup_address, 
-                destination: o.delivery_address, 
-                price: o.total_price,
-                pickup_lat: o.pickup_lat,
-                pickup_lng: o.pickup_lng,
-                delivery_lat: o.delivery_lat,
-                delivery_lng: o.delivery_lng,
-                store_name: o.merchant_name || o.store_name || 'Loja Parceira',
-                customer: 'Cliente Izi'
-            }));
+            if (error || !available) {
+                console.error('[FETCH-ORDERS] Erro ou dados nulos:', error);
+                return;
+            }
+
+            const newAvailable = (available || []).map((o: any) => {
+                try {
+                    const safeId = String(o?.id || '');
+                    if (!safeId) return null;
+                    return {
+                        ...o,
+                        id: safeId.slice(0, 8).toUpperCase(), 
+                        realId: safeId, 
+                        type: o.service_type || 'delivery', 
+                        origin: o.pickup_address || o.origin || '', 
+                        destination: o.delivery_address || o.destination || '', 
+                        price: Number(o.total_price || 0),
+                        pickup_lat: Number(o.pickup_lat || 0),
+                        pickup_lng: Number(o.pickup_lng || 0),
+                        delivery_lat: Number(o.delivery_lat || 0),
+                        delivery_lng: Number(o.delivery_lng || 0),
+                        store_name: String(o.merchant_name || o.store_name || 'Loja Parceira'),
+                        customer: 'Cliente Izi'
+                    };
+                } catch (e) {
+                    console.error('[POLL-ERROR] Pedido inválido:', o);
+                    return null;
+                }
+            }).filter(Boolean);
 
             setOrders(prev => {
-                const hasNew = newAvailable.some(no => !prev.find(po => po.realId === no.realId));
-                
-                // Se não há pedidos disponíveis, paramos o som imediatamente
-                if (newAvailable.length === 0) {
-                    stopIziSounds();
-                } else if (hasNew && isOnlineRef.current && localStorage.getItem('pref_sound') !== 'false') {
-                    // Se há novos pedidos, tocamos o som
-                    playIziSound('driver', true);
-                }
-                
+                // A gestão de som agora é 100% centralizada no useEffect observador de 'visibleOrders'
                 return newAvailable;
             });
         } catch (err) {
@@ -2832,14 +2943,16 @@ function MainApp() {
                     return;
                 }
 
-                const o = payload.new;
+                const o = payload.new as any;
+                if (!o || !o.id) return;
+
                 const dId = String(driverIdRef.current || '').trim();
                 const currentMission = activeMissionRef.current;
                 const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
 
                 // 1. GESTÃƒO DA MISSÃƒO ATIVA DESTE MOTORISTA
                 if (isMyOrder) {
-                    const status = o.status.toLowerCase().trim();
+                    const status = String(o.status || '').toLowerCase().trim();
                     const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered', 'rejected', 'recusado'];
                     
                     if (terminalStatuses.includes(status)) {
@@ -2858,7 +2971,7 @@ function MainApp() {
                     const isNowReady = o.preparation_status === 'pronto';
                     if (wasPreparing && isNowReady) {
                         playIziSound('driver', true);
-                        toastSuccess('ðŸ”” O Pedido está PRONTO para coleta!');
+                        toastSuccess('🔔 O Pedido está PRONTO para coleta!');
                     }
 
                     const mission = { 
@@ -2887,19 +3000,42 @@ function MainApp() {
                     return;
                 }
 
-                // 2. GESTÃƒO DO RADAR (Pedidos disponíveis)
-                if (o.scheduled_at) return;
+                // 2. GESTÃO DO RADAR (Pedidos disponíveis)
+                if (o.scheduled_at && o.driver_id !== dId) return;
                 
-                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 const isMerchantOrder = !!o.merchant_id;
-                const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
-                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
                 
-                const isAcceptable = isMerchantOrder ? merchantAccepted : p2pAllowed;
+                // Trava de Exclusividade (Sync com fetchOrders)
+                if (isMerchantOrder) {
+                    const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
+                    const isExclusive = exclusiveMerchantIdsRef.current.includes(o.merchant_id);
+                    const isPaladar = o.merchant_id === '6dd87fb5-9711-4d47-bda0-9f6cec948609';
+
+                    if (isPaladar) {
+                        console.log("[REALTIME-DEBUG] Paladar via Realtime!", { myMerchantId, isExclusive, status: o.status });
+                    }
+
+                    if (myMerchantId) {
+                        if (String(o.merchant_id) !== String(myMerchantId)) {
+                            if (isPaladar) console.warn("[REALTIME-DEBUG] Paladar bloqueado: Driver vinculado a outro merchant:", myMerchantId);
+                            return;
+                        }
+                    } else {
+                        if (isExclusive) {
+                            if (isPaladar) console.warn("[REALTIME-DEBUG] Paladar bloqueado: Merchant exclusivo e driver sem vínculo.");
+                            return;
+                        }
+                    }
+                }
+
+                const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted', 'confirmado', 'confirmed'];
+                const isAcceptable = o.status && actionableStatuses.includes(o.status);
+
                 if (!isAcceptable || (o.driver_id && String(o.driver_id).trim() !== dId)) {
                     setOrders(prev => {
-                        const newOrders = prev.filter(x => x.realId !== o.id);
-                        if (newOrders.length === 0) stopIziSounds();
+                        const orderIdToRemove = o?.id;
+                        if (!orderIdToRemove) return prev;
+                        const newOrders = prev.filter(x => x.realId !== orderIdToRemove);
                         return newOrders;
                     });
                     return;
@@ -2937,44 +3073,50 @@ function MainApp() {
                     const canDoCar = ['carro'].includes(myVehicle);
                     const canDoLarge = ['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g'].includes(myVehicle);
 
-                    if (isDelivery) return canDoMoto || canDoBike || canDoCar;
-                    if (type === 'mototaxi') return canDoMoto;
-                    if (type === 'car_ride' || type === 'motorista_particular') return canDoCar;
-                    if (type === 'frete' || type === 'van' || type === 'utilitario') return canDoLarge || canDoCar;
-
-                    return true;
+                    const result = isDelivery ? (canDoMoto || canDoBike || canDoCar) : (type === 'mototaxi' ? canDoMoto : (type === 'car_ride' || type === 'motorista_particular' ? canDoCar : (type === 'frete' || type === 'van' || type === 'utilitario' ? (canDoLarge || canDoCar) : true)));
+                    
+                    if (isPaladar && !result) {
+                        console.warn("[COMPATIBILITY-DEBUG] Paladar Incompatível!", { type, myVehicle, isDelivery, pServices, allServicesEnabled });
+                    }
+                    return result;
                 };
 
                 if (!isCompatible()) return;
 
-                const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
+                // const actionableStatuses já declarado acima no mesmo escopo de efeito
                 const pStatus = String(o.payment_status || '').toLowerCase();
                 const pMethod = String(o.payment_method || '').toLowerCase();
                 const isPaidOrCash = ['cash', 'dinheiro', 'entrega_avulsa'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus) || o.service_type === 'entrega_avulsa';
                 const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
                 const servicePreview = getServicePresentation(o);
 
-                const mappedOrder = {
-                    ...o,
-                    id: o.id.slice(0, 8).toUpperCase(), 
-                    realId: o.id, 
-                    type: o.service_type, 
-                    origin: o.pickup_address, 
-                    destination: o.delivery_address, 
-                    price: o.total_price,
-                    store_name: o.store_name || 'Loja Parceira',
-                    customer: o.user_name || 'Cliente Izi'
-                };
+                const mappedOrder = (() => {
+                    try {
+                        const safeId = String(o?.id || '');
+                        if (!safeId) return null;
+                        return {
+                            ...o,
+                            id: safeId.slice(0, 8).toUpperCase(), 
+                            realId: safeId, 
+                            type: o.service_type || 'delivery', 
+                            origin: o.pickup_address || o.origin || '', 
+                            destination: o.delivery_address || o.destination || '', 
+                            price: Number(o.total_price || 0),
+                            store_name: String(o.store_name || o.merchant_name || 'Loja Parceira'),
+                            customer: String(o.user_name || 'Cliente Izi')
+                        };
+                    } catch (e) {
+                        console.error('[REALTIME-ERROR] Pedido inválido:', o);
+                        return null;
+                    }
+                })();
+
+                if (!mappedOrder) return;
 
                 setOrders(prev => {
                     const exists = prev.find(x => x.realId === o.id);
                     if (exists) {
                         return prev.map(x => x.realId === o.id ? mappedOrder : x);
-                    }
-                    
-                    if (isOnlineRef.current && shouldSound) {
-                        // O alerta agora é disparado pelo useEffect de monitoramento de 'orders'
-                        // que centraliza a lógica de som, moveToForeground e popup flutuante.
                     }
                     return [mappedOrder, ...prev].slice(0, 20);
                 });
@@ -3817,12 +3959,12 @@ function MainApp() {
                 .from('driver_vehicle_requests')
                 .insert([{
                     driver_id: driverId,
-                    vehicle_type: newVehicleType,
-                    plate: needsPlate ? newVehiclePlate.trim().toUpperCase() : null,
-                    model: newVehicleModel.trim(),
-                    color: newVehicleColor.trim(),
-                    status: 'pending'
-                }]);
+                                vehicle_type: newVehicleType,
+                                plate: needsPlate ? newVehiclePlate.trim().toUpperCase() : null,
+                                model: newVehicleModel.trim(),
+                                color: newVehicleColor.trim(),
+                                status: 'pending'
+                            }]);
 
             if (error) throw error;
 
@@ -4450,9 +4592,13 @@ function MainApp() {
                     </div>
                     <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar -mx-6 px-6">
                         {filteredOrders.map((order) => {
-                                const isAvulsa = (order.service_type || order.type || '').toLowerCase() === 'entrega_avulsa';
+                                if (!order) return null;
+                                const isAvulsa = String(order.service_type || order.type || '').toLowerCase() === 'entrega_avulsa';
                                 const presentation = getServicePresentation(order);
-                                const isAcceptingThis = isAccepting && (selectedOrder?.realId === (order.realId || order.id) || selectedOrder?.id === order.id);
+                                if (!presentation || !presentation.details) return null;
+                                
+                                const orderId = order.realId || order.id || '---';
+                                const isAcceptingThis = isAccepting && (selectedOrder?.realId === orderId || selectedOrder?.id === order.id);
                                 
                                 return (
                                     <motion.div 
@@ -4473,7 +4619,7 @@ function MainApp() {
                                             </div>
 
                                             <div className="mt-8 w-full">
-                                                <div className={`inline-block px-4 py-1.5 rounded-full ${isAvulsa ? 'bg-emerald-50 text-emerald-600' : presentation.details.bg + ' ' + presentation.details.color} text-[10px] font-bold uppercase tracking-widest mb-2`}>
+                                                <div className={`inline-block px-4 py-1.5 rounded-full ${isAvulsa ? 'bg-emerald-50 text-emerald-600' : (presentation.details.bg || 'bg-zinc-100') + ' ' + (presentation.details.color || 'text-zinc-500')} text-[10px] font-bold uppercase tracking-widest mb-2`}>
                                                     {isAvulsa ? '📦 ENTREGA AVULSA' : presentation.isMobility ? 'NOVA CORRIDA' : 'NOVA OPORTUNIDADE'}
                                                 </div>
 
@@ -4525,24 +4671,10 @@ function MainApp() {
                                                     <div className="flex flex-col bg-zinc-50 p-3 rounded-xl border border-zinc-100 col-span-2">
                                                         <span className={`${presentation.isMobility ? 'text-indigo-600/80' : 'text-yellow-600/80'} text-[8px] sm:text-[9px] uppercase font-bold tracking-widest mb-1`}>{presentation.pickupLabel}</span>
                                                         <span className={`${presentation.isMobility ? 'text-indigo-600' : 'text-yellow-600'} text-xs sm:text-sm font-black leading-tight uppercase mb-1 truncate`}>
-                                                            {order.store_name || order.merchant_name || (() => {
-                                                               const st = (order.service_type || '').toLowerCase();
-                                                               if (st === 'mototaxi') return 'MotoTaxi';
-                                                               if (st === 'carro' || st === 'car_ride') return 'Viagem de Carro';
-                                                               if (st === 'van') return 'Van Express';
-                                                               if (st === 'utilitario') return 'Utilitário';
-                                                               if (st === 'frete' || st === 'logistica') return 'Serviço de Frete';
-                                                               if (st === 'entrega_avulsa') return 'Entrega Avulsa';
-                                                               if (st === 'motoboy' || st === 'package') return 'Serviço de Motoboy';
-                                                               if (st === 'restaurant') return 'Restaurante';
-                                                               if (st === 'market') return 'Mercado';
-                                                               if (st === 'pharmacy') return 'Farmácia';
-                                                               if (st === 'beverages') return 'Distribuidora';
-                                                               return presentation.headline || 'Serviço Local';
-                                                             })()}
+                                                            {String(order?.store_name || order?.merchant_name || presentation.headline || 'Loja Parceira')}
                                                         </span>
                                                         <span className="text-zinc-800 text-[11px] sm:text-xs font-bold leading-relaxed break-words">
-                                                            {cleanAddressText(order.origin || order.pickup_address) || presentation.pickupText || 'Endereço de coleta não informado'}
+                                                            {cleanAddressText(order?.origin || order?.pickup_address) || presentation.pickupText || 'Endereço não informado'}
                                                         </span>
                                                     </div>
 

@@ -160,6 +160,7 @@ Atualizado: 2026-05-10
 - **RLS Full Coverage**: Todas as 43 tabelas do schema público possuem Row Level Security ativo e políticas granulares.
 - **Correção de IDOR**: `orders_delivery` agora exige explicitamente `driver_id = auth.uid()` ou `merchant_id = auth.uid()`.
 - **Is Admin Helper**: Criada função SQL `is_admin()` que centraliza a verificação de privilégios.
+- **⚠️ Radar de Pedidos (CRÍTICO)**: Criada política `"drivers: ver pedidos disponiveis no radar"` que permite a qualquer usuário autenticado VER pedidos com `driver_id IS NULL` e `status NOT IN (concluido, cancelado, ...)`. Sem esta política, o `fetchOrders` do App do Entregador não retorna pedidos disponíveis (RLS bloqueava), fazendo com que pedidos adicionados pelo Realtime sumissem após 5s no próximo polling.
 
 #### 3. Frontend — Hardening
 - **AdminProvider**: Removida a leitura de `izi_admin_role` do `localStorage`. A fonte de verdade agora é exclusivamente o banco de dados via `fetchUserRole()` após o login.
