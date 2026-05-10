@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel (IDs de projeto não devem ficar no repositório)
+.vercel/
+
+# Variaveis de ambiente
+.env
+.env.local
+.env.production
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo

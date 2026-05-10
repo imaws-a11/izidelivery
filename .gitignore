@@ -47,3 +47,7 @@ test2.mjs
 test3.mjs
 *.py
 App.tsx.py
+
+# Vercel (IDs de projeto não devem ficar no repositório)
+.vercel/
+**/.vercel/
