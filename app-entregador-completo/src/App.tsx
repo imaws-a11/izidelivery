@@ -387,7 +387,7 @@ const normalizeServiceType = (raw: string | undefined | null): string => {
     if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
     if (['logistica', 'logistics'].includes(t)) return 'logistica';
     if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
-    if (['motoboy', 'courier', 'moto', 'motoboy_express'].includes(t)) return 'motoboy';
+    if (['motoboy', 'courier', 'moto', 'motoboy_express', 'entrega_avulsa'].includes(t)) return 'motoboy';
     if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
     return t; // retorna o tipo original se não houver mapeamento
 };
@@ -522,7 +522,7 @@ const getServicePresentation = (order: any) => {
     } else if (detectedType === 'logistica' || detectedType === 'frete') {
         headline = 'Frete / carreto';
     } else if (detectedType === 'motoboy') {
-        headline = 'Servico de motoboy';
+        headline = rawType === 'entrega_avulsa' ? 'Entrega Avulsa' : 'Servico de motoboy';
     } else if (detectedType === 'package') {
         headline = 'Envio express';
     }
@@ -2917,7 +2917,7 @@ function MainApp() {
                     const myVehicle = driverVehicleRef.current?.toLowerCase() || 'moto';
 
                     const allServicesEnabled = pServices.includes('all_services');
-                    const isDelivery = ['restaurant', 'market', 'pharmacy', 'beverages', 'package', 'motoboy'].includes(type);
+                    const isDelivery = ['restaurant', 'market', 'pharmacy', 'beverages', 'package', 'motoboy', 'entrega_avulsa'].includes(type);
                     const isMobility = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'van', 'utilitario'].includes(type);
 
                     // Filtro de ServiÃ§os
@@ -2950,7 +2950,7 @@ function MainApp() {
                 const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                 const pStatus = String(o.payment_status || '').toLowerCase();
                 const pMethod = String(o.payment_method || '').toLowerCase();
-                const isPaidOrCash = ['cash', 'dinheiro'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus);
+                const isPaidOrCash = ['cash', 'dinheiro', 'entrega_avulsa'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus) || o.service_type === 'entrega_avulsa';
                 const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
                 const servicePreview = getServicePresentation(o);
 
@@ -3058,7 +3058,7 @@ function MainApp() {
 
     const getCategory = (rawType: string): string => {
         const type = normalizeServiceType(rawType);
-        if (['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy'].includes(type)) return 'motoboy';
+        if (['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'].includes(type)) return 'motoboy';
         if (['car_ride', 'mototaxi'].includes(type)) return 'car_ride';
         if (['frete', 'van', 'utilitario'].includes(type)) return 'frete';
         if (type === 'motorista_particular') return 'motorista_particular';
@@ -3514,7 +3514,7 @@ function MainApp() {
         if (!activeMission) return;
 
         const isFinishing = ['concluido', 'entregue', 'finalizado', 'delivered'].includes(newStatus.toLowerCase());
-        const isPaid = activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago';
+        const isPaid = activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago' || activeMission.service_type === 'entrega_avulsa';
         
         let paymentConfirmedMode: string | false = false;
         if (isFinishing && !isPaid) {
@@ -7947,7 +7947,7 @@ function MainApp() {
                                          </div>
                                      </div>
 
-                                     {!(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && activeMission.payment_method !== 'online' ? (
+                                     {!(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago' || activeMission.service_type === 'entrega_avulsa') && activeMission.payment_method !== 'online' ? (
                                          <div className="bg-zinc-100/50 p-6 rounded-[28px] border border-zinc-200 flex flex-col gap-3 shadow-inner">
                                              <div className="flex justify-between items-center text-[9px] font-black text-zinc-950 uppercase tracking-[0.2em]">
                                                  <span>Subtotal Carga</span>
@@ -8164,7 +8164,7 @@ function MainApp() {
         const netEarnings = getNetEarnings(selectedOrder);
         const displayDistance = calculatedDistance || selectedOrder.distance || 'Calculando...';
 
-        const isPaid = selectedOrder.payment_status === 'paid' || selectedOrder.payment_status === 'pago';
+        const isPaid = selectedOrder.payment_status === 'paid' || selectedOrder.payment_status === 'pago' || selectedOrder.service_type === 'entrega_avulsa';
         const paymentLabel = getPaymentLabel(selectedOrder);
         const needsChange = !isPaid && selectedOrder.change_for > 0;
 
