@@ -1118,6 +1118,15 @@ function MainApp() {
             return;
         }
 
+        // FIX BUG 5: Marcar primeiro carregamento como concluído quando há pedidos
+        // Isso evita som/anúncio de pedidos já existentes ao entrar online
+        if (isFirstLoad.current) {
+            isFirstLoad.current = false;
+            // Apenas silenciosamente marcar todos os pedidos atuais como já "vistos"
+            visibleOrders.forEach(o => announcedOrderIds.current.add(o.realId || o.id));
+            return;
+        }
+
         // Detectar ordens que ainda não foram anunciadas (som + popup + foreground)
         const newOrders = visibleOrders.filter(o => !announcedOrderIds.current.has(o.realId || o.id));
         
@@ -1777,10 +1786,10 @@ function MainApp() {
                      // O moveToForeground causava tela branca no Android. Deixando apenas o som e a notificação.
                      
                      if (notification.data?.type === 'new_order' || notification.title?.toLowerCase().includes('chamada') || notification.body?.toLowerCase().includes('chamada')) {
-                         setOrders(prev => {
-                            // lógica para adicionar o pedido se não estiver na lista ou disparar refresh
-                            return prev;
-                         });
+                         // FIX BUG 3: antes retornava prev sem fazer nada (pedido nunca aparecia na lista)
+                         // Agora dispara um fetchOrders para garantir que o pedido apareça na UI
+                         // mesmo que o realtime WebSocket tenha perdido a conexão no APK
+                         fetchOrders();
                      }
                      toastSuccess(`Nova Chamada: ${notification.title || ''}`);
                  });
@@ -2864,7 +2873,9 @@ function MainApp() {
                     isCompatible = (['fiorino', 'caminhonete', 'van', 'vuc', 'bau_p', 'bau_m', 'bau_g', 'carro'].includes(myVehicle)) && pServices.includes('frete');
                 }
 
-                const finalResult = result && isCompatible;
+                // FIX BUG 1: 'result' não estava declarado — substituído pelos filtros corretos
+                const baseResult = statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled;
+                const finalResult = baseResult && isCompatible;
 
                 if (isPaladar) {
                     if (!finalResult) {
@@ -3089,6 +3100,13 @@ function MainApp() {
                 const isPaidOrCash = ['cash', 'dinheiro', 'entrega_avulsa'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus) || o.service_type === 'entrega_avulsa';
                 const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
                 const servicePreview = getServicePresentation(o);
+
+                // FIX BUG 2: shouldSound estava calculado mas nunca usado
+                // O som agora é disparado aqui no Realtime (não apenas pelo visibleOrders watcher)
+                // Isso garante que novos pedidos tocam imediatamente ao chegar, sem esperar o poll
+                if (shouldSound && localStorage.getItem('pref_sound') !== 'false') {
+                    playIziSound('driver', true);
+                }
 
                 const mappedOrder = (() => {
                     try {
