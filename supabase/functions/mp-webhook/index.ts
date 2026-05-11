@@ -108,6 +108,13 @@ serve(async (req) => {
     )
 
     const orderId = payment.external_reference
+    
+    // Busca dados básicos do pedido para redundância
+    let orderData: any = null;
+    if (orderId) {
+      const { data } = await supabaseAdmin.from('orders_delivery').select('*').eq('id', orderId).maybeSingle();
+      orderData = data;
+    }
 
     // Pagamento de Empréstimo
     if (payment.metadata?.type === 'loan_payment') {
@@ -134,17 +141,15 @@ serve(async (req) => {
     }
 
     // Recarga de Saldo ou Compra de Moedas
-    if (payment.metadata?.type === 'wallet_recharge') {
-      const userId = payment.metadata.user_id
+    if (payment.metadata?.type === 'wallet_recharge' || orderData?.service_type === 'coin_purchase') {
+      const userId = payment.metadata.user_id || orderData?.user_id
       const amount = payment.transaction_amount
-      console.log(`[mp-webhook] Recarga/Compra Moedas para UserID: ${userId}, Amount: ${amount}, Status: ${payment.status}`)
+      const sType = orderData?.service_type || (payment.metadata?.type === 'wallet_recharge' ? 'coin_purchase' : 'order')
+      
+      console.log(`[mp-webhook] Recarga/Compra Moedas para UserID: ${userId}, Amount: ${amount}, Status: ${payment.status}, ServiceType: ${sType}`)
 
       if (payment.status === 'approved') {
-        // 1. Verificar se é compra de moedas (customer) ou recarga de saldo (merchant)
-        // Buscamos o pedido para saber o service_type
-        const { data: order } = await supabaseAdmin.from('orders_delivery').select('service_type').eq('id', orderId).single()
-        
-        if (order?.service_type === 'coin_purchase') {
+        if (sType === 'coin_purchase') {
           // Crédito de Moedas (1 BRL = 1 Moeda, ou conforme cotação)
           const { data: settings } = await supabaseAdmin.from('app_settings_delivery').select('izi_coin_value').single()
           const coinValue = settings?.izi_coin_value || 1.0

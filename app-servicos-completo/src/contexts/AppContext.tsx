@@ -807,22 +807,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     initBroadcasts();
 
-    const broadcastSub = supabase
-      .channel(`broadcast-notifs-user-${userId}`)
+    // Sincronização em Tempo Real de Saldo e Moedas
+    const profileChannel = supabase.channel(`user_profile_${userId}`)
       .on('postgres_changes', { 
-        event: 'INSERT', 
+        event: 'UPDATE', 
         schema: 'public', 
-        table: 'broadcast_notifications' 
+        table: 'users_delivery',
+        filter: `id=eq.${userId}`
       }, (payload) => {
-        const notif = payload.new as any;
-        if ((notif.type === 'popup' || notif.type === 'both') && 
-            (notif.target_type === 'all' || notif.target_type === 'users')) {
-          setActiveBroadcast(notif);
-        }
+        console.log("[REALTIME] Perfil atualizado:", payload.new);
+        const data = payload.new as any;
+        if (data.wallet_balance !== undefined) setWalletBalance(data.wallet_balance);
+        if (data.izi_coins !== undefined) setIziCoins(data.izi_coins);
+        if (data.is_izi_black !== undefined) setIsIziBlackMembership(data.is_izi_black);
+      })
+      .subscribe();
+
+    const broadcastSub = supabase.channel('broadcast_notifications_user')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcast_notifications' }, (payload) => {
+          const notif = payload.new as any;
+          if (notif.target_type === 'all' || notif.target_type === 'users' || notif.user_id === userId) {
+            setActiveBroadcast(notif);
+          }
       })
       .subscribe();
 
     return () => {
+      supabase.removeChannel(profileChannel);
       supabase.removeChannel(broadcastSub);
     };
   }, [userId]);

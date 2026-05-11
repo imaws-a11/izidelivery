@@ -383,8 +383,8 @@ function App() {
                clearCart(newOrder.id).catch(err => console.error("Erro ao limpar carrinho:", err));
              }
 
-             // Se estava na tela de aguardando pagamento, move para aguardando lojista
-             if (navigationSubViewRef.current === "waiting_payment" || navigationSubViewRef.current === "pix_payment" || navigationSubViewRef.current === "lightning_payment" || navigationSubViewRef.current === "card_payment") {
+             // Se estava na tela de aguardando pagamento, move para aguardando lojista (apenas para pedidos normais)
+             if (newOrder.service_type !== 'coin_purchase' && (navigationSubViewRef.current === "waiting_payment" || navigationSubViewRef.current === "pix_payment" || navigationSubViewRef.current === "lightning_payment" || navigationSubViewRef.current === "card_payment")) {
                 setSubView("waiting_merchant");
              }
           }
@@ -1713,7 +1713,7 @@ function App() {
     
     const total = Math.max(0, subtotal - couponDiscount);
     
-    // BENEFÃCIO IZI BLACK: Multiplicadores DinÃ¢micos
+    // BENEFÃ CIO IZI BLACK: Multiplicadores DinÃ¢micos
     const baseRate = Number(globalSettings?.izi_coin_rate || 1);
     const blackRate = Number(globalSettings?.izi_black_cashback || 5);
     const coinRate = isIziBlackMembership ? blackRate : baseRate;
@@ -1722,7 +1722,7 @@ function App() {
     const earnedCoins = Number((total * (coinRate / 100)).toFixed(8));
     const finalCoins = useCoins ? earnedCoins : (Number(iziCoins) + earnedCoins);
     
-    // BENEFÃCIO IZI BLACK: XP DinÃ¢mico
+    // BENEFÃ CIO IZI BLACK: XP DinÃ¢mico
     const baseXP = 50;
     const xpMult = Number(globalSettings?.izi_black_xp_multiplier || 2);
     const earnedXP = isIziBlackMembership ? (baseXP * xpMult) : baseXP;
@@ -1762,7 +1762,7 @@ function App() {
           lng: prev.lng + (Math.random() - 0.5) * 0.001
         }));
       }, 3000);
-      return () => clearInterval(interval);
+      return () => () => clearInterval(interval);
     }
   }, [subView]);
 
@@ -2025,7 +2025,7 @@ function App() {
 
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(`${title}\n${text}`);
-        showToast("InformaÃ§Ãµes copiadas para compartilhar.", "success");
+        showToast("InformaÃ§Ã£es copiadas para compartilhar.", "success");
         return;
       }
     } catch (error: any) {
