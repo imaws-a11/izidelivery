@@ -18,6 +18,7 @@ export const CardPaymentView: React.FC = () => {
     setIsIziBlackMembership,
     toastSuccess,
     toastError,
+    user,
   } = useApp();
 
   const { getCartSubtotal, cart, clearCart, selectedShop } = useOrder();
