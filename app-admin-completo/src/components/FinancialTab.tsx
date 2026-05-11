@@ -9,7 +9,8 @@ import type { DashboardData } from '../lib/types';
 export default function FinancialTab() {
   const {
     allOrders, dashboardOrders, appSettings, dashboardData: globalDashboardData, 
-    userRole, merchantProfile, selectedMerchantPreview, merchantsList
+    userRole, merchantProfile, selectedMerchantPreview, merchantsList,
+    handleSaveAppSettings, isSaving
   } = useAdmin();
 
   const isMerchantPreview = userRole === 'admin' && selectedMerchantPreview;
@@ -92,6 +93,27 @@ export default function FinancialTab() {
           </p>
         </div>
         <div className="flex gap-3">
+          {userRole === 'admin' && !isMerchantPreview && (
+            <button 
+              onClick={async () => {
+                try {
+                  await handleSaveAppSettings();
+                  toastSuccess('Configurações salvas com sucesso!');
+                } catch (e) {
+                  toastError('Erro ao salvar configurações.');
+                }
+              }}
+              disabled={isSaving}
+              className="flex items-center justify-center rounded-2xl h-12 px-6 bg-emerald-500 text-white hover:brightness-110 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
+              ) : (
+                <span className="material-symbols-outlined text-lg mr-2">save</span>
+              )}
+              Salvar Alterações
+            </button>
+          )}
           <button className="flex items-center justify-center rounded-2xl h-12 px-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
             <span className="material-symbols-outlined text-lg mr-2 text-slate-400">picture_as_pdf</span>
             Relatório PDF
@@ -1379,8 +1401,22 @@ function MasterFinancialControl() {
        <div>
           <div className="flex justify-between items-center mb-6">
             <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Gateways Ativos</h4>
-            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${saving ? 'bg-primary/20 text-primary' : 'bg-green-500/10 text-green-500'}`}>
-              {saving ? 'Sincronizando...' : 'Online'}
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={onSave}
+                disabled={saving}
+                className="h-9 px-5 bg-emerald-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/10 disabled:opacity-50"
+              >
+                {saving ? (
+                  <div className="size-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <span className="material-symbols-outlined text-sm">save</span>
+                )}
+                Salvar
+              </button>
+              <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${saving ? 'bg-primary/20 text-primary' : 'bg-green-500/10 text-green-500'}`}>
+                {saving ? 'Sincronizando...' : 'Online'}
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

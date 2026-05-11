@@ -11,7 +11,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 const OverlayPermission = registerPlugin<any>('OverlayPermission');
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
-import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 import SplashScreen from './components/common/SplashScreen';
 import { IziBottomSheet } from './components/common/IziBottomSheet';
@@ -587,29 +587,41 @@ const getServicePresentation = (order: any) => {
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 // Error Boundary Minimalista para evitar Tela Branca Fatal
-class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
     constructor(props: any) {
         super(props);
-        this.state = { hasError: false };
+        this.state = { hasError: false, error: null };
     }
-    static getDerivedStateFromError() { return { hasError: true }; }
+    static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
     componentDidCatch(error: any, errorInfo: any) {
         console.error('[FATAL-ERROR]', error, errorInfo);
     }
     render() {
         if (this.state.hasError) {
             return (
-                <div className="h-screen w-full bg-zinc-900 flex flex-col items-center justify-center p-10 text-center">
-                    <div className="size-20 rounded-[32px] bg-yellow-400 flex items-center justify-center mb-8">
-                        <span className="material-symbols-outlined text-4xl text-black">error</span>
+                <div className="h-screen w-full bg-zinc-900 flex flex-col items-center justify-center p-6 text-center overflow-auto">
+                    <div className="size-16 rounded-2xl bg-red-500 flex items-center justify-center mb-6 shadow-lg shadow-red-500/20">
+                        <span className="material-symbols-outlined text-3xl text-white">warning</span>
                     </div>
-                    <h1 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Ops! Algo deu errado</h1>
-                    <p className="text-zinc-500 text-sm font-bold mb-10 leading-relaxed uppercase tracking-widest">A interface encontrou um erro inesperado. Clique abaixo para reiniciar.</p>
+                    <h1 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Ops! Algo deu errado</h1>
+                    <p className="text-zinc-500 text-xs font-bold mb-6 leading-relaxed uppercase tracking-widest px-4">
+                        A interface encontrou um erro. Se estiver no APK, veja o erro abaixo:
+                    </p>
+                    
+                    <div className="w-full max-w-xs bg-black/40 border border-white/10 rounded-xl p-4 mb-8 text-left">
+                        <p className="text-red-400 text-[10px] font-mono break-all leading-tight mb-2">
+                            {this.state.error?.toString() || 'Erro desconhecido'}
+                        </p>
+                        <p className="text-zinc-600 text-[9px] font-mono break-all leading-tight opacity-50">
+                            {this.state.error?.stack?.split('\n').slice(0, 3).join('\n')}
+                        </p>
+                    </div>
+
                     <button 
                         onClick={() => window.location.reload()}
-                        className="w-full max-w-xs h-16 bg-white text-zinc-900 font-black uppercase tracking-widest rounded-2xl shadow-xl active:scale-95 transition-all"
+                        className="w-full max-w-xs h-14 bg-yellow-400 text-black font-black uppercase tracking-widest rounded-xl shadow-xl active:scale-95 transition-all"
                     >
-                        Reiniciar App
+                        Tentar Novamente
                     </button>
                 </div>
             );
@@ -1103,7 +1115,7 @@ function MainApp() {
         activeTabRef.current = activeTab; 
     }, [activeTab]);
 
-    const [isOnline, setIsOnline] = useState(false);
+    const [isOnline, setIsOnline] = useState(() => localStorage.getItem('izi_driver_online') === 'true');
     const isOnlineRef = useRef(false);
     useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
@@ -1586,30 +1598,12 @@ function MainApp() {
     }, [driverId, supabaseUrl]);
 
     const handleScanQR = async () => {
-        try {
-            await BarcodeScanner.requestPermissions();
-            document.querySelector('body')?.classList.add('barcode-scanner-active');
-            setIsScanning(true);
-            const { barcodes } = await BarcodeScanner.scan();
-            document.querySelector('body')?.classList.remove('barcode-scanner-active');
-            setIsScanning(false);
-            if (barcodes.length > 0) {
-                const scannedContent = barcodes[0].rawValue;
-                toastSuccess(`QR Code Lido: ${scannedContent}`);
-                // Lógica customizada de verificação de pacote caso necessário
-            }
-        } catch (e) {
-            console.error("Erro no Scanner:", e);
-            document.querySelector('body')?.classList.remove('barcode-scanner-active');
-            setIsScanning(false);
-            toastError("Erro ao iniciar a câmera nativa");
-        }
+        toastError("Funcionalidade de scanner desativada.");
     };
 
     const stopScan = async () => {
         setIsScanning(false);
         document.querySelector('body')?.classList.remove('barcode-scanner-active');
-        await BarcodeScanner.stopScan();
     };
 
 
@@ -3013,6 +3007,7 @@ function MainApp() {
                     }
                 }
 
+                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
                 
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];

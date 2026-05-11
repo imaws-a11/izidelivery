@@ -172,20 +172,10 @@ export const useAuth = () => {
       
       const user = data.user;
       if (user) {
-        // Regra de Isolamento: Só sincroniza se não for motorista/lojista
         const userRole = user.user_metadata?.role;
         const isNotSpecialAccount = !userRole || userRole === 'user' || userRole === 'customer';
 
-        if (isNotSpecialAccount) {
-          // Sincronizar com perfil publico (Trigger do DB também faz isso, mas aqui garantimos o nome/tel)
-          await supabase.from("users_delivery").upsert({ 
-            id: user.id, 
-            name: userName.trim(), 
-            email: loginEmail,
-            phone: phone.trim(),
-            created_at: new Date().toISOString()
-          });
-        } else {
+        if (!isNotSpecialAccount) {
           console.warn("[AUTH] Cadastro detectado para papel especial. Sincronização de perfil de cliente abortada.");
         }
 

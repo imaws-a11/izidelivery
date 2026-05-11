@@ -181,7 +181,7 @@ export const MissionsView = ({ driverId }: { driverId: string }) => {
         return () => {
             window.removeEventListener('izi:mission_completed', handleMissionCompleted);
             if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-            subscription.unsubscribe();
+            if (subscription) subscription.unsubscribe();
         };
     }, [fetchMissions]);
 
