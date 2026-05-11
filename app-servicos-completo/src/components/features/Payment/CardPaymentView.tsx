@@ -118,8 +118,8 @@ export const CardPaymentView: React.FC = () => {
   };
 
   return (
-    <div className="absolute inset-0 z-40 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-10">
-      <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900 text-white">
+    <div className="absolute inset-0 z-40 bg-[#F7F7F7] text-zinc-900 flex flex-col overflow-y-auto no-scrollbar pb-32">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md flex items-center gap-4 px-5 py-6 border-b border-zinc-100">
         <button onClick={() => {
             if (isCoinPurchase) {
               setTab("home");
@@ -130,31 +130,31 @@ export const CardPaymentView: React.FC = () => {
               setSubView("checkout");
             }
           }}
-          className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-          <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          className="size-12 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center active:scale-90 transition-all shadow-sm">
+          <span className="material-symbols-outlined text-zinc-900">arrow_back_ios_new</span>
         </button>
         <div className="flex flex-col text-left">
-            <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">Cartão de Crédito</h1>
-            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">{selectedShop?.name || 'Venda Digital'}</p>
+            <h1 className="text-lg font-black text-zinc-900 uppercase tracking-tighter leading-none">Pagamento</h1>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">{selectedShop?.name || 'Venda Digital'}</p>
         </div>
       </header>
 
       <main className="px-5 pt-10 max-w-sm mx-auto w-full space-y-10">
         <div className="text-center">
-          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">Valor Final</p>
-          <p className="text-5xl font-black text-white" style={{ textShadow: "0 0 20px rgba(255,215,9,0.2)" }}>R$ {total.toFixed(2).replace(".", ",")}</p>
+          <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-1">Total a Pagar</p>
+          <p className="text-5xl font-black text-zinc-900 tracking-tighter">R$ {total.toFixed(2).replace(".", ",")}</p>
         </div>
 
-        <div className="bg-zinc-900/10 border border-zinc-900/50 p-6 rounded-[40px] shadow-2xl">
+        <div className="bg-white border border-zinc-100 p-6 rounded-[40px] shadow-2xl shadow-zinc-200">
             <MercadoPagoCardForm onConfirm={handleConfirmCard} publicKey={appSettings?.mercadopago_public_key} />
         </div>
         
         <div className="flex flex-col items-center gap-4 py-4">
            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-zinc-700 text-sm">enhanced_encryption</span>
-              <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-black">Certificado pela PCI DSS</p>
+              <span className="material-symbols-outlined text-zinc-400 text-sm">enhanced_encryption</span>
+              <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-black">Certificado pela PCI DSS</p>
            </div>
-           <p className="text-[10px] text-center text-zinc-700 uppercase tracking-widest font-bold max-w-[200px] leading-relaxed">
+           <p className="text-[10px] text-center text-zinc-300 uppercase tracking-widest font-bold max-w-[200px] leading-relaxed">
              Seus dados são encriptados de ponta a ponta e nunca armazenados em nossos servidores.
            </p>
         </div>

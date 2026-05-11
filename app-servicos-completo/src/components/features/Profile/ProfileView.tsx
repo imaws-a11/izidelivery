@@ -78,7 +78,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     { icon: "chat_bubble", label: "Conversas", action: () => setSubView?.("chats") },
     { icon: "notifications", label: "Notificações", action: () => setSubView?.("notifications_center") },
     { icon: "description", label: "Dados da conta", action: () => setSubView?.("account_details") },
-    { icon: "credit_card", label: "Pagamentos", action: () => setSubView?.("payments") },
     { icon: "confirmation_number", label: "Cupons", action: () => setSubView?.("coupons") },
     { icon: "lock", label: "Código de entrega", action: () => setSubView?.("delivery_code") },
     { icon: "workspace_premium", label: "Fidelidade", action: () => setSubView?.("loyalty") },

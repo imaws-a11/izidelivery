@@ -156,11 +156,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   key={m.id}
                   onClick={() => {
                     if (m.disabled) return;
-                    if (m.id === "cartao" && paymentMethod === "cartao") {
-                      setSubView("payments");
-                    } else {
-                      setPaymentMethod(m.id);
-                    }
+                    setPaymentMethod(m.id);
                   }}
                   className={`flex flex-col items-start p-5 rounded-[32px] border-4 transition-all duration-300 ${paymentMethod === m.id ? 'border-yellow-400 bg-white shadow-2xl shadow-yellow-100' : 'border-zinc-50 bg-zinc-50 opacity-60'}`}
                 >

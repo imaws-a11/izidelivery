@@ -711,10 +711,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       navigateSubView('pix_payment');
     } else if (method.includes('lightning') || method.includes('bitcoin')) {
       navigateSubView('lightning_payment');
-    } else if (method.includes('cartao') || method.includes('card') || method.includes('stripe') || method.includes('credit')) {
-      navigateSubView('payments');
     } else {
-      navigateSubView('payments'); // Fallback para tela de seleção
+      // Para cartão ou qualquer outro método transparente
+      navigateSubView('card_payment');
     }
   };
 

@@ -1546,7 +1546,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                        {[
                          { id: 'lightning', label: 'Bitcoin Lightning', desc: 'Aprovação Instantânea • Cashback 1%', icon: 'bolt', color: 'text-yellow-600', bg: 'bg-yellow-50' },
                          { id: 'pix', label: 'PIX Copia e Cola', desc: 'Liberação em poucos segundos', icon: 'pix', color: 'text-emerald-600', bg: 'bg-emerald-50', isImage: true },
-                         { id: 'cartao', label: 'Cartão de Crédito', desc: 'Em até 12x no App', icon: 'credit_card', color: 'text-blue-600', bg: 'bg-blue-50' }
+                         { id: 'cartao', label: 'Cartão', desc: 'Em até 12x no App', icon: 'credit_card', color: 'text-blue-600', bg: 'bg-blue-50' }
                        ].map((m) => (
                          <button 
                            key={m.id}

@@ -52,7 +52,6 @@ import { ExploreHotelsView } from "./components/features/Tourism/ExploreHotelsVi
 import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
 import { MarketExploreView } from "./components/features/Home/MarketExploreView";
-import { PaymentMethodsView } from "./components/features/Payment/PaymentMethodsView";
 import { FlashOffersListView } from "./components/features/FlashOffersListView";
 import { AddressListView } from "./components/features/Address/AddressListView";
 import { NotificationsCenterView } from "./components/features/Notifications/NotificationsCenterView";
@@ -162,7 +161,7 @@ function App() {
     selectedCard, setSelectedCard,
     walletBalance, setWalletBalance, iziCoins, setIziCoins,
     paymentMethod, setPaymentMethod,
-    savedCards, fetchSavedCards, handleDeleteCard,
+    handleDeleteCard,
     triggerCartAnimation, 
     cartAnimations,
     handleResumePayment
@@ -522,101 +521,7 @@ function App() {
     }
   };
 
-  const handleConfirmSavedCardShortcut = async (orderId: string, amount: number, origin: string, cardObj?: any) => {
-    const cardToCharge = cardObj || selectedCard || (savedCards.length > 0 ? savedCards[0] : null);
-    if (!cardToCharge) {
-      setSubView("payments");
-      return;
-    }
-    
-    // Transição visual imediata para evitar sensação de "travamento"
-    setSubView("payment_processing");
-    setIsLoading(true);
 
-    try {
-      const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
-      const brand = (cardToCharge.brand || "Visa").toLowerCase();
-      const token = cardToCharge.mp_token || cardToCharge.token;
-
-      // Mapeamento correto para IDs do Mercado Pago
-      let mpMethodId = "master";
-      if (brand.includes("visa")) mpMethodId = "visa";
-      else if (brand.includes("master")) mpMethodId = "master";
-      else if (brand.includes("amex")) mpMethodId = "amex";
-      else if (brand.includes("elo")) mpMethodId = "elo";
-      else if (brand.includes("hiper")) mpMethodId = "hipercard";
-
-      // Metadados cruciais para o Webhook saber o que creditar
-      const metadata = {
-        type: origin === "profile" ? "wallet_recharge" : "order",
-        service_type: origin === "profile" ? "coin_purchase" : "restaurant",
-        user_id: userId
-      };
-
-      console.log("[PAYMENT] Iniciando processamento de cartão salvo:", { orderId, amount, origin, metadata });
-
-      const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
-        body: {
-          amount: Number(amount.toFixed(2)),
-          orderId: orderId,
-          payment_method_id: mpMethodId,
-          token: token,
-          email: cleanEmail,
-          installments: 1,
-          metadata
-        },
-      });
-
-      if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process' && fnData.status !== 'authorized'))) {
-         const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
-         console.error("[PAYMENT ERROR]", { fnErr, fnData });
-         toastError(`Pagamento não aprovado: ${mpMsg}`);
-         
-         // Retornar para a origem em caso de erro
-         if (origin === "izi_black") setSubView("izi_black_purchase");
-         else if (origin === "profile") {
-           setShowDepositModal(true);
-           setSubView("none");
-         }
-         else setSubView("checkout");
-         return;
-      }
-
-      // Sucesso ou Processando
-      console.log("[PAYMENT] Resposta recebida:", fnData?.status);
-
-      if (origin === "izi_black") {
-         await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
-         setIsIziBlackMembership(true);
-         setIziBlackStep('success');
-         setSubView("izi_black_purchase");
-      } else if (origin === "profile") {
-         // Para recarga de carteira, vamos para o tracking de moedas para aguardar o webhook
-         console.log("[PAYMENT] Redirecionando para izi_coin_tracking (Recarga)");
-         setSubView("izi_coin_tracking");
-      } else {
-         const { data: updatedOrder } = await supabase.from("orders_delivery").select().eq("id", orderId).single();
-         setSelectedItem(updatedOrder || { id: orderId });
-         setTab("orders");
-         setSubView("none");
-      }
-      toastSuccess(fnData?.status === 'approved' ? "Pagamento aprovado!" : "Pagamento em análise.");
-
-    } catch (err: any) {
-      console.error("[PAYMENT ERROR] Card processing shortcut error:", err);
-      toastError("Erro ao processar cartão: " + (err.message || "Tente novamente."));
-      
-      // Retornar para a origem segura em caso de erro fatal
-      if (origin === "profile") {
-         setSubView("none");
-         setShowDepositModal(true);
-      } else {
-         setSubView(origin === "izi_black" ? "izi_black_purchase" : "checkout");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // fetchWalletBalance migrada para WalletContext
 
@@ -905,7 +810,7 @@ function App() {
       
       fetchOrders();
       fetchWalletData();
-      fetchSavedCards(userId!);
+
       fetchCoupons();
       fetchBeveragePromo();
       fetchFlashOffers();
@@ -1750,11 +1655,6 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (subView === "payments" && userId) {
-      fetchSavedCards(userId);
-    }
-  }, [subView, userId]);
 
 // Simular movimento do entregador
   useEffect(() => {
@@ -2564,32 +2464,28 @@ function App() {
       }
 
       if (paymentMethod === "cartao") {
-        const cardToUse = selectedCard || (savedCards.length > 0 ? savedCards[0] : null);
-        if (cardToUse) {
-           const orderPayload = { ...orderBase, status: "pendente_pagamento" };
-           const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderPayload).select().single();
-           if (insertError || !order) {
-              toastError("Erro ao criar pedido. Tente novamente.");
-              return;
-           }
-
-           // Dedução de Izi Coins se houver desconto aplicado
-           if (useCoins && iziCoins > 0) {
-             const coinValue = globalSettings?.izi_coin_value || 1.0;
-             const discountApplied = (iziCoins * coinValue);
-             const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
-             const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
-             const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
-             const newIziCoins = Number((iziCoins - coinsToDeduct).toFixed(8));
-             
-             await supabase.from("users_delivery").update({ izi_coins: newIziCoins }).eq("id", userId);
-             setIziCoins(newIziCoins);
-           }
-
-           await handleConfirmSavedCardShortcut(order.id, total, "checkout", cardToUse);
+        const orderPayload = { ...orderBase, status: "pendente_pagamento" };
+        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderPayload).select().single();
+        if (insertError || !order) {
+           toastError("Erro ao criar pedido. Tente novamente.");
            return;
         }
-        setSubView("payments");
+
+        // Dedução de Izi Coins se houver desconto aplicado
+        if (useCoins && iziCoins > 0) {
+          const coinValue = globalSettings?.izi_coin_value || 1.0;
+          const discountApplied = (iziCoins * coinValue);
+          const subtotalForCoins = subtotal + deliveryFee + serviceFeeAmount - couponDiscount;
+          const coinsUsedAsDiscountValue = Math.min(discountApplied, subtotalForCoins);
+          const coinsToDeduct = coinsUsedAsDiscountValue / coinValue;
+          const newIziCoins = Number((iziCoins - coinsToDeduct).toFixed(8));
+          
+          await supabase.from("users_delivery").update({ izi_coins: newIziCoins }).eq("id", userId);
+          setIziCoins(newIziCoins);
+        }
+
+        setSelectedItem(order);
+        setSubView("card_payment");
         return;
       }
 
@@ -3941,12 +3837,7 @@ const navigateSubView = (target: string) => {
       setShowDepositModal(false);
 
       if (method === "cartao") {
-        if (selectedCard) {
-          console.log("[RECHARGE] Usando cartão salvo para recarga direta");
-          await handleConfirmSavedCardShortcut(orderData.id, amount, "profile");
-          return;
-        }
-        console.log("[RECHARGE] Indo para tela de cartão");
+        console.log("[RECHARGE] Indo para fluxo de cartão transparente");
         navigateSubView("card_payment");
       } else if (method === "lightning") {
         console.log("[RECHARGE] Gerando invoice Lightning...");
@@ -4612,7 +4503,7 @@ const navigateSubView = (target: string) => {
                       cart={cart} 
                       appliedCoupon={appliedCoupon} 
                       walletTransactions={walletTransactions} 
-                      savedCards={savedCards} 
+                      savedCards={[]} 
                       userId={userId} 
                       userLocation={userLocation} 
                       paymentMethod={paymentMethod} 
@@ -4620,8 +4511,8 @@ const navigateSubView = (target: string) => {
                       iziCoinRate={isIziBlackMembership ? (globalSettings?.izi_coin_rate || 1.0) : 0}
                       changeFor={changeFor} 
                       setChangeFor={setChangeFor} 
-                      selectedCard={selectedCard} 
-                      setSelectedCard={setSelectedCard} 
+                      selectedCard={null} 
+                      setSelectedCard={() => {}} 
                       couponInput={couponInput} 
                       setCouponInput={setCouponInput} 
                       handleApplyCoupon={handleApplyCoupon} 
@@ -4913,11 +4804,6 @@ const navigateSubView = (target: string) => {
                   </motion.div>
                 )}
 
-                {subView === "payments" && (
-                  <motion.div key="payments" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                    <PaymentMethodsView />
-                  </motion.div>
-                )}
 
                 {subView === "wallet_internal" && (
                   <motion.div key="wallet" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
@@ -5070,7 +4956,7 @@ const navigateSubView = (target: string) => {
                 {/* Status de Pagamento e Pedido */}
                 {/* Fluxo de Pagamento e Checkout */}
                 {["payment_processing", "payment_error", "payment_success", "mobility_payment_success", "pix_payment", "lightning_payment", "card_payment"].includes(subView) && (
-                  <motion.div key="payment-flow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[2000]">
+                  <motion.div key="payment-flow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
                     <PaymentFlowView />
                   </motion.div>
                 )}
@@ -5114,7 +5000,7 @@ const navigateSubView = (target: string) => {
 
               </AnimatePresence>
 
-              {subView === "none" && <BottomNav />}
+              {(subView === "none" || ["card_payment", "pix_payment", "lightning_payment", "payment_success", "payment_error"].includes(subView)) && <BottomNav />}
             </motion.div>
           )}
         </AnimatePresence>
