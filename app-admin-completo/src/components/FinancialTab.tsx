@@ -248,7 +248,7 @@ export default function FinancialTab() {
       {/* Conciliação & Repasses em Lote - Visão Admin Master */}
       {userRole === 'admin' && !isMerchantPreview && <BatchPayoutManager />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-8">
         {/* Economy Management Card - Replacing Divisão de Taxas */}
         {(!isMerchantPreview && userRole === 'admin') ? (
           <MasterFinancialControl />
@@ -263,7 +263,7 @@ export default function FinancialTab() {
                  <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{activeMerchant?.store_name || 'Loja Parceira'}</h4>
                </div>
                
-               <div className="grid grid-cols-1 gap-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 group-hover:border-primary/20 transition-all">
                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Taxa de Comissão</p>
                     <div className="flex items-end gap-2">
@@ -283,45 +283,6 @@ export default function FinancialTab() {
             </div>
           </div>
         )}
-
-        {/* Revenue Trend Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex justify-between items-center mb-10">
-            <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary text-2xl">insights</span>
-              Crescimento de Vendas
-            </h4>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-primary ring-4 ring-primary/10"></span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Volume (R$)</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-64 flex items-end justify-between gap-1 px-4">
-            {(effectiveDashboardData.dailyRevenue || []).map((val: number, i: number) => {
-              const maxVal = Math.max(...(effectiveDashboardData.dailyRevenue || [1]), 1);
-              const h = (val / maxVal) * 100;
-              return (
-                <div key={i} className="flex-1 bg-slate-50 dark:bg-slate-800/50 rounded-t-lg relative group cursor-pointer">
-                  <motion.div 
-                    initial={{ height: 0 }}
-                    animate={{ height: `${h}%` }}
-                    className={`absolute bottom-0 left-0 right-0 bg-primary/20 group-hover:bg-primary transition-all duration-300 rounded-t-lg`} 
-                  ></motion.div>
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-xl">
-                    R$ {val.toFixed(2)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-between mt-6 pt-6 border-t border-slate-50 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-            <span>6 dias atrás</span>
-            <span>Hoje</span>
-          </div>
-        </div>
       </div>
 
       {/* Withdrawal Requests Logic */}
