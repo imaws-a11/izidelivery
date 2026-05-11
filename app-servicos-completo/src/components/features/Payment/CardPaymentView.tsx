@@ -34,7 +34,7 @@ export const CardPaymentView: React.FC = () => {
     total = subtotal; // Simples por enquanto, CheckoutView lida com descontos
   }
 
-  const handleConfirmCard = async (token: string, issuer: string, installments: number, brand: string, _last4: string) => {
+  const handleConfirmCard = async (token: string, issuer: string, installments: number, brand: string, _last4: string, cpf: string) => {
       setIsLoading(true);
       try {
           let orderId = selectedItem?.id;
@@ -68,11 +68,14 @@ export const CardPaymentView: React.FC = () => {
               body: {
                   amount: Number(total.toFixed(2)),
                   orderId: orderId,
-                  payment_method_id: brand.toLowerCase().replace(/\s/g, ''),
+                  payment_method_id: brand.toLowerCase().includes('master') ? 'master' : brand.toLowerCase().replace(/\s/g, ''),
                   token: token,
                   email: userEmail,
                   installments: installments || 1,
                   issuer_id: issuer,
+                  customer: {
+                    cpf: cpf
+                  },
                   metadata: {
                     type: isSubscription ? 'subscription' : (isCoinPurchase ? 'wallet_recharge' : 'order'),
                     user_id: userId
@@ -147,7 +150,7 @@ export const CardPaymentView: React.FC = () => {
         </div>
 
         <div className="bg-white border border-zinc-100 p-6 rounded-[40px] shadow-2xl shadow-zinc-200">
-            <MercadoPagoCardForm onConfirm={handleConfirmCard} publicKey={appSettings?.mercadopago_public_key} />
+            <MercadoPagoCardForm onConfirm={handleConfirmCard} publicKey={appSettings?.mercadopago_public_key} total={total} />
         </div>
         
         <div className="flex flex-col items-center gap-4 py-4">

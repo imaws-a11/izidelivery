@@ -7,13 +7,13 @@ declare const MercadoPago: any;
 const mpPublicKey = import.meta.env.VITE_MP_PUBLIC_KEY as string || "";
 
 interface MercadoPagoCardFormProps {
-  onConfirm: (token: string, issuer: string, installments: number, brand: string, last4: string) => void;
+  onConfirm: (token: string, issuer: string, installments: number, brand: string, last4: string, cpf: string) => void;
   total?: number;
   userId?: string | null;
   publicKey?: string;
 }
 
-export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFormProps) => {
+export const MercadoPagoCardForm = ({ onConfirm, publicKey, total }: MercadoPagoCardFormProps) => {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   
@@ -25,7 +25,10 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
     cardholderName: '',
     identificationType: 'CPF',
     identificationNumber: '',
+    installments: '1',
   });
+  const [installmentsOptions, setInstallmentsOptions] = useState<any[]>([]);
+  const [issuerId, setIssuerId] = useState<string>("");
 
   // Função para formatar o número do cartão
   const formatCardNumber = (value: string) => {
@@ -56,6 +59,37 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
     }
 
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
+
+    // Se mudou o número do cartão, buscar parcelas se tiver BIN (6 dígitos)
+    if (name === 'cardNumber') {
+      const bin = formattedValue.replace(/\s/g, '').slice(0, 6);
+      if (bin.length >= 6) {
+        updateInstallments(bin);
+      }
+    }
+  };
+
+  const updateInstallments = async (bin: string) => {
+    try {
+      if (typeof MercadoPago === 'undefined') return;
+      const finalPublicKey = (publicKey || mpPublicKey || "").trim();
+      const mp = new MercadoPago(finalPublicKey);
+      
+      console.log("[MP] Buscando parcelas para BIN:", bin);
+      const installments = await mp.getInstallments({
+        amount: String(total || 0),
+        bin: bin,
+        paymentTypeId: 'credit_card'
+      });
+
+      if (installments && installments.length > 0) {
+        const firstIssuer = installments[0];
+        setIssuerId(firstIssuer.issuer.id);
+        setInstallmentsOptions(firstIssuer.payer_costs);
+      }
+    } catch (err) {
+      console.error("[MP] Erro ao buscar parcelas:", err);
+    }
   };
 
   // Determine card brand for UI
@@ -123,7 +157,7 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
 
       if (cardToken && cardToken.id) {
         const last4 = formData.cardNumber.replace(/\s/g, '').slice(-4);
-        onConfirm(cardToken.id, "1", 1, getCardBrand(), last4);
+        onConfirm(cardToken.id, issuerId || "1", Number(formData.installments), getCardBrand(), last4, formData.identificationNumber);
       } else {
         const firstError = cardToken?.cause?.[0]?.description || "Verifique os dados do cartão.";
         toastError(`Erro MP: ${firstError}`);
@@ -311,6 +345,32 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
             className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-5 text-zinc-900 dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
           />
         </div>
+
+        {installmentsOptions.length > 0 && (
+          <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+            <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-1">Parcelamento</label>
+            <div className="relative">
+              <select 
+                name="installments" 
+                value={formData.installments} 
+                onChange={handleInputChange}
+                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-zinc-900 dark:text-white outline-none focus:border-yellow-400 transition-colors appearance-none font-medium"
+              >
+                {installmentsOptions.map((opt: any) => (
+                  <option key={opt.installments} value={opt.installments}>
+                    {opt.recommended_message}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                <span className="material-symbols-outlined text-[20px]">payments</span>
+              </div>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
+                <span className="material-symbols-outlined">expand_more</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <button 
           type="submit" 
