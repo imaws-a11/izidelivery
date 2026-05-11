@@ -11,7 +11,7 @@ export const PixPaymentView: React.FC = () => {
     userId,
     userName,
     userLocation,
-    user,
+    user: currentUser,
     setSubView,
     setTab,
     pixCpf,
@@ -106,10 +106,10 @@ export const PixPaymentView: React.FC = () => {
           amount: Number(total.toFixed(2)),
           orderId: orderId,
           payment_method_id: 'pix',
-          email: user?.email || "cliente@izidelivery.com",
+          email: currentUser?.email || "cliente@izidelivery.com",
           customer: {
             cpf: cleanCpf,
-            name: userName || user?.user_metadata?.name || "Cliente IziDelivery",
+            name: userName || currentUser?.user_metadata?.name || "Cliente IziDelivery",
           },
           metadata: {
             type: selectedItem?.service_type === 'coin_purchase' ? 'wallet_recharge' : 'order',

@@ -224,7 +224,7 @@ function App() {
 
       // 2. Notificação Push Real (Via Edge Function)
       // Isso envia para o Firebase/FCM e chega no celular do usuário
-      await supabase.functions.invoke('send-push-notification', {
+      const { data: pushData, error: pushError } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: userId,
           title,
@@ -233,7 +233,11 @@ function App() {
         }
       });
 
-      console.log("[NOTIFY] Notificação interna e push enviada com sucesso.");
+      if (pushError || (pushData && !pushData.success)) {
+        console.warn("[NOTIFY] Notificação push não enviada (provavelmente sem token):", pushError || pushData?.error);
+      } else {
+        console.log("[NOTIFY] Notificação interna e push enviada com sucesso.");
+      }
     } catch (e) {
       console.error("[NOTIFY] Erro ao criar notificação:", e);
     }

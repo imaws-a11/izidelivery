@@ -1583,7 +1583,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                        if (onDeposit) {
                           try {
                              setIsProcessing(true);
-                             await onDeposit(Number(depositAmount), depositMethod);
+                             await onDeposit(parseFloat(depositAmount.toString().replace(",", ".")), depositMethod);
                              setSubView("main");
                           } catch (err: any) {
                              console.error("[DEPOSIT] Erro ao iniciar:", err);
