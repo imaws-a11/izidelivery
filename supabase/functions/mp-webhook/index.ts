@@ -131,7 +131,15 @@ serve(async (req) => {
         await supabaseAdmin.from('audit_logs_delivery').insert({
           action: 'Parcela Empréstimo Paga',
           module: 'MercadoPago',
-          metadata: { loanId: payment.metadata.loan_id, amount: payment.transaction_amount, status: payment.status },
+          metadata: { 
+            notification: {
+              title: 'Izi Delivery',
+              body: 'Pagamento de empréstimo aprovado com sucesso!'
+            },
+            loanId: payment.metadata.loan_id, 
+            amount: payment.transaction_amount, 
+            status: payment.status 
+          },
         })
       }
       return new Response(JSON.stringify({ received: true, type: 'loan_payment' }), {
@@ -151,8 +159,8 @@ serve(async (req) => {
       if (payment.status === 'approved') {
         if (sType === 'coin_purchase') {
           // Crédito de Moedas (1 BRL = 1 Moeda, ou conforme cotação)
-          const { data: settings } = await supabaseAdmin.from('app_settings_delivery').select('izi_coin_value').single()
-          const coinValue = settings?.izi_coin_value || 1.0
+          const { data: settings } = await supabaseAdmin.from('app_settings_delivery').select('izi_coin_rate').single()
+          const coinValue = Number(settings?.izi_coin_rate || 1.0)
           const coinsToCredit = amount / coinValue
 
           const { data: user } = await supabaseAdmin.from('users_delivery').select('izi_coins').eq('id', userId).single()

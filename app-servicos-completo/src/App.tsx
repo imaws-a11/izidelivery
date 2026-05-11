@@ -233,8 +233,11 @@ function App() {
         }
       });
 
+      // 3. Feedback Visual Imediato (Toast)
+      showToast(title, 'info');
+
       if (pushError || (pushData && !pushData.success)) {
-        console.warn("[NOTIFY] Notificação push não enviada (provavelmente sem token):", pushError || pushData?.error);
+        console.log("[NOTIFY] Notificação push ignorada (usuário sem token).");
       } else {
         console.log("[NOTIFY] Notificação interna e push enviada com sucesso.");
       }
