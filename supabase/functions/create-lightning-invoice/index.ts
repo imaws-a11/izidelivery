@@ -19,29 +19,31 @@ serve(async (req) => {
     // Valores iniciais e fallbacks
     let btcPriceBRL = 350000 // Fallback conservador
     let usdPriceBRL = 5.20    // Fallback conservador
+    let btcPriceUSD = 65000   // Fallback conservador
     
-    // Tentar obter preos atualizados da Coinbase
+    // Tentar obter preços atualizados da Coinbase
     try {
       const btcRes = await fetch('https://api.coinbase.com/v2/prices/BTC-BRL/spot')
       if (btcRes.ok) {
         const p = await btcRes.json()
         btcPriceBRL = parseFloat(p.data.amount) || btcPriceBRL
-        console.log(`Preo BTC obtido: R$ ${btcPriceBRL}`)
+        console.log(`Preço BTC obtido: R$ ${btcPriceBRL}`)
       }
       
       const usdRes = await fetch('https://api.coinbase.com/v2/prices/USD-BRL/spot')
       if (usdRes.ok) {
         const u = await usdRes.json()
         usdPriceBRL = parseFloat(u.data.amount) || usdPriceBRL
-        console.log(`Preo USD obtido: R$ ${usdPriceBRL}`)
+        console.log(`Preço USD obtido: R$ ${usdPriceBRL}`)
       }
       const btcUsdRes = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot')
       if (btcUsdRes.ok) {
         const b = await btcUsdRes.json()
         btcPriceUSD = parseFloat(b.data.amount) || btcPriceUSD
+        console.log(`Preço BTC/USD obtido: $ ${btcPriceUSD}`)
       }
     } catch (e) {
-      console.error('Erro ao buscar taxas de cmbio Coinbase:', e.message)
+      console.error('Erro ao buscar taxas de câmbio Coinbase:', e.message)
     }
 
     console.log(`[LN] Calculando Invoice: BRL=${amount}, BTC/BRL=${btcPriceBRL}, BTC/USD=${btcPriceUSD}, OrderId=${orderId}`);
@@ -57,12 +59,12 @@ serve(async (req) => {
 
     let amountUSD = (amountNum / btcPriceBRL) * btcPriceUSD
     
-    // Garantir que amountUSD no seja 0 se o amount for > 0
+    // Garantir que amountUSD não seja 0 se o amount for > 0
     if (amountNum > 0 && amountUSD < 0.01) {
       amountUSD = 0.01
     }
 
-    console.log(`Processando fatura: R$ ${amountNum} -> $ ${amountUSD} USD -> ${finalSatoshis} sats`)
+    console.log(`Processando fatura: R$ ${amountNum} -> $ ${amountUSD.toFixed(2)} USD -> ${finalSatoshis} sats`)
 
     // Criar cobrana no OpenNode
     // Nota: Usamos USD como moeda base para a cobrana para que o OpenNode calcule os sats na cotao dele
