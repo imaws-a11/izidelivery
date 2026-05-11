@@ -589,6 +589,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsInitialLoading(true);
       fetchUserRole(session.user.email);
       fetchEstablishmentTypes();
+      fetchGlobalSettings();
     } else {
       setIsInitialLoading(false);
     }
@@ -1537,6 +1538,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const fetchAppSettings = useCallback(async () => {
     setIsFetchingSettings(true);
+    fetchGlobalSettings(); // Garante que globalSettings também seja atualizado aqui
     try {
       const { data } = await supabase.from('app_settings_delivery').select('*').maybeSingle();
       if (data) {
@@ -2934,6 +2936,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .eq('id', SETTINGS_ID);
 
       if (error) throw error;
+
+      // --- SINCRONIZAÇÃO COM O CÉREBRO (admin_settings_delivery) ---
+      if (globalSettings) {
+        const { error: globalError } = await supabase
+          .from('admin_settings_delivery')
+          .upsert({ 
+            key: 'global',
+            value: { 
+              ...globalSettings, 
+              izi_coin_value: Number(appSettings.iziCoinRate ?? 1.0) 
+            } 
+          }, { onConflict: 'key' });
+        
+        if (globalError) {
+          console.warn('Erro ao sincronizar com cérebro global:', globalError);
+        } else {
+          console.log('Sincronização com cérebro global concluída.');
+        }
+      }
+
       setLastSavedHash(JSON.stringify(appSettings));
       setAutoSaveStatus('saved');
       toastSuccess('Configurações salvas com sucesso!');

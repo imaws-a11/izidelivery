@@ -22,7 +22,7 @@ export const IziBlackView = () => {
   // Benefícios para quem JÁ É membro
   const activePerks = [
     { id: 'frete', label: 'Frete Grátis', icon: 'local_shipping', active: true, desc: `Frete grátis ilimitado em pedidos acima de R$ ${appSettings?.izi_black_min_order_free_shipping || '30,00'}.` },
-    { id: 'cashback', label: 'Cashback ' + (appSettings?.izi_black_cashback || '1') + '%', icon: 'monetization_on', active: true, desc: `Receba ${appSettings?.izi_black_cashback || '1'}% de volta em IZI Coins em cada compra.` },
+    { id: 'cashback', label: 'Cashback ' + (appSettings?.izi_black_cashback || '1') + '%', icon: 'monetization_on', active: true, desc: `Receba ${appSettings?.izi_black_cashback || '1'}% de volta em saldo em cada compra.` },
     { id: 'priority', label: 'Prioridade', icon: 'bolt', active: true, desc: "Seus pedidos são priorizados na fila de preparo e entrega." },
     { id: 'surprise', label: 'Izi Surprise', icon: 'card_giftcard', active: true, desc: "Mimos e brindes exclusivos enviados aleatoriamente." },
   ];
@@ -163,7 +163,7 @@ export const IziBlackView = () => {
 
            <div className="flex flex-col items-center gap-4">
               <div className="px-4 py-1.5 rounded-full border border-zinc-900 bg-zinc-950/50 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                {globalSettings?.izi_coin_rate || 5} coins por R$ 1,00 gasto
+                1 coin vale R$ {Number(globalSettings?.izi_coin_value || 1).toFixed(2).replace('.', ',')}
               </div>
               <motion.button
                 whileTap={{ scale: 0.98 }}

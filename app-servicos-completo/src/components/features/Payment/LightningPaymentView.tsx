@@ -18,6 +18,7 @@ export const LightningPaymentView: React.FC = () => {
     userLocation,
     setIsLoading,
     setPaymentMethod,
+    setPaymentProcessing
   } = useApp();
 
   const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
@@ -50,7 +51,7 @@ export const LightningPaymentView: React.FC = () => {
     const generateInvoice = async () => {
       setIsGenerating(true);
       setPaymentMethod("lightning");
-      setIsLoading(true);
+      setPaymentProcessing({ method: 'bitcoin_lightning', status: 'processing' });
       try {
         let orderId = selectedItem?.id;
         const isSubscription = paymentsOrigin === "izi_black";
@@ -95,10 +96,14 @@ export const LightningPaymentView: React.FC = () => {
         
       } catch (e: any) {
         toastError("Erro ao iniciar Lightning: " + e.message);
+        setPaymentProcessing({ method: 'bitcoin_lightning', status: 'error', error: e.message });
         setSubView("none");
       } finally {
         setIsGenerating(false);
         setIsLoading(false);
+        if (paymentProcessing?.status !== 'error') {
+          setPaymentProcessing(null);
+        }
       }
     };
 

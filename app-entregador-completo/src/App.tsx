@@ -663,6 +663,7 @@ function MainApp() {
         setIsApproved(!!data?.is_active);
     }, []);
     const [appSettings, setAppSettings] = useState<any>(null);
+    const [globalSettings, setGlobalSettings] = useState<any>(null);
     const [exclusiveMerchantIds, setExclusiveMerchantIds] = useState<string[]>([]);
     const exclusiveMerchantIdsRef = useRef<string[]>([]);
     useEffect(() => { exclusiveMerchantIdsRef.current = exclusiveMerchantIds; }, [exclusiveMerchantIds]);
@@ -808,7 +809,16 @@ function MainApp() {
             const token = session?.access_token || supabaseKey;
             const authHeaders = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
             
-            // Busca configurações gerais
+            // Busca cérebro global (Fonte da Verdade)
+            const resGlobal = await fetch(`${supabaseUrl}/rest/v1/admin_settings_delivery?key=eq.global&select=*`, {
+                headers: authHeaders
+            });
+            if (resGlobal.ok) {
+                const dataGlobal = await resGlobal.json();
+                if (dataGlobal && dataGlobal[0]?.value) setGlobalSettings(dataGlobal[0].value);
+            }
+
+            // Busca configurações locais (retrocompatibilidade)
             const res = await fetch(`${supabaseUrl}/rest/v1/app_settings_delivery?select=*`, {
                 headers: authHeaders
             });

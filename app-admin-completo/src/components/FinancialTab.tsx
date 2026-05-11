@@ -250,13 +250,13 @@ export default function FinancialTab() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Economy Management Card - Replacing Divisão de Taxas */}
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-           <div className="absolute top-0 right-0 p-8 opacity-5">
-            <span className="material-symbols-outlined text-8xl">account_balance</span>
-          </div>
-          {(!isMerchantPreview && userRole === 'admin') ? (
-            <MasterFinancialControl />
-          ) : (
+        {(!isMerchantPreview && userRole === 'admin') ? (
+          <MasterFinancialControl />
+        ) : (
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-8 opacity-5">
+              <span className="material-symbols-outlined text-8xl">account_balance</span>
+            </div>
             <div className="space-y-6 relative z-10">
                <div className="flex flex-col gap-1">
                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Perfil do Estabelecimento</p>
@@ -281,8 +281,8 @@ export default function FinancialTab() {
                   </div>
                </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Revenue Trend Chart */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -1363,7 +1363,7 @@ function PreApprovedLimitsSection() {
 }
 
 function MasterFinancialControl() {
-  const { appSettings, setAppSettings, handleSaveAppSettings } = useAdmin();
+  const { appSettings, setAppSettings, handleSaveAppSettings, globalSettings, setGlobalSettings, saveGlobalSettings } = useAdmin();
   const [saving, setSaving] = React.useState(false);
 
   const handleUpdate = (field: keyof AppSettings, val: any) => {
@@ -1380,6 +1380,9 @@ function MasterFinancialControl() {
     setSaving(true);
     try {
       await handleSaveAppSettings();
+      if (globalSettings) {
+        await saveGlobalSettings(globalSettings);
+      }
       toastSuccess('Configurações sincronizadas!');
     } catch (err) {
       toastError('Erro ao sincronizar');
@@ -1396,30 +1399,33 @@ function MasterFinancialControl() {
   );
 
   return (
-    <div className="space-y-8 pb-12">
-       {/* GATEWAYS CONTROL */}
-       <div>
-          <div className="flex justify-between items-center mb-6">
-            <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Gateways Ativos</h4>
+    <div className="space-y-6">
+       {/* 1. GATEWAYS CONTROL CARD */}
+       <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex flex-col gap-1">
+               <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Gateways Ativos</h4>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle de Meios de Pagamento Disponíveis</p>
+            </div>
             <div className="flex items-center gap-4">
               <button 
                 onClick={onSave}
                 disabled={saving}
-                className="h-9 px-5 bg-emerald-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/10 disabled:opacity-50"
+                className="h-10 px-6 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
               >
                 {saving ? (
-                  <div className="size-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                 ) : (
-                  <span className="material-symbols-outlined text-sm">save</span>
+                  <span className="material-symbols-outlined text-lg">save</span>
                 )}
                 Salvar
               </button>
-              <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${saving ? 'bg-primary/20 text-primary' : 'bg-green-500/10 text-green-500'}`}>
+              <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${saving ? 'bg-primary/20 text-primary' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
                 {saving ? 'Sincronizando...' : 'Online'}
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
              {[
                { id: 'pix', label: 'PIX', icon: 'qrcode', color: 'text-emerald-500' },
                { id: 'card', label: 'Cartão', icon: 'credit_card', color: 'text-blue-500' },
@@ -1429,219 +1435,235 @@ function MasterFinancialControl() {
                <button 
                  key={m.id}
                  onClick={() => toggleMethod(m.id)}
-                 className={`flex flex-col items-center justify-center p-4 rounded-[32px] transition-all border ${
+                 className={`flex flex-col items-center justify-center p-6 rounded-[32px] transition-all border ${
                    appSettings.paymentmethodsactive?.[m.id] 
-                   ? 'bg-white dark:bg-slate-900 shadow-sm border-slate-200/50 dark:border-slate-700' 
+                   ? 'bg-white dark:bg-slate-900 shadow-md border-slate-200/50 dark:border-slate-700' 
                    : 'bg-slate-50 dark:bg-slate-800/20 border-transparent opacity-40 hover:opacity-60 grayscale'
                  }`}
                >
-                  <span className={`material-symbols-outlined ${m.color} text-2xl mb-2`}>{m.icon}</span>
-                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">{m.label}</span>
-                  <div className={`mt-2 h-1 w-6 rounded-full ${appSettings.paymentmethodsactive?.[m.id] ? 'bg-primary' : 'bg-slate-300'}`} />
+                  <span className={`material-symbols-outlined ${m.color} text-3xl mb-3`}>{m.icon}</span>
+                  <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">{m.label}</span>
+                  <div className={`mt-3 h-1.5 w-8 rounded-full ${appSettings.paymentmethodsactive?.[m.id] ? 'bg-primary shadow-[0_0_10px_rgba(255,217,0,0.5)]' : 'bg-slate-300'}`} />
                </button>
              ))}
           </div>
        </div>
 
-       {/* ECONOMY RATES */}
-       <div className="pt-4 space-y-4">
-          <div className="flex items-center justify-between px-2">
-             <div className="flex items-center gap-3">
-                <div className="size-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                   <span className="material-symbols-outlined text-base">percent</span>
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de Serviço Global</span>
-             </div>
-             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
-               <input 
-                 type="number" step="0.1"
-                 value={appSettings.serviceFee}
-                 onChange={(e) => handleUpdate('serviceFee', parseFloat(e.target.value))}
-                 className="w-10 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
-               />
-               <span className="text-[10px] text-slate-400 font-bold">%</span>
-             </div>
-          </div>
+       {/* 2. GLOBAL ECONOMY RATES CARD */}
+       <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-100 dark:border-indigo-500/20">
+                     <span className="material-symbols-outlined text-xl">percent</span>
+                  </div>
+                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Taxa de Serviço Global</span>
+               </div>
+               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
+                 <input 
+                   type="number" step="0.1"
+                   value={appSettings.serviceFee}
+                   onChange={(e) => handleUpdate('serviceFee', parseFloat(e.target.value))}
+                   className="w-12 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
+                 />
+                 <span className="text-[11px] text-slate-400 font-black">%</span>
+               </div>
+            </div>
 
-          <div className="flex items-center justify-between px-2">
-             <div className="flex items-center gap-3">
-                <div className="size-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                   <span className="material-symbols-outlined text-base">monetization_on</span>
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Moeda (1 Z)</span>
-             </div>
-             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
-               <span className="text-[10px] text-slate-400 font-bold">R$</span>
-               <input 
-                 type="number" step="0.01"
-                 value={appSettings.iziCoinRate}
-                 onChange={(e) => handleUpdate('iziCoinRate', parseFloat(e.target.value))}
-                 className="w-12 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
-               />
-             </div>
-          </div>
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-100 dark:border-emerald-500/20">
+                     <span className="material-symbols-outlined text-xl">monetization_on</span>
+                  </div>
+                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Valor Moeda (1 Z)</span>
+               </div>
+               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
+                 <span className="text-[11px] text-slate-400 font-black">R$</span>
+                 <input 
+                   type="number" step="0.01"
+                   value={globalSettings?.izi_coin_value ?? appSettings.iziCoinRate}
+                   onChange={(e) => {
+                     const val = parseFloat(e.target.value) || 0;
+                     handleUpdate('iziCoinRate', val);
+                     if (globalSettings) {
+                       setGlobalSettings({ ...globalSettings, izi_coin_value: val });
+                     }
+                   }}
+                   className="w-16 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
+                 />
+               </div>
+            </div>
 
-          <div className="flex items-center justify-between px-2">
-             <div className="flex items-center gap-3">
-                <div className="size-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500">
-                   <span className="material-symbols-outlined text-base">trending_up</span>
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Juros Empréstimo</span>
-             </div>
-             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
-               <input 
-                 type="number" step="0.1"
-                 value={appSettings.loan_interest_rate}
-                 onChange={(e) => handleUpdate('loan_interest_rate', parseFloat(e.target.value))}
-                 className="w-10 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
-               />
-               <span className="text-[10px] text-slate-400 font-bold">%</span>
-             </div>
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-100 dark:border-amber-500/20">
+                     <span className="material-symbols-outlined text-xl">trending_up</span>
+                  </div>
+                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Juros Empréstimo</span>
+               </div>
+               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
+                 <input 
+                   type="number" step="0.1"
+                   value={appSettings.loan_interest_rate}
+                   onChange={(e) => handleUpdate('loan_interest_rate', parseFloat(e.target.value))}
+                   className="w-12 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
+                 />
+                 <span className="text-[11px] text-slate-400 font-black">%</span>
+               </div>
+            </div>
           </div>
+       </div>
 
-          <div className="pt-6 border-t border-slate-100 dark:border-white/5 space-y-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-2">Mensalidades dos Planos</p>
+       {/* 3. PLAN SUBSCRIPTION FEES CARD */}
+       <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="space-y-5">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-4 italic">Mensalidades dos Planos</p>
             
             <div className="flex items-center justify-between px-2">
-               <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500">
-                     <span className="material-symbols-outlined text-base">storefront</span>
+               <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-100 dark:border-blue-500/20">
+                     <span className="material-symbols-outlined text-xl">storefront</span>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Market (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Market (R$)</span>
                </div>
-               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
                    type="number" step="0.01"
                    value={appSettings.plan_fee_market || 0}
                    onChange={(e) => handleUpdate('plan_fee_market', parseFloat(e.target.value))}
-                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                   className="w-20 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
                  />
                </div>
             </div>
 
             <div className="flex items-center justify-between px-2">
-               <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-500">
-                     <span className="material-symbols-outlined text-base">workspace_premium</span>
+               <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-2xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-500 border border-purple-100 dark:border-purple-500/20">
+                     <span className="material-symbols-outlined text-xl">workspace_premium</span>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Full (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Full (R$)</span>
                </div>
-               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
                    type="number" step="0.01"
                    value={appSettings.plan_fee_full || 0}
                    onChange={(e) => handleUpdate('plan_fee_full', parseFloat(e.target.value))}
-                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                   className="w-20 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
                  />
                </div>
             </div>
 
             <div className="flex items-center justify-between px-2">
-               <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500">
-                     <span className="material-symbols-outlined text-base">auto_transmission</span>
+               <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-100 dark:border-orange-500/20">
+                     <span className="material-symbols-outlined text-xl">auto_transmission</span>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Avulso (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Avulso (R$)</span>
                </div>
-               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
                    type="number" step="0.01"
                    value={appSettings.plan_fee_avulso || 0}
                    onChange={(e) => handleUpdate('plan_fee_avulso', parseFloat(e.target.value))}
-                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                   className="w-20 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
                  />
                </div>
             </div>
 
             <div className="flex items-center justify-between px-2">
-               <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                     <span className="material-symbols-outlined text-base">handshake</span>
+               <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-100 dark:border-emerald-500/20">
+                     <span className="material-symbols-outlined text-xl">handshake</span>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Plano Click & Retire (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Click & Retire (R$)</span>
                </div>
-               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
                    type="number" step="0.01"
                    value={appSettings.plan_fee_click_retire || 0}
                    onChange={(e) => handleUpdate('plan_fee_click_retire', parseFloat(e.target.value))}
-                   className="w-16 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+                   className="w-20 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
                  />
                </div>
             </div>
           </div>
        </div>
 
-       {/* WITHDRAWAL RULES */}
-       <div className="p-6 rounded-[40px] bg-slate-900 border border-white/5 space-y-5 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-6 opacity-5">
-            <span className="material-symbols-outlined text-4xl text-primary">account_balance</span>
+       {/* 4. WITHDRAWAL RULES CARD (DARK THEME) */}
+       <div className="p-10 rounded-[40px] bg-slate-900 border border-white/10 space-y-7 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-8xl text-primary">account_balance</span>
           </div>
 
-          <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-             <span className="material-symbols-outlined text-sm">payments</span>
-             Regras de Liquidez
-          </p>
+          <div className="flex items-center justify-between relative z-10">
+            <p className="text-[11px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-3">
+               <span className="material-symbols-outlined text-xl text-primary font-fill">payments</span>
+               Regras de Liquidez
+            </p>
+            <span className="material-symbols-outlined text-white/20">account_balance</span>
+          </div>
           
-          <div className="flex justify-between items-center">
-             <span className="text-[11px] font-bold text-slate-400">Taxa de Saque</span>
-             <div className="flex items-center gap-2">
-                <input 
-                  type="number" step="0.5"
-                  value={appSettings.withdrawalfeepercent ?? 0}
-                  onChange={(e) => handleUpdate('withdrawalfeepercent', parseFloat(e.target.value) || 0)}
-                  className="w-12 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-xs outline-none focus:border-primary transition-all"
-                />
-                <span className="text-[10px] text-white/20">%</span>
-             </div>
-          </div>
+          <div className="space-y-5 relative z-10">
+            <div className="flex justify-between items-center group/item">
+               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Taxa de Saque</span>
+               <div className="flex items-center gap-3">
+                  <input 
+                    type="number" step="0.5"
+                    value={appSettings.withdrawalfeepercent ?? 0}
+                    onChange={(e) => handleUpdate('withdrawalfeepercent', parseFloat(e.target.value) || 0)}
+                    className="w-16 bg-white/5 border border-white/10 rounded-[18px] py-2 px-4 text-white font-black text-right text-sm outline-none focus:border-primary focus:bg-white/10 transition-all"
+                  />
+                  <span className="text-[10px] text-white/30 font-black">%</span>
+               </div>
+            </div>
 
-          <div className="flex justify-between items-center">
-             <span className="text-[11px] font-bold text-slate-400">Valor Mínimo</span>
-             <div className="flex items-center gap-2">
-                <span className="text-[10px] text-white/20">R$</span>
-                <input 
-                  type="number"
-                  value={appSettings.minwithdrawalamount ?? 0}
-                  onChange={(e) => handleUpdate('minwithdrawalamount', parseFloat(e.target.value) || 0)}
-                  className="w-16 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-xs outline-none focus:border-primary transition-all"
-                />
-             </div>
-          </div>
+            <div className="flex justify-between items-center group/item">
+               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Valor Mínimo</span>
+               <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-white/30 font-black">R$</span>
+                  <input 
+                    type="number"
+                    value={appSettings.minwithdrawalamount ?? 0}
+                    onChange={(e) => handleUpdate('minwithdrawalamount', parseFloat(e.target.value) || 0)}
+                    className="w-20 bg-white/5 border border-white/10 rounded-[18px] py-2 px-4 text-white font-black text-right text-sm outline-none focus:border-primary focus:bg-white/10 transition-all"
+                  />
+               </div>
+            </div>
 
-          <div className="flex justify-between items-center">
-             <span className="text-[11px] font-bold text-slate-400">Prazo (Horas)</span>
-             <div className="flex items-center gap-2">
-                <input 
-                  type="number"
-                  value={appSettings.withdrawal_period_h ?? 24}
-                  onChange={(e) => handleUpdate('withdrawal_period_h', parseInt(e.target.value) || 24)}
-                  className="w-12 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-xs outline-none focus:border-primary transition-all"
-                />
-                <span className="text-[10px] text-white/20">H</span>
-             </div>
-          </div>
+            <div className="flex justify-between items-center group/item">
+               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Prazo (Horas)</span>
+               <div className="flex items-center gap-3">
+                  <input 
+                    type="number"
+                    value={appSettings.withdrawal_period_h ?? 24}
+                    onChange={(e) => handleUpdate('withdrawal_period_h', parseInt(e.target.value) || 24)}
+                    className="w-16 bg-white/5 border border-white/10 rounded-[18px] py-2 px-4 text-white font-black text-right text-sm outline-none focus:border-primary focus:bg-white/10 transition-all"
+                  />
+                  <span className="text-[10px] text-white/30 font-black uppercase">H</span>
+               </div>
+            </div>
 
-          <div className="flex justify-between items-center">
-             <span className="text-[11px] font-bold text-slate-400">Dia de Pagamento</span>
-             <input 
-               type="text"
-               value={appSettings.withdrawal_day || 'Sexta-feira'}
-               onChange={(e) => handleUpdate('withdrawal_day', e.target.value)}
-               className="w-28 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-[9px] outline-none focus:border-primary uppercase tracking-wider"
-             />
+            <div className="flex justify-between items-center group/item">
+               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Dia de Pagamento</span>
+               <input 
+                 type="text"
+                 value={appSettings.withdrawal_day || 'Sexta-feira'}
+                 onChange={(e) => handleUpdate('withdrawal_day', e.target.value)}
+                 className="w-36 bg-white/5 border border-white/10 rounded-[18px] py-2 px-4 text-white font-black text-right text-[10px] outline-none focus:border-primary focus:bg-white/10 uppercase tracking-widest transition-all"
+               />
+            </div>
           </div>
 
           <button 
             onClick={onSave}
             disabled={saving}
-            className="w-full mt-2 h-12 bg-primary text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/10"
+            className="w-full mt-4 h-14 bg-primary text-slate-900 rounded-[24px] font-black text-[11px] uppercase tracking-[0.25em] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-primary/20 relative z-10"
           >
             {saving ? (
-              <div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin"></div>
+              <div className="size-5 border-3 border-slate-900/20 border-t-slate-900 rounded-full animate-spin"></div>
             ) : (
               <>
-                <span className="material-symbols-outlined text-base">save</span>
+                <span className="material-symbols-outlined text-xl">sync_alt</span>
                 Sincronizar Regras
               </>
             )}

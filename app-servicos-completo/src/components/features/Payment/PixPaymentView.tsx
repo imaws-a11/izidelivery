@@ -24,6 +24,7 @@ export const PixPaymentView: React.FC = () => {
     toastError,
     setIsLoading,
     setPaymentMethod,
+    setPaymentProcessing
   } = useApp();
 
   const { getCartSubtotal, cart, appliedCoupon, useCoins, iziCoins, setIziCoins, selectedShop } = useOrder();
@@ -42,7 +43,7 @@ export const PixPaymentView: React.FC = () => {
     if (pixCpf.replace(/\D/g,"").length < 11) { toastError("CPF inválido."); return; }
     setPixConfirmed(true);
     setPaymentMethod("pix");
-    setIsLoading(true);
+    setPaymentProcessing({ method: 'pix', status: 'processing' });
     try {
       let orderId = selectedItem?.id;
       let orderRef = selectedItem;
@@ -150,8 +151,14 @@ export const PixPaymentView: React.FC = () => {
     } catch (e: any) {
       setSelectedItem((prev: any) => ({ ...prev, pixError: true, pixErrorMessage: e.message }));
       setPixConfirmed(true);
+      setPaymentProcessing({ method: 'pix', status: 'error', error: e.message });
     } finally {
       setIsLoading(false);
+      // Mantém a tela de processamento aberta por um tempinho para o usuário ver o 'sucesso' se não houver erro
+      // mas no PIX o 'sucesso' é o QR Code, então fechamos direto se for sucesso
+      if (paymentProcessing?.status !== 'error') {
+        setPaymentProcessing(null);
+      }
     }
   };
 

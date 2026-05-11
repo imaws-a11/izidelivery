@@ -207,6 +207,7 @@ function App() {
   const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   const [systemNotification, setSystemNotification] = useState<{ title: string; message: string; image_url?: string } | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState<{ method: string; status: 'processing' | 'success' | 'error'; error?: string } | null>(null);
   
   const sendInternalNotification = async (title: string, body: string, data: any = {}) => {
     if (!userId) return;
@@ -1623,7 +1624,7 @@ function App() {
     const total = Math.max(0, subtotal - couponDiscount);
     
     // BENEFÃ CIO IZI BLACK: Multiplicadores DinÃ¢micos
-    const baseRate = Number(globalSettings?.izi_coin_rate || 1);
+    const baseRate = Number(globalSettings?.izi_coin_value || 1);
     const blackRate = Number(globalSettings?.izi_black_cashback || 5);
     const coinRate = isIziBlackMembership ? blackRate : baseRate;
     
@@ -3687,7 +3688,7 @@ const navigateSubView = (target: string) => {
         handleRemoveOneFromCart={handleRemoveOneFromCart}
         navigateSubView={navigateSubView}
         cart={cart}
-        iziCoinRate={Number(globalSettings?.izi_coin_rate || 1.0)}
+        iziCoinRate={Number(globalSettings?.izi_coin_value || 1.0)}
         iziBlackRate={Number(globalSettings?.izi_black_cashback || 5.0)}
         isIziBlack={isIziBlackMembership}
       />
@@ -3780,12 +3781,17 @@ const navigateSubView = (target: string) => {
     };
   };
 
-  const renderPaymentProcessing = () => (
-    <PaymentProcessingView 
-      method={paymentMethod as any} 
-      message={paymentMethod === 'pix' ? "Gerando seu código Pix..." : paymentMethod === 'lightning' ? "Criando sua fatura Lightning..." : "Processando seu pagamento..."} 
-    />
-  );
+  const renderPaymentProcessing = () => {
+    if (!paymentProcessing) return null;
+    return (
+      <PaymentProcessingView 
+        method={paymentProcessing.method} 
+        status={paymentProcessing.status}
+        errorMessage={paymentProcessing.error}
+        onFinished={() => setPaymentProcessing(null)}
+      />
+    );
+  };
   const handlePurchaseCoins = async (amount: number, method: string, existingOrderId?: string) => {
     if (!userId) return;
     console.log("[RECHARGE] Iniciando recarga:", { amount, method, existingOrderId });
@@ -3928,7 +3934,7 @@ const navigateSubView = (target: string) => {
   );
 
   const renderDepositModal = () => {
-    const coinRate = appSettings?.iziCoinRate || 1.0;
+    const coinRate = Number(globalSettings?.izi_coin_value || 1.0);
     const coinsToReceive = (Number(depositAmount) || 0) / coinRate;
     const integerPart = Math.floor(coinsToReceive);
     const fractionalPart = (coinsToReceive - integerPart).toFixed(8).substring(2);
@@ -4420,6 +4426,7 @@ const navigateSubView = (target: string) => {
                         navigateSubView={navigateSubView} 
                         fetchMyOrders={fetchOrders} 
                         tab={tab} 
+                        iziCoinValue={globalSettings?.izi_coin_value || 1.0}
                         onOpenCoinTracking={(order) => {
                           setSelectedItem(order);
                           setSubView("izi_coin_tracking");
@@ -4435,7 +4442,7 @@ const navigateSubView = (target: string) => {
                        userName={userName}
                        userId={userId}
                        walletBalance={walletBalance || 0}
-                       iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 1.0}
+                       iziCoinValue={globalSettings?.izi_coin_value || 1.0}
                        onBack={() => setTab("home")}
                        onDeposit={handlePurchaseCoins}
                      />
@@ -4494,7 +4501,7 @@ const navigateSubView = (target: string) => {
                       isIziBlack={isIziBlackMembership} 
                       deliveryFee={currentDeliveryFee} 
                       iziBlackRate={appSettings?.izi_black_cashback || 5}
-                      iziCoinRate={isIziBlackMembership ? (globalSettings?.izi_coin_rate || 1) : 0}                    />
+                      iziCoinRate={isIziBlackMembership ? (globalSettings?.izi_coin_value || 1) : 0}                    />
                   </motion.div>
                 )}
                 {subView === "checkout" && (
@@ -4508,7 +4515,7 @@ const navigateSubView = (target: string) => {
                       userLocation={userLocation} 
                       paymentMethod={paymentMethod} 
                       setPaymentMethod={(m: any) => setPaymentMethod(m)} 
-                      iziCoinRate={isIziBlackMembership ? (globalSettings?.izi_coin_rate || 1.0) : 0}
+                      iziCoinRate={isIziBlackMembership ? (globalSettings?.izi_coin_value || 1.0) : 0}
                       changeFor={changeFor} 
                       setChangeFor={setChangeFor} 
                       selectedCard={null} 
@@ -4521,7 +4528,7 @@ const navigateSubView = (target: string) => {
                       setPaymentsOrigin={setPaymentsOrigin} 
                       setSubView={(v: any) => setSubView(v)} 
                       iziCoins={iziCoins} 
-                      iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 1.0} 
+                      iziCoinValue={globalSettings?.izi_coin_value || 1.0} 
                       deliveryFee={currentDeliveryFee} 
                       isIziBlack={isIziBlackMembership}
                       walletBalance={walletBalance}
@@ -5107,7 +5114,7 @@ const navigateSubView = (target: string) => {
         </AnimatePresence>
 
         <AnimatePresence>
-          {isLoading && (
+          {(isLoading || paymentProcessing) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

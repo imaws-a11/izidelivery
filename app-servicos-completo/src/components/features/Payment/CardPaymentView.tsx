@@ -19,6 +19,8 @@ export const CardPaymentView: React.FC = () => {
     toastSuccess,
     toastError,
     user,
+    paymentProcessing,
+    setPaymentProcessing
   } = useApp();
 
   const { getCartSubtotal, cart, clearCart, selectedShop } = useOrder();
@@ -35,7 +37,7 @@ export const CardPaymentView: React.FC = () => {
   }
 
   const handleConfirmCard = async (token: string, issuer: string, installments: number, brand: string, _last4: string, cpf: string) => {
-      setIsLoading(true);
+      setPaymentProcessing({ method: 'cartao', status: 'processing' });
       try {
           let orderId = selectedItem?.id;
           const userEmail = user?.email || "cliente@izidelivery.com";
@@ -55,7 +57,7 @@ export const CardPaymentView: React.FC = () => {
 
             const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
             if (insertError || !order) { 
-              toastError("Erro ao criar pedido."); 
+              setPaymentProcessing({ method: 'cartao', status: 'error', error: "Erro ao criar pedido." });
               return; 
             }
             orderId = order.id;
@@ -85,7 +87,8 @@ export const CardPaymentView: React.FC = () => {
 
           if (fnErr) {
             console.error("[CARD ERROR] Supabase invoke error:", fnErr);
-            throw fnErr;
+            setPaymentProcessing({ method: 'cartao', status: 'error', error: "Erro na comunicação com o processador de pagamentos." });
+            return;
           }
 
           console.log("[CARD] Resposta MP:", fnData);
@@ -94,28 +97,35 @@ export const CardPaymentView: React.FC = () => {
 
           if (!isSuccess) {
               const mpMsg = fnData?.details || fnData?.error || "Pagamento recusado pela operadora.";
-              toastError(`Pagamento não aprovado: ${mpMsg}`);
+              setPaymentProcessing({ method: 'cartao', status: 'error', error: mpMsg });
               return;
           }
 
-          if (isSubscription) {
-              await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
-              setIsIziBlackMembership(true);
-              setSubView("izi_black_purchase");
-          } else if (isCoinPurchase) {
-              setSubView("izi_coin_tracking");
-          } else {
-              const { data: updatedOrder } = await supabase.from("orders_delivery").select().eq("id", orderId).single();
-              setSelectedItem(updatedOrder || { id: orderId });
-              await clearCart(orderId);
-              setTab("orders");
-              setSubView("none");
-          }
-          toastSuccess(isSubscription ? "Assinatura IZI Black ativada!" : "Pedido aprovado!");
+          setPaymentProcessing({ method: 'cartao', status: 'success' });
+          
+          setTimeout(async () => {
+            if (isSubscription) {
+                await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
+                setIsIziBlackMembership(true);
+                setSubView("izi_black_purchase");
+                setPaymentProcessing(null);
+            } else if (isCoinPurchase) {
+                setSubView("izi_coin_tracking");
+                setPaymentProcessing(null);
+            } else {
+                const { data: updatedOrder } = await supabase.from("orders_delivery").select().eq("id", orderId).single();
+                setSelectedItem(updatedOrder || { id: orderId });
+                await clearCart(orderId);
+                setTab("orders");
+                setSubView("none");
+                setPaymentProcessing(null);
+            }
+            toastSuccess(isSubscription ? "Assinatura IZI Black ativada!" : "Pedido aprovado!");
+          }, 2000);
 
       } catch (err: any) {
           console.error("[CARD] Erro crítico:", err);
-          toastError("Falha ao processar pagamento. Verifique sua conexão ou dados do cartão.");
+          setPaymentProcessing({ method: 'cartao', status: 'error', error: "Falha técnica ao processar pagamento." });
       } finally {
           setIsLoading(false);
       }

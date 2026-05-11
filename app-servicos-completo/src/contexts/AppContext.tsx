@@ -48,6 +48,8 @@ interface AppContextData {
   setIsIziBlackMembership: (isBlack: boolean) => void;
   lightningData: any;
   setLightningData: (data: any) => void;
+  paymentProcessing: { method: string; status: 'processing' | 'success' | 'error'; error?: string } | null;
+  setPaymentProcessing: (data: { method: string; status: 'processing' | 'success' | 'error'; error?: string } | null) => void;
   
   // Localização
   userLocation: { lat: number | null; lng: number | null; loading: boolean; error: string | null; address?: string };
@@ -158,6 +160,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [lightningData, setLightningData] = useState<any>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState<{ method: string; status: 'processing' | 'success' | 'error'; error?: string } | null>(null);
   const [cartAnimations, setCartAnimations] = useState<any[]>([]);
 
   const triggerCartAnimation = (e: any, img: string) => {
@@ -775,7 +778,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     initializeApp();
     
-    const interval = setInterval(fetchMarketData, 30000);
+    const interval = setInterval(() => {
+      fetchMarketData();
+      refreshSettings();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -845,6 +851,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       selectedItem, setSelectedItem, selectedShop, setSelectedShop, activeService, setActiveService,
       isLoading, setIsLoading, paymentsOrigin, setPaymentsOrigin,
       pixCpf, setPixCpf, pixConfirmed, setPixConfirmed, isIziBlackMembership, setIsIziBlackMembership, lightningData, setLightningData,
+      paymentProcessing, setPaymentProcessing,
       userLocation, updateLocation, setUserLocation,
       cart, setCart, appliedCoupon, setAppliedCoupon, useCoins, setUseCoins, getCartSubtotal, clearCart,
       ESTABLISHMENTS, setESTABLISHMENTS, handleShopClick, establishmentTypes, setEstablishmentTypes,
