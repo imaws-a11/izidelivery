@@ -16,6 +16,11 @@ export default function MerchantStudio() {
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState<'logo' | 'banner' | null>(null);
 
+  // Reseta o step ao trocar de lojista
+  React.useEffect(() => {
+    setStep(1);
+  }, [editingItem?.id]);
+
   React.useEffect(() => {
     if (step === 5 && editingItem?.id && !editingItem.id.toString().startsWith('new-')) {
       fetchPartnerFinance(editingItem.id);

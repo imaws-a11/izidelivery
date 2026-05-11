@@ -1636,6 +1636,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMerchantTransactions([]);
     
     setSelectedMerchantPreview(merchant);
+    setEditingItem(merchant); // Garante que o MerchantStudio tenha dados ao abrir
     setActivePreviewTab('info');
     try {
       const { data: prods } = await supabase.from('products_delivery').select('*').eq('merchant_id', merchant.id);

@@ -302,12 +302,14 @@ export default function TaxonomyCenter({ initialMode = 'assignment' }: { initial
                                    
                                    <div className="absolute top-4 right-4 flex gap-2 z-20">
                                       {isSelected && <span className="material-symbols-outlined text-lg text-slate-900">check_circle</span>}
-                                      <button 
-                                        onClick={(e) => { e.stopPropagation(); setEditingType(t); }}
-                                        className={`size-8 rounded-lg flex items-center justify-center transition-all ${isSelected ? 'bg-slate-900/10 text-slate-900 hover:bg-slate-900/20' : 'bg-slate-200/50 text-slate-400 hover:text-primary opacity-0 group-hover:opacity-100'}`}
+                                      <div 
+                                         role="button"
+                                         tabIndex={0}
+                                         onClick={(e) => { e.stopPropagation(); setEditingType(t); }}
+                                         className={`size-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${isSelected ? 'bg-slate-900/10 text-slate-900 hover:bg-slate-900/20' : 'bg-slate-200/50 text-slate-400 hover:text-primary opacity-0 group-hover:opacity-100'}`}
                                       >
                                          <span className="material-symbols-outlined text-base">edit</span>
-                                      </button>
+                                      </div>
                                    </div>
 
                                    <span className={`relative z-10 transition-transform group-hover:scale-110 flex items-center justify-center ${isSelected ? 'text-slate-900' : 'text-slate-300 dark:text-slate-600'}`}>{renderIcon(t.icon, 'text-4xl')}</span>
@@ -357,12 +359,14 @@ export default function TaxonomyCenter({ initialMode = 'assignment' }: { initial
                                           
                                           <div className="absolute top-4 right-4 flex gap-2 z-20">
                                              {isSubSelected && <span className="material-symbols-outlined text-lg text-white">verified</span>}
-                                             <button 
-                                               onClick={(e) => { e.stopPropagation(); setEditingType(t); }}
-                                               className={`size-8 rounded-lg flex items-center justify-center transition-all ${isSubSelected ? 'bg-white/20 text-white hover:bg-white/40' : 'bg-slate-200/50 text-slate-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100'}`}
-                                             >
-                                                <span className="material-symbols-outlined text-base">edit</span>
-                                             </button>
+                                             <div 
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(e) => { e.stopPropagation(); setEditingType(t); }}
+                                                className={`size-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${isSubSelected ? 'bg-white/20 text-white hover:bg-white/40' : 'bg-slate-200/50 text-slate-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100'}`}
+                                              >
+                                                 <span className="material-symbols-outlined text-base">edit</span>
+                                              </div>
                                           </div>
                                        </button>
                                      );
