@@ -15,7 +15,9 @@ export const LightningPaymentView: React.FC = () => {
     toastError,
     userId,
     userName,
-    userLocation
+    userLocation,
+    setIsLoading,
+    setPaymentMethod,
   } = useApp();
 
   const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
@@ -47,6 +49,8 @@ export const LightningPaymentView: React.FC = () => {
 
     const generateInvoice = async () => {
       setIsGenerating(true);
+      setPaymentMethod("lightning");
+      setIsLoading(true);
       try {
         let orderId = selectedItem?.id;
         const isSubscription = paymentsOrigin === "izi_black";
@@ -94,6 +98,7 @@ export const LightningPaymentView: React.FC = () => {
         setSubView("none");
       } finally {
         setIsGenerating(false);
+        setIsLoading(false);
       }
     };
 
@@ -101,12 +106,7 @@ export const LightningPaymentView: React.FC = () => {
   }, [localInvoice, isGenerating, amountBrl]);
 
   if (!localInvoice) {
-    return (
-      <div className="absolute inset-0 z-[200] bg-white text-zinc-900 flex flex-col items-center justify-center">
-        <div className="size-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">Gerando Fatura Lightning...</p>
-      </div>
-    );
+    return null; // O App.tsx já mostra o loader global
   }
 
   const handleCancel = async () => {

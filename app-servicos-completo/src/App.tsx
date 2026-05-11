@@ -92,6 +92,7 @@ import { OrderFeedbackView } from "./components/features/Order/OrderFeedbackView
 import { FloatingHeader } from "./components/common/FloatingHeader";
 import { AddressDrawer } from "./components/features/Address/AddressDrawer";
 import { OrderWaitingView } from "./components/features/Order/OrderWaitingView";
+import { PaymentProcessingView } from "./components/features/Payment/PaymentProcessingView";
 
 // Mobilidade e Envios
 import { MobilityWizardView } from "./components/features/Mobility/MobilityWizardView";
@@ -3780,11 +3781,10 @@ const navigateSubView = (target: string) => {
   };
 
   const renderPaymentProcessing = () => (
-    <div className="absolute inset-0 z-[2000] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
-      <div className="size-20 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin mb-6" />
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight">Processando Pagamento</h2>
-      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... ⚡</p>
-    </div>
+    <PaymentProcessingView 
+      method={paymentMethod as any} 
+      message={paymentMethod === 'pix' ? "Gerando seu código Pix..." : paymentMethod === 'lightning' ? "Criando sua fatura Lightning..." : "Processando seu pagamento..."} 
+    />
   );
   const handlePurchaseCoins = async (amount: number, method: string, existingOrderId?: string) => {
     if (!userId) return;

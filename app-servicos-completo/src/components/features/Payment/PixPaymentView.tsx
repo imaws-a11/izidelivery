@@ -22,6 +22,8 @@ export const PixPaymentView: React.FC = () => {
     isIziBlackMembership,
     toastSuccess,
     toastError,
+    setIsLoading,
+    setPaymentMethod,
   } = useApp();
 
   const { getCartSubtotal, cart, appliedCoupon, useCoins, iziCoins, setIziCoins, selectedShop } = useOrder();
@@ -39,6 +41,8 @@ export const PixPaymentView: React.FC = () => {
   const handlePixConfirm = async () => {
     if (pixCpf.replace(/\D/g,"").length < 11) { toastError("CPF inválido."); return; }
     setPixConfirmed(true);
+    setPaymentMethod("pix");
+    setIsLoading(true);
     try {
       let orderId = selectedItem?.id;
       let orderRef = selectedItem;
@@ -146,6 +150,8 @@ export const PixPaymentView: React.FC = () => {
     } catch (e: any) {
       setSelectedItem((prev: any) => ({ ...prev, pixError: true, pixErrorMessage: e.message }));
       setPixConfirmed(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -200,12 +206,7 @@ export const PixPaymentView: React.FC = () => {
           </button>
         )}
 
-        {pixConfirmed && !pixReady && !selectedItem?.pixError && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-4 py-8">
-            <div className="size-12 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
-            <p className="text-zinc-500 text-sm font-black uppercase tracking-wider">Gerando PIX...</p>
-          </motion.div>
-        )}
+        {/* Loader global agora gerencia isso */}
 
         {pixReady && !selectedItem?.pixError && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-5">
