@@ -522,7 +522,10 @@ function App() {
       return;
     }
     
+    // Transição visual imediata para evitar sensação de "travamento"
+    setSubView("payment_processing");
     setIsLoading(true);
+
     try {
       const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
       const brand = (cardToCharge.brand || "Visa").toLowerCase();
@@ -536,6 +539,15 @@ function App() {
       else if (brand.includes("elo")) mpMethodId = "elo";
       else if (brand.includes("hiper")) mpMethodId = "hipercard";
 
+      // Metadados cruciais para o Webhook saber o que creditar
+      const metadata = {
+        type: origin === "profile" ? "wallet_recharge" : "order",
+        service_type: origin === "profile" ? "coin_purchase" : "restaurant",
+        user_id: userId
+      };
+
+      console.log("[PAYMENT] Iniciando processamento de cartão salvo:", { orderId, amount, origin, metadata });
+
       const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
         body: {
           amount: Number(amount.toFixed(2)),
@@ -543,14 +555,17 @@ function App() {
           payment_method_id: mpMethodId,
           token: token,
           email: cleanEmail,
-          installments: 1
+          installments: 1,
+          metadata
         },
       });
 
-      if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process'))) {
+      if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process' && fnData.status !== 'authorized'))) {
          const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
          console.error("[PAYMENT ERROR]", { fnErr, fnData });
          toastError(`Pagamento não aprovado: ${mpMsg}`);
+         
+         // Retornar para a origem em caso de erro
          if (origin === "izi_black") setSubView("izi_black_purchase");
          else if (origin === "profile") {
            setShowDepositModal(true);
@@ -560,13 +575,17 @@ function App() {
          return;
       }
 
-      // Sucesso
+      // Sucesso ou Processando
+      console.log("[PAYMENT] Resposta recebida:", fnData?.status);
+
       if (origin === "izi_black") {
          await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
          setIsIziBlackMembership(true);
          setIziBlackStep('success');
          setSubView("izi_black_purchase");
       } else if (origin === "profile") {
+         // Para recarga de carteira, vamos para o tracking de moedas para aguardar o webhook
+         console.log("[PAYMENT] Redirecionando para izi_coin_tracking (Recarga)");
          setSubView("izi_coin_tracking");
       } else {
          const { data: updatedOrder } = await supabase.from("orders_delivery").select().eq("id", orderId).single();
@@ -574,11 +593,19 @@ function App() {
          setTab("orders");
          setSubView("none");
       }
-      toastSuccess("Pagamento aprovado!");
+      toastSuccess(fnData?.status === 'approved' ? "Pagamento aprovado!" : "Pagamento em análise.");
 
     } catch (err: any) {
-      console.error("Card processing shortcut error:", err);
-      toastError("Instabilidade na rede. Tente novamente.");
+      console.error("[PAYMENT ERROR] Card processing shortcut error:", err);
+      toastError("Erro ao processar cartão: " + (err.message || "Tente novamente."));
+      
+      // Retornar para a origem segura em caso de erro fatal
+      if (origin === "profile") {
+         setSubView("none");
+         setShowDepositModal(true);
+      } else {
+         setSubView(origin === "izi_black" ? "izi_black_purchase" : "checkout");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -2552,7 +2579,7 @@ function App() {
              setIziCoins(newIziCoins);
            }
 
-           handleConfirmSavedCardShortcut(order.id, total, "checkout", cardToUse);
+           await handleConfirmSavedCardShortcut(order.id, total, "checkout", cardToUse);
            return;
         }
         setSubView("payments");
@@ -3840,7 +3867,7 @@ const navigateSubView = (target: string) => {
       };
     }
     return { 
-      label: 'AlimentaÃ§Ã£o',
+      label: 'Alimentação',
       icon: 'restaurant',
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
@@ -3849,33 +3876,28 @@ const navigateSubView = (target: string) => {
     };
   };
 
-
-
   const renderPaymentProcessing = () => (
-    <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
+    <div className="absolute inset-0 z-[2000] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
       <div className="size-20 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin mb-6" />
       <h2 className="text-2xl font-black text-white uppercase tracking-tight">Processando Pagamento</h2>
-      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... âš¡</p>
+      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... ⚡</p>
     </div>
   );
-
-
-
-
-
   const handlePurchaseCoins = async (amount: number, method: string, existingOrderId?: string) => {
     if (!userId) return;
+    console.log("[RECHARGE] Iniciando recarga:", { amount, method, existingOrderId });
     setIsLoading(true);
+    
     try {
       let orderData: any;
 
       if (existingOrderId) {
-        // Atualizar o mÃ©todo de pagamento de um pedido existente
+        console.log("[RECHARGE] Atualizando pedido existente:", existingOrderId);
         const { data: updated, error: updateError } = await supabase
           .from("orders_delivery")
           .update({
             payment_method: method === "lightning" ? "bitcoin_lightning" : method === "pix" ? "pix" : "cartao",
-            status: "pendente_pagamento" // Garante que volta para pendente se estava em outro estado
+            status: "pendente_pagamento"
           })
           .eq("id", existingOrderId)
           .select()
@@ -3884,7 +3906,7 @@ const navigateSubView = (target: string) => {
         if (updateError) throw updateError;
         orderData = updated;
       } else {
-        // Criar um novo pedido
+        console.log("[RECHARGE] Criando novo pedido de recarga...");
         const { data: inserted, error: insertError } = await supabase
           .from("orders_delivery")
           .insert({
@@ -3904,17 +3926,23 @@ const navigateSubView = (target: string) => {
         orderData = inserted;
       }
 
+      console.log("[RECHARGE] Pedido criado/atualizado:", orderData.id);
+      
+      // Fecha o modal de depósito imediatamente após ter os dados do pedido
       setShowDepositModal(false);
 
       if (method === "cartao") {
         setSelectedItem(orderData);
         setPaymentsOrigin("profile");
         if (selectedCard) {
-          handleConfirmSavedCardShortcut(orderData.id, amount, "profile");
+          console.log("[RECHARGE] Usando cartão salvo para recarga direta");
+          await handleConfirmSavedCardShortcut(orderData.id, amount, "profile");
           return;
         }
+        console.log("[RECHARGE] Indo para tela de cartão");
         setSubView("card_payment");
       } else if (method === "lightning") {
+        console.log("[RECHARGE] Gerando invoice Lightning...");
         setSubView("payment_processing");
         const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
           body: { amount, orderId: orderData.id, memo: `IZI Coin Deposit - R$ ${amount}` },
@@ -3928,15 +3956,20 @@ const navigateSubView = (target: string) => {
         });
         setSubView("lightning_payment");
       } else if (method === "pix") {
+        console.log("[RECHARGE] Indo para tela de PIX");
         setSelectedItem(orderData);
         setSubView("pix_payment");
       }
+      
+      console.log("[RECHARGE] Fluxo inicial concluído com sucesso.");
     } catch (e: any) {
-      toastError("Erro ao processar recarga: " + e.message);
+      console.error("[RECHARGE ERROR]", e);
+      toastError("Erro ao processar recarga: " + (e.message || "Tente novamente."));
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const renderBroadcastPopup = () => (
     <AnimatePresence>
@@ -5176,6 +5209,19 @@ const navigateSubView = (target: string) => {
                     </div>
                 </motion.div>
             )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[10000]"
+            >
+              {renderPaymentProcessing()}
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </>
