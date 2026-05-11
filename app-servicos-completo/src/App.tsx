@@ -3927,23 +3927,23 @@ const navigateSubView = (target: string) => {
       }
 
       console.log("[RECHARGE] Pedido criado/atualizado:", orderData.id);
+      setSelectedItem(orderData);
+      setPaymentsOrigin("profile");
       
       // Fecha o modal de depósito imediatamente após ter os dados do pedido
       setShowDepositModal(false);
 
       if (method === "cartao") {
-        setSelectedItem(orderData);
-        setPaymentsOrigin("profile");
         if (selectedCard) {
           console.log("[RECHARGE] Usando cartão salvo para recarga direta");
           await handleConfirmSavedCardShortcut(orderData.id, amount, "profile");
           return;
         }
         console.log("[RECHARGE] Indo para tela de cartão");
-        setSubView("card_payment");
+        navigateSubView("card_payment");
       } else if (method === "lightning") {
         console.log("[RECHARGE] Gerando invoice Lightning...");
-        setSubView("payment_processing");
+        navigateSubView("payment_processing");
         const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
           body: { amount, orderId: orderData.id, memo: `IZI Coin Deposit - R$ ${amount}` },
         });
@@ -3954,12 +3954,13 @@ const navigateSubView = (target: string) => {
           satoshis: lnData.satoshis, 
           btc_price_brl: lnData.btc_price_brl 
         });
-        setSubView("lightning_payment");
+        navigateSubView("lightning_payment");
       } else if (method === "pix") {
-        console.log("[RECHARGE] Indo para tela de PIX");
-        setSelectedItem(orderData);
-        setSubView("pix_payment");
+        console.log("[RECHARGE] Redirecionando para tela de PIX:", orderData.id);
+        navigateSubView("pix_payment");
       }
+      
+      console.log("[RECHARGE] Transição de tela solicitada com sucesso para:", method);
       
       console.log("[RECHARGE] Fluxo inicial concluído com sucesso.");
     } catch (e: any) {
@@ -4887,7 +4888,7 @@ const navigateSubView = (target: string) => {
                 )}
 
                 {subView === "izi_coin_tracking" && (
-                  <motion.div key="izicointrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[160]">
+                  <motion.div key="izicointrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[2000]">
                      <IziCoinTrackingView 
                         order={selectedItem} 
                         onClose={() => setSubView("none")} 
@@ -5062,7 +5063,7 @@ const navigateSubView = (target: string) => {
                 {/* Status de Pagamento e Pedido */}
                 {/* Fluxo de Pagamento e Checkout */}
                 {["payment_processing", "payment_error", "payment_success", "mobility_payment_success", "pix_payment", "lightning_payment", "card_payment"].includes(subView) && (
-                  <motion.div key="payment-flow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                  <motion.div key="payment-flow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[2000]">
                     <PaymentFlowView />
                   </motion.div>
                 )}
@@ -5135,6 +5136,7 @@ const navigateSubView = (target: string) => {
         </AnimatePresence>
 
         {renderBroadcastPopup()}
+        {renderDepositModal()}
 
         <AnimatePresence>
           {toast && (

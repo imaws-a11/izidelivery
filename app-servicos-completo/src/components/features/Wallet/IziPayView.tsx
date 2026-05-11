@@ -1584,6 +1584,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                           try {
                              setIsProcessing(true);
                              await onDeposit(Number(depositAmount), depositMethod);
+                             setSubView("main");
                           } catch (err: any) {
                              console.error("[DEPOSIT] Erro ao iniciar:", err);
                              toastError("Não foi possível iniciar o depósito.");

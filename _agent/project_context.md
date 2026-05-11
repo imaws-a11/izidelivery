@@ -28,9 +28,9 @@ Atualizado: 2026-05-11
   - Checkpoints de diagnóstico integrados para resolução rápida de erros 401/404/500.
   - Valor mínimo forçado em $0.01 USD conforme requisitos do OpenNode.
 - **Estabilização de UI (Anti-Hanging)**:
-  - Uso obrigatório de `ProcessingOverlay` (via `isLoading` global) em todas as transações financeiras.
-  - Padrão `try/finally` rigoroso para garantir que indicadores de loading sejam resetados mesmo em falhas de rede.
-  - Fechamento imediato de modais de entrada (`setShowDepositModal(false)`) após a persistência da ordem para evitar estados de UI zumbis.
+  - Uso obrigatório de `ProcessingOverlay` (z-index 10000) e elevação de telas de pagamento/tracking para z-index 2000.
+  - Navegação via `navigateSubView` para garantir consistência de histórico e re-renderização correta.
+  - Fechamento imediato de modais e reset de subViews locais (`setSubView("main")` no `IziPayView`) após a persistência da ordem.
 - **Sincronização**: O `mp-webhook` e `lightning-webhook` gerenciam a baixa de pedidos e o crédito automático de IZI Coins, roteando via metadados (`type: 'wallet_recharge' | 'order'`).
 
 ### 📦 Izi Entrega Avulsa (Logística)
