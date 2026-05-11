@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useApp } from "../../../contexts/AppContext";
 
 /** Extrai a parte em texto limpo de endereços salvos de forma corrompida ou serializada no DB */
 const parseAddressText = (rawStr: any): string => {
@@ -37,6 +38,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
   fetchMyOrders,
   onOpenCoinTracking,
 }) => {
+  const { handleResumePayment } = useApp();
   const [filterTab, setFilterTab] = useState("ativos");
 
   const safeOrders = Array.isArray(myOrders) ? myOrders : [];
@@ -149,15 +151,10 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
         </div>
 
         {(['pendente_pagamento', 'pendente', 'novo'].includes(order.status) && order.payment_status !== 'paid') && (
-          <button
+          <button 
             onClick={(e) => {
               e.stopPropagation();
-              setSelectedItem(order);
-              const method = order.payment_method;
-              if (method === 'pix') navigateSubView('pix_payment');
-              else if (method === 'lightning') navigateSubView('lightning_payment');
-              else if (method?.includes('cartao') || method?.includes('card')) navigateSubView('payments');
-              else navigateSubView('checkout');
+              handleResumePayment(order);
             }}
             className="w-full py-4 bg-yellow-400 text-black font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-yellow-200 flex items-center justify-center gap-2 mt-3 active:scale-95 transition-all"
           >

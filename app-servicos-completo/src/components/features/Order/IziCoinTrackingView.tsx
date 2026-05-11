@@ -8,6 +8,7 @@ interface IziCoinTrackingViewProps {
   onGoToWallet: () => void;
   onCancel: (orderId: string) => void;
   onSupport: () => void;
+  onReturnToPayment?: (order: any) => void;
 }
 
 export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
@@ -15,7 +16,8 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
   onClose,
   onGoToWallet,
   onCancel,
-  onSupport
+  onSupport,
+  onReturnToPayment
 }) => {
   if (!order) return null;
   const iziCoinImg = iziCoinImgAsset;
@@ -152,10 +154,18 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
              <div className="grid grid-cols-1 gap-3">
                 <button 
                   onClick={onClose}
-                  className="w-full bg-yellow-400 text-black font-black h-16 rounded-2xl shadow-xl shadow-yellow-400/10 uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"
+                  className="w-full bg-zinc-900 text-white font-black h-16 rounded-2xl shadow-xl uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"
                 >
                    Entendi
                 </button>
+                {onReturnToPayment && (
+                  <button 
+                    onClick={() => onReturnToPayment(order)}
+                    className="w-full bg-yellow-400 text-black font-black h-16 rounded-2xl shadow-xl shadow-yellow-400/10 uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"
+                  >
+                     Voltar ao Pagamento
+                  </button>
+                )}
                 <button 
                   onClick={() => onCancel(order.id)}
                   className="w-full bg-zinc-50 text-zinc-400 font-black h-16 rounded-2xl border border-zinc-200 uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all"

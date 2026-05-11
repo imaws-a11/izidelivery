@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Icon } from "../../common/Icon";
 import { showConfirm } from "../../../lib/useToast";
+import { useApp } from "../../../contexts/AppContext";
 
 interface ActiveOrderViewProps {
   selectedItem: any;
@@ -22,6 +23,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   setSubView,
   onCancelOrder,
 }) => {
+  const { handleResumePayment } = useApp();
   if (!selectedItem) return null;
 
   const handleCall = () => {
@@ -216,13 +218,6 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 
                 if (!isPending || isOffline) return null;
                 
-                const tech = (selectedItem.payment_method || 'pix').toLowerCase();
-                const targetView = (tech.includes('bitcoin') || tech.includes('lightning')) 
-                  ? 'lightning_payment' 
-                  : (tech.includes('cartao') || tech.includes('card'))
-                    ? 'payments'
-                    : 'pix_payment';
-
                 return (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -230,7 +225,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                     className="mb-4"
                   >
                     <button
-                      onClick={() => setSubView(targetView)}
+                      onClick={() => handleResumePayment(selectedItem)}
                       className="w-full py-5 rounded-[28px] bg-yellow-400 text-black font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all flex items-center justify-center gap-3 shadow-[8px_8px_20px_rgba(250,204,21,0.2),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.1)] group"
                     >
                       <span className="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">payments</span>

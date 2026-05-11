@@ -114,6 +114,7 @@ import type { SavedAddress, Order, Quest } from "./types";
 function App() {
   useGoogleMapsLoader();
 
+  const app = useApp();
   const {
     // Auth
     user, userId, userName, setUserName, phone, setPhone,
@@ -162,8 +163,10 @@ function App() {
     walletBalance, setWalletBalance, iziCoins, setIziCoins,
     paymentMethod, setPaymentMethod,
     savedCards, fetchSavedCards, handleDeleteCard,
-    triggerCartAnimation, cartAnimations
-  } = useApp();
+    triggerCartAnimation, 
+    cartAnimations,
+    handleResumePayment
+  } = app;
   
   const viewRef = useRef(view);
   const tabRef = useRef(tab);
@@ -4449,16 +4452,7 @@ const navigateSubView = (target: string) => {
                       setSearchQuery={setSearchQuery} 
                       setSelectedItem={setSelectedItem} 
                       onOpenDepositModal={() => setShowDepositModal(true)}
-                      onReturnToPayment={(order) => {
-                        setSelectedItem(order);
-                        const tech = (order.payment_method || 'pix').toLowerCase();
-                        const targetView = (tech.includes('bitcoin') || tech.includes('lightning')) 
-                          ? 'lightning_payment' 
-                          : (tech.includes('cartao') || tech.includes('card'))
-                            ? 'payments'
-                            : 'pix_payment';
-                        setSubView(targetView);
-                      }}
+                      onReturnToPayment={handleResumePayment}
                       onOpenCoinTracking={(order) => {
                         setSelectedItem(order);
                         setSubView("izi_coin_tracking");
@@ -4867,6 +4861,7 @@ const navigateSubView = (target: string) => {
                         onGoToWallet={() => { setSubView("none"); setTab("wallet"); }} 
                         onCancel={handleCancelCoinOrder} 
                         onSupport={() => setSubView("order_support")} 
+                        onReturnToPayment={handleResumePayment}
                       />
                   </motion.div>
                 )}

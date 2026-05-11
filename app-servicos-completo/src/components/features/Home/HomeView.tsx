@@ -26,8 +26,8 @@ interface HomeViewProps {
   setActiveService: (service: any) => void;
   flashOffers: any[];
   onRefresh?: () => Promise<void>;
-  myOrders?: any[];
   setSelectedItem?: (item: any) => void;
+  onReturnToPayment?: (order: any) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -47,6 +47,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onRefresh,
   myOrders = [],
   setSelectedItem,
+  onReturnToPayment,
 }) => {
     const [isExploreOpen, setIsExploreOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -346,11 +347,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 const statusMap = isMobility ? mobilityStatusMap : baseStatusMap;
                 const displayStatus = statusMap[activeOrder.status] || activeOrder.status?.replace("_", " ");
 
+                const isPending = activeOrder.status === 'pendente_pagamento' || activeOrder.payment_status === 'pending';
+                const isOffline = activeOrder.payment_method === 'dinheiro' || activeOrder.payment_method === 'cartao_entrega';
+
                 return (
                   <motion.section 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
+                    className="mb-8 space-y-3"
                   >
                     <div 
                       onClick={() => {
@@ -384,6 +388,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         </div>
                       </div>
                     </div>
+
+                    {isPending && !isOffline && onReturnToPayment && (
+                      <button 
+                        onClick={() => onReturnToPayment(activeOrder)}
+                        className="w-full h-14 bg-zinc-900 text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                      >
+                         <span className="material-symbols-rounded text-yellow-400">payments</span>
+                         Concluir Pagamento Agora
+                      </button>
+                    )}
                   </motion.section>
                 );
               })()}

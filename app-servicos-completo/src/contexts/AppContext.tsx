@@ -66,7 +66,8 @@ interface AppContextData {
   setESTABLISHMENTS: React.Dispatch<React.SetStateAction<any[]>>;
   handleShopClick: (shop: any) => Promise<void>;
   establishmentTypes: any[];
-  setEstablishmentTypes: React.Dispatch<React.SetStateAction<any[]>>;
+  setEstablishmentTypes: (types: any[]) => void;
+  handleResumePayment: (order: any) => void;
 
   // Trânsito e Envios
   transitData: any;
@@ -698,6 +699,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearTimeout(timer);
   }, [cart, userId, isInitialLoad]);
 
+  const handleResumePayment = (order: any) => {
+    if (!order) return;
+    setSelectedItem(order);
+    const method = (order.payment_method || '').toLowerCase();
+    
+    if (method.includes('pix')) {
+      setSubView('pix_payment');
+    } else if (method.includes('lightning') || method.includes('bitcoin')) {
+      setSubView('lightning_payment');
+    } else if (method.includes('cartao') || method.includes('card') || method.includes('stripe') || method.includes('credit')) {
+      setSubView('payments');
+    } else {
+      setSubView('payments'); // Fallback para tela de seleção
+    }
+  };
+
   // Sincronização de Saldo e Moedas
   useEffect(() => {
     if (!userId) {
@@ -825,7 +842,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       handleConfirmMobility,
       selectedCard, setSelectedCard, walletBalance, setWalletBalance, iziCoins, setIziCoins,
       paymentMethod, setPaymentMethod, triggerCartAnimation, cartAnimations,
-      mobilityStep, setMobilityStep
+      mobilityStep, setMobilityStep, handleResumePayment
     }}>
       {children}
     </AppContext.Provider>
