@@ -110,6 +110,10 @@ export const PixPaymentView: React.FC = () => {
             cpf: cleanCpf,
             name: userName || "Cliente IziDelivery",
           },
+          metadata: {
+            type: selectedItem?.service_type === 'coin_purchase' ? 'wallet_recharge' : 'order',
+            user_id: userId
+          },
           description: selectedItem?.service_type === 'coin_purchase' ? `Compra de IZI COINS - R$ ${total.toFixed(2)}` : undefined
         },
       });

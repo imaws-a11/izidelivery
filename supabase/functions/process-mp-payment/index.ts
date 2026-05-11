@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
     await checkRateLimit(req, supabaseAdmin, 'process-mp-payment', 20, 60)
 
-    const { amount, orderId, email, token, payment_method_id, installments, issuer_id, customer } = await req.json()
+    const { amount, orderId, email, token, payment_method_id, installments, issuer_id, customer, metadata } = await req.json()
 
     if (!amount || !orderId || !payment_method_id) {
       return new Response(JSON.stringify({ error: 'amount, orderId e payment_method_id são obrigatórios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -33,7 +33,8 @@ serve(async (req) => {
       binary_mode: true, // Garante Aprovação ou Rejeição imediata (sem pendência manual)
       metadata: {
         order_id: orderId,
-        customer_email: email
+        customer_email: email,
+        ...metadata
       },
       payer: {
         email: email || 'cliente@izidelivery.com',

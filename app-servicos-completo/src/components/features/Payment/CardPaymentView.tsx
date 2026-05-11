@@ -33,10 +33,11 @@ export const CardPaymentView: React.FC = () => {
     total = subtotal; // Simples por enquanto, CheckoutView lida com descontos
   }
 
-  const handleConfirmCard = async (token: string, _issuer: string, _installments: number, brand: string, _last4: string) => {
+  const handleConfirmCard = async (token: string, issuer: string, installments: number, brand: string, _last4: string) => {
       setIsLoading(true);
       try {
           let orderId = selectedItem?.id;
+          const userEmail = user?.email || "cliente@izidelivery.com";
 
           if (!isCoinPurchase) {
             const orderBase = {
@@ -61,21 +62,34 @@ export const CardPaymentView: React.FC = () => {
             await supabase.from("orders_delivery").update({ status: "pendente_pagamento" }).eq("id", orderId);
           }
 
+          console.log("[CARD] Processando pagamento MP para pedido:", orderId);
           const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
               body: {
                   amount: Number(total.toFixed(2)),
                   orderId: orderId,
-                  payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
+                  payment_method_id: brand.toLowerCase().replace(/\s/g, ''),
                   token: token,
-                  email: "cliente@izidelivery.com",
-                  installments: 1
+                  email: userEmail,
+                  installments: installments || 1,
+                  issuer_id: issuer,
+                  metadata: {
+                    type: isSubscription ? 'subscription' : (isCoinPurchase ? 'wallet_recharge' : 'order'),
+                    user_id: userId
+                  }
               },
           });
 
-          const isSuccess = !fnErr && fnData && fnData.success === true && fnData.status === 'approved';
+          if (fnErr) {
+            console.error("[CARD ERROR] Supabase invoke error:", fnErr);
+            throw fnErr;
+          }
+
+          console.log("[CARD] Resposta MP:", fnData);
+
+          const isSuccess = fnData && (fnData.status === 'approved' || fnData.status === 'authorized');
 
           if (!isSuccess) {
-              const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "Cartão recusado.";
+              const mpMsg = fnData?.details || fnData?.error || "Pagamento recusado pela operadora.";
               toastError(`Pagamento não aprovado: ${mpMsg}`);
               return;
           }
@@ -95,8 +109,9 @@ export const CardPaymentView: React.FC = () => {
           }
           toastSuccess(isSubscription ? "Assinatura IZI Black ativada!" : "Pedido aprovado!");
 
-      } catch (err) {
-          toastError("Instabilidade na rede. Tente novamente.");
+      } catch (err: any) {
+          console.error("[CARD] Erro crítico:", err);
+          toastError("Falha ao processar pagamento. Verifique sua conexão ou dados do cartão.");
       } finally {
           setIsLoading(false);
       }

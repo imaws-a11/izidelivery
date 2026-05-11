@@ -133,54 +133,66 @@ serve(async (req) => {
       })
     }
 
-    // Recarga de Saldo Lojista
+    // Recarga de Saldo ou Compra de Moedas
     if (payment.metadata?.type === 'wallet_recharge') {
-      console.log(`[mp-webhook] Recarga MerchantID: ${payment.metadata.user_id}, Status: ${payment.status}`)
+      const userId = payment.metadata.user_id
+      const amount = payment.transaction_amount
+      console.log(`[mp-webhook] Recarga/Compra Moedas para UserID: ${userId}, Amount: ${amount}, Status: ${payment.status}`)
 
       if (payment.status === 'approved') {
-        const merchantId = payment.metadata.user_id
-        const amount = payment.transaction_amount
+        // 1. Verificar se é compra de moedas (customer) ou recarga de saldo (merchant)
+        // Buscamos o pedido para saber o service_type
+        const { data: order } = await supabaseAdmin.from('orders_delivery').select('service_type').eq('id', orderId).single()
+        
+        if (order?.service_type === 'coin_purchase') {
+          // Crédito de Moedas (1 BRL = 1 Moeda, ou conforme cotação)
+          const { data: settings } = await supabaseAdmin.from('app_settings_delivery').select('izi_coin_value').single()
+          const coinValue = settings?.izi_coin_value || 1.0
+          const coinsToCredit = amount / coinValue
 
-        const { data: txs } = await supabaseAdmin
-          .from('wallet_transactions_delivery')
-          .select('amount, type, status')
-          .eq('user_id', merchantId)
+          const { data: user } = await supabaseAdmin.from('users_delivery').select('izi_coins').eq('id', userId).single()
+          const newCoins = (user?.izi_coins || 0) + coinsToCredit
 
-        const currentBalance = txs?.reduce((acc: number, t: any) => {
-          if (t.status === 'cancelado' || t.status === 'estornado') return acc
-          const amt = Math.abs(Number(t.amount) || 0)
-          return acc + (t.type === 'saque' || t.type === 'debit' ? -amt : amt)
-        }, 0) || 0
+          await supabaseAdmin.from('users_delivery').update({ izi_coins: newCoins }).eq('id', userId)
+          
+          await supabaseAdmin.from('wallet_transactions_delivery').insert({
+            user_id: userId,
+            amount: coinsToCredit,
+            type: 'credit',
+            description: `Compra de ${coinsToCredit.toFixed(2)} Izi Coins via PIX`,
+            status: 'concluido',
+            metadata: { mp_payment_id: payment.id, type: 'coin_purchase' }
+          })
+        } else {
+          // Recarga de Saldo em R$ (Merchant)
+          const { data: user } = await supabaseAdmin.from('users_delivery').select('wallet_balance').eq('id', userId).single()
+          const newBalance = (user?.wallet_balance || 0) + amount
 
-        const newBalance = currentBalance + amount
+          await supabaseAdmin.from('users_delivery').update({ wallet_balance: newBalance }).eq('id', userId)
 
-        const { error: insErr } = await supabaseAdmin.from('wallet_transactions_delivery').insert({
-          user_id: merchantId,
-          amount,
-          type: 'deposito',
-          description: `Recarga via PIX #${String(payment.id).slice(-6)}`,
+          await supabaseAdmin.from('wallet_transactions_delivery').insert({
+            user_id: userId,
+            amount,
+            type: 'deposito',
+            description: `Recarga de Saldo via PIX #${String(payment.id).slice(-6)}`,
+            status: 'concluido',
+            balance_after: newBalance,
+            metadata: { mp_payment_id: payment.id }
+          })
+        }
+
+        // Marcar pedido como concluído
+        await supabaseAdmin.from('orders_delivery').update({
           status: 'concluido',
-          balance_after: newBalance,
-          metadata: { mp_payment_id: payment.id }
-        })
-
-        if (insErr) throw insErr
+          paid_at: new Date().toISOString(),
+          payment_status: 'approved'
+        }).eq('id', orderId)
 
         await supabaseAdmin.from('audit_logs_delivery').insert({
-          action: 'Recarga Saldo Lojista',
+          action: 'Recarga/Compra Concluída',
           module: 'Wallet',
-          metadata: { merchantId, amount, paymentId: payment.id, balanceAfter: newBalance },
+          metadata: { userId, amount, paymentId: payment.id },
         })
-
-        try {
-          await supabaseAdmin.channel(`recharge_confirm_${merchantId}`).send({
-            type: 'broadcast',
-            event: 'confirmed',
-            payload: { merchantId, amount, paymentId: payment.id, balanceAfter: newBalance, timestamp: new Date().toISOString() }
-          })
-        } catch (broadcastErr: any) {
-          console.error('[mp-webhook] Falha no broadcast:', broadcastErr.message)
-        }
       }
       return new Response(JSON.stringify({ received: true, type: 'wallet_recharge' }), {
         status: 200,

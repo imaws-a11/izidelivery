@@ -1575,28 +1575,35 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                  </section>
               </div>
 
-              <footer className="p-8 pb-12 bg-white border-t border-zinc-100 relative z-20">
-                 <motion.button 
-                   whileTap={{ scale: 0.98 }}
-                   disabled={isProcessing || !depositAmount || Number(depositAmount) <= 0}
-                   onClick={() => {
-                      if (onDeposit) {
-                         setIsProcessing(true);
-                         onDeposit(Number(depositAmount), depositMethod);
-                      }
-                   }}
-                   className="w-full h-20 bg-zinc-900 text-white rounded-[32px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-zinc-900/20 flex items-center justify-center gap-4 group"
-                 >
-                    {isProcessing ? (
-                       <div className="size-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                    ) : (
-                       <>
-                          <span>Confirmar Recarga</span>
-                          <span className="material-symbols-rounded font-black group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                       </>
-                    )}
-                 </motion.button>
-              </footer>
+               <footer className="p-8 pb-12 bg-white border-t border-zinc-100 relative z-20">
+                  <motion.button 
+                    whileTap={{ scale: 0.98 }}
+                    disabled={isProcessing || !depositAmount || Number(depositAmount) <= 0}
+                    onClick={async () => {
+                       if (onDeposit) {
+                          try {
+                             setIsProcessing(true);
+                             await onDeposit(Number(depositAmount), depositMethod);
+                          } catch (err: any) {
+                             console.error("[DEPOSIT] Erro ao iniciar:", err);
+                             toastError("Não foi possível iniciar o depósito.");
+                          } finally {
+                             setIsProcessing(false);
+                          }
+                       }
+                    }}
+                    className="w-full h-20 bg-zinc-900 text-white rounded-[32px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-zinc-900/20 flex items-center justify-center gap-4 group"
+                  >
+                     {isProcessing ? (
+                        <div className="size-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                     ) : (
+                        <>
+                           <span>Confirmar Recarga</span>
+                           <span className="material-symbols-rounded font-black group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </>
+                     )}
+                  </motion.button>
+               </footer>
            </motion.div>
         )}
       </AnimatePresence>
