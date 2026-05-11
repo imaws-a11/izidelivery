@@ -11,6 +11,9 @@ interface AppContextData {
   isInitializing: boolean;
   initError: string | null;
   activeBroadcast: any | null;
+  user: any | null;
+  userId: string | null;
+  userName: string;
   closeBroadcast: () => void;
   refreshSettings: () => Promise<void>;
 
@@ -117,7 +120,7 @@ interface AppContextData {
 const AppContext = createContext<AppContextData>({} as AppContextData);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { authInitLoading, userId } = useAuth();
+  const { authInitLoading, user, userId, userName } = useAuth();
   
   // Estados de Configuração
   const [globalSettings, setGlobalSettings] = useState<any>(null);
@@ -827,6 +830,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       globalSettings, appSettings, isInitializing, initError, activeBroadcast, closeBroadcast, refreshSettings,
+      user, userId, userName,
       view, setView, tab, setTab, subView, setSubView, navigateSubView,
       selectedItem, setSelectedItem, selectedShop, setSelectedShop, activeService, setActiveService,
       isLoading, setIsLoading, paymentsOrigin, setPaymentsOrigin,

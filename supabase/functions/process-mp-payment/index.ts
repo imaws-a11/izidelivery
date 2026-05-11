@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
     await checkRateLimit(req, supabaseAdmin, 'process-mp-payment', 20, 60)
 
-    const { amount, orderId, email, token, payment_method_id, installments, issuer_id, customer, metadata } = await req.json()
+    const { amount, orderId, email, token, payment_method_id, installments, issuer_id, customer, metadata, description } = await req.json()
 
     if (!amount || !orderId || !payment_method_id) {
       return new Response(JSON.stringify({ error: 'amount, orderId e payment_method_id são obrigatórios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -28,7 +28,7 @@ serve(async (req) => {
     const payload: any = {
       transaction_amount: Number(amount),
       payment_method_id: payment_method_id,
-      description: `Pedido IziDelivery #${orderId.slice(0, 8).toUpperCase()}`,
+      description: description || `Pedido IziDelivery #${orderId.slice(0, 8).toUpperCase()}`,
       external_reference: orderId,
       binary_mode: true, // Garante Aprovação ou Rejeição imediata (sem pendência manual)
       metadata: {
@@ -56,7 +56,8 @@ serve(async (req) => {
       payload.date_of_expiration = new Date(Date.now() + 30 * 60 * 1000).toISOString()
     }
 
-    console.log(`Processing ${payment_method_id} payment for order ${orderId}...`)
+    console.log(`[PAYMENT] Processing ${payment_method_id} for order ${orderId}. Amount: ${amount}. Desc: ${payload.description}`)
+    console.log(`[PAYMENT] Payload:`, JSON.stringify(payload))
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',

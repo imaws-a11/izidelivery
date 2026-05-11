@@ -1578,7 +1578,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
                <footer className="p-8 pb-12 bg-white border-t border-zinc-100 relative z-20">
                   <motion.button 
                     whileTap={{ scale: 0.98 }}
-                    disabled={isProcessing || !depositAmount || Number(depositAmount) <= 0}
+                    disabled={isProcessing || !depositAmount || Number(depositAmount) < 1}
                     onClick={async () => {
                        if (onDeposit) {
                           try {
