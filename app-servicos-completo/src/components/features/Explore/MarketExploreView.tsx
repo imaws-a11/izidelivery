@@ -40,7 +40,7 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = (props) => {
       activeService="Mercados"
       categories={categories}
       listTitle="Mais Pedidos"
-      serviceType="market"
+      serviceType={["market", "mercado", "mercearia", "conveniencia", "supermercado"]}
     />
   );
 };

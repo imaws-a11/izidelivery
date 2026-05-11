@@ -704,11 +704,60 @@ function MainApp() {
         }
     }, []);
 
+    // --- SINCRONIZAÇÃO E BOOTSTRAP ---
     useEffect(() => {
+        let isMounted = true;
+
+        const bootstrap = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user && isMounted) {
+                    setDriverId(session.user.id);
+                    setIsAuthenticated(true);
+                    const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Entregador';
+                    await loadProfileAndEnforceOnboarding(session.user.id, session.user.email || '', name);
+                } else if (isMounted) {
+                    setIsAuthenticated(false);
+                    setIsProfileLoaded(true);
+                }
+            } catch (e) {
+                console.error('[BOOTSTRAP] Erro:', e);
+                if (isMounted) setIsProfileLoaded(true);
+            } finally {
+                if (isMounted) setAuthInitLoading(false);
+            }
+        };
+
+        bootstrap();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!isMounted) return;
+
+            if (event === 'SIGNED_OUT') {
+                setIsAuthenticated(false);
+                setDriverId(null);
+                localStorage.removeItem('izi_driver_id');
+                return;
+            }
+
+            if (event === 'SIGNED_IN' && session?.user) {
+                setDriverId(session.user.id);
+                setIsAuthenticated(true);
+                const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Entregador';
+                await loadProfileAndEnforceOnboarding(session.user.id, session.user.email || '', name);
+            }
+        });
+
+        // Timer de segurança para o Splash
         const safetyTimer = setTimeout(() => {
-            setShowSplash(false);
-        }, 5000);
-        return () => clearTimeout(safetyTimer);
+            if (isMounted) setShowSplash(false);
+        }, 3500);
+
+        return () => {
+            isMounted = false;
+            if (subscription) subscription.unsubscribe();
+            clearTimeout(safetyTimer);
+        };
     }, []);
 
     // Solicitar permissão de sobreposição de apps (Draw over other apps) no Android
@@ -889,6 +938,7 @@ function MainApp() {
             // Atualiza estados locais e cache
             setDriverName(editProfileData.name);
             setDriverPlate(editProfileData.plate);
+            setDriverVehicle(editProfileData.vehicle_type);
             
             localStorage.setItem('izi_driver_name', editProfileData.name);
             localStorage.setItem('izi_driver_phone', editProfileData.phone);
@@ -899,6 +949,9 @@ function MainApp() {
             
             toastSuccess('Perfil atualizado com sucesso!');
             setShowPersonalDataModal(false);
+            
+            // Recarrega para garantir sincronia total
+            loadProfileAndEnforceOnboarding(driverId, editProfileData.email, editProfileData.name);
         } catch (err: any) {
             console.error('[DEBUG] Exceção capturada em handleUpdateProfile:', err);
             toastError('Erro ao salvar dados: ' + (err.message || 'Verifique sua conexão'));
@@ -982,7 +1035,11 @@ function MainApp() {
     const [view, setView] = useState<View>('dashboard');
     const [activeTab, setActiveTab] = useState<View>(() => {
         const saved = localStorage.getItem('izi_driver_active_tab') as View;
-        const validTabs: View[] = ['dashboard', 'active_mission', 'history', 'earnings', 'profile', 'missions', 'dedicated', 'scheduled', 'notifications'];
+        // Abas que são overlays (fixos full-screen) NÃO devem ser restauradas no refresh
+        // para evitar telas sobrepostas/brancas ao recarregar o app
+        const overlaytabs: View[] = ['profile', 'notifications'];
+        const validTabs: View[] = ['dashboard', 'active_mission', 'history', 'earnings', 'missions', 'dedicated', 'scheduled'];
+        if (overlaytabs.includes(saved)) return 'dashboard';
         return validTabs.includes(saved) ? saved : 'dashboard';
     });
     const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
@@ -1910,7 +1967,6 @@ function MainApp() {
     }, [isAuthenticated, driverId, isOnline, activeMission]);
 
 
-    useEffect(() => {
 
     // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
     const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
@@ -2036,67 +2092,9 @@ function MainApp() {
         }
     };
 
-        // Check initial Supabase session — CAMINHO PRINCIPAL no F5/refresh
-        const checkSession = async () => {
-            try {
-                console.log('[AUTH] checkSession: Verificando sessão...');
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) {
-                    console.error('[AUTH] Erro ao verificar sessão inicial:', error.message);
-                }
-                const user = session?.user;
-                if (user) {
-                    console.log('[AUTH] checkSession: Sessão encontrada para', user.email);
-                    setDriverId(user.id);
-                    localStorage.setItem('izi_driver_id', user.id);
-                    setIsAuthenticated(true);
-                    hasBootedRef.current = true;
-                    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                    await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
-                } else {
-                    console.log('[AUTH] checkSession: Nenhuma sessão ativa.');
-                    setDriverId(null);
-                    localStorage.removeItem('izi_driver_id');
-                    setIsAuthenticated(false);
-                    setIsProfileLoaded(true);
-                }
-            } catch (e: any) {
-                console.error('[AUTH] Erro ao verificar sessão inicial:', e);
-                setIsProfileLoaded(true);
-            } finally {
-                setAuthInitLoading(false);
-            }
-        };
+    useEffect(() => {
 
-        checkSession();
-
-        // Listener de eventos de autenticação — SÓ age em SIGNED_IN (novo login)
-        // INITIAL_SESSION é ignorado pois checkSession já tratou acima.
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-                setIsAuthenticated(false);
-                setDriverId(null);
-                localStorage.removeItem('izi_driver_id');
-                return;
-            }
-
-            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
-                const user = session.user;
-                setDriverId(user.id);
-                localStorage.setItem('izi_driver_id', user.id);
-                setIsAuthenticated(true);
-
-                // Carregamento otimista do LocalStorage
-                const cachedName = localStorage.getItem('izi_driver_name');
-                if (cachedName) setDriverName(cachedName);
-                
-                const cachedAvatar = localStorage.getItem('izi_driver_avatar');
-                if (cachedAvatar) setDriverAvatar(cachedAvatar);
-
-                const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                await loadProfileAndEnforceOnboarding(user.id, user.email || '', name);
-            }
-        });
+        // Lógica de bootstrap removida daqui para o useEffect consolidado no topo
 
         // Listener de visibilidade: quando o app volta do background (web/PWA/APK)
         const handleVisibilityChange = async () => {
@@ -2113,14 +2111,17 @@ function MainApp() {
 
         return () => {
             clearTimeout(authTimeout);
-            subscription.unsubscribe();
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
 
     // Salva a aba ativa para persistência no F5
+    // Overlays não são salvos para evitar tela branca no reload
     useEffect(() => {
-        localStorage.setItem('izi_driver_active_tab', activeTab);
+        const overlaytabs: View[] = ['profile', 'notifications'];
+        if (!overlaytabs.includes(activeTab)) {
+            localStorage.setItem('izi_driver_active_tab', activeTab);
+        }
     }, [activeTab]);
 
     // SINCRONIZAÇÃO MULTIDISPOSITIVO (Perfil, Status e Vínculo)
@@ -2780,6 +2781,11 @@ function MainApp() {
     };
 
     const fetchOrders = useCallback(async () => {
+        if (!driverId || !isAuthenticated) {
+            console.log('[RADAR] Busca cancelada: Sem sessão ativa.');
+            setOrders([]);
+            return;
+        }
         if (!isOnlineRef.current) {
             setOrders([]);
             return;
@@ -2799,6 +2805,12 @@ function MainApp() {
                 new Promise(resolve => setTimeout(resolve, 600))
             ]);
 
+            if (ordersRes.error) {
+                console.error('[RADAR] Erro Supabase:', ordersRes.error.message, ordersRes.error.details);
+                if (ordersRes.error.message.includes('JWT')) {
+                    console.warn('[RADAR] Token expirado ou inválido. Verifique o login.');
+                }
+            }
             const data = ordersRes.data || [];
             const error = ordersRes.error;
             
@@ -2838,23 +2850,20 @@ function MainApp() {
                 const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
                 const notScheduled = !o.scheduled_at || o.driver_id === driverId;
                 
-                // Trava de Exclusividade Segura
-                const isMerchantOrder = !!o.merchant_id;
+                // --- REGRA DE EXCLUSIVIDADE ---
+                // Regra 1: Pedido de lojista EXCLUSIVO → só o entregador vinculado a esse lojista pode ver
+                // Regra 2: Entregador exclusivo → NÃO é bloqueado de ver pedidos de lojistas globais
+                // Regra 3: Pedido de lojista GLOBAL → TODOS os entregadores podem ver
+                const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
+                const orderMerchantId = o.merchant_id ? String(o.merchant_id) : null;
+                const isOrderFromExclusiveMerchant = orderMerchantId && (exclusiveIds || []).includes(orderMerchantId);
+                
                 let merchantOk = true;
-                if (isMerchantOrder) {
-                    const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
-                    const isOrderExclusive = (exclusiveIds || []).includes(o.merchant_id);
-                    
-                    if (isOrderExclusive) {
-                        // Pedido EXCLUSIVO: só vê quem é da mesma loja
-                        if (!myMerchantId || String(o.merchant_id) !== String(myMerchantId)) {
-                            merchantOk = false;
-                        }
-                    } else {
-                        // Pedido GLOBAL: todos veem (independentes e exclusivos de outras lojas)
-                        merchantOk = true;
-                    }
+                if (isOrderFromExclusiveMerchant) {
+                    // Pedido exclusivo: apenas o entregador vinculado a este lojista pode receber
+                    merchantOk = !!myMerchantId && myMerchantId === orderMerchantId;
                 }
+                // Se não for pedido exclusivo, merchantOk = true (todos recebem)
 
                 return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled && merchantOk;
             });
@@ -2989,19 +2998,19 @@ function MainApp() {
                     return;
                 }
 
-                // Trava de Exclusividade Segura (Sync com fetchOrders)
-                const isMerchantOrder = !!o.merchant_id;
-                if (isMerchantOrder) {
-                    const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
-                    const isOrderExclusive = (exclusiveMerchantIdsRef.current || []).includes(o.merchant_id);
-                    
-                    if (isOrderExclusive) {
-                        // Pedido EXCLUSIVO: só vê quem é da mesma loja
-                        if (!myMerchantId || String(o.merchant_id) !== String(myMerchantId)) {
-                            return;
-                        }
+                // --- REGRA DE EXCLUSIVIDADE (Realtime) ---
+                // Pedido de lojista EXCLUSIVO → só o entregador vinculado a esse lojista pode ver
+                // Pedido de lojista GLOBAL → TODOS os entregadores podem ver
+                const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
+                const orderMerchantId = o.merchant_id ? String(o.merchant_id) : null;
+                const isOrderFromExclusiveMerchant = orderMerchantId && (exclusiveMerchantIdsRef.current || []).includes(orderMerchantId);
+
+                if (isOrderFromExclusiveMerchant) {
+                    // Pedido exclusivo: bloqueia quem não é o entregador deste lojista
+                    if (!myMerchantId || myMerchantId !== orderMerchantId) {
+                        setOrders(prev => prev.filter(x => x.realId !== o.id));
+                        return;
                     }
-                    // Se for GLOBAL, o fluxo segue normalmente
                 }
 
                 if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
@@ -6536,14 +6545,14 @@ function MainApp() {
                             key={i} 
                             onClick={() => {
                                 if (item.label === 'Meus Dados') {
-                                    // Forçar recarregamento do perfil para garantir que não há cache de outra conta
+                                    // Sincroniza dados antes de abrir para evitar campos vazios
                                     if (driverId) {
-                                        const user = supabase.auth.getUser(); // Apenas para pegar o email se necessário
-                                        supabase.auth.getUser().then(({ data: { user } }) => {
-                                            if (user) loadProfileAndEnforceOnboarding(user.id, user.email || '', driverName);
+                                        loadProfileAndEnforceOnboarding(driverId, authEmail || '', driverName).then(() => {
+                                            setShowPersonalDataModal(true);
                                         });
+                                    } else {
+                                        setShowPersonalDataModal(true);
                                     }
-                                    setShowPersonalDataModal(true);
                                 }
                                 if (item.label === 'Dados Bancários') setShowBankDetails(true);
                                 if (item.label === 'Veículo & Placa') setShowPlateModal(true);
@@ -8238,7 +8247,7 @@ function MainApp() {
                 initial={{ opacity: 0, y: 100 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: 100 }}
-                className="fixed inset-0 z-[300] bg-white flex flex-col overflow-y-auto no-scrollbar pb-40"
+                className="fixed inset-0 z-[400] bg-white flex flex-col overflow-y-auto no-scrollbar pb-40"
             >
                 {/* TopAppBar */}
                 <header className="bg-white/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4">

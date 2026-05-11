@@ -24,7 +24,7 @@ export const FoodCategoryExplorer: React.FC<FoodCategoryExplorerProps> = (props)
       activeService="Restaurantes"
       categories={categories}
       listTitle="Melhores Restaurantes"
-      serviceType="restaurant"
+      serviceType={["restaurant", "food", "restaurante", "lanche", "pizza", "acai"]}
     />
   );
 };

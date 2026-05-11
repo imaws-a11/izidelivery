@@ -39,7 +39,7 @@ export const FruitExploreView: React.FC<FruitExploreViewProps> = (props) => {
       activeService="Hortifrutti"
       categories={categories}
       listTitle="Melhores do Hortifrutti"
-      serviceType="fruit"
+      serviceType={["fruit", "hortifruti", "sacolao", "feirante"]}
     />
   );
 };

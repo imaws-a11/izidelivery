@@ -3588,7 +3588,7 @@ const navigateSubView = (target: string) => {
       setSearchQuery={setSearchQuery}
       setSubView={setSubView}
       establishments={ESTABLISHMENTS}
-      filterFn={(shop: any) => shop.type === "beverages" || shop.type === "bebidas"}
+      filterFn={(shop: any) => ["beverages", "bebidas", "bebida", "adega", "distribuidora"].includes(shop.type)}
       onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
       cartLength={cart.length}
       navigateSubView={navigateSubView}

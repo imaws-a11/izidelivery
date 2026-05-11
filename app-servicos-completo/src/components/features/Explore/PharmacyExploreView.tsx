@@ -38,8 +38,8 @@ export const PharmacyExploreView: React.FC<PharmacyExploreViewProps> = (props) =
       placeholder="O que você precisa da farmácia?"
       activeService="Farmácias"
       categories={categories}
-      listTitle="Farmácias Próximas"
-      serviceType="pharmacy"
+      listTitle="Farmácias na Região"
+      serviceType={["pharmacy", "farmacia", "saude"]}
       infoCard={{
         text: "Medicamentos controlados exigem retenção de receita. O Izi Delivery facilita sua busca, mas a venda é responsabilidade da farmácia.",
         link: "Regras de Entrega >"

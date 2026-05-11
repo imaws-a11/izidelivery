@@ -42,7 +42,7 @@ export const BakeryExploreView: React.FC<BakeryExploreViewProps> = (props) => {
       activeService="Padaria"
       categories={categories}
       listTitle="Padarias e Confeitarias"
-      serviceType="bakery"
+      serviceType={["bakery", "padaria", "confeitaria", "doceria"]}
     />
   );
 };

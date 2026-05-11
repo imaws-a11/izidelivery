@@ -39,7 +39,7 @@ export const PetshopExploreView: React.FC<PetshopExploreViewProps> = (props) => 
       activeService="Petshop"
       categories={categories}
       listTitle="Pet Shops na Região"
-      serviceType="pet"
+      serviceType={["pet", "petshop", "veterinaria", "pets"]}
     />
   );
 };

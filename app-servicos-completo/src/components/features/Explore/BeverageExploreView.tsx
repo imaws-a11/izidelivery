@@ -39,7 +39,7 @@ export const BeverageExploreView: React.FC<BeverageExploreViewProps> = (props) =
       activeService="Bebidas"
       categories={categories}
       listTitle="Distribuidoras na Região"
-      serviceType="beverages"
+      serviceType={["beverages", "bebidas", "bebida", "adega", "distribuidora"]}
     />
   );
 };

@@ -368,6 +368,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const allOrdersRef = useRef<Order[]>([]);
   const merchantProfileRef = useRef<MerchantProfile | null>(null);
   const selectedMerchantPreviewRef = useRef<Merchant | null>(null);
+  const userRoleRef = useRef<UserRole>('merchant');
 
 
   useEffect(() => {
@@ -859,6 +860,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => { allOrdersRef.current = allOrders; }, [allOrders]);
   useEffect(() => { merchantProfileRef.current = merchantProfile; }, [merchantProfile]);
   useEffect(() => { selectedMerchantPreviewRef.current = selectedMerchantPreview; }, [selectedMerchantPreview]);
+  useEffect(() => { userRoleRef.current = userRole; }, [userRole]);
 
   // Canal Global de Tempo Real (Admin e Lojista)
   useEffect(() => {
@@ -1124,7 +1126,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     //   1. session?.user?.id  → UUID do Supabase Auth (login)
     //   2. merchantProfile?.id → UUID do admin_users (operações financeiras)
     // Os créditos são gravados com admin_users.id, então DEVEMOS usar merchantProfile.id
-    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+    // USANDO REFS para evitar recriação do callback e loops de re-render
+    const idToUse = userRoleRef.current === 'merchant'
+      ? merchantProfileRef.current?.id
+      : selectedMerchantPreviewRef.current?.id;
     if (!idToUse) {
       setMerchantBalance(0);
       setMerchantTransactions([]);
@@ -1157,7 +1162,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsWalletLoading(false);
     }
-  }, [userRole, merchantProfile, selectedMerchantPreview]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchPartnerFinance = useCallback(async (partnerId: string) => {
     if (!partnerId) return;
@@ -1678,7 +1684,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchMyDedicatedSlots();
       fetchMerchantFinance();
     }
-  }, [isAuthLoading, session?.user?.id, userRole, merchantProfile?.id, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots, fetchMerchantFinance]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthLoading, session?.user?.id, userRole, merchantProfile?.id]);
 
   // Real-time: App Settings
   useEffect(() => {
