@@ -705,13 +705,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const method = (order.payment_method || '').toLowerCase();
     
     if (method.includes('pix')) {
-      setSubView('pix_payment');
+      navigateSubView('pix_payment');
     } else if (method.includes('lightning') || method.includes('bitcoin')) {
-      setSubView('lightning_payment');
+      navigateSubView('lightning_payment');
     } else if (method.includes('cartao') || method.includes('card') || method.includes('stripe') || method.includes('credit')) {
-      setSubView('payments');
+      navigateSubView('payments');
     } else {
-      setSubView('payments'); // Fallback para tela de seleção
+      navigateSubView('payments'); // Fallback para tela de seleção
     }
   };
 
