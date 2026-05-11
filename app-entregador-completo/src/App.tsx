@@ -8,9 +8,7 @@ import { BespokeIcons } from './lib/BespokeIcons';
 import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { Capacitor, registerPlugin } from '@capacitor/core';
-const OverlayPermission = registerPlugin<any>('OverlayPermission');
-import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
+import { Capacitor } from '@capacitor/core';
 
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 import SplashScreen from './components/common/SplashScreen';
@@ -773,33 +771,7 @@ function MainApp() {
         };
     }, []);
 
-    // Solicitar permissão de sobreposição de apps (Draw over other apps) no Android
-    useEffect(() => {
-        const requestOverlayPermission = async () => {
-            if (Capacitor.getPlatform() !== 'android') return;
-            try {
-                const { granted } = await ForegroundService.checkManageOverlayPermission();
-                setOverlayBlocked(!granted);
-                if (granted) {
-                    setOverlayBannerDismissed(false);
-                    return;
-                }
 
-
-                setOverlayBannerDismissed(false);
-
-                const result = await ForegroundService.requestManageOverlayPermission();
-                setOverlayBlocked(result?.granted !== true);
-            } catch (e) {
-                setOverlayBlocked(true);
-                setOverlayBannerDismissed(false);
-
-            }
-        };
-        // Aguarda splash antes de solicitar
-        const timer = setTimeout(requestOverlayPermission, 3000);
-        return () => clearTimeout(timer);
-    }, []);
 
     const fetchGlobalSettings = useCallback(async () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -1158,34 +1130,10 @@ function MainApp() {
     }, [orders, declinedStats, now]);
 
     const announcedOrderIds = useRef<Set<string>>(new Set());
-    const activeOverlayMissionRef = useRef<any>(null);
+
     const handleAcceptRef = useRef<any>(null);
 
-    // Listener global para ações da janela nativa flutuante
-    useEffect(() => {
-        if (Capacitor.getPlatform() !== 'android') return;
-        const listener = OverlayPermission.addListener('onMissionAction', (data: any) => {
-            const order = activeOverlayMissionRef.current;
-            if (!order) return;
-            
-            stopIziSounds();
 
-            if (data.action === 'accept') {
-                setSelectedOrder(order);
-                if (handleAcceptRef.current) handleAcceptRef.current(order);
-                activeOverlayMissionRef.current = null;
-            } else if (data.action === 'reject') {
-                activeOverlayMissionRef.current = null;
-            } else if (data.action === 'details') {
-                setSelectedOrder(order);
-                setShowOrderModal(true);
-                activeOverlayMissionRef.current = null;
-            }
-        });
-        return () => {
-            listener.remove();
-        };
-    }, []);
 
     useEffect(() => {
         if (!isAuthenticated || !isOnline) return;
@@ -1304,8 +1252,7 @@ function MainApp() {
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [audioBlocked, setAudioBlocked] = useState(false);
-    const [overlayBlocked, setOverlayBlocked] = useState(false);
-    const [overlayBannerDismissed, setOverlayBannerDismissed] = useState(false);
+
 
     // Verificar periodicamente se a permissão de sobreposição foi concedida
     useEffect(() => {
@@ -1329,33 +1276,7 @@ function MainApp() {
         return () => clearInterval(interval);
     }, []);
 
-    const openOverlaySettings = async () => {
-        if (Capacitor.getPlatform() !== 'android') {
-            toastError("Recurso disponível apenas em dispositivos Android.");
-            return;
-        }
 
-        try {
-            // Abre diretamente a tela de configurações de overlay via Capacitor App
-            const { granted } = await ForegroundService.checkManageOverlayPermission();
-            if (granted) {
-                setOverlayBlocked(false);
-                setOverlayBannerDismissed(false);
-                toastSuccess("A permissão de sobreposição já está ativa!");
-                return;
-            }
-            setOverlayBannerDismissed(false);
-            const result = await ForegroundService.requestManageOverlayPermission();
-            const grantedAfterRequest = result?.granted === true;
-            setOverlayBlocked(!grantedAfterRequest);
-            if (grantedAfterRequest) {
-                toastSuccess("Permissão de sobreposição ativada com sucesso!");
-            }
-        } catch (e) {
-            console.warn('[OVERLAY] Não foi possível abrir configurações:', e);
-            toastError("Não foi possível abrir as configurações de sobreposição.");
-        }
-    };
 
     // Efeito para checar se o áudio está bloqueado
     useEffect(() => {
@@ -8630,35 +8551,8 @@ function MainApp() {
                     </div>
                 </motion.div>
             )}
-            {/* Banner de Permissão de Sobreposição */}
-            {overlayBlocked && !overlayBannerDismissed && Capacitor.getPlatform() === 'android' && (
-                <motion.div 
-                    initial={{ y: -100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    onClick={openOverlaySettings}
-                    className="fixed top-0 left-0 right-0 z-[200] bg-orange-400/95 backdrop-blur-xl px-4 py-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform shadow-[0_8px_30px_rgba(0,0,0,0.1)]"
-                    style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-full bg-white/40 flex items-center justify-center shrink-0">
-                            <Icon name="visibility" size={18} className="text-zinc-950" />
-                        </div>
-                        <div>
-                            <p className="text-zinc-950 text-[11px] font-black leading-tight uppercase tracking-wide">⚠️ Ative: Sobrepor a outros apps</p>
-                            <p className="text-zinc-900/80 text-[9px] font-bold mt-0.5">Toque aqui → ative o toggle → volte ao app</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-zinc-950 text-[9px] font-black uppercase tracking-widest bg-white/40 px-2 py-1 rounded-full">Ativar</span>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setOverlayBannerDismissed(true); }}
-                            className="size-6 rounded-full bg-zinc-950/10 flex items-center justify-center"
-                        >
-                            <Icon name="close" size={12} className="text-zinc-950/60" />
-                        </button>
-                    </div>
-                </motion.div>
-            )}
+
+
             <AnimatePresence mode="wait">
                 {!isAuthenticated && (
                     <div key="auth-container" className="h-full">
