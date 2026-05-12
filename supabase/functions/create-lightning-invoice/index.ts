@@ -1,27 +1,27 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = { 
-  'Access-Control-Allow-Origin': '*', 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  
+
   try {
     const rawBody = await req.json()
     console.log('[LN] Recebido body:', JSON.stringify(rawBody))
-    
+
     const { amount, orderId, memo } = rawBody
     const amountNum = Number(amount)
 
     if (!amountNum || !orderId) {
       console.error('[LN] Erro: amount ou orderId ausentes ou inválidos:', { amount, orderId })
-      return new Response(JSON.stringify({ error: 'amount e orderId obrigatorios e devem ser validos' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'amount e orderId obrigatorios e devem ser validos' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -32,10 +32,10 @@ serve(async (req) => {
     }
 
     // Valores iniciais e fallbacks
-    let btcPriceBRL = 350000 
-    let usdPriceBRL = 5.20    
-    let btcPriceUSD = 65000   
-    
+    let btcPriceBRL = 350000
+    let usdPriceBRL = 5.20
+    let btcPriceUSD = 65000
+
     const coinbaseHeaders = { 'User-Agent': 'IziDelivery-EdgeFunction/1.0' }
 
     // Tentar obter preços atualizados da Coinbase
@@ -51,7 +51,7 @@ serve(async (req) => {
         const p = await btcRes.json()
         btcPriceBRL = parseFloat(p.data.amount) || btcPriceBRL
       }
-      
+
       if (usdRes.ok) {
         const u = await usdRes.json()
         usdPriceBRL = parseFloat(u.data.amount) || usdPriceBRL
@@ -72,28 +72,28 @@ serve(async (req) => {
 
     // OpenNode geralmente prefere USD para calcular sats internamente com precisão
     let amountUSD = Number(((amountNum / btcPriceBRL) * btcPriceUSD).toFixed(2))
-    
+
     // Garantir valor mínimo para OpenNode ($0.01)
     if (amountUSD < 0.01) amountUSD = 0.01
 
     console.log(`[LN] Calculado: R$ ${amountNum} -> $ ${amountUSD} USD -> ${finalSatoshis} sats`)
 
-    const openNodePayload = { 
-      amount: amountUSD, 
-      currency: 'USD', 
-      order_id: orderId, 
-      description: memo || `IziDelivery #${orderId.slice(0,8).toUpperCase()}`, 
-      callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/lightning-webhook`, 
-      auto_settle: false 
+    const openNodePayload = {
+      amount: amountUSD,
+      currency: 'USD',
+      order_id: orderId,
+      description: memo || `IziDelivery #${orderId.slice(0, 8).toUpperCase()}`,
+      callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/lightning-webhook`,
+      auto_settle: false
     }
-    
+
     console.log('[LN] Chamando OpenNode...')
 
     const chargeRes = await fetch('https://api.opennode.com/v1/charges', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': apiKey 
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': apiKey
       },
       body: JSON.stringify(openNodePayload),
     })
@@ -106,7 +106,7 @@ serve(async (req) => {
 
     const responseJson = await chargeRes.json()
     const charge = responseJson.data
-    
+
     if (!charge || !charge.id) {
       console.error('[LN] Resposta OpenNode malformada:', JSON.stringify(responseJson))
       throw new Error('Resposta do provedor de pagamento inválida.')
@@ -116,15 +116,15 @@ serve(async (req) => {
 
     // Conectar ao Supabase para salvar o ID da cobrança
     const db = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '', 
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', 
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
     const { error: updateError } = await db.from('orders_delivery')
-      .update({ 
-        payment_intent_id: charge.id, 
-        payment_status: 'pending' 
+      .update({
+        payment_intent_id: charge.id,
+        payment_status: 'pending'
       })
       .eq('id', orderId)
 
@@ -132,29 +132,29 @@ serve(async (req) => {
       console.error('[LN] Erro ao atualizar pedido no banco:', updateError)
     }
 
-    const responseData = { 
-      chargeId: charge.id, 
-      payment_request: charge.lightning_invoice?.payreq, 
-      hosted_checkout: charge.hosted_checkout_url, 
-      satoshis: finalSatoshis, 
-      amount_brl: amountNum, 
-      btc_price_brl: btcPriceBRL 
+    const responseData = {
+      chargeId: charge.id,
+      payment_request: charge.lightning_invoice?.payreq,
+      hosted_checkout: charge.hosted_checkout_url,
+      satoshis: finalSatoshis,
+      amount_brl: amountNum,
+      btc_price_brl: btcPriceBRL
     }
 
-    return new Response(JSON.stringify(responseData), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    return new Response(JSON.stringify(responseData), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (err: any) {
     console.error('[LN] Erro Crítico:', err.message)
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: err.message,
       stack: err.stack, // Apenas para debug interno, Supabase logs capturam isso
       details: 'Consulte os logs da função para mais informações.'
-    }), { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
