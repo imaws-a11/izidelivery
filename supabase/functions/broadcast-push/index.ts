@@ -140,6 +140,50 @@ serve(async (req) => {
     const response = await admin.messaging().sendEachForMulticast(payload)
     console.log(`[broadcast-push] Resultado: ${response.successCount} sucessos, ${response.failureCount} falhas.`)
 
+    // PERSISTÊNCIA NO HISTÓRICO EM LOTE (IN-APP SYNC)
+    try {
+      const historyRows: any[] = [];
+      
+      if (target_type === 'drivers' || target_type === 'all') {
+        const { data: dData } = await supabase.from('drivers_delivery').select('id').not('push_token', 'is', null);
+        if (dData) {
+          dData.forEach((d: any) => historyRows.push({
+            user_id: d.id,
+            app_type: 'driver',
+            title: title || 'Notificação Izi',
+            body: message || '',
+            data: data || { context: 'broadcast' },
+            status: 'pending'
+          }));
+        }
+      }
+
+      if (target_type === 'users' || target_type === 'all') {
+        const { data: uData } = await supabase.from('users_delivery').select('id').not('push_token', 'is', null);
+        if (uData) {
+          uData.forEach((u: any) => historyRows.push({
+            user_id: u.id,
+            app_type: 'customer',
+            title: title || 'Notificação Izi',
+            body: message || '',
+            data: data || { context: 'broadcast' },
+            status: 'pending'
+          }));
+        }
+      }
+
+      if (historyRows.length > 0) {
+        // Inserir em chunks de 500 para evitar limites do Supabase/Postgres
+        for (let i = 0; i < historyRows.length; i += 500) {
+          const chunk = historyRows.slice(i, i + 500);
+          await supabase.from('notifications_delivery').insert(chunk);
+        }
+        console.log(`[broadcast-push] Histórico persistido para ${historyRows.length} usuários.`);
+      }
+    } catch (dbErr) {
+      console.error('[broadcast-push] Erro ao persistir histórico:', dbErr.message);
+    }
+
     return new Response(
       JSON.stringify({ success: true, sent: response.successCount, failed: response.failureCount }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

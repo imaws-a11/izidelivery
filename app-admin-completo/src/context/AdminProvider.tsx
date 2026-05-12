@@ -625,7 +625,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: driverData } = await supabase.from('drivers_delivery').select('id').eq('is_deleted', false);
       let orderQuery = supabase
         .from('orders_delivery')
-        .select('total_price, status, merchant_id, created_at, service_type');
+        .select('total_price, status, merchant_id, merchant_name, created_at, service_type, delivery_fee, service_fee, items, route_distance_km');
       
       // FILTRAGEM DE SEGURANÇA: Se não for ADMIN mestre, forçamos a filtragem por merchant_id no BANCO
       if (userRole === 'merchant' && merchantProfile?.id) {
@@ -708,7 +708,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .from('drivers_delivery')
         .select('*')
         .eq('is_deleted', false)
-        .is('merchant_id', null)
         .order('is_online', { ascending: false })
         .order('name', { ascending: true });
       if (data) {

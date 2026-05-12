@@ -48,7 +48,7 @@ serve(async (req) => {
 
     if (driver_id) {
       if (driver_id === 'all') {
-        let query = supabase.from('drivers_delivery').select('push_token').not('push_token', 'is', null);
+        let query = supabase.from('drivers_delivery').select('id, push_token').not('push_token', 'is', null);
 
         // Lógica de Despacho Exclusivo
         if (merchant_id) {
@@ -88,6 +88,26 @@ serve(async (req) => {
         };
         const response = await admin.messaging().sendEachForMulticast(message);
         console.log(`[PUSH] Enviado para ${response.successCount} motoboys.`);
+
+        // PERSISTÊNCIA NO HISTÓRICO EM LOTE
+        try {
+          const historyRows = driversData.map((d: any) => ({
+            user_id: d.id, // Supondo que driversData tenha o campo id (preciso verificar se selecionei id)
+            app_type: 'driver',
+            title: title || '🛵 Nova Entrega IZI!',
+            body: body || 'Um novo pedido aguarda um entregador na região. Seja rápido!',
+            data: data || { context: "geral" },
+            status: 'pending'
+          }));
+
+          if (historyRows.length > 0) {
+            await supabase.from('notifications_delivery').insert(historyRows);
+            console.log(`[HISTORY] Histórico persistido para ${historyRows.length} motoboys.`);
+          }
+        } catch (dbErr) {
+          console.error("[HISTORY] Erro ao persistir histórico global:", dbErr.message);
+        }
+
         return new Response(JSON.stringify({ success: true, sent: response.successCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
@@ -115,6 +135,24 @@ serve(async (req) => {
     };
 
     const response = await admin.messaging().send(message);
+
+    // PERSISTÊNCIA NO HISTÓRICO (IN-APP SYNC)
+    try {
+      const app_type = driver_id ? 'driver' : user_id ? 'customer' : 'merchant';
+      const target_uid = driver_id || user_id || merchant_id;
+
+      await supabase.from('notifications_delivery').insert({
+        user_id: target_uid,
+        app_type: app_type,
+        title: title || 'Izi Delivery',
+        body: body || 'Você tem uma nova atualização.',
+        data: data || { context: "geral" },
+        status: 'pending'
+      });
+      console.log(`[HISTORY] Notificação persistida para ${target_uid} (${app_type})`);
+    } catch (dbErr) {
+      console.error("[HISTORY] Erro ao persistir histórico:", dbErr.message);
+    }
 
     return new Response(
       JSON.stringify({ success: true, messageId: response }),

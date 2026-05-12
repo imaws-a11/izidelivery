@@ -249,6 +249,7 @@ export default function App() {
                <>
                   <NavTab id="dashboard" icon="dashboard" label="Home" />
                    <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
+                   <NavTab id="tracking" icon="map" label="Rastreio" />
                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
                   <NavTab id="partners" icon="handshake" label="Parceiros Izi" />
                   <NavTab id="categories" icon="category" label="Taxonomia" />
@@ -283,7 +284,7 @@ export default function App() {
         </nav>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark relative scrollbar-hide p-8">
+        <main className={`flex-1 ${activeTab === 'tracking' ? 'overflow-hidden p-0' : 'overflow-y-auto p-8'} bg-background-light dark:bg-background-dark relative scrollbar-hide`}>
           <AnimatePresence mode="wait">
             <motion.div 
               key={activeTab}

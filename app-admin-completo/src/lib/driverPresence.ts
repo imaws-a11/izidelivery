@@ -1,6 +1,6 @@
 import type { Driver } from './types';
 
-export const DRIVER_ONLINE_GRACE_MS = 15_000;
+export const DRIVER_ONLINE_GRACE_MS = 300_000; // 5 minutos de tolerância
 
 export const isDriverOnline = (driver?: Partial<Driver> | null, now = Date.now()) => {
   if (!driver || !driver.is_online || driver.is_deleted) return false;
