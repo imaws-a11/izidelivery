@@ -131,6 +131,7 @@ export interface Merchant {
 export interface MerchantProfile {
   id?: string;
   merchant_id?: string;
+  email?: string;
   store_name?: string;
   store_logo?: string;
   store_description?: string;

@@ -182,7 +182,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       iziCashbackEarned,
       isIziBlackMembership,
       walletTransactions,
-      walletTransactions,
       isLoadingWallet,
       fetchWalletData,
       setUserXP,

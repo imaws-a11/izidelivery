@@ -308,7 +308,7 @@ export default function App() {
               {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'merchant_profile' && userRole === 'merchant' && <MerchantProfileTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyDriversTab />}
-              {activeTab === 'merchant_studio' && <MerchantStudio />}
+
               {activeTab === 'establishment_types' && <TaxonomyCenter initialMode="global" />}
               {(activeTab === 'finance' && userRole === 'merchant') && <MyStudioTab initialTab="financial" />}
               {(activeTab === 'my_studio' && userRole === 'merchant') && <MyStudioTab initialTab="info" />}
@@ -331,7 +331,7 @@ export default function App() {
             <MerchantStudio />
           </div>
         )}
-        {editType === 'merchant' && (
+        {editType === 'merchant' && userRole === 'admin' && (
           <div className="fixed inset-0 z-[120]">
             <MerchantStudio />
           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { AddressSearchInput } from './AddressSearchInput';
@@ -17,6 +17,21 @@ export default function MerchantProfileTab() {
     longitude: merchantProfile?.longitude || 0,
     pix_key: merchantProfile?.bank_info?.pix_key || ''
   });
+
+  useEffect(() => {
+    if (merchantProfile) {
+      setFormData({
+        store_name: merchantProfile.store_name || '',
+        email: merchantProfile.email || '',
+        document: merchantProfile.document || '',
+        store_phone: merchantProfile.store_phone || '',
+        store_address: merchantProfile.store_address || '',
+        latitude: merchantProfile.latitude || 0,
+        longitude: merchantProfile.longitude || 0,
+        pix_key: merchantProfile.bank_info?.pix_key || ''
+      });
+    }
+  }, [merchantProfile]);
 
   const handleSave = async () => {
     // Mesclar a chave pix no objeto bank_info

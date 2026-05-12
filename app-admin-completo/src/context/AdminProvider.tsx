@@ -521,6 +521,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const profile: MerchantProfile = {
             id: data.id,
             merchant_id: data.id,
+            email: data.email || '',
             store_name: data.store_name || 'Loja',
             store_logo: data.store_logo || '',
             store_description: data.store_description || '',
@@ -542,6 +543,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             food_category: Array.isArray(data.food_category) ? data.food_category : [data.food_category || 'all'],
             payment_enabled: data.payment_enabled ?? true,
             document: data.document || '',
+            bank_info: data.bank_info || {},
             subscription_plan: data.subscription_plan || 'market',
             metadata: data.metadata || {}
           };
@@ -551,8 +553,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setActiveTab(prev => {
             const isAvulso = profile.subscription_plan === 'avulso';
             const validMerchantTabs = isAvulso 
-              ? ['standalone_delivery', 'order_center', 'my_drivers', 'financial', 'settings', 'support']
-              : ['orders', 'my_studio', 'my_drivers', 'promotions', 'financial', 'settings', 'support', 'dashboard'];
+              ? ['dashboard', 'standalone_delivery', 'financial', 'merchant_profile', 'settings', 'support', 'order_center']
+              : ['orders', 'my_studio', 'my_drivers', 'promotions', 'financial', 'settings', 'support', 'dashboard', 'merchant_profile', 'order_center'];
             
             if (!prev || !validMerchantTabs.includes(prev)) {
               return isAvulso ? 'standalone_delivery' : 'orders';
@@ -2244,6 +2246,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { error: upsertError } = await supabase.from('admin_users').upsert(merchantData);
       
       if (upsertError) throw upsertError;
+
+      // Se for um parceiro do plano "avulso", sincronizamos com a tabela partner_stores_delivery
+      if (merchantData.subscription_plan === 'avulso') {
+        const partnerData = {
+          id: merchantData.id,
+          name: merchantData.store_name,
+          email: merchantData.email,
+          phone: merchantData.store_phone,
+          address: merchantData.store_address,
+          latitude: merchantData.latitude,
+          longitude: merchantData.longitude,
+          bank_info: merchantData.bank_info,
+          logo_url: merchantData.store_logo,
+          banner_url: merchantData.store_banner,
+          subscription_plan: 'avulso',
+          is_active: merchantData.is_active
+        };
+        await supabase.from('partner_stores_delivery').upsert(partnerData);
+      }
       
       await showConfirm({
         title: 'Sucesso!',
@@ -2870,6 +2891,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .eq('id', merchantProfile.id);
 
       if (error) throw error;
+
+      // Se for um parceiro do plano "avulso", atualizamos também a tabela de parceiros de entrega
+      if (merchantProfile.subscription_plan === 'avulso') {
+        const partnerUpdates: any = {
+          name: data.store_name,
+          email: data.email,
+          phone: data.store_phone,
+          address: data.store_address,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          bank_info: data.bank_info,
+          logo_url: data.store_logo,
+          banner_url: data.store_banner
+        };
+
+        // Remover campos que podem estar indefinidos ou que não existem na tabela partner_stores_delivery
+        Object.keys(partnerUpdates).forEach(key => partnerUpdates[key] === undefined && delete partnerUpdates[key]);
+
+        await supabase
+          .from('partner_stores_delivery')
+          .update(partnerUpdates)
+          .eq('id', merchantProfile.id);
+      }
 
       const updatedProfile = { ...merchantProfile, ...data };
       setMerchantProfile(updatedProfile);
