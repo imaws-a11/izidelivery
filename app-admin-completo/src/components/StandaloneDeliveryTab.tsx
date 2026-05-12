@@ -121,13 +121,12 @@ export default function StandaloneDeliveryTab() {
         user_id: null, // Entregas avulsas não obrigatoriamente possuem um "usuário/cliente" cadastrado na tabela users_delivery
         merchant_id: merchantProfile?.id,
         merchant_name: merchantProfile?.store_name,
-        store_name: merchantProfile?.store_name,
         service_type: 'entrega_avulsa',
         status: 'waiting_driver', // Cai direto na busca de entregador
         pickup_address: merchantProfile?.store_address || '',
-        pickup_lat: merchantProfile?.latitude || null,
-        pickup_lng: merchantProfile?.longitude || null,
         delivery_address: deliveryAddress,
+        delivery_lat: merchantProfile?.latitude || null,
+        delivery_lng: merchantProfile?.longitude || null,
         total_price: estimatedFee, // O valor do "pedido" aqui é apenas a taxa de entrega
         delivery_fee: estimatedFee,
         payment_method: 'entrega_avulsa', // Identificador interno

@@ -266,25 +266,29 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
 
   if (!isLoaded) return <div className="w-full h-full bg-white animate-pulse" />;
 
-  const mapCenter = routeInfo?.start || vPickup || vDelivery || { lat: -19.9167, lng: -43.9345 };
+  const mapCenter = useMemo(() => routeInfo?.start || vPickup || vDelivery || { lat: -19.9167, lng: -43.9345 }, [routeInfo?.start?.lat, routeInfo?.start?.lng, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng]);
+
+  const mapOpts = useMemo(() => ({
+    disableDefaultUI: true,
+    styles: mapStyle,
+    backgroundColor: '#ffffff',
+    gestureHandling: 'greedy' as const,
+    zoomControl: false,
+    streetViewControl: false,
+    mapTypeControl: false,
+    fullscreenControl: false
+  }), []);
+
+  const containerStyle = useMemo(() => ({ width: '100%', height: '100%' }), []);
 
   return (
     <div className="w-full h-full relative">
       <GoogleMap
-        mapContainerStyle={{ width: '100%', height: '100%' }}
+        mapContainerStyle={containerStyle}
         center={mapCenter}
         zoom={routePolyline ? 14 : 13}
         onLoad={setMap}
-        options={{
-          disableDefaultUI: true,
-          styles: mapStyle,
-          backgroundColor: '#ffffff',
-          gestureHandling: 'greedy',
-          zoomControl: false,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false
-        }}
+        options={mapOpts}
       >
       {routePolyline && (
         <Polyline 
@@ -2007,7 +2011,7 @@ function MainApp() {
     // Salva a aba ativa para persistência no F5
     // Overlays não são salvos para evitar tela branca no reload
     useEffect(() => {
-        const overlaytabs: View[] = ['profile', 'notifications'];
+        const overlaytabs: View[] = ['profile', 'notifications', 'active_mission'];
         if (!overlaytabs.includes(activeTab)) {
             localStorage.setItem('izi_driver_active_tab', activeTab);
         }
@@ -2646,7 +2650,7 @@ function MainApp() {
             setOrders([]);
             return;
         }
-        if (!isOnline) {
+        if (!isOnlineRef.current) {
             setOrders([]);
             return;
         }
@@ -2747,14 +2751,17 @@ function MainApp() {
         } finally {
             setIsSyncing(false);
         }
-    }, [isOnline, driverId]);
+    }, [driverId]);
+
+    const fetchOrdersRef = useRef(fetchOrders);
+    useEffect(() => { fetchOrdersRef.current = fetchOrders; }, [fetchOrders]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
-        fetchOrders();
-        const interval = setInterval(fetchOrders, 5000);
+        fetchOrdersRef.current();
+        const interval = setInterval(() => fetchOrdersRef.current(), 5000);
         return () => clearInterval(interval);
-    }, [isAuthenticated, driverId, fetchOrders]);
+    }, [isAuthenticated, driverId]);
 
 
         
@@ -3292,7 +3299,7 @@ function MainApp() {
 
         try {
             await Promise.all([
-                fetchOrders(),
+                fetchOrdersRef.current(),
                 refreshFinanceData()
             ]);
 
@@ -3378,11 +3385,7 @@ function MainApp() {
                 localStorage.removeItem('Izi_active_mission');
             }
 
-            if (isSyncing) {
-                if (formattedMissions.length > 0) {
-                    toastSuccess(`${formattedMissions.length} missões ativas encontradas!`);
-                }
-            }
+                    // Toast removido para evitar spam infinito durante syncs automáticos
 
         } catch (err: any) {
             console.error("[SYNC-MISSION] Erro:", err);
@@ -3395,11 +3398,15 @@ function MainApp() {
             setIsSyncingMission(false);
             setIsSyncing(false);
         }
-    }, [driverId, isAuthenticated, fetchOrders, refreshFinanceData, fetchFromDB]);
+    }, [driverId, isAuthenticated, fetchFromDB]);
 
+    const hasSyncedMissionOnce = useRef(false);
     useEffect(() => {
+        if (!driverId || !isAuthenticated) return;
+        if (hasSyncedMissionOnce.current) return;
+        hasSyncedMissionOnce.current = true;
         syncMissionWithDB();
-    }, [driverId, isAuthenticated, syncMissionWithDB]);
+    }, [driverId, isAuthenticated]);
 
     const handleUpdateStatus = async (newStatus: string) => {
         if (!activeMission) return;
