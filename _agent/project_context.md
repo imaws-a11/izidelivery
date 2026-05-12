@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Resumo Executivo)
-Atualizado: 2026-05-11
+Atualizado: 2026-05-12
 
 ---
 
@@ -61,6 +61,10 @@ Atualizado: 2026-05-11
   - **Fetch Nativo**: O Radar DEVE usar `fetch` nativo com o REST API do Supabase em vez da biblioteca client para evitar travamentos (hanging promises) em redes instáveis ou no APK.
   - **Blindagem Nativa**: Todas as chamadas a APIs de navegador (como `Notification`) ou plugins (como `ForegroundService`) devem ser protegidas com `typeof ... !== 'undefined'` e `Capacitor.isNativePlatform()` para evitar crashes (ReferenceErrors).
   - **Persistência Online**: O status `is_online` no boot deve priorizar o `localStorage` para evitar que o refresh da página "derrube" o entregador indevidamente.
+  - **Estabilidade de UI**: 
+    - **Anti-Loop**: Dependências cíclicas em `useEffect` (como `exclusiveMerchantIds`) devem ser evitadas para prevenir erros de "Maximum update depth".
+    - **Resposta Instantânea**: Modais de perfil ("Meus Dados") devem abrir imediatamente ao clique, preenchendo dados da sessão (Auth) como fallback enquanto o banco de dados é consultado.
+    - **Aceite Resiliente**: O aceite de pedidos deve garantir a parada incondicional de sons (`stopIziSounds`) e o retorno ao estado anterior em caso de falha no banco.
 - **Remoção de Legado**: Sempre excluir versões incorretas/legadas de funções ao realizar correções (Política de Zero Lixo).
 
 ---
