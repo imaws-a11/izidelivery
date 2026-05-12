@@ -826,13 +826,7 @@ function MainApp() {
     const [orders, setOrders] = useState<Order[]>([]);
     
     // Estatísticas de rejeição para lógica de loop inteligente (2x = cooldown 30s, 4x = bloqueio permanente)
-    const [declinedStats, setDeclinedStats] = useState<Record<string, { count: number, lastDecline: number, isPermanent: boolean }>>(() => {
-        try {
-            return JSON.parse(localStorage.getItem('Izi_declined_stats') || '{}');
-        } catch {
-            return {};
-        }
-    });
+    const [declinedStats, setDeclinedStats] = useState<Record<string, { count: number, lastDecline: number, isPermanent: boolean }>>({});
 
     // Sincronizar stats com localStorage
     useEffect(() => {
@@ -1029,10 +1023,10 @@ function MainApp() {
     const [view, setView] = useState<View>('dashboard');
     const [activeTab, setActiveTab] = useState<View>(() => {
         const saved = localStorage.getItem('izi_driver_active_tab') as View;
-        // Abas que são overlays (fixos full-screen) NÃO devem ser restauradas no refresh
-        // para evitar telas sobrepostas/brancas ao recarregar o app
-        const overlaytabs: View[] = ['profile', 'notifications'];
-        const validTabs: View[] = ['dashboard', 'active_mission', 'history', 'earnings', 'missions', 'dedicated', 'scheduled'];
+        // Abas que são overlays (fixos full-screen) ou dependem de estado dinâmico
+        // NÃO devem ser restauradas no refresh para evitar telas vazias/sobrepostas
+        const overlaytabs: View[] = ['profile', 'notifications', 'active_mission'];
+        const validTabs: View[] = ['dashboard', 'history', 'earnings', 'missions', 'dedicated', 'scheduled'];
         if (overlaytabs.includes(saved)) return 'dashboard';
         return validTabs.includes(saved) ? saved : 'dashboard';
     });
@@ -1098,36 +1092,24 @@ function MainApp() {
     }, [activeTab]);
 
     const [isOnline, setIsOnline] = useState(() => localStorage.getItem('izi_driver_online') === 'true');
-    const isOnlineRef = useRef(false);
+    const isOnlineRef = useRef(localStorage.getItem('izi_driver_online') === 'true');
     useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
     // Vigilante de Som (Padrão Lojista - Alta Confiabilidade)
     const heardOrderIds = useRef<Set<string>>(new Set());
     const isFirstLoad = useRef(true);
 
-    // Filtro de pedidos visíveis/auditíveis (respeitando cooldown e bloqueio permanente)
     const [now, setNow] = useState(Date.now());
     useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 5000); // Atualiza a cada 5s para checar fim de cooldown
+        const timer = setInterval(() => setNow(Date.now()), 10000); 
         return () => clearInterval(timer);
     }, []);
 
     const visibleOrders = useMemo(() => {
-        return orders.filter(o => {
-            const id = o.realId || o.id;
-            const stats = declinedStats[id];
-            if (!stats) return true;
-            if (stats.isPermanent) return false;
-            
-            // Se tiver 2 rejeições, entra em cooldown de 30 segundos
-            if (stats.count === 2) {
-                const cooldownEnd = stats.lastDecline + 30000;
-                return now > cooldownEnd;
-            }
-
-            return true;
-        });
-    }, [orders, declinedStats, now]);
+        // Simplificação Radical: Se está na lista de ordens, é visível.
+        // Removemos qualquer lógica de bloqueio por rejeição para facilitar testes.
+        return orders;
+    }, [orders]);
 
     const announcedOrderIds = useRef<Set<string>>(new Set());
 
@@ -1252,30 +1234,6 @@ function MainApp() {
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [audioBlocked, setAudioBlocked] = useState(false);
-
-
-    // Verificar periodicamente se a permissão de sobreposição foi concedida
-    useEffect(() => {
-        if (Capacitor.getPlatform() !== 'android') return;
-        const checkOverlay = async () => {
-            try {
-                // Se o plugin não existir, usa o estado padrão (precisa verificar via Native)
-                // Fallback: se não foi granted ainda, mostra banner
-                const granted = (await ForegroundService.checkManageOverlayPermission()).granted;
-                setOverlayBlocked(!granted);
-                if (granted) {
-                    setOverlayBannerDismissed(false);
-                }
-            } catch {
-                // Sem plugin nativo â€” verifica via flag no localStorage
-                setOverlayBlocked(true);
-            }
-        };
-        checkOverlay();
-        const interval = setInterval(checkOverlay, 5000);
-        return () => clearInterval(interval);
-    }, []);
-
 
 
     // Efeito para checar se o áudio está bloqueado
@@ -1991,22 +1949,20 @@ function MainApp() {
             const active = !!profile.is_active;
             setIsApproved(active);
             
-            // Sincroniza Status Online autoritativo do Banco
+            // Sincroniza Status Online: RESPEITA o LocalStorage primeiro para não derrubar o radar no refresh
+            const localWantsOnline = localStorage.getItem('izi_driver_online') === 'true';
             const onlineFromDB = !!profile.is_online;
-            setIsOnline(onlineFromDB);
-            localStorage.setItem('izi_driver_online', String(onlineFromDB));
-
-            if (profile.merchant_id) {
-                localStorage.setItem('izi_driver_merchant_id', String(profile.merchant_id));
-            } else {
-                localStorage.removeItem('izi_driver_merchant_id');
-            }
-            localStorage.setItem('izi_driver_approved', active.toString());
-
+            
+            // Se o motorista não for ativo, forçamos offline
             if (!active) {
                 setIsOnline(false);
                 localStorage.setItem('izi_driver_online', 'false');
+            } else {
+                // Mantém o estado que o motorista já estava (Local > DB no Boot)
+                setIsOnline(localWantsOnline);
             }
+
+            localStorage.setItem('izi_driver_approved', active.toString());
 
             refreshFinanceData();
             syncMissionWithDB();
@@ -2689,19 +2645,14 @@ function MainApp() {
     }, [isAuthenticated, fetchFromDB]);
 
     const handleDeclineOrder = (orderId: string) => {
-        try {
-            const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-            declinedMap[orderId] = Date.now();
-            localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
-            
-            // Remove do estado local imediatamente para feedback instantâneo
+        // Agora unificamos com o handleDecline que tem cooldown e inteligência
+        const orderToDecline = orders.find(o => (o.realId || o.id) === orderId);
+        if (orderToDecline) {
+            handleDecline(orderToDecline);
+        } else {
+            // Fallback caso o objeto do pedido não seja encontrado (id puro)
             setOrders(prev => prev.filter(o => (o.realId || o.id) !== orderId));
-            
-            // Parar o som ao recusar
             stopIziSounds();
-            
-            toastSuccess('Missão ocultada com sucesso.');
-        } catch (e) {
         }
     };
 
@@ -2711,45 +2662,45 @@ function MainApp() {
             setOrders([]);
             return;
         }
-        if (!isOnlineRef.current) {
+        if (!isOnline) {
+            console.log('%c[RADAR] Offline. Ignorando busca.', 'color: #ff0000');
             setOrders([]);
             return;
         }
         setIsSyncing(true);
         try {
-            // Buscar pedidos e lojistas exclusivos em paralelo usando o cliente oficial
+            console.log('%c[RADAR] Buscando pedidos (Fetch Nativo)...', 'color: #ffd400');
+            
+            const sUrl = import.meta.env.VITE_SUPABASE_URL;
+            const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            const token = await getSecureToken();
+
+            // Usando Promise.all com Fetch Nativo para máxima performance e zero travamento
             const [ordersRes, exclusiveRes] = await Promise.all([
-                supabase.from('orders_delivery')
-                    .select('*')
-                    .not('status', 'in', '(concluido,cancelado,finalizado,entregue)')
-                    .order('created_at', { ascending: false })
-                    .limit(50),
-                supabase.from('admin_users')
-                    .select('id')
-                    .eq('dispatch_priority', 'exclusive'),
-                new Promise(resolve => setTimeout(resolve, 600))
+                fetch(`${sUrl}/rest/v1/orders_delivery?status=not.in.(concluido,cancelado,finalizado,entregue)&select=*&order=created_at.desc&limit=50`, {
+                    headers: { 'apikey': sKey, 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${sUrl}/rest/v1/admin_users?dispatch_priority=eq.exclusive&select=id`, {
+                    headers: { 'apikey': sKey, 'Authorization': `Bearer ${token}` }
+                })
             ]);
 
-            if (ordersRes.error) {
-                console.error('[RADAR] Erro Supabase:', ordersRes.error.message, ordersRes.error.details);
-                if (ordersRes.error.message.includes('JWT')) {
-                    console.warn('[RADAR] Token expirado ou inválido. Verifique o login.');
-                }
-            }
-            const data = ordersRes.data || [];
-            const error = ordersRes.error;
+            if (!ordersRes.ok) throw new Error(`Erro Pedidos: ${ordersRes.status}`);
             
-            const exclusiveIds = (exclusiveRes?.data || []).map(m => m.id);
+            const data = await ordersRes.ok ? await ordersRes.json() : [];
+            const exclusiveData = exclusiveRes.ok ? await exclusiveRes.json() : [];
+            const exclusiveIds = exclusiveData.map((m: any) => m.id);
+            
             exclusiveMerchantIdsRef.current = exclusiveIds;
             setExclusiveMerchantIds(exclusiveIds);
             
-            const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+            const declinedMap: Record<string, number> = {}; // Limpo no boot
             const now = Date.now();
             const currentMission = activeMissionRef.current;
 
             const myAssignment = data.find((o: any) => 
                 o.driver_id && String(o.driver_id).trim() === String(driverId).trim() &&
-                !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
+                !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(String(o.status || '').toLowerCase())
             );
 
             if (myAssignment && (!currentMission || currentMission.realId !== myAssignment.id)) {
@@ -2768,30 +2719,27 @@ function MainApp() {
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             }
             const available = (data || []).filter((o: any) => {
-                const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted', 'confirmado', 'confirmed'];
-                const statusOk = o.status && actionableStatuses.includes(o.status);
-                const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
-                const notDeclined = !(now - (declinedMap[o.id] || 0) < 5000);
-                const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
-                const notScheduled = !o.scheduled_at || o.driver_id === driverId;
-                
-                // --- REGRA DE EXCLUSIVIDADE ---
-                // Regra 1: Pedido de lojista EXCLUSIVO → só o entregador vinculado a esse lojista pode ver
-                // Regra 2: Entregador exclusivo → NÃO é bloqueado de ver pedidos de lojistas globais
-                // Regra 3: Pedido de lojista GLOBAL → TODOS os entregadores podem ver
-                const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
-                const orderMerchantId = o.merchant_id ? String(o.merchant_id) : null;
-                const isOrderFromExclusiveMerchant = orderMerchantId && (exclusiveIds || []).includes(orderMerchantId);
-                
-                let merchantOk = true;
-                if (isOrderFromExclusiveMerchant) {
-                    // Pedido exclusivo: apenas o entregador vinculado a este lojista pode receber
-                    merchantOk = !!myMerchantId && myMerchantId === orderMerchantId;
-                }
-                // Se não for pedido exclusivo, merchantOk = true (todos recebem)
+                const rawStatus = String(o.status || '').toLowerCase();
+                const isClosed = ['concluido', 'cancelado', 'finalizado', 'entregue'].includes(rawStatus);
+                if (isClosed) return false;
 
-                return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled && merchantOk;
+                const isFinancial = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
+                if (isFinancial) return false;
+
+                const hasDriver = o.driver_id && String(o.driver_id).trim() !== '' && String(o.driver_id).trim() !== String(driverId).trim();
+                if (hasDriver) return false;
+
+                return true;
             });
+
+            console.log(`[RADAR] Busca concluída. Total no banco: ${data.length} | Aceitos no Radar: ${available.length}`);
+            if (data.length > 0 && available.length === 0) {
+                console.warn('[RADAR] Atenção: Existem pedidos no banco mas todos foram filtrados pela lógica acima!');
+            }
+
+            if (available.length > 0) {
+                console.log(`[RADAR] ${available.length} pedidos encontrados e filtrados com sucesso.`);
+            }
 
             if (!available) {
                 return;
@@ -2831,7 +2779,7 @@ function MainApp() {
         } finally {
             setIsSyncing(false);
         }
-    }, [isOnline, driverId, fetchFromDB, exclusiveMerchantIds]);
+    }, [isOnline, driverId, fetchFromDB, exclusiveMerchantIds, myApplications]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
@@ -3067,9 +3015,9 @@ function MainApp() {
     };
 
     const filteredOrders = useMemo(() => {
-        if (filter === 'all') return orders;
-        return orders.filter((o: any) => getCategory(o.type) === filter);
-    }, [filter, orders, normalizeServiceType]);
+        if (filter === 'all') return visibleOrders;
+        return visibleOrders.filter((o: any) => getCategory(o.type) === filter);
+    }, [filter, visibleOrders, normalizeServiceType]);
 
     const handleAccept = async (order: Order) => {
         if (isAccepting) return;
@@ -3489,8 +3437,6 @@ function MainApp() {
             if (isSyncing) {
                 if (formattedMissions.length > 0) {
                     toastSuccess(`${formattedMissions.length} missões ativas encontradas!`);
-                } else {
-                    toastSuccess("Sincronizado. Nenhuma missão ativa.");
                 }
             }
 
