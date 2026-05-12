@@ -1151,9 +1151,9 @@ function MainApp() {
                 playIziSound('driver', true);
             }
 
-            // 2. Notificação Nativa
+            // 2. Notificação Web Push (Apenas se disponível)
             const servicePreview = getServicePresentation(latest);
-            if (Notification.permission === 'granted') {
+            if (!Capacitor.isNativePlatform() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                 new Notification('🚀 Nova Missão Izi!', { 
                     body: `${servicePreview.headline} • ${servicePreview.pickupText || latest.pickup_address}`, 
                     icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
