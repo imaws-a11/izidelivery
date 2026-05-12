@@ -1654,16 +1654,46 @@ function WithdrawalRequestsSection() {
 
       if (txs && txs.length > 0) {
         const uids = [...new Set(txs.map((t: any) => t.user_id).filter(Boolean))];
-        const { data: drivers } = await supabase
-          .from('drivers_delivery')
-          .select('id, name, phone, bank_info')
-          .in('id', uids);
+        
+        // Buscar em Drivers e AdminUsers simultaneamente
+        const [ { data: drivers }, { data: admins } ] = await Promise.all([
+          supabase.from('drivers_delivery').select('id, name, phone, bank_info').in('id', uids),
+          supabase.from('admin_users').select('id, store_name, email, role, bank_info').in('id', uids)
+        ]);
 
         const mapped = txs.map((t: any) => {
           const driver = drivers?.find((d: any) => d.id === t.user_id);
+          const admin = admins?.find((a: any) => a.id === t.user_id);
+          
+          let entityInfo: any = null;
+          let typeLabel = 'Desconhecido';
+          let typeColor = 'bg-slate-100 text-slate-500';
+
+          if (driver) {
+            entityInfo = {
+              name: driver.name,
+              contact: driver.phone,
+              pix_key: driver.bank_info?.pix_key,
+              bank: driver.bank_info?.bank
+            };
+            typeLabel = 'Entregador';
+            typeColor = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+          } else if (admin) {
+            entityInfo = {
+              name: admin.store_name || admin.email,
+              contact: admin.email,
+              pix_key: admin.bank_info?.pix_key,
+              bank: admin.bank_info?.bank
+            };
+            typeLabel = admin.role === 'merchant' ? 'Lojista' : 'Parceiro';
+            typeColor = 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20';
+          }
+
           return {
             ...t,
-            user: driver ? { ...driver, pix_key: driver.bank_info?.pix_key } : null,
+            user: entityInfo,
+            typeLabel,
+            typeColor
           };
         });
         setRequests(mapped);
@@ -1682,6 +1712,10 @@ function WithdrawalRequestsSection() {
   }, [fetchRequests]);
 
   const handleProcessPayment = async (id: string) => {
+    if (!receiptFiles[id]) {
+      if (!window.confirm("Você está aprovando este saque sem anexar um comprovante. Deseja continuar?")) return;
+    }
+
     setProcessingId(id);
     try {
       let receiptUrl = '';
@@ -1724,94 +1758,130 @@ function WithdrawalRequestsSection() {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-10">
-      <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
-        <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary">payments</span>
-          Solicitações de Saque
-        </h4>
-        <button onClick={fetchRequests} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
+    <section className="space-y-6 mb-12">
+      <div className="flex items-center justify-between px-2">
+        <div>
+          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3 italic uppercase">
+            <span className="material-symbols-outlined text-primary font-fill">payments</span>
+            Fila de Liquidação Financeira
+          </h4>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            {requests.length} solicitações pendentes de análise e pagamento
+          </p>
+        </div>
+        <button 
+          onClick={fetchRequests} 
+          className="size-11 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm active:scale-90"
+        >
           <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
         </button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/50">
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Motorista</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Chave PIX</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ação</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-            {requests.map((r) => (
-              <tr key={r.id} className="hover:bg-primary/5 transition-colors">
-                <td className="px-8 py-6 text-xs font-bold text-slate-500 dark:text-slate-400">
-                  {new Date(r.created_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                </td>
-                <td className="px-8 py-6">
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300 line-clamp-1">{r.user?.name || 'Motorista'}</p>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{r.user?.phone || '—'}</span>
-                </td>
-                <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-slate-100">
-                  {r.user?.pix_key || 'Não cadastrada'}
-                </td>
-                <td className="px-8 py-6 text-sm font-black text-emerald-500">
-                  R$ {parseFloat(r.amount).toFixed(2).replace('.', ',')}
-                </td>
-                <td className="px-8 py-6 text-right">
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-100 dark:border-white/5 w-full max-w-[200px]">
-                      <span className="material-symbols-outlined text-slate-400 text-sm shrink-0">attach_file</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) setReceiptFiles(prev => ({ ...prev, [r.id]: f }));
-                        }}
-                        className="text-[8px] font-bold text-slate-500 w-full file:hidden cursor-pointer"
-                      />
-                      {receiptFiles[r.id] && (
-                        <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
-                      )}
+
+      {loading && requests.length === 0 ? (
+        <div className="py-20 flex flex-col items-center gap-4">
+          <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizando fila...</p>
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="bg-slate-50 dark:bg-slate-800/20 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[40px] py-20 flex flex-col items-center gap-3 opacity-60">
+          <span className="material-symbols-outlined text-5xl text-slate-300">verified_user</span>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tudo em dia! Nenhuma solicitação pendente.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {requests.map((r) => (
+            <motion.div 
+              key={r.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-[36px] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden group hover:border-primary/40 transition-all flex flex-col"
+            >
+              <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-start justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="flex flex-col gap-1.5">
+                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit ${r.typeColor}`}>
+                    {r.typeLabel}
+                  </span>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                    {new Date(r.created_at).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Valor do Saque</p>
+                  <h5 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter italic">
+                    R$ {parseFloat(r.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </h5>
+                </div>
+              </div>
+
+              <div className="p-6 flex-1 space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 border ${r.typeLabel === 'Entregador' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 'bg-indigo-50 text-indigo-500 border-indigo-100'}`}>
+                    <span className="material-symbols-outlined font-black">
+                      {r.typeLabel === 'Entregador' ? 'moped' : 'storefront'}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate">{r.user?.name || 'Titular Indisponível'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 truncate">{r.user?.contact || 'Sem contato'}</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Informação de Pagamento</span>
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">PIX Ativo</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-emerald-500 text-lg">qr_code_2</span>
+                    <p className="text-xs font-black text-slate-900 dark:text-white break-all select-all">{r.user?.pix_key || 'CHAVE NÃO INFORMADA'}</p>
+                  </div>
+                  {r.user?.bank && (
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-7 italic">{r.user.bank}</p>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-primary/40 cursor-pointer transition-all group/file relative overflow-hidden">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) setReceiptFiles(prev => ({ ...prev, [r.id]: f }));
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover/file:text-primary transition-colors">
+                      <span className="material-symbols-outlined text-sm">{receiptFiles[r.id] ? 'check_circle' : 'attach_file'}</span>
                     </div>
-                    <button
-                      disabled={processingId === r.id}
-                      onClick={() => handleProcessPayment(r.id)}
-                      className="h-9 px-5 rounded-2xl bg-primary text-slate-900 font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 w-full"
-                    >
-                      {processingId === r.id ? 'Enviando...' : 'Aprovar Saque'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!loading && requests.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-8 py-20 text-center">
-                  <div className="flex flex-col items-center gap-2 opacity-30">
-                    <span className="material-symbols-outlined text-4xl">inventory_2</span>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum saque pendente</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-            {loading && requests.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-8 py-20 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando...</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                    <div className="flex-1">
+                      <p className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                        {receiptFiles[r.id] ? receiptFiles[r.id].name : 'Anexar Comprovante'}
+                      </p>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase opacity-60">PDF, JPG ou PNG</p>
+                    </div>
+                  </label>
+
+                  <button
+                    disabled={processingId === r.id}
+                    onClick={() => handleProcessPayment(r.id)}
+                    className="w-full h-12 rounded-[20px] bg-primary text-slate-900 font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {processingId === r.id ? (
+                      <div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-sm">verified_user</span>
+                        Confirmar Pagamento
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
