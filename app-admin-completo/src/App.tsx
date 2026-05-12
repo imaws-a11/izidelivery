@@ -39,6 +39,7 @@ import StandaloneDeliveryTab from './components/StandaloneDeliveryTab';
 import MerchantProfileTab from './components/MerchantProfileTab';
 import WalletHistoryTab from './components/WalletHistoryTab';
 import GlobalOrderDetailsModal from './components/GlobalOrderDetailsModal';
+import LiveOrderTracking from './components/LiveOrderTracking';
 // import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
 
@@ -203,6 +204,7 @@ export default function App() {
                      <>
                        <NavTab id="dashboard" icon="dashboard" label="Métricas" />
                        <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
+                       <NavTab id="live_tracking" icon="monitoring" label="Rastreio" />
                        <NavTab id="my_studio" icon="inventory_2" label="Minha Loja" />
                        <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
                      </>
@@ -213,6 +215,7 @@ export default function App() {
                      <>
                        <NavTab id="dashboard" icon="dashboard" label="Métricas" />
                        <NavTab id="order_center" icon="local_shipping" label="Entregas" />
+                       <NavTab id="live_tracking" icon="monitoring" label="Rastreio" />
                        <NavTab id="my_studio" icon="inventory_2" label="Meu Ponto" />
                      </>
                    )}
@@ -222,6 +225,7 @@ export default function App() {
                      <>
                        <NavTab id="dashboard" icon="dashboard" label="Métricas" />
                        <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
+                       <NavTab id="live_tracking" icon="monitoring" label="Rastreio" />
                        <NavTab id="financial" icon="account_balance_wallet" label="Financeiro" />
                        <NavTab id="merchant_profile" icon="person" label="Perfil" />
                        <NavTab id="settings" icon="settings" label="Config" />
@@ -320,6 +324,7 @@ export default function App() {
               {activeTab === 'support' && <SupportTab />}
               {activeTab === 'notifications' && <NotificationsTab />}
               {activeTab === 'gamification' && <GamificationTab />}
+              {activeTab === 'live_tracking' && <LiveOrderTracking />}
             </motion.div>
           </AnimatePresence>
         </main>

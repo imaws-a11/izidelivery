@@ -1971,10 +1971,28 @@ function MainApp() {
             // Se o motorista não for ativo, forçamos offline
             if (!active) {
                 setIsOnline(false);
+                isOnlineRef.current = false;
                 localStorage.setItem('izi_driver_online', 'false');
             } else {
-                // Mantém o estado que o motorista já estava (Local > DB no Boot)
-                setIsOnline(localWantsOnline);
+                // Se tem missão ativa em cache, FORÇAR online para não perder acesso
+                const hasCachedMission = !!localStorage.getItem('Izi_active_mission');
+                const shouldBeOnline = localWantsOnline || hasCachedMission;
+                
+                setIsOnline(shouldBeOnline);
+                isOnlineRef.current = shouldBeOnline;
+                localStorage.setItem('izi_driver_online', shouldBeOnline.toString());
+                
+                // Se temos missão, garantimos a aba correta logo no boot
+                if (hasCachedMission && activeTab === 'dashboard') {
+                    setActiveTab('active_mission');
+                }
+                
+                // Se forçamos online por causa de missão ativa, atualiza o DB também
+                if (hasCachedMission && !localWantsOnline) {
+                    supabase.from('drivers_delivery').update({ is_online: true }).eq('id', userId).then(() => {
+                        console.log('[BOOT] Motorista forçado online por missão ativa em andamento.');
+                    });
+                }
             }
 
             localStorage.setItem('izi_driver_approved', active.toString());
@@ -2254,6 +2272,12 @@ function MainApp() {
 
     const handleToggleOnline = async () => {
         const nextState = !isOnline;
+        
+        // Bloqueio: Não permite ficar offline se houver missão ativa
+        if (!nextState && (activeMission || localStorage.getItem('Izi_active_mission'))) {
+            toastError("Você não pode ficar offline enquanto tiver uma missão em andamento!");
+            return;
+        }
 
         if (nextState && isApproved === false && isProfileLoaded) {
             setShowPendingApprovalModal(true);
@@ -2291,6 +2315,11 @@ function MainApp() {
                     ? { is_online: true, last_seen_at: new Date().toISOString() }
                     : { is_online: false };
                 await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
+                
+                // Se ficou online, força um sync imediato para recuperar missões
+                if (nextState) {
+                    syncMissionWithDB();
+                }
             } catch (e: any) {
             }
         }
@@ -2700,6 +2729,8 @@ function MainApp() {
                     pickup_lng: myAssignment.pickup_lng
                 };
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                setActiveMission(mission);
+                if (activeTab === 'dashboard') setActiveTab('active_mission');
             }
             const available = (data || []).filter((o: any) => {
                 const rawStatus = String(o.status || '').toLowerCase();
@@ -2708,6 +2739,10 @@ function MainApp() {
 
                 const isFinancial = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
                 if (isFinancial) return false;
+
+                // Se o pedido já está confirmado/aceito, ele não está mais disponível no radar global
+                const isAlreadyTaken = ['confirmado', 'confirmed', 'accepted', 'a_caminho_coleta', 'picking_up', 'delivering'].includes(rawStatus);
+                if (isAlreadyTaken) return false;
 
                 const hasDriver = o.driver_id && String(o.driver_id).trim() !== '' && String(o.driver_id).trim() !== String(driverId).trim();
                 if (hasDriver) return false;
@@ -2838,7 +2873,8 @@ function MainApp() {
                 }
 
                 // 2. GESTÃO DO RADAR (Pedidos disponíveis)
-                const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted', 'confirmado', 'confirmed'];
+                // Removemos 'confirmado' e 'accepted' dos actionableStatuses pois eles indicam que alguém já pegou
+                const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'];
                 const isAcceptable = o.status && actionableStatuses.includes(o.status);
 
                 if (!isAcceptable || (o.driver_id && String(o.driver_id).trim() !== dId)) {
@@ -3368,10 +3404,16 @@ function MainApp() {
             if (updatedSelectedMission) {
                 setActiveMission(updatedSelectedMission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(updatedSelectedMission));
+                if (activeTabRef.current === 'dashboard' || activeTabRef.current === 'missions') {
+                    setActiveTab('active_mission');
+                }
             } else if (formattedMissions.length === 1 && !currentActiveId) {
                 // Auto-seleciona se houver apenas uma missão e nada selecionado
                 setActiveMission(formattedMissions[0]);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(formattedMissions[0]));
+                if (activeTabRef.current === 'dashboard' || activeTabRef.current === 'missions') {
+                    setActiveTab('active_mission');
+                }
             } else if (currentActiveId && !updatedSelectedMission) {
                 // Se a missão selecionada não está mais ativa, limpa a seleção
                 setActiveMission(null);
@@ -7378,7 +7420,7 @@ function MainApp() {
             // Se tem missões ativas no array, mostra os cards de seleção
             if (activeMissions.length > 0) {
                 return (
-                    <motion.div key="mission-selector" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-zinc-50 pt-14 pb-36 px-4 font-['Plus_Jakarta_Sans']">
+                    <motion.div key="mission-selector" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col bg-zinc-50 pt-14 pb-36 px-4 font-['Plus_Jakarta_Sans'] overflow-y-auto">
                         <div className="flex items-center gap-3 mb-6">
                             <button onClick={() => setActiveTab('dashboard')} className="size-10 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center">
                                 <Icon name="arrow_back" size={20} className="text-zinc-400" />
@@ -7447,7 +7489,7 @@ function MainApp() {
 
             // Sem missões — tela vazia
             return (
-                <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
+                <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans'] bg-zinc-50">
                     <div className="size-28 rounded-[45px] bg-white border border-zinc-100 flex items-center justify-center mb-8 shadow-[0_20px_40px_rgba(0,0,0,0.03)]">
                         <Icon name="route" size={48} className="text-zinc-300" />
                     </div>
@@ -7556,11 +7598,11 @@ function MainApp() {
                 key="active-mission-populated"
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
-                className="fixed inset-0 z-[100] bg-zinc-50 flex flex-col overflow-hidden text-zinc-950 font-['Plus_Jakarta_Sans']"
+                className="h-full flex flex-col overflow-hidden text-zinc-950 font-['Plus_Jakarta_Sans'] relative"
             >
                 
-                {/* 1. MAP SECTION (Full Height) */}
-                <div className="absolute top-0 left-0 w-full h-[100dvh] z-0">
+                {/* 1. MAP SECTION (Fill available space) */}
+                <div className="absolute inset-0 z-0">
                     <MissionRouteMap 
                         pickup={{ lat: Number(activeMission.pickup_lat), lng: Number(activeMission.pickup_lng) }}
                         delivery={{ lat: Number(activeMission.delivery_lat), lng: Number(activeMission.delivery_lng) }}
@@ -7583,11 +7625,12 @@ function MainApp() {
                             const currentStatus = (activeMission?.status || '').toLowerCase().trim();
                             if (terminalStatuses.includes(currentStatus)) {
                                 localStorage.removeItem('Izi_active_mission');
+                                setActiveMission(null);
                             }
-                            // Volta para a lista de missões (não para o dashboard)
-                            setActiveMission(null);
+                            // Volta para o dashboard (minimiza a missão)
+                            setActiveTab('dashboard');
                         }} 
-                        className="pointer-events-auto size-12 bg-white/60 backdrop-blur-xl border border-white/50 rounded-2xl flex items-center justify-center shadow-lg"
+                        className="pointer-events-auto size-12 bg-white/80 backdrop-blur-xl border border-zinc-200 rounded-2xl flex items-center justify-center shadow-xl active:scale-90 transition-all"
                     >
                         <Icon name="arrow_back" className="text-yellow-600" size={20} />
                     </motion.button>
@@ -8627,10 +8670,10 @@ function MainApp() {
                                     <AnimatePresence>
                                         {activeMission && activeTab !== 'active_mission' && (
                                             <motion.div 
-                                                initial={{ y: -100, opacity: 0 }}
+                                                initial={{ y: 100, opacity: 0 }}
                                                 animate={{ y: 0, opacity: 1 }}
-                                                exit={{ y: -100, opacity: 0 }}
-                                                className="absolute top-4 left-4 right-4 z-[100]"
+                                                exit={{ y: 100, opacity: 0 }}
+                                                className="absolute bottom-28 left-4 right-4 z-[100]"
                                             >
                                                 <button
                                                     onClick={() => setActiveTab('active_mission')}
