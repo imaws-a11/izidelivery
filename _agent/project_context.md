@@ -57,7 +57,11 @@ Atualizado: 2026-05-11
 - **Estado Global**: `AppContext` centraliza `subView`, `tab`, `userLocation`, `cart` e **Realtime User Profile**.
 - **Navegação**: `navigateSubView` gerencia histórico e estados de visualização.
 - **Auth**: Fonte de verdade é exclusivamente o banco de dados; `localStorage` apenas para persistência secundária.
-- **Remoção de Legado**: Sempre excluir versões incorretas/legadas de funções ao realizar correções (Polítca de Zero Lixo).
+- **App do Entregador (Radar & APK)**:
+  - **Fetch Nativo**: O Radar DEVE usar `fetch` nativo com o REST API do Supabase em vez da biblioteca client para evitar travamentos (hanging promises) em redes instáveis ou no APK.
+  - **Blindagem Nativa**: Todas as chamadas a APIs de navegador (como `Notification`) ou plugins (como `ForegroundService`) devem ser protegidas com `typeof ... !== 'undefined'` e `Capacitor.isNativePlatform()` para evitar crashes (ReferenceErrors).
+  - **Persistência Online**: O status `is_online` no boot deve priorizar o `localStorage` para evitar que o refresh da página "derrube" o entregador indevidamente.
+- **Remoção de Legado**: Sempre excluir versões incorretas/legadas de funções ao realizar correções (Política de Zero Lixo).
 
 ---
 

@@ -9,6 +9,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
+import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 import SplashScreen from './components/common/SplashScreen';
@@ -893,8 +894,7 @@ function MainApp() {
         
         setIsSavingProfile(true);
         try {
-            console.log('[DEBUG] Enviando update para Supabase...', editProfileData);
-            console.log('[DEBUG] Enviando update via fetch nativo...');
+            // Update via fetch nativo
             const { data: { session } } = await supabase.auth.getSession();
             
             const response = await fetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
@@ -941,10 +941,8 @@ function MainApp() {
             // Recarrega para garantir sincronia total
             loadProfileAndEnforceOnboarding(driverId, editProfileData.email, editProfileData.name);
         } catch (err: any) {
-            console.error('[DEBUG] Exceção capturada em handleUpdateProfile:', err);
             toastError('Erro ao salvar dados: ' + (err.message || 'Verifique sua conexão'));
         } finally {
-            console.log('[DEBUG] Finalizando loading de handleUpdateProfile');
             setIsSavingProfile(false);
         }
     };
@@ -1487,7 +1485,6 @@ function MainApp() {
     }, [driverId, supabaseUrl]);
 
     const handleScanQR = async () => {
-        toastError("Funcionalidade de scanner desativada.");
     };
 
     const stopScan = async () => {
@@ -1653,6 +1650,20 @@ function MainApp() {
         if (base <= 0) base = Number(appSettings?.base_fee || 7);
         return Number(base.toFixed(2));
     }, [appSettings, dynamicRates]);
+    
+    const openOverlaySettings = () => {
+        if (Capacitor.isNativePlatform()) {
+            try {
+                if (typeof NativeOrderOverlay !== 'undefined') {
+                    NativeOrderOverlay.openOverlaySettings();
+                } else {
+                    toast('Sobreposição não disponível nesta versão.', 'info');
+                }
+            } catch (e) {}
+        } else {
+            toast('Sobreposição disponível apenas no APK.', 'info');
+        }
+    };
 
     const getNetEarnings = useCallback((order: any) => {
         if (!order) return 0;
@@ -1688,7 +1699,6 @@ function MainApp() {
                  }
 
                  if (permStatus.receive !== 'granted') {
-                      console.warn('Permissão de Push Notification negada.');
                       return;
                   }
 
@@ -1708,14 +1718,11 @@ function MainApp() {
 
                  // Listeners do registro nativo
                  PushNotifications.addListener('registration', async (token) => {
-                     console.log('Token de push gerado:', token.value);
                      // Atualiza a coluna no supabase
                      const { error } = await supabase.from('drivers_delivery').update({ push_token: token.value }).eq('id', driverId);
-                     if (error) console.error('Erro ao salvar push_token:', error);
                  });
 
                  PushNotifications.addListener('registrationError', (error) => {
-                     console.error('Erro no registro do Push Notification:', error);
                  });
 
                  PushNotifications.addListener('pushNotificationReceived', async (notification) => {
@@ -1723,12 +1730,7 @@ function MainApp() {
                      // Toca o som apenas uma vez (false para loop)
                      playIziSound('driver', false);
                      
-                     // O moveToForeground causava tela branca no Android. Deixando apenas o som e a notificação.
-                     
                      if (notification.data?.type === 'new_order' || notification.title?.toLowerCase().includes('chamada') || notification.body?.toLowerCase().includes('chamada')) {
-                         // FIX BUG 3: antes retornava prev sem fazer nada (pedido nunca aparecia na lista)
-                         // Agora dispara um fetchOrders para garantir que o pedido apareça na UI
-                         // mesmo que o realtime WebSocket tenha perdido a conexão no APK
                          fetchOrders();
                      }
                      toastSuccess(`Nova Chamada: ${notification.title || ''}`);
@@ -1741,14 +1743,11 @@ function MainApp() {
                  });
 
              } catch (err) {
-                 console.error("Falha ao configurar Push Notifications:", err);
              }
         };
         
         const checkOverlayPermission = async () => {
             if (Capacitor.getPlatform() === 'android') {
-
-                // Lembrete visual para o motorista sobre a importância da sobreposição para receber chamadas
                 setTimeout(() => {
                     if (isOnline) {
                         toast('Dica: Ative a "Sobreposição a outros apps" nas configurações do Android para não perder nenhuma chamada!', 'info');
@@ -1769,7 +1768,7 @@ function MainApp() {
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
-        // Permite GPS se estiver ONLINE ou em uma MISSÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O ATIVA
+        // Permite GPS se estiver ONLINE ou em uma MISSÃO ATIVA
         if (!isOnline && !activeMission) return;
         
         const updateLocation = (lat: number, lng: number) => {
@@ -1813,26 +1812,24 @@ function MainApp() {
                         }
                     );
                 } catch (err) {
-                    console.error("GPS Tracking Error (Native):", err);
                 }
                 return;
             }
 
             // ── AMBIENTE WEB (browser) ─ usa API nativa do browser ──
             if (!navigator.geolocation) {
-                console.warn('[GPS] navigator.geolocation não disponível neste browser.');
                 return;
             }
 
             navigator.geolocation.getCurrentPosition(
                 (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
-                (err) => console.warn('[GPS-WEB] Erro ao obter posição inicial:', err.message),
+                (err) => {},
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
             );
 
             webWatchId = navigator.geolocation.watchPosition(
                 (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
-                (err) => console.warn('[GPS-WEB] Erro no watchPosition:', err.message),
+                (err) => {},
                 { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 }
             );
         };
@@ -1853,7 +1850,6 @@ function MainApp() {
 
     // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
     const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
-        console.log('[AUTH] loadProfileAndEnforceOnboarding chamada para:', userId);
         if (!userId) return;
 
         try {
@@ -1864,7 +1860,13 @@ function MainApp() {
                 .maybeSingle();
 
             if (profileError) {
-                console.error('[AUTH] Erro ao buscar perfil:', profileError);
+                console.error('Erro ao carregar perfil:', profileError);
+                // Mesmo com erro, tentamos inicializar o formulário com o que temos do Auth
+                setEditProfileData(prev => ({
+                    ...prev,
+                    name: userName || prev.name,
+                    email: userEmail || prev.email
+                }));
                 return;
             }
 
@@ -1874,11 +1876,22 @@ function MainApp() {
                 setIsOnline(false);
                 localStorage.setItem('izi_driver_online', 'false');
                 setShowOnboarding(true);
-                ensureDriverRecord(userId, userEmail, userName);
+                // Aguarda a criação do registro para garantir consistência
+                await ensureDriverRecord(userId, userEmail, userName);
+                
+                // Se acabou de criar, inicializa o editProfileData com o que temos
+                setEditProfileData({
+                    name: userName || '',
+                    phone: '',
+                    email: userEmail || '',
+                    vehicle_type: 'mototaxi',
+                    plate: '',
+                    cpf: ''
+                });
                 return;
             }
 
-            // --- SINCRONIZAÃ‡ÃƒO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
+            // --- SINCRONIZAÇÃO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
             
             // 1. Nome e Avatar
             const currentName = profile.name || userName || 'Entregador Izi';
@@ -1890,7 +1903,7 @@ function MainApp() {
                 localStorage.setItem('izi_driver_avatar', profile.avatar_url);
             }
 
-            // 2. VeÃ­culo e Placa
+            // 2. Veículo e Placa
             if (profile.vehicle_type) {
                 setDriverVehicle(profile.vehicle_type);
                 localStorage.setItem('izi_driver_vehicle', profile.vehicle_type);
@@ -1917,17 +1930,17 @@ function MainApp() {
                 localStorage.setItem('izi_driver_pix', profile.bank_info.pix_key);
             }
 
-            // 5. Alimentar formulÃ¡rio de ediÃ§Ã£o com dados GARANTIDOS do banco
+            // 5. Alimentar formulário de edição com dados GARANTIDOS do banco (com fallback para os dados do Auth)
             setEditProfileData({
-                name: profile.name || '',
+                name: profile.name || userName || '',
                 phone: profile.phone || '',
-                email: profile.email || '',
+                email: profile.email || userEmail || '',
                 vehicle_type: profile.vehicle_type || '',
                 plate: profile.license_plate || '',
                 cpf: profile.document_number || ''
             });
 
-            // 6. PreferÃªncias
+            // 6. Preferências
             if (profile.preferences) {
                 const p = profile.preferences as any;
                 if (p.pref_sound !== undefined) {
@@ -1942,7 +1955,6 @@ function MainApp() {
                     setPrefNavApp(p.pref_nav_app);
                     localStorage.setItem('pref_nav_app', p.pref_nav_app);
                 }
-                // ... outras preferÃªncias se necessÃ¡rio
             }
 
             // 7. Status de Aprovação e Vínculo
@@ -1951,7 +1963,6 @@ function MainApp() {
             
             // Sincroniza Status Online: RESPEITA o LocalStorage primeiro para não derrubar o radar no refresh
             const localWantsOnline = localStorage.getItem('izi_driver_online') === 'true';
-            const onlineFromDB = !!profile.is_online;
             
             // Se o motorista não for ativo, forçamos offline
             if (!active) {
@@ -1967,15 +1978,12 @@ function MainApp() {
             refreshFinanceData();
             syncMissionWithDB();
         } catch (e: any) {
-            console.error('[AUTH] Erro fatal em loadProfileAndEnforceOnboarding:', e);
         } finally {
             setIsProfileLoaded(true);
         }
     };
 
     useEffect(() => {
-
-        // Lógica de bootstrap removida daqui para o useEffect consolidado no topo
 
         // Listener de visibilidade: quando o app volta do background (web/PWA/APK)
         const handleVisibilityChange = async () => {
@@ -2009,7 +2017,6 @@ function MainApp() {
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
-        console.log('[SYNC] Iniciando listener de perfil para:', driverId);
         const channel = supabase.channel(`driver_profile_${driverId}`)
             .on('postgres_changes', { 
                 event: 'UPDATE', 
@@ -2018,7 +2025,6 @@ function MainApp() {
                 filter: `id=eq.${driverId}`
             }, (payload) => {
                 const updated = payload.new as any;
-                console.log('[SYNC] Perfil atualizado no DB:', updated.is_online, updated.merchant_id);
                 
                 // Sincroniza Status Online
                 if (updated.is_online !== undefined) {
@@ -2153,19 +2159,16 @@ function MainApp() {
 
 
     // =====================================================================
-    // RESTAURAÂ¢ÃƒÆ’Ã†â€™Â¢Â¬áÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
-    // Este é o ÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬Â¦áNICO lugar onde o is_online é restaurado apÂ³s login/refresh.
-    // Ele dispara quando driverId e isAuthenticated ficam disponíveis.
+    // RESTAURAÇÃO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
     // =====================================================================
     useEffect(() => {
         if (!driverId || !isAuthenticated || !isProfileLoaded) return;
 
         // SE O PERFIL ESTÁ EXPLICITAMENTE DESATIVADO, FORÇA OFFLINE.
-        // Usamos === false para evitar que o estado inicial (null) force offline durante o load.
         if (isApproved === false) {
             setIsOnline(false);
             localStorage.setItem('izi_driver_online', 'false');
-            stopIziSounds(); // Segurança extra
+            stopIziSounds();
             return;
         }
 
@@ -2176,23 +2179,24 @@ function MainApp() {
 
         // Restaurar Foreground Service se estiver online
         if (Capacitor.getPlatform() === 'android' && localWantsOnline) {
-             ForegroundService.startForegroundService({
-                id: 1001,
-                title: "Izi Entregador: Online ✅",
-                body: "Buscando novas chamadas em tempo real...",
-                importance: 5,
-                icon: 'notification_icon'
-            }).catch(e => console.error("Erro ao restaurar FS:", e));
+            try {
+                if (typeof ForegroundService !== 'undefined') {
+                    ForegroundService.startForegroundService({
+                        id: 1001,
+                        title: "Izi Entregador: Online ✅",
+                        body: "Buscando novas chamadas em tempo real...",
+                        importance: 5,
+                        icon: 'notification_icon'
+                    }).catch(e => {});
+                }
+            } catch (e) {}
         }
 
         if (localWantsOnline) {
             // Sincronizar banco em background para garantir consistência
             supabase.from('drivers_delivery')
                 .update({ is_online: true, last_seen_at: new Date().toISOString() })
-                .eq('id', driverId)
-                .then(({ error }) => {
-                    if (error) console.error('[ONLINE-RESTORE] Erro ao sincronizar online no banco:', error.message);
-                });
+                .eq('id', driverId);
         }
     }, [driverId, isAuthenticated, isProfileLoaded]);
 
@@ -2210,22 +2214,17 @@ function MainApp() {
             }, (payload) => {
                 const updated = payload.new;
                 
-                // Sincronização multi-dispositivo de perfil e financeira
-                // REMOVIDO: Sincronização de is_online do banco para cá.
-                // O localStorage é a autoridade absoluta sobre a intenção do motorista.
-                // A única forma de ser ejetado é via is_active (Remote Eject) ou Logout manual.
                 if (updated.is_active !== undefined) {
                     setIsApproved(!!updated.is_active);
                     if (!updated.is_active) setIsOnline(false);
                 }
                 
-                // Recarregar dados financeiros se o saldo mudou por outro dispositivo
                 refreshFinanceData();
             })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [driverId, isAuthenticated]); // REMOVIDO isOnline das deps - evita re-subscrição que dispara snapshot do banco
+    }, [driverId, isAuthenticated]);
 
     // Heartbeat: enquanto online, atualiza last_seen_at a cada 5 segundos
     useEffect(() => {
@@ -2252,17 +2251,34 @@ function MainApp() {
     const handleToggleOnline = async () => {
         const nextState = !isOnline;
 
-        // Se quer ir ONLINE e já sabemos que NÃO está aprovado, bloqueia
-        // Se o perfil ainda não carregou, PERMITE — o loadProfile vai corrigir se necessário
         if (nextState && isApproved === false && isProfileLoaded) {
             setShowPendingApprovalModal(true);
             return;
         }
 
-        // SALVA NO LOCALSTORAGE IMEDIATAMENTE Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ antes de qualquer chamada ao banco
-        // Isso garante que F5 sempre restaura o status correto, independente de rede
         localStorage.setItem('izi_driver_online', nextState.toString());
         setIsOnline(nextState);
+
+        // Gerenciar Foreground Service com segurança máxima
+        if (Capacitor.isNativePlatform()) {
+            try {
+                if (typeof ForegroundService !== 'undefined') {
+                    if (nextState && !activeMission) {
+                        await ForegroundService.startForegroundService({
+                            id: 1001,
+                            title: "Izi Entregador: Online ✅",
+                            body: "Buscando novas chamadas em tempo real...",
+                            importance: 5,
+                            icon: 'notification_icon'
+                        });
+                    } else {
+                        await ForegroundService.stopForegroundService();
+                    }
+                }
+            } catch (fsErr) {
+            }
+        }
+
         if (!nextState) setOrders([]);
         
         if (driverId) {
@@ -2271,35 +2287,13 @@ function MainApp() {
                     ? { is_online: true, last_seen_at: new Date().toISOString() }
                     : { is_online: false };
                 await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
-
-                // Gerenciar Foreground Service para o Moto-entregador
-                if (Capacitor.getPlatform() === 'android') {
-                    try {
-                        if (nextState) {
-                            await ForegroundService.startForegroundService({
-                                id: 1001,
-                                title: "Izi Entregador: Online ✅",
-                                body: "Buscando novas chamadas em tempo real...",
-                                importance: 5,
-                                icon: 'notification_icon'
-                            });
-                        } else {
-                            await ForegroundService.stopForegroundService();
-                        }
-                    } catch (fsErr) {
-                        console.error("Erro ao gerenciar Foreground Service:", fsErr);
-                    }
-                }
             } catch (e: any) {
-                console.warn('[STATUS] Falha ao sincronizar banco (storage preservado):', e.message);
-                // NÃƒÆ’Ã‚Â¢ÃƒÂ¢â‚¬ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…Â¾Â¢O reverte Â¢Â¢ÃƒÆ’Ã†â€™Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã…áÂ¬ÃƒÆ’ââ‚¬Â¦áÂ¬Â¢ÃƒÆ’Ã†â€™Â¢Â¬ o localStorage já salvou a intenção e o heartbeat sincronizará o banco
             }
         }
     };
 
 
     // Remote Eject Listener (Kill Switch)
-    // Monitora se o entregador foi desativado/ejetado pelo admin
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
 
@@ -2311,14 +2305,9 @@ function MainApp() {
                 table: 'drivers_delivery',
                 filter: `id=eq.${driverId}`
             }, (payload) => {
-                // Se is_active mudar para false, ejeta na hora
                 if (payload.new && payload.new.is_active === false) {
-                    console.error('[EJECT] Sessão ejetada remotamente! Motivo: Motorista desativado no painel Admin.');
-                    toastError('Sua conta foi desativada pelo administrador.');
                     handleLogout();
                 }
-                // Se o banco forçar is_online=false MAS o motorista quer estar online, 
-                // o heartbeat (useEffect abaixo) vai corrigir o banco em 5 segundos.
             })
             .subscribe();
 
@@ -2364,13 +2353,12 @@ function MainApp() {
                     toastSuccess('Parabéns! Sua vaga foi confirmada!');
                 }
             })
-            .subscribe((status) => {
-            });
+            .subscribe();
 
         return () => { supabase.removeChannel(slotsChannel); };
     }, [isAuthenticated, driverId]);
     
-    // Auxiliar centralizado para obter token de auth seguro (com refresh se necessÃ¡rio)
+    // Auxiliar centralizado para obter token de auth seguro (com refresh se necessário)
     const getSecureToken = useCallback(async () => {
         const sUrl = import.meta.env.VITE_SUPABASE_URL;
         const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -2495,7 +2483,7 @@ function MainApp() {
                         
                         setShowApprovedSlotModal(true);
 
-                        toastSuccess("ðŸ   VAGA CONFIRMADA! Clique para ver os detalhes.");
+                        toastSuccess("🚀 VAGA CONFIRMADA! Clique para ver os detalhes.");
                     }
                     
                     // Sincroniza estados após qualquer atualização minha
@@ -2503,8 +2491,7 @@ function MainApp() {
                     fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone)&is_active=eq.true&order=created_at.desc');
                 }
             )
-            .subscribe((status) => {
-            });
+            .subscribe();
 
         return () => {
 
@@ -2518,7 +2505,6 @@ function MainApp() {
         if (!isAuthenticated || !driverId) return;
         
         // Tenta carregar do cache primeiro para evitar flicker da trava sumindo
-        // Já carregado no estado inicial via initializer, mas atualizamos se o ID mudar
         const cached = localStorage.getItem(`izi_apps_${driverId}`);
         if (cached) {
             try { 
@@ -2624,7 +2610,6 @@ function MainApp() {
         // Configuração de Push Nativo (Android)
         if (Capacitor.isNativePlatform()) {
             PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                console.log('Push recebido nativamente:', notification);
                 // No Android, isso garante que o banner apareça se o canal estiver configurado
             });
 
@@ -2635,7 +2620,7 @@ function MainApp() {
                 importance: 5, // Max importance para banner
                 visibility: 1,
                 sound: 'izi_bell.mp3' // Se houver som customizado
-            }).catch(err => console.error('Erro ao criar canal push:', err));
+            }).catch(err => {});
         }
 
         return () => { 
@@ -2658,18 +2643,15 @@ function MainApp() {
 
     const fetchOrders = useCallback(async () => {
         if (!driverId || !isAuthenticated) {
-            console.log('[RADAR] Busca cancelada: Sem sessão ativa.');
             setOrders([]);
             return;
         }
         if (!isOnline) {
-            console.log('%c[RADAR] Offline. Ignorando busca.', 'color: #ff0000');
             setOrders([]);
             return;
         }
         setIsSyncing(true);
         try {
-            console.log('%c[RADAR] Buscando pedidos (Fetch Nativo)...', 'color: #ffd400');
             
             const sUrl = import.meta.env.VITE_SUPABASE_URL;
             const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -2694,7 +2676,6 @@ function MainApp() {
             exclusiveMerchantIdsRef.current = exclusiveIds;
             setExclusiveMerchantIds(exclusiveIds);
             
-            const declinedMap: Record<string, number> = {}; // Limpo no boot
             const now = Date.now();
             const currentMission = activeMissionRef.current;
 
@@ -2714,8 +2695,6 @@ function MainApp() {
                     pickup_lat: myAssignment.pickup_lat,
                     pickup_lng: myAssignment.pickup_lng
                 };
-                // Auto-seleção removida por solicitação do usuário. O motorista deve escolher na lista.
-                // setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             }
             const available = (data || []).filter((o: any) => {
@@ -2732,14 +2711,6 @@ function MainApp() {
                 return true;
             });
 
-            console.log(`[RADAR] Busca concluída. Total no banco: ${data.length} | Aceitos no Radar: ${available.length}`);
-            if (data.length > 0 && available.length === 0) {
-                console.warn('[RADAR] Atenção: Existem pedidos no banco mas todos foram filtrados pela lógica acima!');
-            }
-
-            if (available.length > 0) {
-                console.log(`[RADAR] ${available.length} pedidos encontrados e filtrados com sucesso.`);
-            }
 
             if (!available) {
                 return;
@@ -2765,21 +2736,18 @@ function MainApp() {
                         customer: 'Cliente Izi'
                     };
                 } catch (e) {
-                    console.error('[POLL-ERROR] Pedido inválido:', o);
                     return null;
                 }
             }).filter(Boolean);
 
             setOrders(prev => {
-                // A gestão de som agora é 100% centralizada no useEffect observador de 'visibleOrders'
                 return newAvailable;
             });
         } catch (err) {
-            console.error('[FETCH-ORDERS-CRASH]:', err);
         } finally {
             setIsSyncing(false);
         }
-    }, [isOnline, driverId, fetchFromDB, exclusiveMerchantIds, myApplications]);
+    }, [isOnline, driverId]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
@@ -2812,7 +2780,7 @@ function MainApp() {
                 const currentMission = activeMissionRef.current;
                 const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
 
-                // 1. GESTÃƒO DA MISSÃƒO ATIVA DESTE MOTORISTA
+                // 1. GESTÃO DA MISSÃO ATIVA DESTE MOTORISTA
                 if (isMyOrder) {
                     const status = String(o.status || '').toLowerCase().trim();
                     const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered', 'rejected', 'recusado'];
@@ -2913,7 +2881,6 @@ function MainApp() {
                             customer: String(o.user_name || 'Cliente Izi')
                         };
                     } catch (e) {
-                        console.error('[REALTIME-ERROR] Pedido inválido:', o);
                         return null;
                     }
                 })();
@@ -2932,12 +2899,6 @@ function MainApp() {
 
         return () => { supabase.removeChannel(channel); };
     }, [isAuthenticated, driverId, getServicePresentation]);
-
-    // O som agora é disparado DIRETAMENTE pelo listener Realtime (acima)
-    // para maior precisão e evitar disparos duplicados ou atrasados.
-
-
-
 
     // Startup / Session Recovery: Buscar missão ativa no banco se o driverId estiver presente
     useEffect(() => {
@@ -2961,8 +2922,6 @@ function MainApp() {
                     price: data.total_price,
                     customer: data.user_name || 'Cliente Izi'
                 };
-                // Auto-seleção removida por solicitação do usuário.
-                // setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             }
         };
@@ -3073,12 +3032,14 @@ function MainApp() {
                 'Prefer': 'return=representation'
             };
             
-            const updateRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}&driver_id=is.null`, {
+            // A regra RLS exige que o status mude para 'confirmado' para validar o aceite.
+            // Também permitimos aceitar se o driver_id já for o meu (atribuição manual do lojista).
+            const updateRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}&or=(driver_id.is.null,driver_id.eq.${driverId})`, {
                 method: 'PATCH',
                 headers: authHeaders,
                 body: JSON.stringify({
-                    status: newStatus,
-                    driver_id: driverId, // Garante que o driver_id seja enviado para passar no with_check
+                    status: 'confirmado',
+                    driver_id: driverId,
                     updated_at: new Date().toISOString()
                 })
             });
@@ -3088,7 +3049,8 @@ function MainApp() {
             const updatedData = await updateRes.json();
             
             if (!updatedData || updatedData.length === 0) {
-                toastError('Este pedido já foi aceito por outro piloto.');
+                stopIziSounds(); // Garante que o som pare mesmo no erro
+                toastError('Não foi possível assumir esta corrida. Verifique se ela ainda está disponível.');
                 setOrders(previousOrders);
                 setActiveMission(previousActiveMission);
                 setActiveMissions(previousActiveMissions);
@@ -3109,7 +3071,6 @@ function MainApp() {
             }
 
         } catch (e: any) {
-            console.error("[ACCEPT] Erro ao aceitar missão:", e);
             toastError('Erro ao confirmar: ' + e.message);
             setOrders(previousOrders);
             setActiveMission(previousActiveMission);
@@ -3134,17 +3095,12 @@ function MainApp() {
             const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
             const newCount = current.count + 1;
             
-            // Se o contador for resetado pelo fim do cooldown (ou seja, se já estava no 2 e ele rejeitou de novo)
-            // ele vai para 3. Se rejeitar de novo, vai para 4 e bloqueia.
-            
             const newStats = {
                 count: newCount,
                 lastDecline: Date.now(),
                 isPermanent: newCount >= 4
             };
 
-            // Se atingiu o ponto de cooldown (2) ou bloqueio (4), removemos do heardOrderIds 
-            // para que o alarme possa ser disparado novamente após o cooldown (no caso do 2)
             if (newCount === 2) {
                 heardOrderIds.current.delete(targetId);
             }
@@ -3325,7 +3281,6 @@ function MainApp() {
                 });
             }
         } catch (e) {
-            console.error("[FINANCE] Error:", e);
         } finally {
             setIsFinanceLoading(false);
         }
@@ -3333,9 +3288,7 @@ function MainApp() {
 
     const syncMissionWithDB = useCallback(async () => {
         if (!driverId || !isAuthenticated) return;
-        // Só mostra loading se for a primeira vez ou refresh manual para evitar "piscada"
         setIsSyncingMission(true);
-        // Não resetamos setIsSyncing aqui para não interferir no Radar se não for necessário
 
         try {
             await Promise.all([
@@ -3344,13 +3297,11 @@ function MainApp() {
             ]);
 
             const dId = String(driverId).trim();
-            // Aumentado o limite para 50 para garantir que não percamos missões ativas em dias movimentados
             const orders = await fetchFromDB('orders_delivery', `driver_id=eq.${dId}&order=created_at.desc&limit=50`);
 
             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
             const allActiveOrders = (orders || []).filter((o: any) => {
                 const status = (o.status || '').toLowerCase().trim();
-                // Incluindo mais status que podem ser considerados "em andamento"
                 const terminalStatuses = ['concluido', 'cancelado', 'rejected', 'recusado'];
                 const isTerminal = terminalStatuses.includes(status);
                 const isFinancial = financialTypes.includes(o.service_type);
@@ -3359,13 +3310,6 @@ function MainApp() {
                 return !isTerminal && !isFinancial && isMine;
             });
 
-            console.log("[SYNC] Total bruto:", orders?.length, "Filtrados:", allActiveOrders.length);
-            if (orders?.length > 0) {
-                const foundPaladar = orders.find((o: any) => (o.merchant_name || "").toLowerCase().includes('paladar'));
-                if (foundPaladar) {
-                    console.log("[SYNC] Paladar Encontrado! Status:", foundPaladar.status, "ID:", foundPaladar.id);
-                }
-            }
 
             // Helper local para formatar missões
             const formatMission = async (ao: any) => {
@@ -6417,13 +6361,15 @@ function MainApp() {
                             key={i} 
                             onClick={() => {
                                 if (item.label === 'Meus Dados') {
-                                    // Sincroniza dados antes de abrir para evitar campos vazios
+                                    // Pré-preenche com o que já temos para resposta instantânea
+                                    setEditProfileData(prev => ({
+                                        ...prev,
+                                        name: driverName || prev.name,
+                                        email: authEmail || prev.email
+                                    }));
+                                    setShowPersonalDataModal(true);
                                     if (driverId) {
-                                        loadProfileAndEnforceOnboarding(driverId, authEmail || '', driverName).then(() => {
-                                            setShowPersonalDataModal(true);
-                                        });
-                                    } else {
-                                        setShowPersonalDataModal(true);
+                                        loadProfileAndEnforceOnboarding(driverId, authEmail || '', driverName);
                                     }
                                 }
                                 if (item.label === 'Dados Bancários') setShowBankDetails(true);

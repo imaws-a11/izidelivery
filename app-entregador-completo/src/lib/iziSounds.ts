@@ -51,7 +51,6 @@ let audioGeneration = 0; // Previne sons "fantasmas" iniciados concorrentemente
 export const playIziSound = async (role: 'merchant' | 'driver' | 'success', loop: boolean = false) => {
   // Se já existe um som de loop ativo para o driver, não reiniciamos (evita cortes no áudio)
   if (role === 'driver' && (window as any)._iziActiveSource && (window as any)._iziActiveSource.loop) {
-      console.log('[AUDIO] Loop de driver já ativo. Ignorando nova chamada.');
       return;
   }
 
@@ -125,7 +124,6 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'success', loop
       }
       
       source.start(0);
-      console.log(`[AUDIO] Reprodução iniciada: ${urls[index]}`);
       return true;
     } catch (err) {
       console.warn(`[AUDIO] Falha no índice ${index}:`, err);
@@ -136,7 +134,6 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'success', loop
   const success = await playFromBuffer(0);
   
   if (!success && currentGen === audioGeneration) {
-    console.log('[AUDIO] Fallback: Usando sintetizador local...');
     playModernChime(ctx, role);
   }
 };
@@ -148,7 +145,6 @@ export const stopIziSounds = () => {
     try {
       (window as any)._iziActiveSource.stop();
       (window as any)._iziActiveSource = null;
-      console.log('[AUDIO] Som parado manualmente.');
     } catch (e) {
       console.error('[AUDIO] Erro ao parar som:', e);
     }
@@ -178,7 +174,6 @@ if (typeof window !== 'undefined') {
     const ctx = getAudioContext();
     if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
       ctx.resume().then(() => {
-        console.log('🔊 [AUDIO] Desbloqueado via interação.');
         // Toca um silêncio para manter o context ativo em alguns dispositivos
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
