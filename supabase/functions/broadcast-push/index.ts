@@ -144,7 +144,7 @@ serve(async (req) => {
       const historyRows: any[] = [];
       
       if (target_type === 'drivers' || target_type === 'all') {
-        const { data: dData } = await supabase.from('drivers_delivery').select('id').not('push_token', 'is', null);
+        const { data: dData } = await supabase.from('drivers_delivery').select('id');
         if (dData) {
           dData.forEach((d: any) => historyRows.push({
             user_id: d.id,
@@ -158,7 +158,7 @@ serve(async (req) => {
       }
 
       if (target_type === 'users' || target_type === 'all') {
-        const { data: uData } = await supabase.from('users_delivery').select('id').not('push_token', 'is', null);
+        const { data: uData } = await supabase.from('users_delivery').select('id');
         if (uData) {
           uData.forEach((u: any) => historyRows.push({
             user_id: u.id,
