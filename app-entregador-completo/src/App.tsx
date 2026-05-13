@@ -2732,7 +2732,8 @@ function MainApp() {
                 description: 'Canal principal de notificações do IZI Delivery',
                 importance: 5, // Max importance para banner
                 visibility: 1,
-                sound: 'izi_bell.mp3' // Se houver som customizado
+                sound: 'notification',
+                vibration: true
             }).catch(err => {});
         }
 
