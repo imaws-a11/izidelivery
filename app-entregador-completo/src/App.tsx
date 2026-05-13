@@ -658,6 +658,21 @@ function MainApp() {
     const [authVehicle, setAuthVehicle] = useState<string>('mototaxi');
     const [authPhone, setAuthPhone] = useState(() => localStorage.getItem('izi_driver_phone') || '');
     const [driverVehicle, setDriverVehicle] = useState<string>(() => localStorage.getItem('izi_driver_vehicle') || 'mototaxi');
+
+    const compatibilityMap: Record<string, string[]> = {
+        'moto': ['mototaxi', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+        'mototaxi': ['mototaxi', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'], // Fallback
+        'carro': ['frete', 'mudanca', 'motorista', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+        'bike': ['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+        'bicicleta': ['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'], // Fallback
+        'fiorino': ['frete', 'mudanca', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+        'caminhonete': ['frete', 'mudanca', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+        'van': ['frete', 'mudanca', 'motorista', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+        'vuc': ['frete', 'mudanca'],
+        'bau_p': ['frete', 'mudanca'],
+        'bau_m': ['frete', 'mudanca'],
+        'bau_g': ['frete', 'mudanca']
+    };
     const [authLoading, setAuthLoading] = useState(false);
     const [authInitLoading, setAuthInitLoading] = useState(true);
 
@@ -2825,6 +2840,18 @@ function MainApp() {
                 const hasDriver = o.driver_id && String(o.driver_id).trim() !== '' && String(o.driver_id).trim() !== String(driverId).trim();
                 if (hasDriver) return false;
 
+                // FILTRO DE COMPATIBILIDADE DE VEÍCULO
+                // Evita que motos vejam fretes, etc.
+                const myV = driverVehicle?.toLowerCase() || 'moto';
+                const allowedForVehicle = compatibilityMap[myV] || [];
+                const orderType = normalizeServiceType(o.service_type);
+                
+                if (!allowedForVehicle.includes(orderType)) {
+                    // Se não estiver explicitamente no mapa, permitimos apenas se for entrega básica (restaurant, etc)
+                    // Mas o mapa acima já cobre as entregas básicas para todos.
+                    return false;
+                }
+
                 return true;
             });
 
@@ -3651,10 +3678,11 @@ function MainApp() {
                     
                     // Gamificação
                     if (driverId) {
-                        incrementMissionProgress({ driverId, missionKey: 'complete_delivery' })
+                        incrementMissionProgress({ driverId, missionKey: 'complete_delivery', token })
                             .then(results => {
                                 const completedMission = results.find(r => r.isCompleted);
                                 if (completedMission) {
+                                    toastSuccess(`Parabéns! Missão Concluída: ${completedMission.title}`);
                                     window.dispatchEvent(new CustomEvent('izi:mission_completed', {
                                         detail: { missionId: completedMission.missionId }
                                     }));
@@ -7433,21 +7461,6 @@ function MainApp() {
         };
 
         const toggleMobility = (key: string) => {
-            const compatibilityMap: Record<string, string[]> = {
-                'moto': ['mototaxi', 'frete'],
-                'mototaxi': ['mototaxi', 'frete'], // Fallback
-                'carro': ['frete', 'mudanca', 'motorista'],
-                'bike': ['frete'],
-                'bicicleta': ['frete'], // Fallback
-                'fiorino': ['frete', 'mudanca'],
-                'caminhonete': ['frete', 'mudanca'],
-                'van': ['frete', 'mudanca', 'motorista'],
-                'vuc': ['frete', 'mudanca'],
-                'bau_p': ['frete', 'mudanca'],
-                'bau_m': ['frete', 'mudanca'],
-                'bau_g': ['frete', 'mudanca']
-            };
-            
             const myVehicle = driverVehicle?.toLowerCase() || 'moto';
             const allowedServices = compatibilityMap[myVehicle] || [];
 
@@ -7570,8 +7583,10 @@ function MainApp() {
                         <div className="space-y-6">
                             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Mobilidade</h3>
                             <div className="divide-y divide-zinc-50">
-                                {mobilityOptions.map(mob => {
-                                    const active = prefServiceTypes.includes(mob.key);
+                                {mobilityOptions
+                                    .filter(mob => (compatibilityMap[driverVehicle?.toLowerCase() || 'moto'] || []).includes(mob.key))
+                                    .map(mob => {
+                                        const active = prefServiceTypes.includes(mob.key);
                                     return (
                                         <div key={mob.key} className="flex items-center justify-between py-5">
                                             <div>

@@ -4,6 +4,7 @@ export interface GamificationIncrement {
     driverId: string;
     missionKey: 'complete_delivery' | 'daily_goal' | 'weekly_bonus';
     incrementBy?: number;
+    token?: string;
 }
 
 /**
@@ -15,12 +16,16 @@ export async function incrementMissionProgress({
     driverId,
     missionKey,
     incrementBy = 1,
-}: GamificationIncrement): Promise<{ isCompleted: boolean; missionId: string }[]> {
+    token,
+}: GamificationIncrement): Promise<{ isCompleted: boolean; missionId: string; title: string }[]> {
     try {
+        const sUrl = (import.meta.env.VITE_SUPABASE_URL as string || '').trim();
+        const sKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string || '').trim();
+        
         // 1. Buscar todas as missões ativas que reagem a este evento
         const { data: missionsList, error: missionError } = await supabase
             .from('gamification_missions')
-            .select('id, target_value')
+            .select('id, target_value, title')
             .eq('audience', 'driver')
             .eq('is_active', true)
             .eq('trigger_event', missionKey);
@@ -33,48 +38,65 @@ export async function incrementMissionProgress({
         // 2. Processar cada missão em paralelo
         const results = await Promise.all(
             missionsList.map(async (mission) => {
-                // Buscar progresso atual do motorista nesta missão
-                const { data: progress, error: progressError } = await supabase
-                    .from('gamification_progress')
-                    .select('*')
-                    .eq('driver_id', driverId)
-                    .eq('mission_id', mission.id)
-                    .maybeSingle();
+                try {
+                    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const headers = { 
+                        'apikey': sKey, 
+                        'Content-Type': 'application/json',
+                        ...authHeader
+                    };
 
-                if (progressError) throw progressError;
-
-                if (!progress) {
-                    // Progresso ainda não existe: criar com o primeiro incremento
-                    const isNowCompleted = incrementBy >= mission.target_value;
-                    await supabase.from('gamification_progress').insert({
-                        driver_id: driverId,
-                        mission_id: mission.id,
-                        current_value: incrementBy,
-                        target_value: mission.target_value,
-                        is_completed: isNowCompleted,
-                        completed_at: isNowCompleted ? new Date().toISOString() : null,
+                    const progressRes = await fetch(`${sUrl}/rest/v1/gamification_progress?driver_id=eq.${driverId}&mission_id=eq.${mission.id}&select=*`, {
+                        headers
                     });
-                    return { isCompleted: isNowCompleted, missionId: mission.id };
+                    
+                    if (!progressRes.ok) throw new Error(`Erro ao buscar progresso: ${progressRes.status}`);
+                    const progressData = await progressRes.json();
+                    const progress = progressData[0];
+
+                    if (!progress) {
+                        const isNowCompleted = incrementBy >= mission.target_value;
+                        const insertRes = await fetch(`${sUrl}/rest/v1/gamification_progress`, {
+                            method: 'POST',
+                            headers: { ...headers, 'Prefer': 'return=minimal' },
+                            body: JSON.stringify({
+                                driver_id: driverId,
+                                mission_id: mission.id,
+                                current_value: incrementBy,
+                                target_value: mission.target_value,
+                                is_completed: isNowCompleted,
+                                completed_at: isNowCompleted ? new Date().toISOString() : null,
+                            })
+                        });
+                        
+                        if (!insertRes.ok) console.error('[GAMIFICATION] Erro ao criar progresso:', await insertRes.text());
+                        return { isCompleted: isNowCompleted, missionId: mission.id, title: mission.title };
+                    }
+
+                    if (!progress.is_completed) {
+                        const newValue = (progress.current_value || 0) + incrementBy;
+                        const isNowCompleted = newValue >= mission.target_value;
+
+                        const updateRes = await fetch(`${sUrl}/rest/v1/gamification_progress?id=eq.${progress.id}`, {
+                            method: 'PATCH',
+                            headers: { ...headers, 'Prefer': 'return=minimal' },
+                            body: JSON.stringify({
+                                current_value: newValue,
+                                is_completed: isNowCompleted,
+                                completed_at: isNowCompleted ? new Date().toISOString() : null,
+                                updated_at: new Date().toISOString()
+                            })
+                        });
+
+                        if (!updateRes.ok) console.error('[GAMIFICATION] Erro ao atualizar progresso:', await updateRes.text());
+                        return { isCompleted: isNowCompleted, missionId: mission.id, title: mission.title };
+                    }
+
+                    return { isCompleted: false, missionId: mission.id, title: mission.title };
+                } catch (e) {
+                    console.error(`[GAMIFICATION] Erro na missão ${mission.id}:`, e);
+                    return { isCompleted: false, missionId: mission.id, title: mission.title };
                 }
-
-                // Já existe progresso — só atualizar se ainda não concluída
-                if (!progress.is_completed) {
-                    const newValue = progress.current_value + incrementBy;
-                    const isNowCompleted = newValue >= mission.target_value;
-
-                    await supabase
-                        .from('gamification_progress')
-                        .update({
-                            current_value: newValue,
-                            is_completed: isNowCompleted,
-                            completed_at: isNowCompleted ? new Date().toISOString() : null,
-                        })
-                        .eq('id', progress.id);
-
-                    return { isCompleted: isNowCompleted, missionId: mission.id };
-                }
-
-                return { isCompleted: false, missionId: mission.id };
             })
         );
 

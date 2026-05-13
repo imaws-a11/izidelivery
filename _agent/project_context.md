@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Resumo Executivo)
-Atualizado: 2026-05-12
+Atualizado: 2026-05-13
 
 ---
 
@@ -58,13 +58,16 @@ Atualizado: 2026-05-12
 - **Navegação**: `navigateSubView` gerencia histórico e estados de visualização.
 - **Auth**: Fonte de verdade é exclusivamente o banco de dados; `localStorage` apenas para persistência secundária.
 - **App do Entregador (Radar & APK)**:
-  - **Fetch Nativo**: O Radar DEVE usar `fetch` nativo com o REST API do Supabase em vez da biblioteca client para evitar travamentos (hanging promises) em redes instáveis ou no APK.
+  - **Fetch Nativo**: O Radar e as solicitações de novos veículos DEVEM usar `fetch` nativo com o REST API do Supabase em vez da biblioteca client para evitar travamentos (hanging promises) em redes instáveis ou no APK.
   - **Blindagem Nativa**: Todas as chamadas a APIs de navegador (como `Notification`) ou plugins (como `ForegroundService`) devem ser protegidas com `typeof ... !== 'undefined'` e `Capacitor.isNativePlatform()` para evitar crashes (ReferenceErrors).
   - **Persistência Online**: O status `is_online` no boot deve priorizar o `localStorage` para evitar que o refresh da página "derrube" o entregador indevidamente.
   - **Estabilidade de UI**: 
     - **Anti-Loop**: Dependências cíclicas em `useEffect` (como `exclusiveMerchantIds`) devem ser evitadas para prevenir erros de "Maximum update depth".
     - **Resposta Instantânea**: Modais de perfil ("Meus Dados") devem abrir imediatamente ao clique, preenchendo dados da sessão (Auth) como fallback enquanto o banco de dados é consultado.
     - **Aceite Resiliente**: O aceite de pedidos deve garantir a parada incondicional de sons (`stopIziSounds`) e o retorno ao estado anterior em caso de falha no banco.
+    - **Standardized Popups**: Alertas do sistema (Sucesso, Erro, Info) e confirmações críticas devem usar o componente `SystemPopup` (Premium) e `showConfirm` (Custom) para consistência visual e UX de alta qualidade.
+    - **Sync de Perfil**: O carregamento inicial (`loadProfileAndEnforceOnboarding`) deve ser resiliente a dados parciais e garantir a limpeza de estados obsoletos em logouts/erros.
+    - **Gamificação (Bônus Izi)**: O incremento de progresso de missões (`incrementMissionProgress`) DEVE usar `fetch` nativo com o token de autenticação (`Bearer`) para garantir que as políticas de RLS de `gamification_progress` sejam respeitadas e evitar lags de sincronização.
 - **Remoção de Legado**: Sempre excluir versões incorretas/legadas de funções ao realizar correções (Política de Zero Lixo).
 
 ---
