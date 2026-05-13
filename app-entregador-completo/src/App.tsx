@@ -1766,7 +1766,7 @@ function MainApp() {
                           id: 'izi_notifications',
                           name: 'Notificações IZI',
                           description: 'Canal principal de notificações do IZI Delivery',
-                          sound: 'notification',
+                          sound: 'mission_call',
                           importance: 5,
                           visibility: 1,
                           vibration: true
@@ -2732,7 +2732,7 @@ function MainApp() {
                 description: 'Canal principal de notificações do IZI Delivery',
                 importance: 5, // Max importance para banner
                 visibility: 1,
-                sound: 'notification',
+                sound: 'mission_call',
                 vibration: true
             }).catch(err => {});
         }
