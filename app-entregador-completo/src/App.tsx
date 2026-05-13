@@ -304,12 +304,11 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
       {/* Marcador do Entregador (Piloto) */}
       {driverCoords && isValidCoord(driverCoords) && (
         <OverlayView position={driverCoords} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-          <div className="relative flex items-center justify-center">
-            <div className="absolute size-14 rounded-full bg-yellow-400/10 animate-ping duration-[2000ms]" />
-            <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
-              <div className="size-8 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-inner">
-                <Icon name="two_wheeler" size={16} className="text-black" />
-              </div>
+          <div className="relative -translate-x-1/2 -translate-y-1/2">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute size-10 bg-blue-500/30 rounded-full animate-ping" />
+              <div className="absolute size-6 bg-blue-500/20 rounded-full animate-pulse" />
+              <div className="relative size-4 bg-blue-600 rounded-full border-2 border-white shadow-md" />
             </div>
           </div>
         </OverlayView>
@@ -334,12 +333,11 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
         if (!clientPos) return null;
         return (
           <OverlayView position={clientPos} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-            <div className="relative flex items-center justify-center">
-              <div className="absolute size-14 rounded-full bg-blue-400/20 animate-pulse" />
-              <div className="size-11 rounded-3xl bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl flex items-center justify-center">
-                <div className="size-8 rounded-2xl bg-blue-600 flex items-center justify-center shadow-inner">
-                  <Icon name="home" size={16} className="text-white" />
-                </div>
+            <div className="relative -translate-x-1/2 -translate-y-1/2">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute size-10 bg-green-500/30 rounded-full animate-ping" />
+                <div className="absolute size-6 bg-green-500/20 rounded-full animate-pulse" />
+                <div className="relative size-4 bg-green-600 rounded-full border-2 border-white shadow-md" />
               </div>
             </div>
           </OverlayView>

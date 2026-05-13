@@ -188,8 +188,10 @@ export function IziTrackingMap({
         {isValid(userLoc) && (
           <OverlayView position={userLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative -translate-x-1/2 -translate-y-1/2">
-              <div className="size-6 bg-blue-500/20 rounded-full flex items-center justify-center animate-pulse">
-                <div className="size-4 bg-blue-600 rounded-full border-2 border-white shadow-xl" />
+              <div className="relative flex items-center justify-center">
+                <div className="absolute size-10 bg-blue-500/30 rounded-full animate-ping" />
+                <div className="absolute size-6 bg-blue-500/20 rounded-full animate-pulse" />
+                <div className="relative size-4 bg-blue-600 rounded-full border-2 border-white shadow-md" />
               </div>
             </div>
           </OverlayView>
@@ -213,8 +215,10 @@ export function IziTrackingMap({
         {isValid(driverLoc) && (
           <OverlayView position={driverLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative -translate-x-1/2 -translate-y-1/2">
-              <div className="size-14 bg-yellow-400 rounded-[28px] flex items-center justify-center shadow-2xl border-2 border-white ring-8 ring-yellow-400/10">
-                <span className="material-symbols-rounded text-black text-3xl font-black">{vehicleIcon}</span>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute size-10 bg-green-500/30 rounded-full animate-ping" />
+                <div className="absolute size-6 bg-green-500/20 rounded-full animate-pulse" />
+                <div className="relative size-4 bg-green-600 rounded-full border-2 border-white shadow-md" />
               </div>
             </div>
           </OverlayView>
