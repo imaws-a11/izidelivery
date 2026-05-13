@@ -101,6 +101,36 @@ const DriverApplicationsTab = () => {
   const handleApprove = async (app: any) => {
     setActionLoading(true);
     try {
+      // Candidatura restaurada manualmente (sem auth user): motorista já existe em drivers_delivery
+      if (!app.user_id) {
+        // Ativar motorista pelo telefone
+        const { data: existingDriver, error: findError } = await supabase
+          .from('drivers_delivery')
+          .select('id')
+          .eq('phone', app.phone)
+          .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (existingDriver) {
+          await supabase
+            .from('drivers_delivery')
+            .update({ status: 'active', is_active: true })
+            .eq('id', existingDriver.id);
+        }
+
+        await supabase
+          .from('driver_applications_delivery')
+          .update({ status: 'approved' })
+          .eq('id', app.id);
+
+        alert('Cadastro aprovado com sucesso!');
+        fetchData();
+        setSelectedApp(null);
+        return;
+      }
+
+      // Fluxo normal: candidatura com auth user
       const { data: existingPhone, error: phoneError } = await supabase
         .from('drivers_delivery')
         .select('id, name, is_deleted')
@@ -171,6 +201,24 @@ const DriverApplicationsTab = () => {
     }
   };
 
+  const handleReactivate = async (appId: string) => {
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('driver_applications_delivery')
+        .update({ status: 'pending', rejection_reason: null })
+        .eq('id', appId);
+      if (error) throw error;
+      alert('Candidatura reativada com sucesso!');
+      fetchData();
+      setSelectedApp(null);
+    } catch (err: any) {
+      alert('Erro ao reativar: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleReject = async (appId: string) => {
     const reason = prompt('Motivo da rejeição:');
     if (!reason) return;
@@ -208,7 +256,7 @@ const DriverApplicationsTab = () => {
             <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">Candidaturas</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Gestão de novos motoristas</p>
          </div>
-         <button onClick={fetchApplications} className="size-12 rounded-2xl bg-white dark:bg-white/5 flex items-center justify-center text-slate-400 hover:text-primary transition-colors border border-slate-100 dark:border-white/5">
+         <button onClick={fetchData} className="size-12 rounded-2xl bg-white dark:bg-white/5 flex items-center justify-center text-slate-400 hover:text-primary transition-colors border border-slate-100 dark:border-white/5">
            <span className="material-symbols-outlined">refresh</span>
          </button>
       </div>
