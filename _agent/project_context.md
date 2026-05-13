@@ -68,6 +68,9 @@ Atualizado: 2026-05-13
     - **Standardized Popups**: Alertas do sistema (Sucesso, Erro, Info) e confirmações críticas devem usar o componente `SystemPopup` (Premium) e `showConfirm` (Custom) para consistência visual e UX de alta qualidade.
     - **Sync de Perfil**: O carregamento inicial (`loadProfileAndEnforceOnboarding`) deve ser resiliente a dados parciais e garantir a limpeza de estados obsoletos em logouts/erros.
     - **Gamificação (Bônus Izi)**: O incremento de progresso de missões (`incrementMissionProgress`) DEVE usar `fetch` nativo com o token de autenticação (`Bearer`) para garantir que as políticas de RLS de `gamification_progress` sejam respeitadas e evitar lags de sincronização.
+- **Painel Admin (Merchant Studio & Taxonomia)**:
+  - **Categorias Principais**: O seletor de "Tipo de Estabelecimento" no `MerchantStudio.tsx` e `MerchantsTab.tsx` agora filtra apenas categorias master (`parent_id IS NULL`), simplificando a navegação inicial do administrador.
+  - **Taxonomia Centralizada**: A seção "Categorias de Especialidade" foi removida do cadastro de lojistas, pois a definição de nichos e especialidades agora é gerida exclusivamente através do Centro de Taxonomia, evitando redundância e inconsistência de dados.
 - **Remoção de Legado**: Sempre excluir versões incorretas/legadas de funções ao realizar correções (Política de Zero Lixo).
 
 ---

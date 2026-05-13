@@ -38,7 +38,7 @@ export default function MerchantStudio() {
             store_name: '',
             email: '',
             password: '',
-            store_type: establishmentTypes[0]?.value || 'restaurant',
+            store_type: (establishmentTypes.filter(t => !t.parent_id)[0]?.value) || 'restaurant',
             commission_percent: appSettings.appCommission || 15,
             service_fee: appSettings.serviceFee || 1.5,
             is_active: true,
@@ -202,7 +202,7 @@ export default function MerchantStudio() {
                           className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-3xl px-8 py-5 font-black text-lg focus:ring-4 focus:ring-primary/20 transition-all dark:text-white appearance-none cursor-pointer"
                         >
                           {establishmentTypes.length > 0 ? (
-                            establishmentTypes.map(t => (
+                            establishmentTypes.filter(t => !t.parent_id).map(t => (
                               <option key={t.id} value={t.value}>{t.name}</option>
                             ))
                           ) : (
@@ -249,33 +249,7 @@ export default function MerchantStudio() {
                         placeholder="00.000.000/0001-00"
                       />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Categorias de Especialidade</label>
-                      <div className="flex flex-wrap gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-3xl min-h-[100px]">
-                        {['Pizza', 'Hambúrguer', 'Japonesa', 'Brasileira', 'Doces', 'Bebidas', 'Saudável', 'Açaí', 'Italiana', 'Chinesa'].map(cat => {
-                          const isSelected = (editingItem.food_category || []).includes(cat.toLowerCase());
-                          return (
-                            <button
-                              key={cat}
-                              onClick={() => {
-                                const current = editingItem.food_category || [];
-                                const lower = cat.toLowerCase();
-                                if (current.includes(lower)) {
-                                  setEditingItem({ ...editingItem, food_category: current.filter((c: string) => c !== lower) });
-                                } else {
-                                  setEditingItem({ ...editingItem, food_category: [...current, lower] });
-                                }
-                              }}
-                              className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                isSelected ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20' : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-600'
-                              }`}
-                            >
-                              {cat}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+
                   </div>
                 </motion.div>
               )}

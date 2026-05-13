@@ -115,7 +115,7 @@ export default function MerchantsTab() {
                   store_name: '',
                   email: '',
                   password: '',
-                  store_type: establishmentTypes[0]?.value || 'restaurant',
+                  store_type: (establishmentTypes.filter(t => !t.parent_id)[0]?.value) || 'restaurant',
                   commission_percent: appSettings.appCommission || 15,
                   service_fee: appSettings.serviceFee || 1.5,
                   is_active: true,

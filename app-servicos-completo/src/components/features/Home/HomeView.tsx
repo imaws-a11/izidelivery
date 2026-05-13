@@ -505,22 +505,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
                               >
                                 <div className={`size-16 rounded-3xl flex items-center justify-center border shadow-sm transition-all relative overflow-hidden active:scale-90 ${
                                   isHighlight 
-                                    ? 'bg-gradient-to-br from-yellow-400 via-yellow-300 to-amber-400 border-yellow-300 shadow-lg shadow-yellow-400/30 group-hover:shadow-xl group-hover:shadow-yellow-400/40' 
+                                    ? 'bg-gradient-to-br from-zinc-900 via-zinc-800 to-black border-zinc-800 shadow-lg shadow-black/30 group-hover:shadow-xl group-hover:shadow-black/40' 
                                     : 'bg-zinc-50 border-zinc-100 group-hover:bg-yellow-50'
                                 }`}>
                                   {isHighlight && (
-                                    <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent" />
+                                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
                                   )}
                                   {s.icon && s.icon.startsWith('http') ? (
-                                    <img src={s.icon} className="size-11 object-contain relative z-[1]" alt={s.name} />
+                                    <img src={s.icon} className="size-14 object-contain relative z-[1]" alt={s.name} />
                                   ) : s.img ? (
-                                    <img src={s.img} className="size-11 object-contain relative z-[1]" alt={s.name} />
+                                    <img src={s.img} className="size-14 object-contain relative z-[1]" alt={s.name} />
                                   ) : (
-                                    <span className={`material-symbols-rounded text-[32px] relative z-[1] ${isHighlight ? 'text-black' : 'text-zinc-400'}`}>{s.icon || 'storefront'}</span>
+                                    <span className={`material-symbols-rounded text-[32px] relative z-[1] ${isHighlight ? 'text-white' : 'text-zinc-400'}`}>{s.icon || 'storefront'}</span>
                                   )}
                                 </div>
                                 <span className={`text-[10px] font-black text-center leading-tight uppercase tracking-tighter truncate w-full ${
-                                  isHighlight ? 'text-yellow-600' : 'text-zinc-900'
+                                  isHighlight ? 'text-black' : 'text-zinc-900'
                                 }`}>
                                   {s.name || s.label}
                                 </span>

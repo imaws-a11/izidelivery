@@ -143,12 +143,12 @@ export const ServicesExploreView: React.FC<ServicesExploreViewProps> = ({
                           className="bg-zinc-50 rounded-3xl p-4 flex items-center gap-3 border border-zinc-100/50 hover:bg-zinc-100 transition-colors cursor-pointer"
                         >
                            {cat.icon && cat.icon.startsWith('http') ? (
-                             <img src={cat.icon} className="size-10 object-contain" alt={cat.name} />
+                             <img src={cat.icon} className="size-12 object-contain" alt={cat.name} />
                            ) : cat.img ? (
-                             <img src={cat.img} className="size-10 object-contain" alt={cat.name} />
+                             <img src={cat.img} className="size-12 object-contain" alt={cat.name} />
                            ) : (
-                             <div className="size-10 rounded-2xl bg-white flex items-center justify-center shadow-sm">
-                               <span className="material-symbols-rounded text-zinc-900">{cat.icon || 'storefront'}</span>
+                             <div className="size-12 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+                               <span className="material-symbols-rounded text-zinc-900 text-xl">{cat.icon || 'storefront'}</span>
                              </div>
                            )}
                            <span className="text-xs font-black text-zinc-900 line-clamp-2 leading-tight">{cat.name || cat.label}</span>
