@@ -20,6 +20,8 @@
         "@capacitor/push-notifications": "^8.0.3",
         "@capawesome-team/capacitor-android-foreground-service": "^8.1.0",
         "@react-google-maps/api": "^2.20.8",
+        "@sentry/browser": "^10.53.1",
+        "@sentry/react": "^10.53.1",
         "@supabase/supabase-js": "^2.98.0",
         "@tailwindcss/vite": "^4.2.1",
         "@tanstack/react-virtual": "^3.13.24",

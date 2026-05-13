@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { iziFetch } from './iziFetch';
 
 export interface GamificationIncrement {
     driverId: string;
@@ -46,8 +47,10 @@ export async function incrementMissionProgress({
                         ...authHeader
                     };
 
-                    const progressRes = await fetch(`${sUrl}/rest/v1/gamification_progress?driver_id=eq.${driverId}&mission_id=eq.${mission.id}&select=*`, {
-                        headers
+                    const progressRes = await iziFetch(`${sUrl}/rest/v1/gamification_progress?driver_id=eq.${driverId}&mission_id=eq.${mission.id}&select=*`, {
+                        headers,
+                        timeoutMs: 5000,
+                        retries: 2
                     });
                     
                     if (!progressRes.ok) throw new Error(`Erro ao buscar progresso: ${progressRes.status}`);
@@ -56,7 +59,7 @@ export async function incrementMissionProgress({
 
                     if (!progress) {
                         const isNowCompleted = incrementBy >= mission.target_value;
-                        const insertRes = await fetch(`${sUrl}/rest/v1/gamification_progress`, {
+                        const insertRes = await iziFetch(`${sUrl}/rest/v1/gamification_progress`, {
                             method: 'POST',
                             headers: { ...headers, 'Prefer': 'return=minimal' },
                             body: JSON.stringify({
@@ -66,7 +69,9 @@ export async function incrementMissionProgress({
                                 target_value: mission.target_value,
                                 is_completed: isNowCompleted,
                                 completed_at: isNowCompleted ? new Date().toISOString() : null,
-                            })
+                            }),
+                            timeoutMs: 8000,
+                            retries: 3
                         });
                         
                         if (!insertRes.ok) console.error('[GAMIFICATION] Erro ao criar progresso:', await insertRes.text());
@@ -77,7 +82,7 @@ export async function incrementMissionProgress({
                         const newValue = (progress.current_value || 0) + incrementBy;
                         const isNowCompleted = newValue >= mission.target_value;
 
-                        const updateRes = await fetch(`${sUrl}/rest/v1/gamification_progress?id=eq.${progress.id}`, {
+                        const updateRes = await iziFetch(`${sUrl}/rest/v1/gamification_progress?id=eq.${progress.id}`, {
                             method: 'PATCH',
                             headers: { ...headers, 'Prefer': 'return=minimal' },
                             body: JSON.stringify({
@@ -85,7 +90,9 @@ export async function incrementMissionProgress({
                                 is_completed: isNowCompleted,
                                 completed_at: isNowCompleted ? new Date().toISOString() : null,
                                 updated_at: new Date().toISOString()
-                            })
+                            }),
+                            timeoutMs: 8000,
+                            retries: 3
                         });
 
                         if (!updateRes.ok) console.error('[GAMIFICATION] Erro ao atualizar progresso:', await updateRes.text());

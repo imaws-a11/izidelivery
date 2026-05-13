@@ -14,6 +14,7 @@ import { ForegroundService } from '@capawesome-team/capacitor-android-foreground
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 import SplashScreen from './components/common/SplashScreen';
 import { IziBottomSheet } from './components/common/IziBottomSheet';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { OnboardingView } from './components/features/OnboardingView';
 import { MissionsView } from './components/features/MissionsView';
 import NotificationsCenterView from './components/features/NotificationsCenterView';
@@ -22,6 +23,12 @@ import { incrementMissionProgress } from './lib/gamification';
 import HistoryView from './components/features/HistoryView';
 import EarningsView from './components/features/EarningsView';
 import ProfileView from './components/features/ProfileView';
+import ScheduledView from './components/features/ScheduledView';
+import WithdrawHistoryView from './components/features/WithdrawHistoryView';
+import { normalizeServiceType, cleanAddressText, formatCurrency } from './lib/utils';
+import { iziFetch } from './lib/iziFetch';
+import PersonalDataModal from './components/features/PersonalDataModal';
+import BankDetailsModal from './components/features/BankDetailsModal';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -612,50 +619,6 @@ const getServicePresentation = (order: any) => {
 };
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-
-// Error Boundary Minimalista para evitar Tela Branca Fatal
-class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
-    constructor(props: any) {
-        super(props);
-        this.state = { hasError: false, error: null };
-    }
-    static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
-    componentDidCatch(error: any, errorInfo: any) {
-        console.error('[FATAL-ERROR]', error, errorInfo);
-    }
-    render() {
-        if (this.state.hasError) {
-            return (
-                <div className="h-screen w-full bg-zinc-900 flex flex-col items-center justify-center p-6 text-center overflow-auto">
-                    <div className="size-16 rounded-2xl bg-red-500 flex items-center justify-center mb-6 shadow-lg shadow-red-500/20">
-                        <span className="material-symbols-outlined text-3xl text-white">warning</span>
-                    </div>
-                    <h1 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Ops! Algo deu errado</h1>
-                    <p className="text-zinc-500 text-xs font-bold mb-6 leading-relaxed uppercase tracking-widest px-4">
-                        A interface encontrou um erro. Se estiver no APK, veja o erro abaixo:
-                    </p>
-                    
-                    <div className="w-full max-w-xs bg-black/40 border border-white/10 rounded-xl p-4 mb-8 text-left">
-                        <p className="text-red-400 text-[10px] font-mono break-all leading-tight mb-2">
-                            {this.state.error?.toString() || 'Erro desconhecido'}
-                        </p>
-                        <p className="text-zinc-600 text-[9px] font-mono break-all leading-tight opacity-50">
-                            {this.state.error?.stack?.split('\n').slice(0, 3).join('\n')}
-                        </p>
-                    </div>
-
-                    <button 
-                        onClick={() => window.location.reload()}
-                        className="w-full max-w-xs h-14 bg-yellow-400 text-black font-black uppercase tracking-widest rounded-xl shadow-xl active:scale-95 transition-all"
-                    >
-                        Tentar Novamente
-                    </button>
-                </div>
-            );
-        }
-        return this.props.children;
-    }
-}
 
 function MainApp() {
     const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -1282,6 +1245,18 @@ function MainApp() {
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
+    const [isNetworkConnected, setIsNetworkConnected] = useState(window.navigator.onLine);
+
+    useEffect(() => {
+        const handleOnline = () => setIsNetworkConnected(true);
+        const handleOffline = () => setIsNetworkConnected(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [audioBlocked, setAudioBlocked] = useState(false);
@@ -4530,133 +4505,16 @@ function MainApp() {
 
     const renderScheduledView = () => {
         if (selectedScheduledOrder) return renderScheduledDetailView();
-        
-        const myAgenda = scheduledOrders.filter((o: any) => o.driver_id && String(o.driver_id).trim() === String(driverId).trim());
-        const availableAgenda = scheduledOrders.filter((o: any) => !o.driver_id || String(o.driver_id).trim() === '');
-        
-        const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
-        const currentList = (subTabScheduled === 'confirmed' ? myAgenda : availableAgenda).filter(o => 
-            !terminalStatuses.includes((o.status || '').toLowerCase())
-        );
-
         return (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="pb-32 px-4 max-w-2xl mx-auto space-y-6 pt-4">
-                <section className="px-2">
-                    <div className="flex flex-col gap-4">
-                        <div className="text-center">
-                            <p className="text-zinc-400 font-black uppercase tracking-[0.4em] text-[10px] mb-1">Planejamento</p>
-                            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">Agenda de Entregas</h2>
-                        </div>
-                        
-                        <div className="flex bg-zinc-100 p-1.5 rounded-[24px] border border-zinc-200">
-                            <button 
-                                onClick={() => setSubTabScheduled('confirmed')}
-                                className={`flex-1 h-12 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
-                                    subTabScheduled === 'confirmed' 
-                                    ? 'bg-yellow-400 text-zinc-900 shadow-lg' 
-                                    : 'text-zinc-400'
-                                }`}
-                            >
-                                <Icon name="event_available" size={16} />
-                                Minha Agenda
-                                {myAgenda.length > 0 && (
-                                    <span className={`size-5 rounded-full flex items-center justify-center text-[9px] font-black ${
-                                        subTabScheduled === 'confirmed' ? 'bg-white' : 'bg-zinc-200'
-                                    }`}>
-                                        {myAgenda.length}
-                                    </span>
-                                )}
-                            </button>
-                            <button 
-                                onClick={() => setSubTabScheduled('available')}
-                                className={`flex-1 h-12 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
-                                    subTabScheduled === 'available' 
-                                    ? 'bg-yellow-400 text-zinc-900 shadow-lg' 
-                                    : 'text-zinc-400'
-                                }`}
-                            >
-                                <Icon name="explore" size={16} />
-                                Disponíveis
-                                {availableAgenda.length > 0 && (
-                                    <span className={`size-5 rounded-full flex items-center justify-center text-[9px] font-black ${
-                                        subTabScheduled === 'available' ? 'bg-white' : 'bg-zinc-200'
-                                    }`}>
-                                        {availableAgenda.length}
-                                    </span>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <div className="space-y-6">
-                    {currentList.length === 0 ? (
-                        <div className="py-24 bg-white border border-zinc-100 rounded-[40px] flex flex-col items-center gap-6 text-center px-8">
-                            <div className="size-20 rounded-full bg-zinc-50 flex items-center justify-center">
-                                <Icon name={subTabScheduled === 'confirmed' ? 'calendar_today' : 'search'} className="text-4xl text-zinc-200" />
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-                                    {subTabScheduled === 'confirmed' ? 'Sua agenda está vazia' : 'Nenhum agendamento aberto'}
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        currentList.map((order: any, i: number) => {
-                            const dt = new Date(order.scheduled_at);
-                            const isConfirmed = !!order.driver_id;
-                            
-                            return (
-                                <motion.div 
-                                    key={order.id}
-                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    transition={{ delay: i * 0.05 }}
-                                    className="bg-white p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all border border-zinc-100 rounded-[2.5rem] shadow-lg"
-                                    onClick={() => setSelectedScheduledOrder(order)}
-                                >
-                                    <div className="relative z-10">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="bg-yellow-400 text-zinc-900 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                                <div className={`size-1.5 rounded-full ${isConfirmed ? 'bg-emerald-600 animate-pulse' : 'bg-yellow-600'}`} />
-                                                {serviceTypeLabel(order.service_type)}
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-[8px] font-black uppercase tracking-widest text-zinc-400">Valor Líquido</p>
-                                                <p className="text-2xl font-black text-zinc-900">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-4 mb-6 text-zinc-900">
-                                            <div className="bg-yellow-400 size-12 rounded-2xl flex items-center justify-center shadow-lg">
-                                                <Icon name="calendar_month" size={24} />
-                                            </div>
-                                            <div>
-                                                <p className="font-black text-lg leading-none uppercase tracking-tighter">
-                                                    {dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }).replace('.', '')}
-                                                </p>
-                                                <p className="text-sm font-bold mt-1 opacity-70">
-                                                    {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-4">
-                                            <button className="flex-1 bg-zinc-900 text-yellow-400 font-black text-[10px] uppercase tracking-[0.2em] py-4 rounded-[22px] active:scale-95 transition-all flex items-center justify-center gap-3">
-                                                {isConfirmed ? (
-                                                    <><Icon name="task_alt" size={18} /> Ver Minha Agenda</>
-                                                ) : (
-                                                    <><Icon name="arrow_forward" size={18} /> Avaliar Oferta</>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })
-                    )}
-                </div>
-            </motion.div>
+            <ScheduledView 
+                scheduledOrders={scheduledOrders}
+                driverId={driverId}
+                subTabScheduled={subTabScheduled}
+                setSubTabScheduled={setSubTabScheduled}
+                setSelectedScheduledOrder={setSelectedScheduledOrder}
+                getNetEarnings={getNetEarnings}
+                serviceTypeLabel={serviceTypeLabel}
+            />
         );
     };
 
@@ -5053,142 +4911,12 @@ function MainApp() {
     // renderEarningsView extraído para componente EarningsView.tsx (performance: React.memo)
 
     const renderWithdrawHistoryView = () => (
-        <motion.div 
-            key="withdraw-history-modal"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            className="fixed inset-0 z-[250] bg-zinc-50 no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
-        >
-            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-zinc-100">
-                <button 
-                    onClick={() => setShowWithdrawHistory(false)}
-                    className="size-12 rounded-[20px] bg-zinc-50 flex items-center justify-center active:scale-95 transition-transform border border-zinc-100"
-                >
-                    <Icon name="arrow_back" className="text-zinc-900" />
-                </button>
-                <div className="flex flex-col items-end">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Financeiro</p>
-                    <h2 className="text-lg font-black text-zinc-900 tracking-tighter uppercase">Histórico de Saques</h2>
-                </div>
-            </header>
-
-            <div className="px-5 pt-8 pb-32 space-y-8">
-
-                <div className="space-y-4 pb-20">
-                    {withdrawHistory.length === 0 ? (
-                        <div className="bg-white rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6 border border-zinc-100 mt-10 shadow-xl" style={sClayLight}>
-                            <div className="size-20 rounded-full bg-zinc-50 flex items-center justify-center border border-zinc-100">
-                                <Icon name="history_edu" size={40} className="text-zinc-200" />
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-zinc-900 font-black uppercase text-[10px] tracking-widest">Nada por aqui</p>
-                                <p className="text-zinc-400 text-[9px] font-black">Você ainda não realizou nenhum saque.</p>
-                            </div>
-                        </div>
-                    ) : (
-                        withdrawHistory.map((tx, i) => (
-                            <motion.div 
-                                key={tx.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                onClick={() => { setSelectedWithdraw(tx); setShowWithdrawDetail(true); }}
-                                className="bg-white rounded-[30px] p-6 border border-zinc-100 flex items-center gap-5 relative overflow-hidden transition-all active:scale-95 cursor-pointer hover:border-yellow-400/30 shadow-sm"
-                                style={sClayLight}
-                            >
-                                <div className={`size-14 rounded-2xl flex items-center justify-center border shadow-sm ${
-                                    tx.status === 'concluido' ? 'bg-emerald-50 border-emerald-100' : 
-                                    tx.status === 'recusado' ? 'bg-rose-50 border-rose-100' :
-                                    'bg-yellow-50 border-yellow-100'
-                                }`}>
-                                    <Icon 
-                                        name={tx.status === 'concluido' ? 'verified' : tx.status === 'recusado' ? 'close' : 'sync'} 
-                                        size={24} 
-                                        className={tx.status === 'concluido' ? 'text-emerald-500' : tx.status === 'recusado' ? 'text-rose-500' : 'text-yellow-600'} 
-                                    />
-                                </div>
-
-                                <div className="flex-1 space-y-1">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-zinc-900 font-black text-xl tracking-tighter">R$ {Number(tx.amount).toFixed(2).replace('.', ',')}</p>
-                                        <div className="flex items-center gap-2">
-                                            {tx.receipt_url && (
-                                                <div className="bg-emerald-500/20 text-emerald-400 text-[7px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                    <Icon name="image" size={10} />
-                                                    RECIBO
-                                                </div>
-                                            )}
-                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${
-                                                tx.status === 'concluido' ? 'bg-emerald-50 text-emerald-500' : 
-                                                tx.status === 'recusado' ? 'bg-rose-50 text-rose-500' :
-                                                'bg-yellow-50 text-yellow-600'
-                                            }`}>
-                                                {tx.status || 'Pendente'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <p className="text-[9px] text-zinc-400 font-black uppercase truncate max-w-[150px]">
-                                        {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                    <p className="text-[8px] text-zinc-300 font-bold line-clamp-1">{tx.description}</p>
-                                </div>
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-400/[0.02] blur-3xl -z-10 rounded-full" />
-                            </motion.div>
-                        ))
-                    )}
-                </div>
-
-                {/* Receipt Viewer Modal */}
-                <AnimatePresence>
-                    {showReceipt && (
-                        <motion.div 
-                            key="receipt-modal"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-xl flex flex-col p-6 items-center justify-center gap-8"
-                        >
-                            <div className="w-full flex justify-between items-center px-2">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] opacity-70">Transação 🧾</p>
-                                    <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase text-center">Comprovante</h2>
-                                </div>
-                                <motion.button 
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => setShowReceipt(false)}
-                                    className="size-12 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100"
-                                >
-                                    <Icon name="close" className="text-zinc-900" size={24} />
-                                </motion.button>
-                            </div>
-
-                            <div className="flex-1 w-full max-w-md bg-white/5 rounded-[40px] border border-white/10 overflow-hidden relative shadow-2xl">
-                                <img 
-                                    src={selectedReceiptUrl} 
-                                    alt="Comprovante de Pagamento" 
-                                    className="w-full h-full object-contain"
-                                />
-                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-8 text-center">
-                                    <p className="text-[10px] text-zinc-400 font-bold">
-                                        Este documento foi emitido pelo sistema IziDelivery e serve como prova de transferência.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <motion.button 
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setShowReceipt(false)}
-                                className="w-full h-16 bg-white text-black rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-3"
-                            >
-                                <Icon name="check" size={20} />
-                                Entendido
-                            </motion.button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </motion.div>
+        <WithdrawHistoryView 
+            withdrawHistory={withdrawHistory}
+            setShowWithdrawHistory={setShowWithdrawHistory}
+            setSelectedWithdraw={setSelectedWithdraw}
+            setShowWithdrawDetail={setShowWithdrawDetail}
+        />
     );
 
     const renderWithdrawDetailView = () => {
@@ -5797,120 +5525,9 @@ function MainApp() {
             )}
         </AnimatePresence>
     );
+    // renderPersonalDataModal extraído para componente PersonalDataModal.tsx
+    // renderBankDetailsView extraído para componente BankDetailsModal.tsx
 
-    const renderPersonalDataModal = () => {
-        return (
-            <motion.div 
-                key="personal-data-modal"
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                className="fixed inset-0 z-[400] bg-white flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
-            >
-                <div className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
-                    <button 
-                        onClick={() => setShowPersonalDataModal(false)}
-                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
-                    >
-                        <Icon name="arrow_back" className="text-white" size={24} />
-                    </button>
-                    <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Perfil</p>
-                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meus Dados</h2>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-6 py-10 space-y-12 no-scrollbar">
-                    <div className="space-y-2">
-                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Dados Pessoais</h3>
-                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
-                            Mantenha seus dados atualizados para garantir segurança.
-                        </p>
-                    </div>
-
-                    <div className="space-y-8">
-                        {/* Campo: Nome */}
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">Nome Completo</label>
-                            <input 
-                                type="text"
-                                value={editProfileData.name}
-                                onChange={(e) => setEditProfileData({ ...editProfileData, name: e.target.value })}
-                                placeholder="Seu nome completo"
-                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
-                            />
-                        </div>
-
-                        {/* Campo: Telefone */}
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">WhatsApp / Telefone</label>
-                            <input 
-                                type="tel"
-                                value={editProfileData.phone}
-                                onChange={(e) => setEditProfileData({ ...editProfileData, phone: e.target.value })}
-                                placeholder="(00) 00000-0000"
-                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
-                            />
-                        </div>
-
-                        {/* Campo: E-mail */}
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">E-mail</label>
-                            <input 
-                                type="email"
-                                value={editProfileData.email}
-                                onChange={(e) => setEditProfileData({ ...editProfileData, email: e.target.value })}
-                                placeholder="seu@email.com"
-                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
-                            />
-                        </div>
-
-                        {/* Campo: CPF */}
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">CPF</label>
-                            <input 
-                                type="text"
-                                value={editProfileData.cpf}
-                                onChange={(e) => setEditProfileData({ ...editProfileData, cpf: e.target.value.replace(/\D/g, '') })}
-                                placeholder="000.000.000-00"
-                                maxLength={11}
-                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
-                            />
-                        </div>
-
-                        {/* Campo: Endereço */}
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">Endereço Completo</label>
-                            <textarea 
-                                value={editProfileData.address}
-                                onChange={(e) => setEditProfileData({ ...editProfileData, address: e.target.value })}
-                                placeholder="Rua, Número, Bairro, Cidade"
-                                rows={2}
-                                className="w-full bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-bold text-lg placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none resize-none"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-8 pb-12 bg-white/95 backdrop-blur-md">
-                    <button 
-                        onClick={handleUpdateProfile}
-                        disabled={isSavingProfile || !editProfileData.name}
-                        className="w-full h-18 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-50"
-                    >
-                        {isSavingProfile ? (
-                            <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                            <>
-                                <Icon name="check_circle" size={18} />
-                                Salvar Alterações
-                            </>
-                        )}
-                    </button>
-                </div>
-            </motion.div>
-        );
-    };
     const renderPendingApprovalModal = () => (
         <AnimatePresence>
             {showPendingApprovalModal && (
@@ -5957,95 +5574,6 @@ function MainApp() {
         </AnimatePresence>
     );
 
-    const renderBankDetailsView = () => {
-        return (
-            <motion.div
-                key="bank-details-modal"
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                className="fixed inset-0 z-[400] bg-white flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
-            >
-                <header className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
-                    <button 
-                        onClick={() => {
-                            setShowBankDetails(false);
-                            setPixKey(localStorage.getItem('izi_driver_pix') || '');
-                            setBankName(localStorage.getItem('izi_driver_bank_name') || '');
-                            setIsEditingPix(false);
-                        }}
-                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
-                    >
-                        <Icon name="arrow_back" className="text-white" size={24} />
-                    </button>
-                    <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Financeiro</p>
-                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Recebimento</h2>
-                    </div>
-                </header>
-
-                <div className="px-6 pt-10 pb-32 space-y-12">
-                    <div className="space-y-2">
-                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Dados Bancários</h3>
-                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
-                            Cadastre sua chave PIX para receber seus ganhos automaticamente.
-                        </p>
-                    </div>
-
-                    <div className="space-y-10">
-                        <div className="space-y-4">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
-                                Nome do Banco
-                            </label>
-                            <input 
-                                type="text"
-                                value={bankName}
-                                onChange={(e) => {
-                                    setBankName(e.target.value);
-                                    setIsEditingPix(true);
-                                }}
-                                placeholder="Itaú, Nubank, Inter..."
-                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
-                            />
-                        </div>
-
-                        <div className="space-y-4">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
-                                Sua Chave PIX
-                            </label>
-                            <input 
-                                type="text"
-                                value={pixKey}
-                                onChange={(e) => {
-                                    setPixKey(e.target.value);
-                                    setIsEditingPix(true);
-                                }}
-                                placeholder="CPF, Celular, E-mail..."
-                                className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
-                            />
-                        </div>
-
-                        <div className="p-6 rounded-3xl bg-zinc-50 border border-zinc-100">
-                            <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
-                                A chave fornecida será vinculada de forma definitiva ao seu perfil para garantir a segurança dos seus recebimentos.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="pt-4">
-                        <button 
-                            onClick={async () => {
-                                await handleSavePix(pixKey, bankName);
-                                setShowBankDetails(false);
-                            }}
-                            disabled={pixKey.length < 5 || bankName.length < 2 || isSavingPix}
-                            className="w-full h-18 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-50"
-                        >
-                            {isSavingPix ? (
-                                <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <Icon name="check_circle" size={18} />
                                     Salvar Dados
                                 </>
                             )}
@@ -7534,8 +7062,46 @@ function MainApp() {
                             
                             <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
                             <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
-                            <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
-                            <AnimatePresence>{showPersonalDataModal && renderPersonalDataModal()}</AnimatePresence>
+                            <AnimatePresence>
+                                {showBankDetails && (
+                                    <BankDetailsModal 
+                                        show={showBankDetails}
+                                        onClose={() => {
+                                            setShowBankDetails(false);
+                                            setPixKey(localStorage.getItem('izi_driver_pix') || '');
+                                            setBankName(localStorage.getItem('izi_driver_bank_name') || '');
+                                            setIsEditingPix(false);
+                                        }}
+                                        bankName={bankName}
+                                        onBankNameChange={(val) => {
+                                            setBankName(val);
+                                            setIsEditingPix(true);
+                                        }}
+                                        pixKey={pixKey}
+                                        onPixKeyChange={(val) => {
+                                            setPixKey(val);
+                                            setIsEditingPix(true);
+                                        }}
+                                        onSave={async () => {
+                                            await handleSavePix(pixKey, bankName);
+                                            setShowBankDetails(false);
+                                        }}
+                                        isSaving={isSavingPix}
+                                    />
+                                )}
+                            </AnimatePresence>
+                            <AnimatePresence>
+                                {showPersonalDataModal && (
+                                    <PersonalDataModal 
+                                        show={showPersonalDataModal}
+                                        onClose={() => setShowPersonalDataModal(false)}
+                                        editProfileData={editProfileData}
+                                        onUpdateData={setEditProfileData}
+                                        onSave={handleUpdateProfile}
+                                        isSaving={isSavingProfile}
+                                    />
+                                )}
+                            </AnimatePresence>
                             <AnimatePresence>{showPlateModal && renderPlateEditView()}</AnimatePresence>
                             <AnimatePresence>{showPreferences && renderPreferencesView()}</AnimatePresence>
  
@@ -7766,7 +7332,28 @@ function MainApp() {
                                     </motion.button>
                                 )}
 
-                                {renderBottomNavigation()}
+                            <AnimatePresence>
+                                {!isNetworkConnected && (
+                                    <motion.div 
+                                        initial={{ y: 50, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        exit={{ y: 50, opacity: 0 }}
+                                        className="fixed bottom-32 left-6 right-6 z-[600] pointer-events-none"
+                                    >
+                                        <div className="bg-zinc-950/90 text-white px-6 py-4 rounded-[24px] shadow-[0_20px_40px_rgba(0,0,0,0.3)] flex items-center gap-4 border border-white/10 backdrop-blur-xl">
+                                            <div className="size-10 rounded-full bg-rose-500 flex items-center justify-center animate-pulse">
+                                                <Icon name="wifi_off" size={20} className="text-white" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 text-white">Modo Offline</p>
+                                                <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">Verifique sua conexão de rede</p>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {renderBottomNavigation()}
                             </div>
                         </div>
 
