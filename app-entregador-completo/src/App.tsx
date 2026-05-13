@@ -648,16 +648,16 @@ function MainApp() {
     const [isApproved, setIsApproved] = useState(() => localStorage.getItem('izi_driver_approved') === 'true');
     const [isProfileLoaded, setIsProfileLoaded] = useState(() => localStorage.getItem('izi_driver_approved') !== null);
     const [isCardExpanded, setIsCardExpanded] = useState(false);
-    const [authEmail, setAuthEmail] = useState('');
+    const [authEmail, setAuthEmail] = useState(() => localStorage.getItem('izi_driver_email') || '');
     const [authPassword, setAuthPassword] = useState('');
     const [showAuthPassword, setShowAuthPassword] = useState(false);
     const [rememberLogin, setRememberLogin] = useState(() => localStorage.getItem('izi_driver_remember') === 'true');
     const [authError, setAuthError] = useState('');
-    const [authName, setAuthName] = useState('');
-    const [authCpf, setAuthCpf] = useState('');
-    const [authVehicle, setAuthVehicle] = useState<'moto' | 'carro' | 'utilitario'>('moto');
-    const [authPhone, setAuthPhone] = useState('');
-    const [driverVehicle, setDriverVehicle] = useState<string>(() => localStorage.getItem('izi_driver_vehicle') || 'moto');
+    const [authName, setAuthName] = useState(() => localStorage.getItem('izi_driver_name') || '');
+    const [authCpf, setAuthCpf] = useState(() => localStorage.getItem('izi_driver_cpf') || '');
+    const [authVehicle, setAuthVehicle] = useState<string>('mototaxi');
+    const [authPhone, setAuthPhone] = useState(() => localStorage.getItem('izi_driver_phone') || '');
+    const [driverVehicle, setDriverVehicle] = useState<string>(() => localStorage.getItem('izi_driver_vehicle') || 'mototaxi');
     const [authLoading, setAuthLoading] = useState(false);
     const [authInitLoading, setAuthInitLoading] = useState(true);
 
@@ -730,8 +730,15 @@ function MainApp() {
                 if (session?.user && isMounted) {
                     setDriverId(session.user.id);
                     setIsAuthenticated(true);
-                    const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Entregador';
-                    await loadProfileAndEnforceOnboarding(session.user.id, session.user.email || '', name);
+                    
+                    // Sincroniza dados do Auth para os estados locais para evitar campos vazios no refresh
+                    const userEmail = session.user.email || '';
+                    const name = session.user.user_metadata?.name || userEmail.split('@')[0] || 'Entregador';
+                    
+                    if (!authEmail) setAuthEmail(userEmail);
+                    if (!authName) setAuthName(name);
+
+                    await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
                 } else if (isMounted) {
                     setIsAuthenticated(false);
                     setIsProfileLoaded(true);
@@ -759,8 +766,14 @@ function MainApp() {
             if (event === 'SIGNED_IN' && session?.user) {
                 setDriverId(session.user.id);
                 setIsAuthenticated(true);
-                const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Entregador';
-                await loadProfileAndEnforceOnboarding(session.user.id, session.user.email || '', name);
+                
+                const userEmail = session.user.email || '';
+                const name = session.user.user_metadata?.name || userEmail.split('@')[0] || 'Entregador';
+                
+                if (!authEmail) setAuthEmail(userEmail);
+                if (!authName) setAuthName(name);
+
+                await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
             }
         });
 
@@ -887,65 +900,83 @@ function MainApp() {
     const handleUpdateProfile = async () => {
         console.log('[DEBUG] handleUpdateProfile iniciado. DriverId:', driverId);
         if (!driverId) {
-            console.error('[DEBUG] Tentativa de salvar sem DriverId!');
+            toastError('Erro: Sessão não encontrada.');
             return;
         }
 
         if (editProfileData.cpf && !validateCPF(editProfileData.cpf)) {
-            alert('O CPF informado é inválido. Por favor, verifique.');
+            toastError('O CPF informado é inválido.');
             return;
         }
         
         setIsSavingProfile(true);
         try {
-            // Update via fetch nativo
-            const { data: { session } } = await supabase.auth.getSession();
+            const sUrl = import.meta.env.VITE_SUPABASE_URL;
+            const token = await getSecureToken();
             
-            const response = await fetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
+            console.log('[DEBUG] Enviando update para drivers_delivery:', {
+                id: driverId,
+                payload: {
+                    name: editProfileData.name,
+                    phone: editProfileData.phone,
+                    email: editProfileData.email,
+                    document_number: editProfileData.cpf,
+                    address: editProfileData.address
+                }
+            });
+
+            const response = await fetch(`${sUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${session?.access_token || ''}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
+                    'Prefer': 'return=minimal',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     name: editProfileData.name,
                     phone: editProfileData.phone,
                     email: editProfileData.email,
-                    vehicle_type: editProfileData.vehicle_type,
-                    license_plate: editProfileData.plate,
-                    document_number: editProfileData.cpf
+                    document_number: editProfileData.cpf,
+                    address: editProfileData.address
                 })
             });
 
             if (!response.ok) {
                 const errText = await response.text();
-                console.error('[DEBUG] Falha no fetch nativo:', errText);
-                throw new Error(`Erro na API: ${response.status} - ${errText}`);
+                console.error('[DEBUG] Falha no update (fetch):', errText);
+                throw new Error(`Erro na API (${response.status}): ${errText}`);
             }
 
-            console.log('[DEBUG] Update realizado com sucesso via fetch nativo!');
-
-            // Atualiza estados locais e cache
+            console.log('[DEBUG] Perfil atualizado com sucesso no banco!');
+            
+            // Atualiza estados locais e cache persistente
             setDriverName(editProfileData.name);
-            setDriverPlate(editProfileData.plate);
-            setDriverVehicle(editProfileData.vehicle_type);
+            setAuthName(editProfileData.name);
+            setAuthPhone(editProfileData.phone);
+            setAuthEmail(editProfileData.email);
+            setAuthCpf(editProfileData.cpf);
             
             localStorage.setItem('izi_driver_name', editProfileData.name);
             localStorage.setItem('izi_driver_phone', editProfileData.phone);
             localStorage.setItem('izi_driver_email', editProfileData.email);
-            localStorage.setItem('izi_driver_vehicle', editProfileData.vehicle_type);
-            localStorage.setItem('izi_driver_plate', editProfileData.plate);
             localStorage.setItem('izi_driver_cpf', editProfileData.cpf);
+            localStorage.setItem('izi_driver_address', editProfileData.address);
             
-            toastSuccess('Perfil atualizado com sucesso!');
+            showSystemPopup(
+                'Perfil Atualizado!', 
+                'Seus dados pessoais foram salvos com sucesso no sistema.',
+                'success'
+            );
             setShowPersonalDataModal(false);
             
-            // Recarrega para garantir sincronia total
-            loadProfileAndEnforceOnboarding(driverId, editProfileData.email, editProfileData.name);
+            // Sincronização completa final
+            await loadProfileAndEnforceOnboarding(driverId, editProfileData.email, editProfileData.name);
+
         } catch (err: any) {
-            toastError('Erro ao salvar dados: ' + (err.message || 'Verifique sua conexão'));
+            console.error('[DEBUG] Erro em handleUpdateProfile:', err);
+            toastError('Erro ao salvar: ' + (err.message || 'Falha na conexão'));
         } finally {
             setIsSavingProfile(false);
         }
@@ -1337,12 +1368,14 @@ function MainApp() {
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [isProfileNotFound, setIsProfileNotFound] = useState(false);
     const [editProfileData, setEditProfileData] = useState({
-        name: '',
-        phone: '',
-        email: '',
-        vehicle_type: '',
-        plate: '',
-        cpf: ''
+        name: localStorage.getItem('izi_driver_name') || '',
+        phone: localStorage.getItem('izi_driver_phone') || '',
+        email: localStorage.getItem('izi_driver_email') || '',
+        vehicle_type: localStorage.getItem('izi_driver_vehicle') || '',
+        plate: localStorage.getItem('izi_driver_plate') || '',
+        cpf: localStorage.getItem('izi_driver_cpf') || '',
+        address: localStorage.getItem('izi_driver_address') || '',
+        vehicle_model: localStorage.getItem('izi_driver_vehicle_model') || ''
     });
     const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -1380,7 +1413,14 @@ function MainApp() {
     const [newVehicleModel, setNewVehicleModel] = useState('');
     const [newVehicleColor, setNewVehicleColor] = useState('');
     const [isSavingNewVehicle, setIsSavingNewVehicle] = useState(false);
+    const [myVehicles, setMyVehicles] = useState<any[]>([]);
     const [myVehicleRequests, setMyVehicleRequests] = useState<any[]>([]);
+    const [systemPopup, setSystemPopup] = useState<{
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        onClose?: () => void;
+    } | null>(null);
     const [showPreferences, setShowPreferences] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
     const [showPendingApprovalModal, setShowPendingApprovalModal] = useState(false);
@@ -1463,6 +1503,8 @@ function MainApp() {
             'Izi_declined_timed',
             'izi_driver_online',
             'izi_driver_approved',
+            'izi_driver_address',
+            'izi_driver_vehicle_model',
             'izi_audio_unlocked',
             'last_izi_broadcast_driver'
         ];
@@ -1859,7 +1901,7 @@ function MainApp() {
         try {
             const { data: profile, error: profileError } = await supabase
                 .from('drivers_delivery')
-                .select('name, phone, email, vehicle_type, license_plate, document_number, bank_info, avatar_url, preferences, is_active, merchant_id')
+                .select('name, phone, email, vehicle_type, vehicle_model, license_plate, document_number, bank_info, avatar_url, preferences, is_active, merchant_id')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -1921,6 +1963,8 @@ function MainApp() {
             if (profile.phone) localStorage.setItem('izi_driver_phone', profile.phone);
             if (profile.email) localStorage.setItem('izi_driver_email', profile.email);
             if (profile.document_number) localStorage.setItem('izi_driver_cpf', profile.document_number);
+            if (profile.address) localStorage.setItem('izi_driver_address', profile.address);
+            if (profile.vehicle_model) localStorage.setItem('izi_driver_vehicle_model', profile.vehicle_model);
             
             // 4. Dados Bancários e Vínculos
             if (profile.merchant_id) {
@@ -1929,20 +1973,22 @@ function MainApp() {
                 localStorage.removeItem('izi_driver_merchant_id');
             }
 
-            if (profile.bank_info?.pix_key) {
-                setPixKey(profile.bank_info.pix_key);
-                localStorage.setItem('izi_driver_pix', profile.bank_info.pix_key);
-            }
-
-            // 5. Alimentar formulário de edição com dados GARANTIDOS do banco (com fallback para os dados do Auth)
+            // 5. Sincroniza o buffer de edição (editProfileData) para evitar dados incorretos nos modais
             setEditProfileData({
                 name: profile.name || userName || '',
                 phone: profile.phone || '',
                 email: profile.email || userEmail || '',
-                vehicle_type: profile.vehicle_type || '',
+                vehicle_type: profile.vehicle_type || 'mototaxi',
                 plate: profile.license_plate || '',
-                cpf: profile.document_number || ''
+                cpf: profile.document_number || '',
+                address: profile.address || '',
+                vehicle_model: profile.vehicle_model || ''
             });
+
+            if (profile.bank_info?.pix_key) {
+                setPixKey(profile.bank_info.pix_key);
+                localStorage.setItem('izi_driver_pix', profile.bank_info.pix_key);
+            }
 
             // 6. Preferências
             if (profile.preferences) {
@@ -2041,25 +2087,33 @@ function MainApp() {
 
         const channel = supabase.channel(`driver_profile_${driverId}`)
             .on('postgres_changes', { 
-                event: 'UPDATE', 
+                event: '*', 
                 schema: 'public', 
                 table: 'drivers_delivery',
                 filter: `id=eq.${driverId}`
             }, (payload) => {
-                const updated = payload.new as any;
-                
-                // Sincroniza Status Online
-                if (updated.is_online !== undefined) {
-                    setIsOnline(!!updated.is_online);
-                    localStorage.setItem('izi_driver_online', String(updated.is_online));
+                if (payload.eventType === 'DELETE') {
+                    console.log('[REALTIME] Conta do entregador foi excluída!');
+                    handleLogout();
+                    return;
                 }
-                
-                // Sincroniza Vínculo de Lojista
-                if (updated.merchant_id !== undefined) {
-                    if (updated.merchant_id) {
-                        localStorage.setItem('izi_driver_merchant_id', String(updated.merchant_id));
-                    } else {
-                        localStorage.removeItem('izi_driver_merchant_id');
+
+                if (payload.eventType === 'UPDATE') {
+                    const updated = payload.new as any;
+                    
+                    // Sincroniza Status Online
+                    if (updated.is_online !== undefined) {
+                        setIsOnline(!!updated.is_online);
+                        localStorage.setItem('izi_driver_online', String(updated.is_online));
+                    }
+                    
+                    // Sincroniza Vínculo de Lojista
+                    if (updated.merchant_id !== undefined) {
+                        if (updated.merchant_id) {
+                            localStorage.setItem('izi_driver_merchant_id', String(updated.merchant_id));
+                        } else {
+                            localStorage.removeItem('izi_driver_merchant_id');
+                        }
                     }
                 }
             })
@@ -2438,6 +2492,30 @@ function MainApp() {
         } catch(e) {}
         return sKey;
     }, []);
+    const loadVehicleRequests = useCallback(async (dId: string) => {
+        if (!dId) return;
+        try {
+            const sUrl = import.meta.env.VITE_SUPABASE_URL;
+            const token = await getSecureToken();
+            const response = await fetch(`${sUrl}/rest/v1/driver_vehicle_requests?driver_id=eq.${dId}&order=created_at.desc`, {
+                headers: {
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setMyVehicleRequests(data);
+            }
+        } catch (e) {
+            console.error('[VEHICLE_REQ] Erro ao carregar:', e);
+        }
+    }, [getSecureToken]);
+
+    const showSystemPopup = useCallback((title: string, message: string, type: 'success' | 'error' | 'info' = 'success', onClose?: () => void) => {
+        setSystemPopup({ title, message, type, onClose });
+    }, []);
+
     const fetchFromDB = useCallback(async (table: string, queryParams: string = '') => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -2974,13 +3052,8 @@ function MainApp() {
     // Carregar solicitações de veículo do entregador
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
-        supabase
-            .from('driver_vehicle_requests')
-            .select('*')
-            .eq('driver_id', driverId)
-            .order('created_at', { ascending: false })
-            .then(({ data }) => { if (data) setMyVehicleRequests(data); });
-    }, [driverId, isAuthenticated]);
+        loadVehicleRequests(driverId);
+    }, [driverId, isAuthenticated, loadVehicleRequests]);
 
     // Gancho para buscar coordenadas reais do lojista se os campos pickup_lat/lng estiverem vazios no pedido
     useEffect(() => {
@@ -3702,7 +3775,11 @@ function MainApp() {
             setPixKey(keyToSave);
             setBankName(bankToSave);
             setIsEditingPix(false);
-            toastSuccess('Dados Bancários salvos!');
+            showSystemPopup(
+                'Dados Salvos!',
+                'Suas informações bancárias e chave PIX foram atualizadas.',
+                'success'
+            );
         } catch (e: any) {
             console.error('[PIX] ERRO:', e);
             toastError('Erro ao salvar: ' + (e?.message || 'Desconhecido'));
@@ -3711,33 +3788,48 @@ function MainApp() {
         }
     };
 
-    const handleSavePlate = async (plateVal: string, vehicleVal: string) => {
-        const val = vehicleVal === 'bicicleta' ? '' : plateVal.trim().toUpperCase();
-        if (vehicleVal !== 'bicicleta' && !val) { toastError('Informe a placa do veículo'); return; }
-        if (!vehicleVal) { toastError('Selecione o tipo de veículo'); return; }
-        if (!driverId) { toastError('Sessão inválida. Por favor, faça login novamente.'); return; }
-
+    const handleSavePlate = async (val: string, vehicleVal: string) => {
+        if (!driverId) return;
         setIsSavingPlate(true);
-        
         try {
-            const { error } = await supabase
-                .from('drivers_delivery')
-                .update({ license_plate: val, vehicle_type: vehicleVal })
-                .eq('id', driverId);
-
-            if (error) throw error;
-
-            setDriverPlate(val);
-            setDriverVehicle(vehicleVal);
-            localStorage.setItem('izi_driver_plate', val);
-            localStorage.setItem('izi_driver_vehicle', vehicleVal);
+            const sUrl = import.meta.env.VITE_SUPABASE_URL;
+            const token = await getSecureToken();
             
+            const payload = {
+                driver_id: driverId,
+                vehicle_type: vehicleVal,
+                plate: val.trim().toUpperCase(),
+                model: editProfileData.vehicle_model,
+                status: 'pending'
+            };
+
+            const response = await fetch(`${sUrl}/rest/v1/driver_vehicle_requests`, {
+                method: 'POST',
+                headers: {
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(errText || 'Falha ao salvar no banco');
+            }
+
+            showSystemPopup(
+                'Solicitação de Alteração!',
+                'Sua solicitação de alteração de veículo foi enviada com sucesso e será analisada pelo administrador.',
+                'success'
+            );
+            await loadVehicleRequests(driverId);
             setIsEditingPlate(false);
-            toastSuccess('Veículo atualizado!');
-            setShowPlateModal(false); 
+            setShowPlateModal(false);
         } catch (e: any) {
-            console.error('[PLATE] Erro ao salvar:', e);
-            toastError('Erro ao salvar veículo: ' + (e.message || 'Tente novamente'));
+            console.error('[PLATE] Erro ao solicitar alteração:', e);
+            toastError('Erro ao enviar solicitação: ' + (e.message || 'Tente novamente'));
         } finally {
             setIsSavingPlate(false);
         }
@@ -3753,34 +3845,47 @@ function MainApp() {
         setIsSavingNewVehicle(true);
 
         try {
-            const { error } = await supabase
-                .from('driver_vehicle_requests')
-                .insert([{
-                    driver_id: driverId,
-                                vehicle_type: newVehicleType,
-                                plate: needsPlate ? newVehiclePlate.trim().toUpperCase() : null,
-                                model: newVehicleModel.trim(),
-                                color: newVehicleColor.trim(),
-                                status: 'pending'
-                            }]);
+            const sUrl = import.meta.env.VITE_SUPABASE_URL;
+            const token = await getSecureToken();
+            
+            const payload = {
+                driver_id: driverId,
+                vehicle_type: newVehicleType,
+                plate: needsPlate ? newVehiclePlate.trim().toUpperCase() : null,
+                model: newVehicleModel.trim(),
+                color: newVehicleColor.trim(),
+                status: 'pending'
+            };
 
-            if (error) throw error;
+            const response = await fetch(`${sUrl}/rest/v1/driver_vehicle_requests`, {
+                method: 'POST',
+                headers: {
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(payload)
+            });
 
-            toastSuccess('Solicitação enviada! O admin irá avaliar seu veículo.');
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(errText || 'Falha ao salvar no banco');
+            }
+
+            showSystemPopup(
+                'Solicitação Enviada!', 
+                'Seu novo veículo foi cadastrado com sucesso e está aguardando a aprovação do administrador.',
+                'success'
+            );
+            
             setShowNewVehicleForm(false);
             setNewVehicleType('');
             setNewVehiclePlate('');
             setNewVehicleModel('');
             setNewVehicleColor('');
             
-            // Recarregar solicitações
-            const { data } = await supabase
-                .from('driver_vehicle_requests')
-                .select('*')
-                .eq('driver_id', driverId)
-                .order('created_at', { ascending: false });
-                
-            if (data) setMyVehicleRequests(data);
+            await loadVehicleRequests(driverId);
         } catch (e: any) {
             console.error('[NEW_VEHICLE] Erro:', e);
             toastError('Erro ao enviar solicitação: ' + (e.message || 'Tente novamente'));
@@ -6410,15 +6515,20 @@ function MainApp() {
                             key={i} 
                             onClick={() => {
                                 if (item.label === 'Meus Dados') {
-                                    // Pré-preenche com o que já temos para resposta instantânea
-                                    setEditProfileData(prev => ({
-                                        ...prev,
-                                        name: driverName || prev.name,
-                                        email: authEmail || prev.email
-                                    }));
+                                    // Sincronização completa para garantir campos preenchidos
+                                    setEditProfileData({
+                                        name: driverName || localStorage.getItem('izi_driver_name') || '',
+                                        email: authEmail || localStorage.getItem('izi_driver_email') || '',
+                                        phone: localStorage.getItem('izi_driver_phone') || '',
+                                        cpf: localStorage.getItem('izi_driver_cpf') || '',
+                                        vehicle_type: driverVehicle || localStorage.getItem('izi_driver_vehicle') || '',
+                                        plate: driverPlate || localStorage.getItem('izi_driver_plate') || '',
+                                        address: localStorage.getItem('izi_driver_address') || '',
+                                        vehicle_model: localStorage.getItem('izi_driver_vehicle_model') || ''
+                                    });
                                     setShowPersonalDataModal(true);
                                     if (driverId) {
-                                        loadProfileAndEnforceOnboarding(driverId, authEmail || '', driverName);
+                                        loadProfileAndEnforceOnboarding(driverId, authEmail || localStorage.getItem('izi_driver_email') || '', driverName);
                                     }
                                 }
                                 if (item.label === 'Dados Bancários') setShowBankDetails(true);
@@ -6459,7 +6569,16 @@ function MainApp() {
 
                 <div className="space-y-4">
                     <button 
-                        onClick={handleLogout} 
+                        onClick={async () => {
+                            if (await showConfirm({ 
+                                title: 'Encerrar Sessão', 
+                                message: 'Deseja realmente sair da sua conta?', 
+                                confirmLabel: 'Sair agora',
+                                danger: true 
+                            })) {
+                                handleLogout();
+                            }
+                        }} 
                         className="w-full h-18 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] bg-rose-50 text-rose-600 active:scale-95 transition-all border border-rose-100"
                     >
                         Encerrar Sessão
@@ -6482,12 +6601,17 @@ function MainApp() {
                                 Sincronizar
                             </button>
                             <button 
-                                onClick={() => {
-                                    if (confirm('Deseja forçar a limpeza da missão atual?')) {
+                                onClick={async () => {
+                                    if (await showConfirm({
+                                        title: 'Resetar Missão',
+                                        message: 'Isso irá limpar o cache local da sua missão atual. Use apenas se estiver travado.',
+                                        confirmLabel: 'Resetar Agora',
+                                        danger: true
+                                    })) {
                                         setActiveMission(null);
                                         localStorage.removeItem('Izi_active_mission');
                                         setActiveTab('dashboard');
-                                        toastSuccess('Limpeza concluída!');
+                                        showSystemPopup('Reset Concluído', 'O cache da missão foi limpo com sucesso.', 'info');
                                     }
                                 }}
                                 className="flex-1 h-12 bg-white border border-rose-200 text-rose-500 font-black text-[9px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
@@ -6516,210 +6640,213 @@ function MainApp() {
         ];
         const nvNeedsPlate = newVehicleType !== 'bicicleta';
         const nvCanSubmit = !!newVehicleType && !!newVehicleModel.trim() && (!nvNeedsPlate || newVehiclePlate.trim().length >= 7);
+        
         return (
             <>
-            <motion.div
-                key="plate-edit-modal"
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                className="fixed inset-0 z-[400] bg-white flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
-            >
-                <header className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100">
-                    <button 
-                        onClick={() => {
-                            setShowPlateModal(false);
-                            setDriverPlate(localStorage.getItem('izi_driver_plate') || '');
-                            setIsEditingPlate(false);
-                        }}
-                        className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
-                    >
-                        <Icon name="arrow_back" className="text-white" size={24} />
-                    </button>
-                    <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Veículo</p>
-                        <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meus Veículos</h2>
-                    </div>
-                </header>
+                <motion.div
+                    key="plate-edit-modal"
+                    initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                    className="fixed inset-0 z-[400] bg-zinc-50 flex flex-col no-scrollbar overflow-y-auto font-['Plus_Jakarta_Sans']"
+                >
+                    <header className="sticky top-0 z-50 bg-white px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100 shadow-sm">
+                        <button 
+                            onClick={() => setShowPlateModal(false)}
+                            className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
+                        >
+                            <Icon name="arrow_back" className="text-white" size={24} />
+                        </button>
+                        <div className="flex flex-col items-end">
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Gestão</p>
+                            <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meus Veículos</h2>
+                        </div>
+                    </header>
 
-                <div className="px-6 pt-10 pb-32 space-y-12">
-                    <div className="space-y-2">
-                        <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Tipo de Veículo</h3>
-                        <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
-                            Mantenha seu veículo atualizado para identificação.
-                        </p>
-                    </div>
-
-                    <div className="space-y-8">
-                        <div className="space-y-6">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
-                                Veículo Utilizado
-                            </label>
-                            <div className="grid grid-cols-2 gap-4">
-                                {[
-                                    { id: 'mototaxi', icon: 'two_wheeler', label: 'Moto' },
-                                    { id: 'carro', icon: 'directions_car', label: 'Carro' },
-                                    { id: 'bicicleta', icon: 'pedal_bike', label: 'Bike' },
-                                    { id: 'fiorino', icon: 'airport_shuttle', label: 'Fiorino' },
-                                    { id: 'caminhonete', icon: 'rv_hookup', label: 'Pickup' },
-                                    { id: 'van', icon: 'directions_bus', label: 'Van' },
-                                    { id: 'vuc', icon: 'local_shipping', label: 'VUC' },
-                                    { id: 'bau_p', icon: 'inventory_2', label: 'Baú P' },
-                                    { id: 'bau_m', icon: 'inventory_2', label: 'Baú M' },
-                                    { id: 'bau_g', icon: 'inventory_2', label: 'Baú G' },
-                                ].map((type) => (
-                                <button
-                                    key={type.id}
-                                    onClick={() => { setDriverVehicle(type.id); setIsEditingPlate(true); }}
-                                    className={`h-28 rounded-3xl font-black text-[10px] flex flex-col items-center justify-center gap-3 transition-all border-2 ${
-                                        driverVehicle === type.id 
-                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-xl scale-[1.02]' 
-                                            : 'bg-white text-zinc-400 border-zinc-100 hover:border-zinc-200'
-                                    }`}
-                                >
-                                    <Icon name={type.icon} size={32} />
-                                    <span className="uppercase tracking-widest">{type.label}</span>
-                                </button>
-                            ))}
+                    <div className="px-6 pt-8 pb-32 space-y-8">
+                        {/* SEÇÃO 1: VEÍCULO ATIVO */}
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículo em Uso</h3>
+                            <div className="bg-zinc-900 rounded-[32px] p-6 text-white shadow-2xl relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/10 transition-all" />
+                                <div className="flex items-start justify-between relative z-10">
+                                    <div className="space-y-4">
+                                        <div className="size-14 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                            <Icon name={
+                                                driverVehicle === 'mototaxi' ? 'two_wheeler' : 
+                                                driverVehicle === 'carro' ? 'directions_car' : 
+                                                driverVehicle === 'bicicleta' ? 'pedal_bike' : 'local_shipping'
+                                            } size={28} className="text-white" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-2xl font-black tracking-tighter leading-none">{driverVehicle === 'mototaxi' ? 'Moto' : driverVehicle === 'carro' ? 'Carro' : driverVehicle === 'bicicleta' ? 'Bike' : driverVehicle?.toUpperCase()}</h4>
+                                            <p className="text-[11px] font-bold text-white/50 uppercase tracking-widest mt-1">{editProfileData.vehicle_model || 'Modelo não informado'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-yellow-400 text-zinc-900 px-4 py-2 rounded-xl font-black text-xs tracking-tighter shadow-lg">
+                                        {driverPlate || 'SEM PLACA'}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {driverVehicle !== 'bicicleta' && (
-                            <div className="space-y-6">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">
-                                    Placa do Veículo
-                                </label>
-                                <div className="relative">
-                                    <input 
-                                        type="text"
-                                        value={driverPlate}
-                                        onChange={(e) => {
-                                            setDriverPlate(e.target.value.toUpperCase());
-                                            setIsEditingPlate(true);
-                                        }}
-                                        placeholder="ABC1234"
-                                        className="w-full h-20 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-2xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
-                                    />
-                                    {isEditingPlate && (
-                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                            <div className="size-2 rounded-full bg-yellow-400 animate-pulse" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                    <div className="space-y-12">
-                        <button 
-                            onClick={() => handleSavePlate(driverPlate, driverVehicle)}
-                            disabled={(!driverVehicle || (driverVehicle !== 'bicicleta' && driverPlate.length < 7)) || isSavingPlate}
-                            className="w-full h-18 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-50"
-                        >
-                            {isSavingPlate ? (
-                                <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <Icon name="check_circle" size={18} className="text-yellow-400" />
-                                    Atualizar Veículo
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* MODAL: Formulario de Novo Veiculo */}
-            <AnimatePresence>
-                {showNewVehicleForm && (
-                    <motion.div
-                        key="new-vehicle-modal"
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[400] bg-black/50 backdrop-blur-sm flex items-end justify-center"
-                        onClick={() => setShowNewVehicleForm(false)}
-                    >
-                        <motion.div
-                            initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-                            transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-                            className="w-full max-w-lg bg-white rounded-t-[40px] p-6 space-y-5 max-h-[90vh] overflow-y-auto"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto" />
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[9px] font-black text-yellow-600 uppercase tracking-[0.3em]">Cadastro</p>
-                                    <h3 className="text-xl font-black text-zinc-900 tracking-tighter">Novo Veículo</h3>
-                                </div>
-                                <button onClick={() => setShowNewVehicleForm(false)} className="size-10 rounded-[16px] bg-zinc-50 border border-zinc-100 flex items-center justify-center active:scale-95">
-                                    <Icon name="close" className="text-zinc-400" />
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-zinc-400 font-bold leading-relaxed bg-blue-50 border border-blue-100 rounded-[16px] p-4">
-                                <span className="text-blue-600">ℹ️</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
-                            </p>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <Icon name="directions_car" size={13} className="text-zinc-300" /> Tipo de Veículo
-                                </label>
-                                <div className="grid grid-cols-5 gap-2">
-                                    {nvVehicleOptions.map((v) => (
-                                        <button key={v.id} onClick={() => setNewVehicleType(v.id)}
-                                            className={`h-20 rounded-[18px] flex flex-col items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-wide transition-all border ${
-                                                newVehicleType === v.id
-                                                    ? 'bg-yellow-400 text-zinc-900 border-yellow-300 scale-105 shadow-[0_8px_16px_rgba(250,204,21,0.25)]'
-                                                    : 'bg-zinc-50 text-zinc-400 border-zinc-100 hover:bg-zinc-100'
-                                            }`}>
-                                            <Icon name={v.icon} size={20} className={newVehicleType === v.id ? 'text-zinc-900' : 'text-zinc-300'} />
-                                            {v.label}
+                        {/* SEÇÃO 2: OUTROS VEÍCULOS APROVADOS */}
+                        {myVehicles.filter(v => !v.is_active).length > 0 && (
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículos Aprovados</h3>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {myVehicles.filter(v => !v.is_active).map(v => (
+                                        <button 
+                                            key={v.id}
+                                            onClick={() => setActiveVehicle(v.id)}
+                                            className="w-full bg-white border border-zinc-100 rounded-[24px] p-4 flex items-center justify-between group active:scale-[0.98] transition-all hover:border-zinc-300"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-zinc-900 group-hover:text-white transition-colors">
+                                                    <Icon name={v.vehicle_type === 'mototaxi' ? 'two_wheeler' : 'directions_car'} size={20} />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black text-zinc-900 leading-none capitalize">{v.vehicle_type} • {v.plate}</p>
+                                                    <p className="text-[10px] font-bold text-zinc-400 mt-1">{v.model}</p>
+                                                </div>
+                                            </div>
+                                            <div className="px-3 py-1.5 bg-zinc-50 rounded-lg text-[9px] font-black text-zinc-400 group-hover:bg-zinc-900 group-hover:text-white transition-all uppercase tracking-tighter">
+                                                Ativar
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <Icon name="drive_eta" size={13} className="text-zinc-300" /> Modelo
-                                </label>
-                                <input type="text" value={newVehicleModel} onChange={(e) => setNewVehicleModel(e.target.value)}
-                                    placeholder="Ex: Honda CG 160, VW Gol, Ford Transit..."
-                                    className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all" />
+                        )}
+
+                        {/* SEÇÃO 3: SOLICITAÇÕES PENDENTES */}
+                        {myVehicleRequests.length > 0 && (
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Em Análise</h3>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {myVehicleRequests.map(req => (
+                                        <div key={req.id} className="w-full bg-amber-50/50 border border-amber-100 rounded-[24px] p-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
+                                                    <Icon name="history" size={20} />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black text-amber-900 leading-none capitalize">{req.vehicle_type} • {req.plate || 'Bike'}</p>
+                                                    <p className="text-[10px] font-bold text-amber-600/70 mt-1">{req.model}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                                <span className="text-[9px] font-black text-amber-600 uppercase tracking-tighter">Pendente</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <Icon name="palette" size={13} className="text-zinc-300" /> Cor
-                                </label>
-                                <input type="text" value={newVehicleColor} onChange={(e) => setNewVehicleColor(e.target.value)}
-                                    placeholder="Ex: Preto, Branco, Prata..."
-                                    className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all" />
-                            </div>
-                            {nvNeedsPlate && (
+                        )}
+
+                        {/* BOTÃO NOVO VEÍCULO */}
+                        <div className="pt-4">
+                            <button 
+                                onClick={() => setShowNewVehicleForm(true)}
+                                className="w-full h-20 bg-white border-2 border-dashed border-zinc-200 rounded-[32px] flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-zinc-100 group"
+                            >
+                                <div className="size-10 rounded-2xl bg-zinc-900 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                                    <Icon name="add" size={24} />
+                                </div>
+                                <span className="text-sm font-black text-zinc-900 uppercase tracking-widest">Novo Veículo</span>
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* MODAL: Formulario de Novo Veiculo */}
+                <AnimatePresence>
+                    {showNewVehicleForm && (
+                        <motion.div
+                            key="new-vehicle-modal"
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[400] bg-black/50 backdrop-blur-sm flex items-end justify-center"
+                            onClick={() => setShowNewVehicleForm(false)}
+                        >
+                            <motion.div
+                                initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+                                transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+                                className="w-full max-w-lg bg-white rounded-t-[40px] p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto" />
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[9px] font-black text-yellow-600 uppercase tracking-[0.3em]">Cadastro</p>
+                                        <h3 className="text-xl font-black text-zinc-900 tracking-tighter">Novo Veículo</h3>
+                                    </div>
+                                    <button onClick={() => setShowNewVehicleForm(false)} className="size-10 rounded-[16px] bg-zinc-50 border border-zinc-100 flex items-center justify-center active:scale-95">
+                                        <Icon name="close" className="text-zinc-400" />
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-zinc-400 font-bold leading-relaxed bg-blue-50 border border-blue-100 rounded-[16px] p-4">
+                                    <span className="text-blue-600">ℹ️</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
+                                </p>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <Icon name="directions_car" size={13} className="text-zinc-300" /> Tipo de Veículo
+                                    </label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                        {nvVehicleOptions.map((v) => (
+                                            <button key={v.id} onClick={() => setNewVehicleType(v.id)}
+                                                className={`h-20 rounded-[18px] flex flex-col items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-wide transition-all border ${
+                                                    newVehicleType === v.id
+                                                        ? 'bg-yellow-400 text-zinc-900 border-yellow-300 scale-105 shadow-[0_8px_16px_rgba(250,204,21,0.25)]'
+                                                        : 'bg-zinc-50 text-zinc-400 border-zinc-100 hover:bg-zinc-100'
+                                                }`}>
+                                                <Icon name={v.icon} size={20} className={newVehicleType === v.id ? 'text-zinc-900' : 'text-zinc-300'} />
+                                                {v.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <Icon name="tag" size={13} className="text-zinc-300" /> Placa
+                                        <Icon name="drive_eta" size={13} className="text-zinc-300" /> Modelo
                                     </label>
-                                    <input type="text" value={newVehiclePlate}
-                                        onChange={(e) => setNewVehiclePlate(e.target.value.toUpperCase())}
-                                        placeholder="ABC1234 ou ABC1D23" maxLength={8}
-                                        className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all uppercase" />
+                                    <input type="text" value={newVehicleModel} onChange={(e) => setNewVehicleModel(e.target.value)}
+                                        placeholder="Ex: Honda CG 160, VW Gol, Ford Transit..."
+                                        className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all" />
                                 </div>
-                            )}
-                            <button onClick={handleSubmitNewVehicle} disabled={!nvCanSubmit || isSavingNewVehicle}
-                                className={`w-full h-16 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg ${
-                                    nvCanSubmit && !isSavingNewVehicle
-                                        ? 'bg-yellow-400 text-zinc-900 shadow-[0_10px_25px_rgba(250,204,21,0.3)] hover:scale-[1.02] active:scale-95'
-                                        : 'bg-zinc-100 text-zinc-300 cursor-not-allowed'
-                                }`}>
-                                {isSavingNewVehicle ? <Icon name="sync" className="animate-spin" size={18} /> : <Icon name="send" size={18} />}
-                                {isSavingNewVehicle ? 'Enviando...' : 'Enviar para Avaliação'}
-                            </button>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <Icon name="palette" size={13} className="text-zinc-300" /> Cor
+                                    </label>
+                                    <input type="text" value={newVehicleColor} onChange={(e) => setNewVehicleColor(e.target.value)}
+                                        placeholder="Ex: Preto, Branco, Prata..."
+                                        className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all" />
+                                </div>
+                                {nvNeedsPlate && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            <Icon name="tag" size={13} className="text-zinc-300" /> Placa
+                                        </label>
+                                        <input type="text" value={newVehiclePlate}
+                                            onChange={(e) => setNewVehiclePlate(e.target.value.toUpperCase())}
+                                            placeholder="ABC1234 ou ABC1D23" maxLength={8}
+                                            className="w-full h-14 bg-zinc-50 border border-zinc-100 rounded-[20px] px-5 text-zinc-900 font-bold text-sm placeholder:text-zinc-300 focus:ring-2 focus:ring-yellow-400/30 outline-none transition-all uppercase" />
+                                    </div>
+                                )}
+                                <button onClick={handleSubmitNewVehicle} disabled={!nvCanSubmit || isSavingNewVehicle}
+                                    className={`w-full h-16 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg ${
+                                        nvCanSubmit && !isSavingNewVehicle
+                                            ? 'bg-yellow-400 text-zinc-900 shadow-[0_10px_25px_rgba(250,204,21,0.3)] hover:scale-[1.02] active:scale-95'
+                                            : 'bg-zinc-100 text-zinc-300 cursor-not-allowed'
+                                    }`}>
+                                    {isSavingNewVehicle ? <Icon name="sync" className="animate-spin" size={18} /> : <Icon name="send" size={18} />}
+                                    {isSavingNewVehicle ? 'Enviando...' : 'Enviar para Avaliação'}
+                                </button>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>
             </>
         );
     };
-
-
 
     const renderProfileNotFoundView = () => {
         return (
@@ -6761,7 +6888,16 @@ function MainApp() {
                     </button>
                     
                     <button 
-                        onClick={handleLogout}
+                        onClick={async () => {
+                            if (await showConfirm({ 
+                                title: 'Sair da Conta', 
+                                message: 'Deseja realmente encerrar sua sessão?',
+                                confirmLabel: 'Sair Agora',
+                                danger: true
+                            })) {
+                                handleLogout();
+                            }
+                        }}
                         className="w-full h-16 rounded-[28px] bg-white border border-zinc-100 text-zinc-400 font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all flex items-center justify-center gap-3"
                     >
                         <Icon name="logout" /> Sair da Conta
@@ -6770,6 +6906,74 @@ function MainApp() {
             </motion.div>
         );
     };
+
+    const renderSystemPopup = () => (
+        <AnimatePresence>
+            {systemPopup && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[1000] bg-zinc-900/60 backdrop-blur-xl flex items-center justify-center p-6"
+                    onClick={() => {
+                        if (systemPopup.onClose) systemPopup.onClose();
+                        setSystemPopup(null);
+                    }}
+                >
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        className="w-full max-w-sm bg-white rounded-[48px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Background Decor */}
+                        <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl rounded-full -mr-16 -mt-16 ${
+                            systemPopup.type === 'success' ? 'bg-emerald-500/10' : 
+                            systemPopup.type === 'error' ? 'bg-red-500/10' : 'bg-yellow-400/10'
+                        }`} />
+                        
+                        <div className={`size-24 rounded-[40px] flex items-center justify-center mb-8 shadow-xl relative ${
+                            systemPopup.type === 'success' ? 'bg-emerald-500 shadow-emerald-500/20' : 
+                            systemPopup.type === 'error' ? 'bg-red-500 shadow-red-500/20' : 'bg-yellow-400 shadow-yellow-400/20'
+                        }`}>
+                            <motion.span 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.2 }}
+                                className="material-symbols-outlined text-5xl text-white"
+                            >
+                                {systemPopup.type === 'success' ? 'check_circle' : 
+                                 systemPopup.type === 'error' ? 'cancel' : 'info'}
+                            </motion.span>
+                        </div>
+
+                        <h2 className="text-2xl font-black text-zinc-900 leading-tight mb-4 uppercase tracking-tighter">
+                            {systemPopup.title}
+                        </h2>
+                        
+                        <p className="text-zinc-500 font-bold text-sm leading-relaxed mb-10">
+                            {systemPopup.message}
+                        </p>
+
+                        <button
+                            onClick={() => {
+                                if (systemPopup.onClose) systemPopup.onClose();
+                                setSystemPopup(null);
+                            }}
+                            className={`w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all ${
+                                systemPopup.type === 'success' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 
+                                systemPopup.type === 'error' ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' : 
+                                'bg-yellow-400 text-black shadow-lg shadow-yellow-400/30'
+                            }`}
+                        >
+                            Entendido
+                        </button>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
 
     const renderPersonalDataModal = () => {
         return (
@@ -6848,6 +7052,18 @@ function MainApp() {
                                 placeholder="000.000.000-00"
                                 maxLength={11}
                                 className="w-full h-16 bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-black text-xl placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none"
+                            />
+                        </div>
+
+                        {/* Campo: Endereço */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] block">Endereço Completo</label>
+                            <textarea 
+                                value={editProfileData.address}
+                                onChange={(e) => setEditProfileData({ ...editProfileData, address: e.target.value })}
+                                placeholder="Rua, Número, Bairro, Cidade"
+                                rows={2}
+                                className="w-full bg-zinc-50 border-b-2 border-zinc-100 px-0 text-zinc-900 font-bold text-lg placeholder:text-zinc-200 focus:border-zinc-900 transition-all outline-none resize-none"
                             />
                         </div>
                     </div>
@@ -8011,15 +8227,15 @@ function MainApp() {
                                 <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-400"><Icon name="pin" className="text-xl" /></div><input type="text" value={authCpf} onChange={e => setAuthCpf(e.target.value)} placeholder="CPF" className="w-full h-14 pl-14 pr-5 bg-white border border-zinc-200 rounded-[20px] text-black font-black placeholder:text-zinc-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all text-sm shadow-sm" /></div>
                                 <div className="relative"><div className="absolute inset-y-0 left-5 flex items-center text-zinc-400"><Icon name="phone" className="text-xl" /></div><input type="tel" value={authPhone} onChange={e => setAuthPhone(e.target.value)} placeholder="Telefone (WhatsApp)" className="w-full h-14 pl-14 pr-5 bg-white border border-zinc-200 rounded-[20px] text-black font-black placeholder:text-zinc-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all text-sm shadow-sm" /></div>
                                 <div className="flex gap-2">
-                                    {(['moto', 'carro', 'utilitario'] as const).map(v => (
+                                    {(['mototaxi', 'carro', 'fiorino'] as const).map(v => (
                                         <button 
                                             key={v} 
                                             type="button" 
                                             onClick={() => setAuthVehicle(v)} 
                                             className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 border-2 transition-all text-[9px] font-black uppercase tracking-widest ${authVehicle === v ? 'bg-black border-black text-primary shadow-xl' : 'bg-white border-zinc-200 text-zinc-400'}`}
                                         >
-                                            <Icon name={v === 'moto' ? 'two_wheeler' : v === 'carro' ? 'directions_car' : 'local_shipping'} size={18} />
-                                            <span>{v}</span>
+                                            <Icon name={v === 'mototaxi' ? 'two_wheeler' : v === 'carro' ? 'directions_car' : 'local_shipping'} size={18} />
+                                            <span>{v === 'mototaxi' ? 'Moto' : v === 'carro' ? 'Carro' : 'Fiorino'}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -9249,9 +9465,10 @@ function MainApp() {
 
             {/* In-App Broadcast Popups */}
             <AnimatePresence>
-              {renderBroadcastPopup()}
+                {renderBroadcastPopup()}
             </AnimatePresence>
-
+            
+            {renderSystemPopup()}
 
 
         </div>

@@ -2364,23 +2364,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
       
       if (error) {
-        if (error.code === '23503') {
-          // Histórico detectado: Soft delete
-          await supabase.from('drivers_delivery').update({ is_deleted: true, is_active: false }).eq('id', id);
-          toastWarning('O entregador possui histórico e não pôde ser removido da tabela, mas foi desativado.');
-        } else {
-          throw error;
-        }
+        throw error;
       } else {
-        // 2. Se deletou da tabela, deleta do Auth
+        // 2. Se deletou da tabela, deleta do Auth via Edge Function
         try {
           await supabase.functions.invoke('manage-driver-auth', {
             body: { action: 'delete', authId: id }
           });
-          toastSuccess('Entregador e conta de acesso removidos!');
+          toastSuccess('Entregador e conta de acesso removidos permanentemente!');
         } catch (authErr: any) {
           console.error('Erro ao remover auth do entregador:', authErr);
-          toastWarning('Entregador removido da tabela, mas a conta de acesso deve ser removida manualmente.');
+          toastWarning('Entregador removido da tabela, mas houve falha ao remover a conta de acesso. Verifique manualmente.');
         }
       }
       fetchDrivers();
@@ -2537,20 +2531,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { error } = await supabase.from('users_delivery').delete().eq('id', id);
       
       if (error) {
-        if (error.code === '23503') {
-          // Histórico detectado: Soft delete
-          await supabase.from('users_delivery').update({ is_deleted: true, is_active: false }).eq('id', id);
-          toastWarning('O cliente possui histórico (pedidos, transações) e não pôde ser removido da tabela, mas foi desativado.');
-        } else {
-          throw error;
-        }
+        throw error;
       } else {
-        // 2. Se deletou da tabela, deleta do Auth
+        // 2. Se deletou da tabela, deleta do Auth via Edge Function
         try {
           await supabase.functions.invoke('manage-user-auth', {
             body: { action: 'delete', authId: id }
           });
-          toastSuccess('Cliente e conta de acesso removidos!');
+          toastSuccess('Cliente e conta de acesso removidos permanentemente!');
         } catch (authErr: any) {
           console.error('Erro ao remover auth do cliente:', authErr);
           toastWarning('Cliente removido da tabela pública, mas houve falha ao remover a conta de acesso.');

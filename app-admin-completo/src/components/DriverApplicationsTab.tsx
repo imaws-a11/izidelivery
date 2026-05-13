@@ -3,23 +3,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 
 const DriverApplicationsTab = () => {
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'vehicles'>('onboarding');
   const [applications, setApplications] = useState<any[]>([]);
+  const [vehicleRequests, setVehicleRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [selectedVehicleReq, setSelectedVehicleReq] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchApplications = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: supabaseError } = await supabase
-        .from('driver_applications_delivery')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (supabaseError) throw supabaseError;
-      setApplications(data || []);
+      if (activeTab === 'onboarding') {
+        const { data, error: supabaseError } = await supabase
+          .from('driver_applications_delivery')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (supabaseError) throw supabaseError;
+        setApplications(data || []);
+      } else {
+        const { data, error: vError } = await supabase
+          .from('driver_vehicle_requests')
+          .select('*, drivers_delivery(name, phone)')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+        if (vError) throw vError;
+        setVehicleRequests(data || []);
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados');
     } finally {
@@ -28,13 +40,67 @@ const DriverApplicationsTab = () => {
   };
 
   useEffect(() => {
-    fetchApplications();
-  }, []);
+    fetchData();
+  }, [activeTab]);
+
+  const handleApproveVehicle = async (req: any) => {
+    setActionLoading(true);
+    try {
+      const { error: insError } = await supabase
+        .from('driver_vehicles_delivery')
+        .insert({
+          driver_id: req.driver_id,
+          vehicle_type: req.vehicle_type,
+          plate: req.plate,
+          model: req.model,
+          color: req.color,
+          is_active: false
+        });
+      
+      if (insError) throw insError;
+
+      const { error: updError } = await supabase
+        .from('driver_vehicle_requests')
+        .update({ status: 'approved' })
+        .eq('id', req.id);
+
+      if (updError) throw updError;
+
+      alert('Veículo aprovado com sucesso!');
+      fetchData();
+      setSelectedVehicleReq(null);
+    } catch (err: any) {
+      alert('Erro ao aprovar veículo: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectVehicle = async (req: any) => {
+    const reason = prompt('Motivo da rejeição:');
+    if (!reason) return;
+
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('driver_vehicle_requests')
+        .update({ status: 'rejected' })
+        .eq('id', req.id);
+
+      if (error) throw error;
+      alert('Solicitação rejeitada.');
+      fetchData();
+      setSelectedVehicleReq(null);
+    } catch (err: any) {
+      alert('Erro: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleApprove = async (app: any) => {
     setActionLoading(true);
     try {
-      // 1. Verificar se o telefone já está em uso por outro ID (incluindo excluídos)
       const { data: existingPhone, error: phoneError } = await supabase
         .from('drivers_delivery')
         .select('id, name, is_deleted')
@@ -43,25 +109,9 @@ const DriverApplicationsTab = () => {
         .maybeSingle();
 
       if (phoneError) throw phoneError;
-
       if (existingPhone) {
         const status = existingPhone.is_deleted ? 'excluído' : 'ativo';
-        throw new Error(`Conflito: O telefone ${app.phone} já pertence ao motorista "${existingPhone.name}" (${status}). Remova o motorista antigo ou altere o telefone antes de aprovar.`);
-      }
-
-      // 2. Verificar se o e-mail já está em uso por outro ID
-      const { data: existingEmail, error: emailError } = await supabase
-        .from('drivers_delivery')
-        .select('id, name, is_deleted')
-        .eq('email', app.email)
-        .neq('id', app.user_id)
-        .maybeSingle();
-
-      if (emailError) throw emailError;
-
-      if (existingEmail) {
-        const status = existingEmail.is_deleted ? 'excluído' : 'ativo';
-        throw new Error(`Conflito: O e-mail ${app.email} já pertence ao motorista "${existingEmail.name}" (${status}).`);
+        throw new Error(`Conflito: O telefone ${app.phone} já pertence ao motorista "${existingPhone.name}" (${status}).`);
       }
 
       const { error: driverError } = await supabase
@@ -87,7 +137,16 @@ const DriverApplicationsTab = () => {
 
       if (driverError) throw driverError;
 
-      // 2. Ativa a conta do usuário e limpa o rascunho de onboarding
+      await supabase
+        .from('driver_vehicles_delivery')
+        .insert({
+          driver_id: app.user_id,
+          vehicle_type: app.vehicle_type,
+          plate: app.vehicle_plate,
+          model: app.vehicle_model,
+          is_active: true
+        });
+
       await supabase
         .from('users_delivery')
         .update({ 
@@ -97,39 +156,36 @@ const DriverApplicationsTab = () => {
         })
         .eq('id', app.user_id);
 
-      // 3. Atualiza o status da candidatura
-      const { error: updateError } = await supabase
+      await supabase
         .from('driver_applications_delivery')
         .update({ status: 'approved' })
         .eq('id', app.id);
 
-      if (updateError) throw updateError;
-
-      await supabase.from('notifications_delivery').insert({
-        user_id: app.user_id,
-        title: '🎊 Cadastro Aprovado!',
-        body: `Parabéns, ${app.full_name.split(' ')[0]}! Sua conta de entregador foi ativada.`,
-        status: 'pending',
-        app_type: 'driver'
-      });
-
-      alert('Candidatura aprovada com sucesso!');
+      alert('Cadastro aprovado com sucesso!');
+      fetchData();
       setSelectedApp(null);
-      fetchApplications();
     } catch (err: any) {
-      alert('Erro ao aprovar: ' + err.message);
+      alert('Erro ao aprovar cadastro: ' + err.message);
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleReject = async (id: string) => {
-    if (!confirm('Rejeitar esta candidatura?')) return;
+  const handleReject = async (appId: string) => {
+    const reason = prompt('Motivo da rejeição:');
+    if (!reason) return;
+
     setActionLoading(true);
     try {
-      await supabase.from('driver_applications_delivery').update({ status: 'rejected' }).eq('id', id);
+      const { error } = await supabase
+        .from('driver_applications_delivery')
+        .update({ status: 'rejected', rejection_reason: reason })
+        .eq('id', appId);
+
+      if (error) throw error;
+      alert('Candidatura rejeitada.');
+      fetchData();
       setSelectedApp(null);
-      fetchApplications();
     } catch (err: any) {
       alert('Erro ao rejeitar: ' + err.message);
     } finally {
@@ -235,10 +291,18 @@ const DriverApplicationsTab = () => {
                     </div>
 
                     <div className="pt-6 flex items-center gap-4">
-                      <button disabled={actionLoading || selectedApp.status !== 'pending'} onClick={() => handleApprove(selectedApp)} className="flex-1 h-20 bg-emerald-500 text-white rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-emerald-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-3">
-                        {actionLoading ? 'Processando...' : <>Aprovar Cadastro <span className="material-symbols-outlined text-sm">verified</span></>}
-                      </button>
-                      <button disabled={actionLoading || selectedApp.status !== 'pending'} onClick={() => handleReject(selectedApp.id)} className="w-1/3 h-20 bg-rose-50 dark:bg-rose-500/10 text-rose-500 rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] transition-all">Rejeitar</button>
+                      {selectedApp.status === 'rejected' ? (
+                        <button disabled={actionLoading} onClick={() => handleReactivate(selectedApp.id)} className="flex-1 h-20 bg-amber-500 text-white rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-amber-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-3 hover:bg-amber-600">
+                          {actionLoading ? 'Processando...' : <>Reativar Candidatura <span className="material-symbols-outlined text-sm">refresh</span></>}
+                        </button>
+                      ) : (
+                        <>
+                          <button disabled={actionLoading || selectedApp.status !== 'pending'} onClick={() => handleApprove(selectedApp)} className="flex-1 h-20 bg-emerald-500 text-white rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-emerald-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-3">
+                            {actionLoading ? 'Processando...' : <>Aprovar Cadastro <span className="material-symbols-outlined text-sm">verified</span></>}
+                          </button>
+                          <button disabled={actionLoading || selectedApp.status !== 'pending'} onClick={() => handleReject(selectedApp.id)} className="w-1/3 h-20 bg-rose-50 dark:bg-rose-500/10 text-rose-500 rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] transition-all disabled:opacity-50">Rejeitar</button>
+                        </>
+                      )}
                     </div>
                   </div>
 

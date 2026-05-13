@@ -22,7 +22,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
     email: '',
     phone: '',
     address: '',
-    vehicle_type: 'moto',
+    vehicle_type: 'mototaxi',
     vehicle_model: '',
     vehicle_plate: '',
   });
@@ -289,9 +289,9 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
                     <h2 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-600 ml-1">Veículo</h2>
                     <div className="grid grid-cols-4 gap-2">
                         {[
-                            { id: 'moto', icon: 'moped' },
+                            { id: 'mototaxi', icon: 'moped' },
                             { id: 'carro', icon: 'directions_car' },
-                            { id: 'bike', icon: 'pedal_bike' },
+                            { id: 'bicicleta', icon: 'pedal_bike' },
                             { id: 'van', icon: 'airport_shuttle' },
                         ].map(type => (
                             <button key={type.id} type="button" onClick={() => setFormData({...formData, vehicle_type: type.id})} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${formData.vehicle_type === type.id ? 'border-yellow-400 bg-yellow-50' : 'border-zinc-50 bg-[#F3F3F3]'}`}>
