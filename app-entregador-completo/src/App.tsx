@@ -19,6 +19,9 @@ import { MissionsView } from './components/features/MissionsView';
 import NotificationsCenterView from './components/features/NotificationsCenterView';
 import Icon from './components/common/Icon';
 import { incrementMissionProgress } from './lib/gamification';
+import HistoryView from './components/features/HistoryView';
+import EarningsView from './components/features/EarningsView';
+import ProfileView from './components/features/ProfileView';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -5722,356 +5725,9 @@ function MainApp() {
 
 
 
-    const renderHistoryView = () => {
+    // renderHistoryView extraído para componente HistoryView.tsx (performance: React.memo)
 
-
-        return (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
-            <header className="flex flex-col items-center text-center gap-1">
-                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em]">Histórico</p>
-                <h2 className="text-3xl font-black text-zinc-900 tracking-tight text-center uppercase">Sua Jornada</h2>
-                <p className="text-xs text-zinc-400 mt-1 font-bold uppercase tracking-widest">Registro consolidado de suas corridas e ganhos.</p>
-            </header>
-
-            <div className="space-y-4">
-                {history.length === 0 ? (
-                    <div className="py-24 clay-card rounded-[40px] flex flex-col items-center gap-6 text-center shadow-2xl relative overflow-hidden bg-white">
-                        <div className="size-20 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner">
-                            <Icon name="history_toggle_off" className="text-4xl text-yellow-600/50" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-black text-zinc-900 uppercase tracking-widest mb-1">Nenhuma Jornada</p>
-                            <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Você ainda não completou corridas</p>
-                        </div>
-                    </div>
-                ) : (
-                    history.map((order: any, i: number) => {
-                        let netEarnings = getNetEarnings(order);
-                        const completedAt = order.updated_at || order.created_at;
-                        
-                        const isCashPaid = order.payment_method === 'dinheiro' || order.payment_method === 'cash';
-                        const totalOrderPrice = Number(order.total_price || order.price || 0);
-
-                        let netEarningsLabel = `R$ ${netEarnings.toFixed(2).replace('.', ',')}`;
-                        let isNegative = false;
-
-                        if (isCashPaid && totalOrderPrice > 0) {
-                            netEarnings = netEarnings - totalOrderPrice;
-                            isNegative = netEarnings < 0;
-                            netEarningsLabel = `${isNegative ? '-' : ''} R$ ${Math.abs(netEarnings).toFixed(2).replace('.', ',')}`;
-                        }
-
-                        return (
-                        <div 
-                            key={order.id} 
-                            onClick={() => {
-                                setSelectedOrder(order);
-                                setShowOrderModal(true);
-                            }}
-                            className="clay-card rounded-[32px] p-6 space-y-5 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all bg-white"
-                        >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-3xl -mr-16 -mt-16 rounded-full transition-opacity group-hover:bg-yellow-400/20" />
-                            
-                            <div className="flex items-center justify-between relative z-10">
-                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] bg-zinc-50 px-3 py-1 rounded-full shadow-inner border border-zinc-100">
-                                    #{order.id.slice(0, 8).toUpperCase()}
-                                </span>
-                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm">
-                                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    Finalizado
-                                </span>
-                            </div>
-
-                            <div className="bg-zinc-50 rounded-3xl p-5 border border-zinc-100 shadow-inner relative z-10">
-                                <div className="space-y-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className="flex flex-col items-center gap-1 mt-1">
-                                            <div className="size-2 rounded-full border-2 border-yellow-500 bg-white" />
-                                            <div className="w-[1px] h-6 border-l border-dashed border-zinc-200" />
-                                            <div className="size-2 rounded-full border-2 border-zinc-300 bg-white" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{serviceTypeLabel(order.service_type)}</p>
-                                            <p className="text-sm font-black text-zinc-900 leading-tight uppercase tracking-tighter">{cleanAddressText(order.delivery_address || order.destination || 'Endereço Indisponível')}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-3 pt-3 mt-3 border-t border-zinc-100">
-                                        <Icon name="event" size={14} className="text-zinc-300" />
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                            {new Date(completedAt).toLocaleDateString('pt-BR')} <span className="mx-1 opacity-40">•</span> {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-3 relative z-10">
-                                <div className="bg-zinc-50 p-4 rounded-[20px] border border-zinc-100 shadow-inner flex flex-col justify-between">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] line-clamp-1 mt-0.5">Lucro Líquido</p>
-                                        <span className={`text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCashPaid ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}>
-                                            {isCashPaid ? 'Dinheiro' : 'Online'}
-                                        </span>
-                                    </div>
-                                    <span className={`text-xl font-black tracking-tighter ${isNegative ? 'text-rose-600 drop-shadow-sm' : 'text-yellow-600 drop-shadow-sm'}`}>
-                                        {netEarningsLabel}
-                                    </span>
-                                </div>
-                                <div className="bg-zinc-100 p-4 rounded-[20px] border border-zinc-200 text-right flex flex-col justify-center shadow-inner">
-                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Total Pedido</p>
-                                    <div className="flex flex-wrap items-center justify-end gap-2">
-                                        {isCashPaid && (
-                                            <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-1 rounded-lg border border-rose-100 whitespace-nowrap">
-                                                R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')} em mãos
-                                            </span>
-                                        )}
-                                        <span className="text-sm font-black text-zinc-900 opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}))
-                }
-            </div>
-        </motion.div>
-    );
-    };
-
-    const renderEarningsView = () => {
-        const tabs = [
-            { id: 'week', label: 'Semana', icon: 'view_week' },
-            { id: 'month', label: 'Mês', icon: 'calendar_month' },
-            { id: 'year', label: 'Ano', icon: 'event_repeat' },
-        ] as const;
-
-        const mainValue = earningsViewTab === 'week' ? stats.weekly :
-                         earningsViewTab === 'month' ? stats.monthly :
-                         stats.yearly;
-
-        const chartData = earningsViewTab === 'week' ? stats.weeklyEarnings : 
-                         earningsViewTab === 'month' ? stats.monthlyPerformance : 
-                         [stats.yearly];
-
-        const chartLabels = earningsViewTab === 'week' ? ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'] :
-                           earningsViewTab === 'month' ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] :
-                           [new Date().getFullYear().toString()];
-
-        const maxVal = Math.max(...chartData, 50);
-
-        return (
-            <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                className="flex-1 flex flex-col bg-zinc-50 overflow-hidden font-['Plus_Jakarta_Sans']"
-            >
-                {/* Header Premium */}
-                <div className="px-6 pt-8 pb-4 space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">Meus Ganhos</h2>
-                        </div>
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={() => setShowBankDetails(true)}
-                                className="size-11 rounded-2xl bg-white border border-zinc-100 shadow-sm flex items-center justify-center text-zinc-400 active:scale-95 transition-all"
-                            >
-                                <Icon name="account_balance" size={20} />
-                            </button>
-                            <button 
-                                onClick={() => setShowWithdrawHistory(true)}
-                                className="size-11 rounded-2xl bg-white border border-zinc-100 shadow-sm flex items-center justify-center text-zinc-400 active:scale-95 transition-all"
-                            >
-                                <Icon name="history" size={20} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Selector de Período */}
-                    <div className="flex p-1.5 bg-zinc-100/50 rounded-[24px] gap-1 border border-zinc-100">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setEarningsViewTab(tab.id)}
-                                className={`flex-1 py-3 rounded-[18px] flex items-center justify-center gap-2 transition-all ${
-                                    earningsViewTab === tab.id 
-                                    ? 'bg-white shadow-sm text-zinc-900' 
-                                    : 'text-zinc-400 hover:text-zinc-600'
-                                }`}
-                            >
-                                <Icon name={tab.icon} size={16} className={earningsViewTab === tab.id ? 'text-yellow-500' : ''} />
-                                <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-40 space-y-8">
-                    {/* Main Balance Display */}
-                    <div className="relative pt-6 pb-2">
-                        <div className="flex flex-col items-center">
-                            <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Total no Período</p>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-black text-zinc-300">R$</span>
-                                <span className="text-7xl font-black text-zinc-950 tracking-tighter leading-none">
-                                    {mainValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                            
-                            <div className="mt-8 flex items-center gap-3">
-                                <div className="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full flex items-center gap-2">
-                                    <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">
-                                        Saldo: R$ {stats.balance.toFixed(2).replace('.', ',')}
-                                    </span>
-                                </div>
-                                <button 
-                                    onClick={handleWithdrawRequest}
-                                    className="px-6 py-2 bg-zinc-900 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
-                                >
-                                    Sacar Agora
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Chart Section */}
-                    <div className="bg-white rounded-[40px] p-8 border border-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.03)] space-y-8">
-                        <div className="flex items-center justify-between">
-                            <div className="flex flex-col gap-1">
-                                <h3 className="text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em]">Fluxo de Caixa</h3>
-                                <p className="text-[9px] text-zinc-400 font-bold uppercase">Performance Financeira</p>
-                            </div>
-                            <div className="px-3 py-1 bg-yellow-50 border border-yellow-100 rounded-full">
-                                <span className="text-[8px] font-black text-yellow-600 uppercase tracking-widest">Top 5% Pilotos</span>
-                            </div>
-                        </div>
-
-                        <div className="h-48 flex items-end justify-between gap-2 pt-6 relative">
-                            {/* Background Lines */}
-                            <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none opacity-[0.05]">
-                                <div className="h-px bg-zinc-900 w-full" />
-                                <div className="h-px bg-zinc-900 w-full" />
-                                <div className="h-px bg-zinc-900 w-full" />
-                            </div>
-
-                            {chartData.map((val, i) => {
-                                const height = (val / maxVal) * 100;
-                                const isCurrent = earningsViewTab === 'week' ? (i === (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)) : 
-                                                 earningsViewTab === 'month' ? (i === new Date().getMonth()) : false;
-
-                                return (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-4 group h-full justify-end relative">
-                                        <div className="w-full flex flex-col items-center relative h-full justify-end">
-                                            {/* Glow Effect for active */}
-                                            {isCurrent && (
-                                                <div className="absolute bottom-0 w-full h-full bg-yellow-400/10 blur-xl rounded-full" />
-                                            )}
-                                            
-                                            <motion.div
-                                                initial={{ height: 0 }}
-                                                animate={{ height: `${Math.max(height, 4)}%` }}
-                                                transition={{ type: 'spring', stiffness: 100, delay: i * 0.05 }}
-                                                className={`w-full max-w-[12px] rounded-t-full rounded-b-lg transition-all relative z-10 ${
-                                                    isCurrent 
-                                                    ? 'bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' 
-                                                    : 'bg-zinc-200 group-hover:bg-zinc-300'
-                                                }`}
-                                            />
-                                            
-                                            {val > 0 && (
-                                                <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md pointer-events-none z-20">
-                                                    R${val.toFixed(0)}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className={`text-[8px] font-black uppercase tracking-widest ${isCurrent ? 'text-zinc-900' : 'text-zinc-300'}`}>
-                                            {chartLabels[i]}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Pro Driver Metrics Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm space-y-4">
-                            <div className="size-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
-                                <Icon name="bolt" size={20} className="text-yellow-500" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Eficiência</p>
-                                <p className="text-lg font-black text-zinc-900 leading-none">R$ {(mainValue / (stats.count || 1)).toFixed(2).replace('.', ',')}</p>
-                                <p className="text-[8px] text-zinc-400 font-bold uppercase mt-1">Média p/ entrega</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm space-y-4">
-                            <div className="size-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
-                                <Icon name={stats.growth >= 0 ? 'trending_up' : 'trending_down'} size={20} className={stats.growth >= 0 ? 'text-emerald-500' : 'text-red-500'} />
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Progresso</p>
-                                <p className={`text-lg font-black leading-none ${stats.growth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {stats.growth >= 0 ? '+' : ''}{stats.growth}%
-                                </p>
-                                <p className="text-[8px] text-zinc-400 font-bold uppercase mt-1">vs. semana anterior</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Dedicated Section - "Queridos Entregadores" */}
-                    <div 
-                        onClick={() => setActiveTab('missions')}
-                        className="bg-zinc-900 rounded-[40px] p-8 relative overflow-hidden group active:scale-[0.98] transition-all cursor-pointer"
-                    >
-                        <div className="absolute right-0 top-0 w-40 h-40 bg-yellow-400/10 blur-[80px] -mr-20 -mt-20" />
-                        
-                        <div className="relative z-10 space-y-6">
-                            <div className="flex items-center gap-3">
-                                <div className="size-12 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg rotate-3 group-hover:rotate-0 transition-transform">
-                                    <Icon name="workspace_premium" size={28} className="text-zinc-900" />
-                                </div>
-                                <div>
-                                    <h4 className="text-white font-black text-sm uppercase tracking-wider">
-                                        Status: {(() => {
-                                            const titles: Record<number, string> = {
-                                                1: 'Explorador', 2: 'Entusiasta', 3: 'Frequente', 4: 'Dedicado', 
-                                                5: 'Veterano', 6: 'Expert', 7: 'Campeão', 8: 'Lenda', 
-                                                9: 'Ícone', 10: 'Imortal IZI'
-                                            };
-                                            return titles[stats.level] || 'Elite Pro';
-                                        })()}
-                                    </h4>
-                                    <p className="text-yellow-400/60 text-[10px] font-bold uppercase tracking-widest">Nível {stats.level} • {stats.xp} XP</p>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-end">
-                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Progresso Level Up</span>
-                                    <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">{stats.xp}/{stats.nextXp} XP</span>
-                                </div>
-                                <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <motion.div 
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${(stats.xp / stats.nextXp) * 100}%` }}
-                                        className="h-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)]"
-                                    />
-                                </div>
-                            </div>
-
-                            <p className="text-[10px] text-white/50 font-medium leading-relaxed italic">
-                                "Sua dedicação é o que move a Izi. Continue acelerando rumo aos melhores bônus da cidade!"
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="h-8" />
-                </div>
-            </motion.div>
-        );
-    };
+    // renderEarningsView extraído para componente EarningsView.tsx (performance: React.memo)
 
     const renderWithdrawHistoryView = () => (
         <motion.div 
@@ -6467,181 +6123,7 @@ function MainApp() {
         }
     };
 
-    const renderProfileView = () => (
-        <div className="flex-1 flex flex-col h-full bg-white font-['Plus_Jakarta_Sans']">
-            {/* Header com botão voltar */}
-            <div className="px-6 pt-12 pb-6 flex items-center justify-between border-b border-zinc-100 sticky top-0 bg-white z-10">
-                <button 
-                    onClick={() => setActiveTab('dashboard')}
-                    className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center active:scale-90 transition-transform"
-                >
-                    <Icon name="arrow_back" className="text-white" size={24} />
-                </button>
-                <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meu Perfil</h2>
-                <div className="size-11" />
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 no-scrollbar">
-                <div className="flex flex-col items-center">
-                    {/* Avatar */}
-                    <label
-                        htmlFor="avatar-upload"
-                        className="size-32 rounded-[48px] bg-zinc-900 flex items-center justify-center mb-6 relative group cursor-pointer overflow-hidden"
-                    >
-                        {driverAvatar ? (
-                            <img
-                                src={driverAvatar}
-                                alt="Foto de Perfil"
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <Icon name="person" size={48} className="text-white/50" />
-                        )}
-
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            {isUploadingAvatar ? (
-                                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <Icon name="photo_camera" size={28} className="text-white" />
-                            )}
-                        </div>
-                    </label>
-
-                    <input
-                        id="avatar-upload"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={handleAvatarUpload}
-                    />
-                    
-                    <div className="text-center space-y-1">
-                        <h2 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">{driverName}</h2>
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Nível {stats.level} • {stats.count} Viagens</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                    {[
-                        { label: 'Meus Dados', icon: 'badge', color: 'bg-zinc-900 text-white' },
-                        { label: 'Dados Bancários', icon: 'account_balance', color: 'bg-zinc-100 text-zinc-900' },
-                        { label: 'Veículo & Placa', icon: 'directions_car', color: 'bg-zinc-100 text-zinc-900' },
-                        { label: 'Preferências', icon: 'settings', color: 'bg-zinc-100 text-zinc-900' },
-                        { label: 'Ajuda', icon: 'support_agent', color: 'bg-zinc-100 text-zinc-900' }
-                    ].map((item, i) => (
-                        <button 
-                            key={i} 
-                            onClick={() => {
-                                if (item.label === 'Meus Dados') {
-                                    // Sincronização completa para garantir campos preenchidos
-                                    setEditProfileData({
-                                        name: driverName || localStorage.getItem('izi_driver_name') || '',
-                                        email: authEmail || localStorage.getItem('izi_driver_email') || '',
-                                        phone: localStorage.getItem('izi_driver_phone') || '',
-                                        cpf: localStorage.getItem('izi_driver_cpf') || '',
-                                        vehicle_type: driverVehicle || localStorage.getItem('izi_driver_vehicle') || '',
-                                        plate: driverPlate || localStorage.getItem('izi_driver_plate') || '',
-                                        address: localStorage.getItem('izi_driver_address') || '',
-                                        vehicle_model: localStorage.getItem('izi_driver_vehicle_model') || ''
-                                    });
-                                    setShowPersonalDataModal(true);
-                                    if (driverId) {
-                                        loadProfileAndEnforceOnboarding(driverId, authEmail || localStorage.getItem('izi_driver_email') || '', driverName);
-                                    }
-                                }
-                                if (item.label === 'Dados Bancários') setShowBankDetails(true);
-                                if (item.label === 'Veículo & Placa') setShowPlateModal(true);
-                                if (item.label === 'Preferências') setShowPreferences(true);
-                                if (item.label === 'Ajuda') setShowHelpModal(true);
-                            }}
-                            className="w-full h-20 bg-white border border-zinc-100 rounded-[24px] px-6 flex items-center justify-between group active:scale-[0.98] transition-all hover:bg-zinc-50"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={`size-12 rounded-2xl flex items-center justify-center ${item.color}`}>
-                                    <Icon name={item.icon} size={22} />
-                                </div>
-                                <span className="text-sm font-black text-zinc-900">{item.label}</span>
-                            </div>
-                            <Icon name="chevron_right" className="text-zinc-300 group-hover:text-zinc-900 transition-colors" />
-                        </button>
-                    ))}
-                </div>
-                
-                <div className="bg-zinc-900 rounded-[32px] p-6 text-white flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-2xl bg-white/10 flex items-center justify-center text-white">
-                            <Icon name="layers" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-black">Sobreposição</span>
-                            <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Ativar em outros apps</span>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={openOverlaySettings}
-                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all"
-                    >
-                        Configurar
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    <button 
-                        onClick={async () => {
-                            if (await showConfirm({ 
-                                title: 'Encerrar Sessão', 
-                                message: 'Deseja realmente sair da sua conta?', 
-                                confirmLabel: 'Sair agora',
-                                danger: true 
-                            })) {
-                                handleLogout();
-                            }
-                        }} 
-                        className="w-full h-18 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] bg-rose-50 text-rose-600 active:scale-95 transition-all border border-rose-100"
-                    >
-                        Encerrar Sessão
-                    </button>
-
-                    <div className="p-8 rounded-[32px] bg-zinc-50 border border-zinc-100 space-y-6">
-                        <div className="space-y-2 text-center">
-                            <h3 className="text-xs font-black text-zinc-900 uppercase tracking-widest flex items-center justify-center gap-2">
-                                <Icon name="admin_panel_settings" size={16} /> Zona de Segurança
-                            </h3>
-                            <p className="text-[11px] text-zinc-400 leading-relaxed">
-                                Use apenas em caso de erros de sincronização.
-                            </p>
-                        </div>
-                        <div className="flex gap-3">
-                            <button 
-                                onClick={syncMissionWithDB}
-                                className="flex-1 h-12 bg-white border border-zinc-200 text-zinc-600 font-black text-[9px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                            >
-                                Sincronizar
-                            </button>
-                            <button 
-                                onClick={async () => {
-                                    if (await showConfirm({
-                                        title: 'Resetar Missão',
-                                        message: 'Isso irá limpar o cache local da sua missão atual. Use apenas se estiver travado.',
-                                        confirmLabel: 'Resetar Agora',
-                                        danger: true
-                                    })) {
-                                        setActiveMission(null);
-                                        localStorage.removeItem('Izi_active_mission');
-                                        setActiveTab('dashboard');
-                                        showSystemPopup('Reset Concluído', 'O cache da missão foi limpo com sucesso.', 'info');
-                                    }
-                                }}
-                                className="flex-1 h-12 bg-white border border-rose-200 text-rose-500 font-black text-[9px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                            >
-                                Resetar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    // renderProfileView extraído para componente ProfileView.tsx (performance: React.memo)
 
     const renderPlateEditView = () => {
         const nvVehicleOptions = [
@@ -8853,8 +8335,8 @@ function MainApp() {
                                     <AnimatePresence mode="wait">
                                         {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderDashboard()}</motion.div>}
                                         {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderActiveMissionView()}</motion.div>}
-                                        {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderHistoryView()}</motion.div>}
-                                        {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderEarningsView()}</motion.div>}
+                                        {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><HistoryView history={history} getNetEarnings={getNetEarnings} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></motion.div>}
+                                        {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><EarningsView stats={stats} onShowBankDetails={() => setShowBankDetails(true)} onShowWithdrawHistory={() => setShowWithdrawHistory(true)} onWithdrawRequest={handleWithdrawRequest} onNavigateToMissions={() => setActiveTab('missions')} /></motion.div>}
                                         {activeTab === 'profile' && (
                                             <motion.div 
                                                 key="prof" 
@@ -8864,7 +8346,36 @@ function MainApp() {
                                                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                                                 className="fixed inset-0 z-[300] bg-white flex flex-col"
                                             >
-                                                {renderProfileView()}
+                                                <ProfileView 
+                                                    driverName={driverName}
+                                                    driverAvatar={driverAvatar}
+                                                    driverPlate={driverPlate}
+                                                    driverVehicle={driverVehicle}
+                                                    authEmail={authEmail}
+                                                    stats={{ level: stats.level, count: stats.count }}
+                                                    isUploadingAvatar={isUploadingAvatar}
+                                                    driverId={driverId}
+                                                    onNavigateToDashboard={() => setActiveTab('dashboard')}
+                                                    onShowPersonalDataModal={() => setShowPersonalDataModal(true)}
+                                                    onShowBankDetails={() => setShowBankDetails(true)}
+                                                    onShowPlateModal={() => setShowPlateModal(true)}
+                                                    onShowPreferences={() => setShowPreferences(true)}
+                                                    onShowHelpModal={() => setShowHelpModal(true)}
+                                                    onLogout={handleLogout}
+                                                    onAvatarUpload={handleAvatarUpload}
+                                                    onOpenOverlaySettings={openOverlaySettings}
+                                                    onSyncMission={syncMissionWithDB}
+                                                    onResetMission={async () => {
+                                                        if (await showConfirm({ title: 'Resetar Missão', message: 'Isso irá limpar o cache local da sua missão atual.', confirmLabel: 'Resetar Agora', danger: true })) {
+                                                            setActiveMission(null);
+                                                            localStorage.removeItem('Izi_active_mission');
+                                                            setActiveTab('dashboard');
+                                                            showSystemPopup('Reset Concluído', 'O cache da missão foi limpo com sucesso.', 'info');
+                                                        }
+                                                    }}
+                                                    onSetEditProfileData={setEditProfileData}
+                                                    onLoadProfile={loadProfileAndEnforceOnboarding}
+                                                />
                                             </motion.div>
                                         )}
                                         {activeTab === 'missions' && <motion.div key="miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></motion.div>}
