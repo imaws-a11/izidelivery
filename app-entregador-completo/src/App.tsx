@@ -138,6 +138,36 @@ const validateCPF = (cpf: string) => {
 
 const isValidCoord = (c: any) => c && typeof c.lat === 'number' && Math.abs(c.lat) > 0.01;
 
+const MISSION_MAP_STYLE = [
+    { "elementType": "geometry", "stylers": [{ "color": "#f1f5f9" }] },
+    { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+    { "elementType": "labels.text.fill", "stylers": [{ "color": "#64748b" }] },
+    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }, { "weight": 3 }] },
+    { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#cbd5e1" }, { "visibility": "on" }, { "weight": 1 }] },
+    { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+    { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#fef08a" }] },
+    { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#facc15" }, { "visibility": "on" }] },
+    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#bae6fd" }] }
+] as const;
+
+const VEHICLE_COMPATIBILITY: Record<string, string[]> = {
+    'moto': ['mototaxi', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'mototaxi': ['mototaxi', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'carro': ['frete', 'mudanca', 'motorista', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'bike': ['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'bicicleta': ['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'fiorino': ['frete', 'mudanca', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'caminhonete': ['frete', 'mudanca', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'van': ['frete', 'mudanca', 'motorista', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
+    'vuc': ['frete', 'mudanca'],
+    'bau_p': ['frete', 'mudanca'],
+    'bau_m': ['frete', 'mudanca'],
+    'bau_g': ['frete', 'mudanca']
+};
+
 function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, driverCoords, missionPhase = 'to_pickup', onRouteInfo, isLoaded = false }: { pickup: any, delivery: any, pickupAddress?: string, deliveryAddress?: string, driverCoords?: any, missionPhase?: 'to_pickup' | 'to_delivery', onRouteInfo?: (info: any) => void, isLoaded?: boolean }) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const [routePolyline, setRoutePolyline] = useState<string | null>(null);
@@ -224,20 +254,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
     }
   }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress, missionPhase, driverCoords?.lat, driverCoords?.lng]);
 
-  const mapStyle = [
-    { "elementType": "geometry", "stylers": [{ "color": "#f1f5f9" }] },
-    { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-    { "elementType": "labels.text.fill", "stylers": [{ "color": "#64748b" }] },
-    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }, { "weight": 3 }] },
-    { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
-    { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
-    { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#cbd5e1" }, { "visibility": "on" }, { "weight": 1 }] },
-    { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-    { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#fef08a" }] },
-    { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#facc15" }, { "visibility": "on" }] },
-    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#bae6fd" }] }
-  ];
+  // mapStyle movido para constante MISSION_MAP_STYLE fora do componente (performance)
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
@@ -270,7 +287,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
 
   const mapOpts = useMemo(() => ({
     disableDefaultUI: true,
-    styles: mapStyle,
+    styles: MISSION_MAP_STYLE as any,
     backgroundColor: '#ffffff',
     gestureHandling: 'greedy' as const,
     zoomControl: false,
@@ -280,6 +297,12 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
   }), []);
 
   const containerStyle = useMemo(() => ({ width: '100%', height: '100%' }), []);
+
+  // Memoizar decodificação de polyline (operação pesada)
+  const decodedPath = useMemo(() => {
+    if (!routePolyline || !window.google?.maps?.geometry?.encoding) return [];
+    return window.google.maps.geometry.encoding.decodePath(routePolyline);
+  }, [routePolyline]);
 
   return (
     <div className="w-full h-full relative">
@@ -292,7 +315,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
       >
       {routePolyline && (
         <Polyline 
-          path={window.google?.maps?.geometry?.encoding ? window.google.maps.geometry.encoding.decodePath(routePolyline) : []} 
+          path={decodedPath} 
           options={{ 
             strokeColor: '#3b82f6',
             strokeOpacity: 1.0,
@@ -657,20 +680,7 @@ function MainApp() {
     const [authPhone, setAuthPhone] = useState(() => localStorage.getItem('izi_driver_phone') || '');
     const [driverVehicle, setDriverVehicle] = useState<string>(() => localStorage.getItem('izi_driver_vehicle') || 'mototaxi');
 
-    const compatibilityMap: Record<string, string[]> = {
-        'moto': ['mototaxi', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
-        'mototaxi': ['mototaxi', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'], // Fallback
-        'carro': ['frete', 'mudanca', 'motorista', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
-        'bike': ['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
-        'bicicleta': ['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'], // Fallback
-        'fiorino': ['frete', 'mudanca', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
-        'caminhonete': ['frete', 'mudanca', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
-        'van': ['frete', 'mudanca', 'motorista', 'restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy', 'entrega_avulsa'],
-        'vuc': ['frete', 'mudanca'],
-        'bau_p': ['frete', 'mudanca'],
-        'bau_m': ['frete', 'mudanca'],
-        'bau_g': ['frete', 'mudanca']
-    };
+    // compatibilityMap movido para constante VEHICLE_COMPATIBILITY fora do componente (performance)
     const [authLoading, setAuthLoading] = useState(false);
     const [authInitLoading, setAuthInitLoading] = useState(true);
 
@@ -1145,17 +1155,9 @@ function MainApp() {
     const heardOrderIds = useRef<Set<string>>(new Set());
     const isFirstLoad = useRef(true);
 
-    const [now, setNow] = useState(Date.now());
-    useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 10000); 
-        return () => clearInterval(timer);
-    }, []);
-
-    const visibleOrders = useMemo(() => {
-        // Simplificação Radical: Se está na lista de ordens, é visível.
-        // Removemos qualquer lógica de bloqueio por rejeição para facilitar testes.
-        return orders;
-    }, [orders]);
+    // Timer de now removido (performance: causava re-render completo a cada 10s sem utilidade)
+    // visibleOrders simplificado: referência direta sem useMemo desnecessário
+    const visibleOrders = orders;
 
     const announcedOrderIds = useRef<Set<string>>(new Set());
 
@@ -2831,7 +2833,7 @@ function MainApp() {
                 // FILTRO DE COMPATIBILIDADE DE VEÍCULO
                 // Evita que motos vejam fretes, etc.
                 const myV = driverVehicle?.toLowerCase() || 'moto';
-                const allowedForVehicle = compatibilityMap[myV] || [];
+                const allowedForVehicle = VEHICLE_COMPATIBILITY[myV] || [];
                 const orderType = normalizeServiceType(o.service_type);
                 
                 if (!allowedForVehicle.includes(orderType)) {
@@ -2884,11 +2886,11 @@ function MainApp() {
     const fetchOrdersRef = useRef(fetchOrders);
     useEffect(() => { fetchOrdersRef.current = fetchOrders; }, [fetchOrders]);
 
+    // Fetch inicial único — o canal Realtime (linha ~2901) já cuida de atualizações contínuas.
+    // O polling de 5s foi removido para economizar ~12 re-renders/min e bateria.
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
         fetchOrdersRef.current();
-        const interval = setInterval(() => fetchOrdersRef.current(), 5000);
-        return () => clearInterval(interval);
     }, [isAuthenticated, driverId]);
 
 
@@ -7450,7 +7452,7 @@ function MainApp() {
 
         const toggleMobility = (key: string) => {
             const myVehicle = driverVehicle?.toLowerCase() || 'moto';
-            const allowedServices = compatibilityMap[myVehicle] || [];
+            const allowedServices = VEHICLE_COMPATIBILITY[myVehicle] || [];
 
             if (!allowedServices.includes(key)) {
                 toastError("Este serviço não está disponível para suas categorias de veículos selecionadas");
@@ -7572,7 +7574,7 @@ function MainApp() {
                             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Mobilidade</h3>
                             <div className="divide-y divide-zinc-50">
                                 {mobilityOptions
-                                    .filter(mob => (compatibilityMap[driverVehicle?.toLowerCase() || 'moto'] || []).includes(mob.key))
+                                    .filter(mob => (VEHICLE_COMPATIBILITY[driverVehicle?.toLowerCase() || 'moto'] || []).includes(mob.key))
                                     .map(mob => {
                                         const active = prefServiceTypes.includes(mob.key);
                                     return (
