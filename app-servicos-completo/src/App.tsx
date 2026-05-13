@@ -450,7 +450,7 @@ function App() {
             id: 'izi_notifications',
             name: 'NotificaÃ§Ãµes IZI',
             description: 'Canal principal de notificaÃ§Ãµes do IZI Delivery',
-            sound: 'notification',
+            sound: 'notification_izi',
             importance: 5,
             visibility: 1,
             vibration: true
@@ -892,11 +892,6 @@ function App() {
             }
           }
 
-          // Monitoramento de Sucesso de Pagamento (Bitcoin / Pix / Geral)
-          // NOTA: !oldOrder foi removido Ã¢â‚¬â€ sem ele, pedidos de dinheiro/maquininha (que sÃƒÂ£o INSERTs novos)
-          // nÃƒÂ£o disparam incorretamente o fluxo de confirmaÃƒÂ§ÃƒÂ£o digital.
-          const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && oldOrder?.status === 'pendente_pagamento');
-          
           if (isPaid) {
             const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing", "card_payment"].includes(navigationSubViewRef.current);
             if (isPaymentSubView) {
