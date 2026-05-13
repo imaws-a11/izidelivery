@@ -836,6 +836,9 @@ function App() {
           // Sempre atualizar a lista local para refletir no F5 ou navegaÃƒÂ§ÃƒÂµes
           if (userIdRef.current) fetchOrders();
 
+          // Monitoramento de Sucesso de Pagamento (Bitcoin / Pix / Geral)
+          const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && oldOrder?.status === 'pendente_pagamento');
+
           // Verificar transiÃ§Ãµes de status para Toasts
           const statusChanged = oldOrder && oldOrder.status && newOrder.status !== oldOrder.status;
           
@@ -858,16 +861,34 @@ function App() {
               'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ›µ',
               'no_local': 'O motoboy chegou ao seu endereÃ§o! ðŸ””',
               'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
-              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. âš ï¸',
-              'recusado': 'Desculpe, o estabelecimento nÃ£o pÃ´de aceitar o pedido agora. âš ï¸'
+              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. âš ï¸ ',
+              'recusado': 'Desculpe, o estabelecimento nÃ£o pÃ´de aceitar o pedido agora. âš ï¸ '
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
-            showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
             
-            // Dispara notificaÃ§Ã£o interna + push para rastreamento em tempo real
+            let finalTitle = "Acompanhamento Izi";
+            let finalMsg = msg;
+
+            if (newOrder.service_type === 'coin_purchase' && (newOrder.status === 'concluido' || newOrder.payment_status === 'paid' || isPaid)) {
+               finalTitle = globalSettings?.push_templates?.coin_purchase?.title || "Compra de IZI Coin";
+               finalMsg = globalSettings?.push_templates?.coin_purchase?.message || "Sua compra de IZI Coins foi confirmada e creditada na sua carteira! 🪙";
+            } else if (newOrder.service_type === 'subscription' && (newOrder.status === 'concluido' || newOrder.payment_status === 'paid' || isPaid)) {
+               finalTitle = globalSettings?.push_templates?.izi_black?.title || "Assinatura IZI Black";
+               finalMsg = globalSettings?.push_templates?.izi_black?.message || "Bem-vindo ao Clube VIP! Seus benefícios exclusivos do IZI Black já estão ativos. 🌟";
+            } else if (newOrder.status === 'concluido') {
+               finalTitle = globalSettings?.push_templates?.order_status_concluido?.title || "Acompanhamento Izi";
+               finalMsg = globalSettings?.push_templates?.order_status_concluido?.message || "Pedido entregue com sucesso! Bom apetite. ✨";
+            } else if (globalSettings?.push_templates?.[`order_status_${newOrder.status}`]) {
+               finalTitle = globalSettings.push_templates[`order_status_${newOrder.status}`].title;
+               finalMsg = globalSettings.push_templates[`order_status_${newOrder.status}`].message;
+            }
+
+            showToast(finalMsg, newOrder.status === 'cancelado' ? 'warning' : 'success');
+            
+            // Dispara notificação interna + push para rastreamento em tempo real
             if (statusChanged) {
-              sendInternalNotification("Acompanhamento Izi", msg, { orderId: newOrder.id, status: newOrder.status });
+              sendInternalNotification(finalTitle, finalMsg, { orderId: newOrder.id, status: newOrder.status });
             }
           }
 

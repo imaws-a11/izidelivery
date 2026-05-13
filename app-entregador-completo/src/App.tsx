@@ -1805,18 +1805,7 @@ function MainApp() {
              }
         };
         
-        const checkOverlayPermission = async () => {
-            if (Capacitor.getPlatform() === 'android') {
-                setTimeout(() => {
-                    if (isOnline) {
-                        toast('Dica: Ative a "Sobreposição a outros apps" nas configurações do Android para não perder nenhuma chamada!', 'info');
-                    }
-                }, 5000);
-            }
-        };
-
         registerPush();
-        checkOverlayPermission();
 
         return () => {
              if (Capacitor.isNativePlatform()) {
