@@ -15,6 +15,7 @@ import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Pol
 import SplashScreen from './components/common/SplashScreen';
 import { IziBottomSheet } from './components/common/IziBottomSheet';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { LocalErrorBoundary } from './components/common/LocalErrorBoundary';
 import { OnboardingView } from './components/features/OnboardingView';
 import { MissionsView } from './components/features/MissionsView';
 import NotificationsCenterView from './components/features/NotificationsCenterView';
@@ -914,14 +915,13 @@ function MainApp() {
                 }
             });
 
-            const response = await fetch(`${sUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
+            const response = await iziFetch(`${sUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
                 method: 'PATCH',
                 headers: {
-                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    'apikey': sKey,
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal',
-                    'Accept': 'application/json'
+                    'Prefer': 'return=minimal'
                 },
                 body: JSON.stringify({
                     name: editProfileData.name,
@@ -2010,11 +2010,6 @@ function MainApp() {
                 isOnlineRef.current = shouldBeOnline;
                 localStorage.setItem('izi_driver_online', shouldBeOnline.toString());
                 
-                // Se temos missão, garantimos a aba correta logo no boot
-                if (hasCachedMission && activeTab === 'dashboard') {
-                    setActiveTab('active_mission');
-                }
-                
                 // Se forçamos online por causa de missão ativa, atualiza o DB também
                 if (hasCachedMission && !localWantsOnline) {
                     supabase.from('drivers_delivery').update({ is_online: true }).eq('id', userId).then(() => {
@@ -2753,18 +2748,16 @@ function MainApp() {
 
             // Usando Promise.all com Fetch Nativo para máxima performance e zero travamento
             const [ordersRes, exclusiveRes] = await Promise.all([
-                fetch(`${sUrl}/rest/v1/orders_delivery?status=not.in.(concluido,cancelado,finalizado,entregue)&select=*&order=created_at.desc&limit=50`, {
+                iziFetch(`${sUrl}/rest/v1/orders_delivery?status=not.in.(concluido,cancelado,finalizado,entregue)&select=*&order=created_at.desc&limit=50`, {
                     headers: { 'apikey': sKey, 'Authorization': `Bearer ${token}` }
                 }),
-                fetch(`${sUrl}/rest/v1/admin_users?dispatch_priority=eq.exclusive&select=id`, {
+                iziFetch(`${sUrl}/rest/v1/admin_users?dispatch_priority=eq.exclusive&select=id`, {
                     headers: { 'apikey': sKey, 'Authorization': `Bearer ${token}` }
                 })
             ]);
 
-            if (!ordersRes.ok) throw new Error(`Erro Pedidos: ${ordersRes.status}`);
-            
-            const data = await ordersRes.ok ? await ordersRes.json() : [];
-            const exclusiveData = exclusiveRes.ok ? await exclusiveRes.json() : [];
+            const data = await ordersRes.json();
+            const exclusiveData = await exclusiveRes.json();
             const exclusiveIds = exclusiveData.map((m: any) => m.id);
             
             exclusiveMerchantIdsRef.current = exclusiveIds;
@@ -3145,7 +3138,7 @@ function MainApp() {
             
             // A regra RLS exige que o status mude para 'confirmado' para validar o aceite.
             // Também permitimos aceitar se o driver_id já for o meu (atribuição manual do lojista).
-            const updateRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}&or=(driver_id.is.null,driver_id.eq.${driverId})`, {
+            const updateRes = await iziFetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}&or=(driver_id.is.null,driver_id.eq.${driverId})`, {
                 method: 'PATCH',
                 headers: authHeaders,
                 body: JSON.stringify({
@@ -3236,11 +3229,11 @@ function MainApp() {
 
             const headers = { 'apikey': sKey, 'Authorization': `Bearer ${token}` };
             const apiRequest = (path: string, method = 'GET', body?: any) => 
-                fetch(`${sUrl}/rest/v1/${path}`, { 
+                iziFetch(`${sUrl}/rest/v1/${path}`, { 
                     method, 
                     headers: { ...headers, ...(body ? { 'Content-Type': 'application/json' } : {}) },
                     body: body ? JSON.stringify(body) : undefined,
-                    signal: AbortSignal.timeout(10000) 
+                    timeoutMs: 10000 
                 });
 
             // 1. Coleta de dados em paralelo para maior performance
@@ -3591,7 +3584,7 @@ function MainApp() {
                     payload.payment_status = 'paid';
                 }
 
-                await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${missionId}`, {
+                await iziFetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${missionId}`, {
                     method: 'PATCH',
                     headers: {
                         'apikey': supabaseKey,
@@ -3611,7 +3604,7 @@ function MainApp() {
 
                     // Ganho do motorista
                     financialTasks.push(
-                        fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                        iziFetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
                             method: 'POST',
                             headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -3628,7 +3621,7 @@ function MainApp() {
                     if (paymentConfirmedMode === 'dinheiro') {
                         const totalOrderPrice = Number(activeMission.total_price || activeMission.price || 0);
                         financialTasks.push(
-                            fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                            iziFetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
                                 method: 'POST',
                                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -3702,7 +3695,7 @@ function MainApp() {
 
 
 
-            const res = await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+            const res = await iziFetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3754,7 +3747,7 @@ function MainApp() {
 
 
 
-            const res = await fetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
+            const res = await iziFetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3799,7 +3792,7 @@ function MainApp() {
                 status: 'pending'
             };
 
-            const response = await fetch(`${sUrl}/rest/v1/driver_vehicle_requests`, {
+            const response = await iziFetch(`${sUrl}/rest/v1/driver_vehicle_requests`, {
                 method: 'POST',
                 headers: {
                     'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -3853,7 +3846,7 @@ function MainApp() {
                 status: 'pending'
             };
 
-            const response = await fetch(`${sUrl}/rest/v1/driver_vehicle_requests`, {
+            const response = await iziFetch(`${sUrl}/rest/v1/driver_vehicle_requests`, {
                 method: 'POST',
                 headers: {
                     'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -3992,7 +3985,7 @@ function MainApp() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
 
-            const response = await fetch(`${supabaseUrl}/rest/v1/slot_applications`, {
+            const response = await iziFetch(`${supabaseUrl}/rest/v1/slot_applications`, {
                 method: 'POST',
                 headers: {
                     'apikey': anonKey,
@@ -5119,24 +5112,19 @@ function MainApp() {
             } catch (e) {}
 
             const uploadUrl = `${supabaseUrl}/storage/v1/object/avatars/${path}`;
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout no upload (30s)')), 30000)
-            );
 
-            // 1. Upload do Arquivo
-            const res = await Promise.race([
-                fetch(uploadUrl, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': file.type,
-                        'x-upsert': 'true'
-                    },
-                    body: blob
-                }),
-                timeoutPromise
-            ]) as Response;
+            // 1. Upload do Arquivo (Timeout estendido para 45s para fotos)
+            const res = await iziFetch(uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': file.type,
+                    'x-upsert': 'true'
+                },
+                body: blob,
+                timeoutMs: 45000
+            });
             
             if (!res.ok) {
                 const errorJson = await res.json().catch(() => ({ message: 'Erro no servidor de storage' }));
@@ -5148,7 +5136,7 @@ function MainApp() {
 
             // 2. Atualização do Perfil no Banco
             const dbUrl = `${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`;
-            const dbRes = await fetch(dbUrl, {
+            const dbRes = await iziFetch(dbUrl, {
                 method: 'PATCH',
                 headers: {
                     'apikey': supabaseKey,
@@ -7222,10 +7210,10 @@ function MainApp() {
                             <div className="flex-1 relative overflow-hidden flex flex-col bg-zinc-50">
                                 <main className="flex-1 overflow-y-auto no-scrollbar relative">
                                     <AnimatePresence mode="wait">
-                                        {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderDashboard()}</motion.div>}
-                                        {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1">{renderActiveMissionView()}</motion.div>}
-                                        {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><HistoryView history={history} getNetEarnings={getNetEarnings} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></motion.div>}
-                                        {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><EarningsView stats={stats} onShowBankDetails={() => setShowBankDetails(true)} onShowWithdrawHistory={() => setShowWithdrawHistory(true)} onWithdrawRequest={handleWithdrawRequest} onNavigateToMissions={() => setActiveTab('missions')} /></motion.div>}
+                                        {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Painel Principal">{renderDashboard()}</LocalErrorBoundary></motion.div>}
+                                        {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Missão Ativa">{renderActiveMissionView()}</LocalErrorBoundary></motion.div>}
+                                        {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Histórico"><HistoryView history={history} getNetEarnings={getNetEarnings} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></LocalErrorBoundary></motion.div>}
+                                        {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Ganhos"><EarningsView stats={stats} onShowBankDetails={() => setShowBankDetails(true)} onShowWithdrawHistory={() => setShowWithdrawHistory(true)} onWithdrawRequest={handleWithdrawRequest} onNavigateToMissions={() => setActiveTab('missions')} /></LocalErrorBoundary></motion.div>}
                                         {activeTab === 'profile' && (
                                             <motion.div 
                                                 key="prof" 
@@ -7235,41 +7223,43 @@ function MainApp() {
                                                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                                                 className="fixed inset-0 z-[300] bg-white flex flex-col"
                                             >
-                                                <ProfileView 
-                                                    driverName={driverName}
-                                                    driverAvatar={driverAvatar}
-                                                    driverPlate={driverPlate}
-                                                    driverVehicle={driverVehicle}
-                                                    authEmail={authEmail}
-                                                    stats={{ level: stats.level, count: stats.count }}
-                                                    isUploadingAvatar={isUploadingAvatar}
-                                                    driverId={driverId}
-                                                    onNavigateToDashboard={() => setActiveTab('dashboard')}
-                                                    onShowPersonalDataModal={() => setShowPersonalDataModal(true)}
-                                                    onShowBankDetails={() => setShowBankDetails(true)}
-                                                    onShowPlateModal={() => setShowPlateModal(true)}
-                                                    onShowPreferences={() => setShowPreferences(true)}
-                                                    onShowHelpModal={() => setShowHelpModal(true)}
-                                                    onLogout={handleLogout}
-                                                    onAvatarUpload={handleAvatarUpload}
-                                                    onOpenOverlaySettings={openOverlaySettings}
-                                                    onSyncMission={syncMissionWithDB}
-                                                    onResetMission={async () => {
-                                                        if (await showConfirm({ title: 'Resetar Missão', message: 'Isso irá limpar o cache local da sua missão atual.', confirmLabel: 'Resetar Agora', danger: true })) {
-                                                            setActiveMission(null);
-                                                            localStorage.removeItem('Izi_active_mission');
-                                                            setActiveTab('dashboard');
-                                                            showSystemPopup('Reset Concluído', 'O cache da missão foi limpo com sucesso.', 'info');
-                                                        }
-                                                    }}
-                                                    onSetEditProfileData={setEditProfileData}
-                                                    onLoadProfile={loadProfileAndEnforceOnboarding}
-                                                />
+                                                <LocalErrorBoundary featureName="Perfil">
+                                                    <ProfileView 
+                                                        driverName={driverName}
+                                                        driverAvatar={driverAvatar}
+                                                        driverPlate={driverPlate}
+                                                        driverVehicle={driverVehicle}
+                                                        authEmail={authEmail}
+                                                        stats={{ level: stats.level, count: stats.count }}
+                                                        isUploadingAvatar={isUploadingAvatar}
+                                                        driverId={driverId}
+                                                        onNavigateToDashboard={() => setActiveTab('dashboard')}
+                                                        onShowPersonalDataModal={() => setShowPersonalDataModal(true)}
+                                                        onShowBankDetails={() => setShowBankDetails(true)}
+                                                        onShowPlateModal={() => setShowPlateModal(true)}
+                                                        onShowPreferences={() => setShowPreferences(true)}
+                                                        onShowHelpModal={() => setShowHelpModal(true)}
+                                                        onLogout={handleLogout}
+                                                        onAvatarUpload={handleAvatarUpload}
+                                                        onOpenOverlaySettings={openOverlaySettings}
+                                                        onSyncMission={syncMissionWithDB}
+                                                        onResetMission={async () => {
+                                                            if (await showConfirm({ title: 'Resetar Missão', message: 'Isso irá limpar o cache local da sua missão atual.', confirmLabel: 'Resetar Agora', danger: true })) {
+                                                                setActiveMission(null);
+                                                                localStorage.removeItem('Izi_active_mission');
+                                                                setActiveTab('dashboard');
+                                                                showSystemPopup('Reset Concluído', 'O cache da missão foi limpo com sucesso.', 'info');
+                                                            }
+                                                        }}
+                                                        onSetEditProfileData={setEditProfileData}
+                                                        onLoadProfile={loadProfileAndEnforceOnboarding}
+                                                    />
+                                                </LocalErrorBoundary>
                                             </motion.div>
                                         )}
-                                        {activeTab === 'missions' && <motion.div key="miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full flex flex-col"><MissionsView driverId={driverId || ''} /></motion.div>}
-                                        {activeTab === 'dedicated' && <motion.div key="dedi" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderDedicatedView()}</motion.div>}
-                                        {activeTab === 'scheduled' && <motion.div key="sched" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">{renderScheduledView()}</motion.div>}
+                                        {activeTab === 'missions' && <motion.div key="miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full flex flex-col"><LocalErrorBoundary featureName="Marketplace"><MissionsView driverId={driverId || ''} /></LocalErrorBoundary></motion.div>}
+                                        {activeTab === 'dedicated' && <motion.div key="dedi" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full"><LocalErrorBoundary featureName="Vagas Dedicadas">{renderDedicatedView()}</LocalErrorBoundary></motion.div>}
+                                        {activeTab === 'scheduled' && <motion.div key="sched" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full"><LocalErrorBoundary featureName="Agenda">{renderScheduledView()}</LocalErrorBoundary></motion.div>}
                                         {activeTab === 'notifications' && (
                                             <motion.div key="notif" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 h-full">
                                                 {authInitLoading ? (
