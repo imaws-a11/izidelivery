@@ -14,7 +14,8 @@ export default function OrdersMerchantTab() {
     fetchAllOrders, 
     merchantProfile,
     isLoadingList,
-    appSettings
+    appSettings,
+    fetchMerchantFinance
   } = useAdmin();
 
   const ORDERS_PER_PAGE = 50;
@@ -97,7 +98,27 @@ export default function OrdersMerchantTab() {
         toastError('O pedido foi atualizado, mas as alterações não refletiram.');
       } else {
         if (newStatus === 'cancelado') {
-          toastSuccess('Pedido cancelado com sucesso.');
+          // Estorno automático para entregas avulsas pagas via saldo
+          const cancelledOrder = data[0];
+          if (cancelledOrder.service_type === 'entrega_avulsa' && cancelledOrder.delivery_fee > 0) {
+            try {
+              const refundAmount = cancelledOrder.delivery_fee;
+              await supabase.from('wallet_transactions_delivery').insert([{
+                user_id: cancelledOrder.merchant_id || merchantProfile?.id,
+                type: 'deposito',
+                amount: refundAmount,
+                description: `Estorno — Entrega Avulsa cancelada (#${cancelledOrder.id.slice(0, 8).toUpperCase()})`,
+                status: 'concluido'
+              }]);
+              await fetchMerchantFinance();
+              toastSuccess(`Pedido cancelado! Estorno de R$ ${refundAmount.toFixed(2).replace('.', ',')} creditado ao seu saldo.`);
+            } catch (refundErr) {
+              console.error('Erro ao processar estorno:', refundErr);
+              toastSuccess('Pedido cancelado, mas houve um erro no estorno automático. Contate o suporte.');
+            }
+          } else {
+            toastSuccess('Pedido cancelado com sucesso.');
+          }
         } else if (newStatus === 'waiting_driver') {
           toastSuccess('Pedido aceito! Chamando entregador...');
           // Notificar Entregadores

@@ -227,6 +227,7 @@ export default function App() {
                        <NavTab id="dashboard" icon="dashboard" label="Métricas" />
                        <NavTab id="standalone_delivery" icon="two_wheeler" label="Entrega Avulsa" />
                        <NavTab id="live_tracking" icon="monitoring" label="Rastreio" />
+                       <NavTab id="my_studio" icon="storefront" label="Meu Estúdio" />
                        <NavTab id="financial" icon="account_balance_wallet" label="Financeiro" />
                        <NavTab id="merchant_profile" icon="person" label="Perfil" />
                        <NavTab id="settings" icon="settings" label="Config" />

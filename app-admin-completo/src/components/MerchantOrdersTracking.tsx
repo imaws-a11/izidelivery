@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAdmin } from '../context/AdminContext';
-import { toastInfo } from '../lib/useToast';
+import { toastInfo, toastSuccess, toastError } from '../lib/useToast';
 
 interface Order {
   id: string;
@@ -32,7 +32,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: string 
 };
 
 export default function MerchantOrdersTracking() {
-  const { merchantProfile, setSelectedOrder } = useAdmin();
+  const { merchantProfile, setSelectedOrder, fetchMerchantFinance } = useAdmin();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +62,55 @@ export default function MerchantOrdersTracking() {
       setOrders(data || []);
     }
     setLoading(false);
+  };
+
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const handleCancelOrder = async (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isTerminal = ['delivered', 'concluido', 'entregue', 'cancelado', 'cancelled', 'finalizado'].includes(order.status);
+    
+    const confirmMsg = isTerminal 
+      ? 'Deseja remover este pedido do histórico?' 
+      : `Deseja cancelar esta entrega? O valor de R$ ${order.delivery_fee.toFixed(2).replace('.', ',')} será estornado ao seu saldo.`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    setProcessingId(order.id);
+    try {
+      if (isTerminal) {
+        // Apenas excluir do histórico (soft delete ou hard delete)
+        await supabase.from('orders_delivery').delete().eq('id', order.id);
+        toastSuccess('Pedido removido do histórico.');
+      } else {
+        // Cancelar e estornar
+        await supabase.from('orders_delivery').update({ 
+          status: 'cancelado', 
+          cancel_reason: 'Cancelado pelo parceiro via painel' 
+        }).eq('id', order.id);
+        
+        // Estorno automático
+        if (order.delivery_fee > 0) {
+          await supabase.from('wallet_transactions_delivery').insert([{
+            user_id: merchantProfile?.id,
+            type: 'deposito',
+            amount: order.delivery_fee,
+            description: `Estorno — Entrega Avulsa cancelada (${order.tracking_code})`,
+            status: 'concluido'
+          }]);
+          await fetchMerchantFinance();
+          toastSuccess(`Cancelado! R$ ${order.delivery_fee.toFixed(2).replace('.', ',')} estornado ao seu saldo.`);
+        } else {
+          toastSuccess('Entrega cancelada com sucesso.');
+        }
+      }
+      fetchOrders();
+    } catch (err) {
+      console.error('Erro ao processar:', err);
+      toastError('Erro ao processar a ação. Tente novamente.');
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   useEffect(() => {
@@ -190,17 +239,36 @@ export default function MerchantOrdersTracking() {
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Custo:</span>
                       <span className="text-xs font-black text-slate-900 dark:text-white">R$ {order.delivery_fee.toFixed(2).replace('.', ',')}</span>
                    </div>
-                   <button 
-                     onClick={() => {
-                        const link = `${window.location.origin}/track/${order.tracking_code}`;
-                        navigator.clipboard.writeText(link);
-                        toastInfo('Link de rastreio copiado para o cliente!');
-                     }}
-                     className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1 hover:underline"
-                   >
-                     <span className="material-symbols-outlined text-[14px]">share</span>
-                     Compartilhar Rastreio
-                   </button>
+                   <div className="flex items-center gap-2">
+                     <button 
+                       onClick={(e) => handleCancelOrder(order, e)}
+                       disabled={processingId === order.id}
+                       className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 transition-all disabled:opacity-50 ${
+                         ['delivered', 'concluido', 'entregue', 'cancelado', 'cancelled', 'finalizado'].includes(order.status)
+                           ? 'text-slate-400 hover:text-rose-500'
+                           : 'text-rose-500 hover:text-rose-700'
+                       }`}
+                     >
+                       <span className="material-symbols-outlined text-[14px]">
+                         {processingId === order.id ? 'refresh' : 
+                          ['delivered', 'concluido', 'entregue', 'cancelado', 'cancelled', 'finalizado'].includes(order.status) ? 'delete' : 'cancel'}
+                       </span>
+                       {processingId === order.id ? '...' :
+                        ['delivered', 'concluido', 'entregue', 'cancelado', 'cancelled', 'finalizado'].includes(order.status) ? 'Excluir' : 'Cancelar'}
+                     </button>
+                     <button 
+                       onClick={(e) => {
+                          e.stopPropagation();
+                          const link = `${window.location.origin}/track/${order.tracking_code}`;
+                          navigator.clipboard.writeText(link);
+                          toastInfo('Link de rastreio copiado para o cliente!');
+                       }}
+                       className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1 hover:underline"
+                     >
+                       <span className="material-symbols-outlined text-[14px]">share</span>
+                       Rastreio
+                     </button>
+                   </div>
                 </div>
               </motion.div>
             );

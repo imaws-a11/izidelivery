@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
+import { toastSuccess, toastError } from '../lib/useToast';
 
 // Configurações do Sistema
 
@@ -36,9 +37,13 @@ export default function SettingsTab() {
     setNeighborhoodSaving(true);
     const { error } = await supabase
       .from('city_neighborhoods_delivery')
-      .insert({ name, city: 'Brumadinho', state: 'MG' });
-    if (!error) {
+      .insert({ name });
+    if (error) {
+      console.error('Erro ao adicionar bairro:', error);
+      toastError('Erro ao salvar bairro: ' + error.message);
+    } else {
       setNewNeighborhoodName('');
+      toastSuccess(`Bairro "${name}" adicionado!`);
       await fetchNeighborhoods();
     }
     setNeighborhoodSaving(false);
@@ -52,24 +57,36 @@ export default function SettingsTab() {
       .from('city_neighborhoods_delivery')
       .update({ name })
       .eq('id', id);
-    if (!error) {
+    if (error) {
+      console.error('Erro ao editar bairro:', error);
+      toastError('Erro ao editar bairro: ' + error.message);
+    } else {
       setEditingId(null);
+      toastSuccess('Bairro atualizado!');
       await fetchNeighborhoods();
     }
     setNeighborhoodSaving(false);
   };
 
   const handleToggleActive = async (id: string, current: boolean) => {
-    await supabase
+    const { error } = await supabase
       .from('city_neighborhoods_delivery')
       .update({ active: !current })
       .eq('id', id);
+    if (error) {
+      toastError('Erro ao alterar status: ' + error.message);
+    }
     await fetchNeighborhoods();
   };
 
   const handleDeleteNeighborhood = async (id: string, name: string) => {
     if (!confirm(`Excluir o bairro "${name}"?\n\nLojistas que o usavam perderão essa configuração.`)) return;
-    await supabase.from('city_neighborhoods_delivery').delete().eq('id', id);
+    const { error } = await supabase.from('city_neighborhoods_delivery').delete().eq('id', id);
+    if (error) {
+      toastError('Erro ao excluir bairro: ' + error.message);
+    } else {
+      toastSuccess(`Bairro "${name}" removido.`);
+    }
     await fetchNeighborhoods();
   };
 
@@ -633,7 +650,7 @@ export default function SettingsTab() {
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className={`inline-block w-1.5 h-1.5 rounded-full ${n.active ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      {n.active ? 'Ativo' : 'Inativo'} · {n.city}
+                      {n.active ? 'Ativo' : 'Inativo'}
                     </p>
                   </div>
                 </div>
