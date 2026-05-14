@@ -122,7 +122,7 @@ export default function StandaloneDeliveryTab() {
         merchant_id: merchantProfile?.id,
         merchant_name: merchantProfile?.store_name,
         service_type: 'entrega_avulsa',
-        status: 'waiting_driver', // Cai direto na busca de entregador
+        status: pickupTime === 'agendado' ? 'agendado' : 'waiting_driver',
         pickup_address: merchantProfile?.store_address || '',
         delivery_address: deliveryAddress,
         delivery_lat: merchantProfile?.latitude || null,
@@ -141,6 +141,7 @@ export default function StandaloneDeliveryTab() {
         reference_point: referencePoint,
         delivery_payment_method: deliveryPaymentMethod,
         pickup_time: pickupTime === 'agendado' ? scheduledPickupTime : new Date().toISOString(),
+        scheduled_at: pickupTime === 'agendado' ? scheduledPickupTime : null,
         order_readiness: orderReadiness,
         needs_card_machine: !!needsCardMachine,
         customer_pays_cash: !!customerPaysCash,
@@ -157,7 +158,17 @@ export default function StandaloneDeliveryTab() {
       toastSuccess(`Entrega solicitada! Código de rastreio: ${trackingCode}`);
       
       // Notifica os entregadores se não for agendado pro futuro distante
-      if (pickupTime === 'agora' || orderReadiness === 'pronto') {
+      if (pickupTime === 'agendado') {
+         await supabase.functions.invoke('send-push-notification', {
+           body: {
+             driver_id: 'all',
+             merchant_id: merchantProfile?.id,
+             title: '📅 Novo Agendamento Disponível!',
+             body: 'Um novo serviço agendado foi adicionado. Confira sua agenda!',
+             data: { orderId: data[0].id }
+           }
+         });
+      } else if (pickupTime === 'agora' || orderReadiness === 'pronto') {
          await supabase.functions.invoke('send-push-notification', {
            body: {
              driver_id: 'all',

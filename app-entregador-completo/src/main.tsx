@@ -10,9 +10,9 @@ initSentry();
 
 createRoot(document.getElementById('root')!).render(
 
-  <StrictMode>
-    <ToastProvider>
-      <App />
-    </ToastProvider>
-  </StrictMode>,
+ <StrictMode>
+ <ToastProvider>
+ <App />
+ </ToastProvider>
+ </StrictMode>,
 )
