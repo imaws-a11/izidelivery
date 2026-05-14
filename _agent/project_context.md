@@ -35,6 +35,12 @@ Atualizado: 2026-05-14
 ### 📦 Logística e Izi Entrega Avulsa
 - **Arquitetura**: Reutiliza `orders_delivery` com `service_type = 'entrega_avulsa'`.
 - **Mapeamento**: Entregadores da categoria `'motoboy'` visualizam entregas avulsas como pagas (taxa retida).
+- **Precificação (Novo)**: Implementação de modelo linear contínuo configurado dinamicamente no painel Admin, garantindo paridade com as taxas locais.
+
+### 🔌 Integrações Externas (API & Webhooks)
+- **API Pública (Inbound)**: Edge Function `integration-api` permite criar pedidos e cotar fretes via API Key, facilitando a injeção de corridas por ERPs ou apps como TchauFome.
+- **Webhooks (Outbound)**: Sistema nativo no painel dispara notificações (HMAC) em tempo real quando o status do motoboy altera.
+- **Autenticação**: Gestão de chaves no painel do lojista com base na tabela segura `merchant_api_keys`.
 
 ---
 
@@ -56,6 +62,7 @@ Atualizado: 2026-05-14
 - **Core**: `AppContext.tsx`, `AdminProvider.tsx`.
 - **App Entregador**: `App.tsx`, `DashboardView.tsx`, `iziFetch.ts`.
 - **Financeiro**: `create-lightning-invoice` (EF), `mp-webhook` (EF), `IziPayView.tsx`.
+- **Integrações**: `integration-api` (EF), `API_INTEGRATION_DOCS.md`, `IntegrationsTab.tsx`.
 - **Utils**: `iziFetch.ts`, `iziSounds.ts`, `telemetry.ts`.
 - **Core App**: `App.tsx` (Serviços/Cliente) - Contém orquestração de subViews e Listeners Realtime.
 
