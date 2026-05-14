@@ -2709,11 +2709,11 @@ const navigateSubView = (target: string) => {
       const { data: zonesData } = await supabase.from('merchant_delivery_zones').select('*');
       const zonesByMerchant: Record<string, Record<string, {active: boolean, price: number}>> = {};
       if (zonesData) {
-        zonesData.forEach(z => {
+        zonesData.forEach((z: any) => {
            if (!zonesByMerchant[z.merchant_id]) zonesByMerchant[z.merchant_id] = {};
-           zonesByMerchant[z.merchant_id][z.neighborhood] = {
-             active: z.is_active,
-             price: z.price
+           zonesByMerchant[z.merchant_id][z.neighborhood_name] = {
+             active: z.active,
+             price: Number(z.delivery_price) || 0
            };
         });
       }
