@@ -9,6 +9,7 @@ import { toastSuccess } from './lib/useToast';
 // Tabs
 import DashboardTab from './components/DashboardTab';
 import MerchantsTab from './components/MerchantsTab';
+import NetworkManagementTab from './components/NetworkManagementTab';
 import TrackingTab from './components/TrackingTab';
 import OrdersAdminTab from './components/OrdersAdminTab';
 import OrdersMerchantTab from './components/OrdersMerchantTab';
@@ -250,8 +251,7 @@ export default function App() {
                   <NavTab id="dashboard" icon="dashboard" label="Home" />
                    <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
                    <NavTab id="tracking" icon="map" label="Rastreio" />
-                  <NavTab id="merchants" icon="storefront" label="Lojistas" />
-                  <NavTab id="partners" icon="handshake" label="Parceiros Izi" />
+                   <NavTab id="network" icon="hub" label="Gestão de Rede" />
                   <NavTab id="categories" icon="category" label="Taxonomia" />
                    <NavTab id="establishment_types" icon="hub" label="Ecossistema" />
                   <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
@@ -294,10 +294,9 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="space-y-8"
             >
-              {activeTab === 'dashboard' && userRole === 'admin' && <DashboardTab />}
+              {(activeTab === 'dashboard' || activeTab === ('merchants' as any) || activeTab === ('partners' as any)) && userRole === 'admin' && <DashboardTab />}
               {activeTab === 'dashboard' && userRole === 'merchant' && <MerchantDashboardTab />}
-              {activeTab === 'merchants' && userRole !== 'merchant' && <MerchantsTab />}
-              {activeTab === 'partners' && userRole === 'admin' && <PartnersTab />}
+              {(activeTab === 'network' || activeTab === ('merchants' as any) || activeTab === ('partners' as any)) && userRole === 'admin' && <NetworkManagementTab />}
               {activeTab === 'tracking' && userRole !== 'merchant' && <TrackingTab />}
               {activeTab === 'orders' && userRole === 'admin' && <OrdersAdminTab />}
               {activeTab === 'orders' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <OrdersMerchantTab />}
@@ -339,12 +338,18 @@ export default function App() {
         )}
         {editType === 'merchant' && userRole === 'admin' && (
           <div className="fixed inset-0 z-[120]">
-            <MerchantStudio />
+            <MerchantStudio onClose={() => {
+              setEditingItem(null);
+              setEditType(null);
+            }} />
           </div>
         )}
         {editType === 'partner' && (
           <div className="fixed inset-0 z-[120]">
-            <PartnerStudio onClose={() => { setEditingItem(null); setEditType(null); }} />
+            <PartnerStudio onClose={() => { 
+              setEditingItem(null); 
+              setEditType(null); 
+            }} />
           </div>
         )}
       </div>

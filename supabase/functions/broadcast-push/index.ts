@@ -5,6 +5,7 @@ import admin from 'npm:firebase-admin@11.11.1'
 const ALLOWED_ORIGINS = [
   'https://izi-admin.vercel.app',
   'http://localhost:5173',
+  'http://localhost:5174',
 ]
 
 function getCorsHeaders(req: Request) {

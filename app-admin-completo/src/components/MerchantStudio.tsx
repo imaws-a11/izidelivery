@@ -3,8 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { AddressSearchInput } from './AddressSearchInput';
 import { toastSuccess, toastError } from '../lib/useToast';
+import WebhookConfigPanel from './WebhookConfigPanel';
 
-export default function MerchantStudio() {
+interface MerchantStudioProps {
+  onClose: () => void;
+}
+
+export default function MerchantStudio({ onClose }: MerchantStudioProps) {
   const { 
     editingItem, setEditingItem, handleUpdateMerchant, isSaving, handleFileUpload,
     establishmentTypes, appSettings, setActiveTab, setEditType,
@@ -120,6 +125,7 @@ export default function MerchantStudio() {
 
   if (editingItem?.id && !editingItem.id.toString().startsWith('new-')) {
     steps.push({ id: 5, label: 'Financeiro', icon: 'account_balance_wallet' });
+    steps.push({ id: 6, label: 'Integrações', icon: 'webhook' });
   }
 
   const canGoNext = () => {
@@ -136,11 +142,7 @@ export default function MerchantStudio() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <button 
-              onClick={() => {
-                setEditType(null);
-                setEditingItem(null);
-                setActiveTab('merchants');
-              }}
+              onClick={onClose}
               className="size-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center hover:bg-primary hover:text-slate-900 transition-all group"
             >
               <span className="material-symbols-outlined text-xl group-hover:font-black transition-all">arrow_back</span>
@@ -634,6 +636,16 @@ export default function MerchantStudio() {
                       )}
                     </div>
                   </div>
+                </motion.div>
+              )}
+              {step === 6 && (
+                <motion.div
+                  key="step6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="h-full overflow-y-auto italic"
+                >
+                   <WebhookConfigPanel />
                 </motion.div>
               )}
             </AnimatePresence>

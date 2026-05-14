@@ -392,7 +392,7 @@ export interface PartnerStore {
 
 export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |
   'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' | 'notifications' | 'gamification' |
-  'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black' | 'partners' | 'merchant_studio' | 'establishment_types' | 'driver_applications' | 'order_center' | 'standalone_delivery' | 'merchant_profile' | 'live_tracking' | 'wallet_history';
+  'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black' | 'partners' | 'network' | 'merchant_studio' | 'establishment_types' | 'driver_applications' | 'order_center' | 'standalone_delivery' | 'merchant_profile' | 'live_tracking' | 'wallet_history';
 
 export type UserRole = 'admin' | 'merchant';
 
