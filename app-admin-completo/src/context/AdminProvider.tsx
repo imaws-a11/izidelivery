@@ -1708,6 +1708,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchPromotions();
       fetchMyDedicatedSlots();
       fetchMerchantFinance();
+      fetchDynamicRates();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthLoading, session?.user?.id, userRole, merchantProfile?.id]);

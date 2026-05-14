@@ -62,12 +62,26 @@ export default function StandaloneDeliveryTab() {
   const [estimatedDistance, setEstimatedDistance] = useState<number>(0);
 
   const calculateFee = async (address: string, coords?: { lat: number; lng: number }, selectedNeighborhood?: string) => {
-    if (!address || !merchantProfile?.latitude || !merchantProfile?.longitude) return;
+    if (!address || !merchantProfile?.latitude || !merchantProfile?.longitude) {
+      console.log('Standalone calculateFee: early return', { address, lat: merchantProfile?.latitude, lng: merchantProfile?.longitude });
+      return;
+    }
+
     try {
        const baseValues = (dynamicRatesState as any)?.baseValues || {};
-       const minFee = parseFloat((baseValues.standalone_min || '10,00').replace(',', '.'));
-       const kmFee = parseFloat((baseValues.standalone_km || '2,00').replace(',', '.'));
-       const kmInterval = parseFloat((baseValues.standalone_km_interval || '1').replace(',', '.'));
+       
+       const safeParse = (val: any, fallback: string) => {
+          if (val === undefined || val === null) return parseFloat(fallback.replace(',', '.'));
+          if (typeof val === 'number') return val;
+          const str = String(val).replace(',', '.');
+          return parseFloat(str) || parseFloat(fallback.replace(',', '.'));
+       };
+
+       const minFee = safeParse(baseValues.standalone_min, '10,00');
+       const kmFee = safeParse(baseValues.standalone_km, '2,00');
+       const kmInterval = safeParse(baseValues.standalone_km_interval, '1');
+
+       console.log('Standalone Params:', { minFee, kmFee, kmInterval, baseValues });
 
        // 1. Verificar se é modo Bairros
        const isNeighborhoodMode = merchantProfile?.delivery_coverage_mode === 'neighborhoods';
@@ -79,14 +93,15 @@ export default function StandaloneDeliveryTab() {
          );
          if (zone) {
            const fee = typeof zone.fee === 'string' ? parseFloat(zone.fee.replace(',', '.')) : zone.fee;
+           console.log('Standalone: Neighborhood Match!', { neighborhood: targetNeighborhood, fee });
            setEstimatedFee(fee);
-           setEstimatedDistance(0); // Distância não é relevante em taxas por bairro fixo
+           setEstimatedDistance(0);
            return;
          }
        }
 
-       // 2. Cálculo por KM (fallback ou se modo radius)
-       let distanceKm = 1.5; // Default fallback
+       // 2. Cálculo por KM
+       let distanceKm = 1.5; 
        
        if (coords?.lat && coords?.lng && (window as any).google?.maps?.geometry?.spherical) {
          const p1 = new (window as any).google.maps.LatLng(merchantProfile.latitude, merchantProfile.longitude);
@@ -94,8 +109,7 @@ export default function StandaloneDeliveryTab() {
          const meters = (window as any).google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
          distanceKm = meters / 1000;
        } else if (coords?.lat && coords?.lng) {
-         // Fallback manual se a lib geometry não estiver carregada
-         const R = 6371; // km
+         const R = 6371; 
          const dLat = (coords.lat - merchantProfile.latitude) * Math.PI / 180;
          const dLon = (coords.lng - merchantProfile.longitude) * Math.PI / 180;
          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -107,8 +121,9 @@ export default function StandaloneDeliveryTab() {
 
        setEstimatedDistance(distanceKm);
        
-       const finalFee = minFee + ((distanceKm / Math.max(0.1, kmInterval)) * kmFee);
+       const finalFee = minFee + (distanceKm * (kmFee / Math.max(0.1, kmInterval)));
        
+       console.log('Standalone Calculation:', { distanceKm, finalFee });
        setEstimatedFee(finalFee);
     } catch (err) {
        console.error('Erro ao calcular taxa:', err);
