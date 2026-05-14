@@ -1090,6 +1090,24 @@ function MainApp() {
     const announcedOrderIds = useRef<Set<string>>(new Set());
 
     const handleAcceptRef = useRef<any>(null);
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            try {
+                ForegroundService.addListener('notificationActionClicked', async (data) => {
+                    const { actionId, notification } = data;
+                    console.log('[DEBUG] Action Clicked:', actionId);
+
+                    if (actionId === 'accept_order' && notification.extra?.fullOrder) {
+                        if (handleAcceptRef.current) {
+                            await handleAcceptRef.current(notification.extra.fullOrder);
+                        }
+                    } else if (actionId === 'view_radar') {
+                        setActiveTab('dashboard');
+                    }
+                });
+            } catch (e) {}
+        }
+    }, []);
 
 
 
@@ -2959,18 +2977,37 @@ function MainApp() {
                             id: safeId.slice(0, 8).toUpperCase(), 
                             realId: safeId, 
                             type: o.service_type || 'delivery', 
-                            origin: o.pickup_address || o.origin || '', 
-                            destination: o.delivery_address || o.destination || '', 
-                            price: Number(o.total_price || 0),
-                            store_name: String(o.store_name || o.merchant_name || 'Loja Parceira'),
-                            customer: String(o.user_name || 'Cliente Izi')
+                            origin: o.pickup_address, 
+                            destination: o.delivery_address, 
+                            price: o.total_price || 0, 
+                            customer: o.user_name || 'Cliente Izi',
+                            store_name: o.store_name || 'Parceiro Izi'
                         };
-                    } catch (e) {
-                        return null;
-                    }
+                    } catch (e) { return null; }
                 })();
 
                 if (!mappedOrder) return;
+
+                // PLANO 2 e 4: Alerta Agressivo no Foreground Service
+                if (Capacitor.isNativePlatform()) {
+                    try {
+                        ForegroundService.startForegroundService({
+                            id: 1001,
+                            title: "🚀 NOVA ENTREGA DISPONÍVEL!",
+                            body: `R$ ${Number(o.total_price || 0).toFixed(2)} • ${o.pickup_address?.split(',')[0]}`,
+                            importance: 5, // Importância máxima para aparecer no topo (Heads-up)
+                            icon: 'notification_icon',
+                            buttons: [
+                                { id: 'accept_order', title: '✅ ACEITAR AGORA' },
+                                { id: 'view_radar', title: '👀 VER DETALHES' }
+                            ],
+                            extra: {
+                                orderId: o.id,
+                                fullOrder: mappedOrder
+                            }
+                        });
+                    } catch (fsErr) {}
+                }
 
                 setOrders(prev => {
                     const exists = prev.find(x => x.realId === o.id);
@@ -3057,6 +3094,8 @@ function MainApp() {
         if (filter === 'all') return visibleOrders;
         return visibleOrders.filter((o: any) => getCategory(o.type) === filter);
     }, [filter, visibleOrders, normalizeServiceType]);
+
+
 
     const handleAccept = async (order: Order) => {
         if (isAccepting) return;
@@ -3162,7 +3201,9 @@ function MainApp() {
     };
     
     // Atualiza a ref para o overlay nativo sempre ter a versão mais recente
-    handleAcceptRef.current = handleAccept;
+    useEffect(() => {
+        handleAcceptRef.current = handleAccept;
+    }, [handleAccept]);
 
     const handleDecline = (order: Order) => {
         const targetId = order.realId || order.id;
