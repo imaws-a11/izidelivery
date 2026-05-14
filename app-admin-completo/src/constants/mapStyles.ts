@@ -216,4 +216,17 @@ export const uberStyle = [
   { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0e1626" }] },
   { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#4e6d70" }] }
 ];
-
+export const cleanLightStyle = [
+  { "elementType": "geometry", "stylers": [{ "color": "#f1f5f9" }] },
+  { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#64748b" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }, { "weight": 3 }] },
+  { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#cbd5e1" }, { "visibility": "on" }, { "weight": 1 }] },
+  { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+  { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#fef08a" }] },
+  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#facc15" }, { "visibility": "on" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#bae6fd" }] }
+];

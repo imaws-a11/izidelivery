@@ -2088,14 +2088,28 @@ function MainApp() {
         const broadcastSub = supabase
             .channel(`broadcast-notifs-${driverId}`)
             .on('postgres_changes', { 
-                event: 'INSERT', 
+                event: '*', 
                 schema: 'public', 
                 table: 'broadcast_notifications' 
             }, (payload) => {
-                const notif = payload.new;
-                if ((notif.type === 'popup' || notif.type === 'both') && 
+                const notif = payload.new as any;
+                if (!notif) return;
+
+                // Só dispara se for um novo insert 'sent' ou um update que mudou para 'sent'
+                const isSent = notif.status === 'sent';
+                const isNewSent = payload.eventType === 'INSERT' && isSent;
+                const isUpdateSent = payload.eventType === 'UPDATE' && isSent && (payload.old as any)?.status !== 'sent';
+
+                if ((isNewSent || isUpdateSent) && 
+                    (notif.type === 'popup' || notif.type === 'both') && 
                     (notif.target_type === 'all' || notif.target_type === 'drivers')) {
-                    setActiveBroadcast(notif);
+                    
+                    // Pequeno delay para garantir que o estado limpo antes de renderizar o novo
+                    setActiveBroadcast(null);
+                    setTimeout(() => {
+                        setActiveBroadcast(notif);
+                        playIziSound('success');
+                    }, 100);
                 }
             })
             .subscribe();
@@ -6919,7 +6933,7 @@ function MainApp() {
         if (!activeBroadcast) return null;
         return (
           <motion.div 
-            key="broadcast-popup"
+            key={`broadcast-${activeBroadcast.id}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

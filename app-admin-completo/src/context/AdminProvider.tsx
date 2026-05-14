@@ -606,6 +606,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [driversList, syncDriverStats]);
 
+  // Limpeza de pilotos fantasmas (Stale Presence)
+  useEffect(() => {
+    const performCleanup = async () => {
+      try {
+        const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+        await supabase
+          .from('drivers_delivery')
+          .update({ is_online: false })
+          .match({ is_online: true })
+          .lt('last_seen_at', oneHourAgo);
+      } catch (err) {
+        console.error('Erro na limpeza de presença:', err);
+      }
+    };
+
+    performCleanup();
+    const interval = setInterval(performCleanup, 15 * 60 * 1000); // A cada 15 minutos
+    return () => clearInterval(interval);
+  }, []);
+
 
   const logAction = useCallback(async (action: string, module: string, details: any = {}) => {
     await supabase.from('audit_logs_delivery').insert({
