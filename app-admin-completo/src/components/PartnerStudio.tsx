@@ -4,6 +4,7 @@ import { useAdmin } from '../context/AdminContext';
 import { toastSuccess, toastError, showConfirm } from '../lib/useToast';
 import { AddressSearchInput } from './AddressSearchInput';
 import { supabase } from '../lib/supabase';
+import WebhookConfigPanel from './WebhookConfigPanel';
 
 interface PartnerStudioProps {
   onClose: () => void;
@@ -17,7 +18,7 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
     appSettings
   } = useAdmin();
 
-  const [activeTab, setActiveTab] = useState<'geral' | 'imagens' | 'localizacao' | 'access' | 'financial'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'imagens' | 'localizacao' | 'access' | 'financial' | 'integracoes'>('geral');
   const [isUploading, setIsUploading] = useState<'logo' | 'banner' | null>(null);
   const [showPayoutDetails, setShowPayoutDetails] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -59,6 +60,7 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
     { id: 'localizacao', label: 'Localização', icon: 'distance' },
     { id: 'access', label: 'Acesso e Planos', icon: 'lock_person' },
     { id: 'financial', label: 'Repasses & Financeiro', icon: 'payments' },
+    { id: 'integracoes', label: 'Integrações (API)', icon: 'webhook' },
   ];
 
   const [passwordPreview, setPasswordPreview] = useState('');
@@ -987,6 +989,17 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                </motion.div>
+              )}
+
+              {activeTab === 'integracoes' && (
+                <motion.div
+                  key="integracoes"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="space-y-10"
+                >
+                   <WebhookConfigPanel storeId={editingItem.id} />
                 </motion.div>
               )}
             </AnimatePresence>
