@@ -3299,7 +3299,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ Client Detail Studio (Comprehensive Editing) ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ */}
+      {/* âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ Client Detail Studio (Comprehensive Editing) âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ */}
       {selectedUserStudio && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setSelectedUserStudio(null)}></div>
@@ -3639,7 +3639,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                         </div>
                         <div>
                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{tx.description || (!isPositive ? 'Uso de Saldo' : 'Aporte de Saldo')}</p>
-                           <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                           <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} âââ€šÂ¬Ã‚Â¢ {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                      </div>
                      <span className={`text-sm font-black ${!isPositive ? 'text-red-500' : 'text-emerald-500'}`}>
@@ -4155,7 +4155,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
    onClick={() => setSelectedCategoryStudio(null)}
    className="px-10 py-5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-all font-sans"
  >
-   Descartar AlteraçÃƒÆ’Ã‚Âµes
+   Descartar Alterações
  </button>
  <button 
    disabled={isSaving}
@@ -4209,7 +4209,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ Category Directory Modal ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ */}
+      {/* âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ Category Directory Modal âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ */}
       {showCategoryListModal && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setShowCategoryListModal(false)}></div>
@@ -4227,7 +4227,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
   </div>
   <div>
     <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Diretório de Categorias</h2>
-    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Ecosystem Infrastructure ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ {categoriesState.length} itens cadastrados</p>
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Ecosystem Infrastructure âââ€šÂ¬Ã‚Â¢ {categoriesState.length} itens cadastrados</p>
   </div>
 </div>
 <div className="flex items-center gap-4">
@@ -4284,7 +4284,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       </div>
       <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
-         <span className={cat.is_active ? 'text-emerald-500' : 'text-slate-300'}>{cat.is_active ? 'ÃƒÂ¢ââ‚¬â€Ã‚Â Ativo' : 'ÃƒÂ¢ââ‚¬â€ââ‚¬Â¹ Inativo'}</span>
+         <span className={cat.is_active ? 'text-emerald-500' : 'text-slate-300'}>{cat.is_active ? 'âââ‚¬â€Ã‚Â Ativo' : 'âââ‚¬â€ââ‚¬Â¹ Inativo'}</span>
          <span>Criado em {cat.created_at ? new Date(cat.created_at).toLocaleDateString() : 'N/A'}</span>
       </div>
     </div>
@@ -4317,7 +4317,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ Peak Hour Rule Modal ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ */}
+      {/* âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ Peak Hour Rule Modal âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ */}
       {isAddingPeakRule && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 text-slate-900">
            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setIsAddingPeakRule(false)}></div>
@@ -4355,7 +4355,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ Zone Map Selection Modal ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ÃƒÂ¢ââ€šÂ¬Ã‚Â¢ */}
+      {/* âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ Zone Map Selection Modal âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢âââ€šÂ¬Ã‚Â¢ */}
       {selectedZoneForMap && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setSelectedZoneForMap(null)}></div>

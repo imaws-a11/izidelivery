@@ -128,10 +128,10 @@ function App() {
     activeBroadcast, closeBroadcast,
     pixCpf, setPixCpf, pixConfirmed, setPixConfirmed, lightningData, setLightningData,
 
-    // OrquestraÃ§Ã£o de View
+    // Orquestração de View
     view, setView, tab, setTab, subView, setSubView, navigateSubView: _ignoredNavigate,
     selectedItem, setSelectedItem, selectedShop, setSelectedShop, activeService, setActiveService, paymentsOrigin, setPaymentsOrigin,
-    userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versÃµes locais legadas
+    userLocation: _ignoredLocation, updateLocation: _ignoredUpdate, // Ignorados pois o App.tsx ainda usa versões locais legadas
 
     // Outros Contextos
     userXP, setUserXP, iziCashbackEarned, isIziBlackMembership, walletTransactions, fetchWalletData,
@@ -144,7 +144,7 @@ function App() {
     // Libs
     toastSuccess, toastError, showConfirm,
 
-    // TrÃ¢nsito & Envios (Migrados)
+    // Trânsito & Envios (Migrados)
     transitData, setTransitData,
     isCalculatingPrice, setIsCalculatingPrice,
     routeDistance, setRouteDistance,
@@ -184,7 +184,7 @@ function App() {
   useEffect(() => { cartRef.current = cart; }, [cart]);
 
 
-  // Injeta funÃ§Ã£o global de navegaÃ§Ã£o para componentes modulares
+  // Injeta função global de navegação para componentes modulares
   useEffect(() => {
     (window as any).izi_navigate = (targetView: string, item?: any) => {
       if (item) setSelectedItem(item);
@@ -202,7 +202,7 @@ function App() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
-  const [aiMessage, setAiMessage] = useState("OlÃ¡! Como posso ajudar vocÃª hoje?");
+  const [aiMessage, setAiMessage] = useState("Olá! Como posso ajudar você hoje?");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPaymentMethod, setDepositPaymentMethod] = useState("pix");
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
@@ -212,7 +212,7 @@ function App() {
   const sendInternalNotification = async (title: string, body: string, data: any = {}) => {
     if (!userId) return;
     try {
-      // 1. NotificaÃ§Ã£o In-App (Persistida no banco)
+      // 1. Notificação In-App (Persistida no banco)
       await supabase.from('notifications_delivery').insert({
         user_id: userId,
         title,
@@ -223,8 +223,8 @@ function App() {
         created_at: new Date().toISOString()
       });
 
-      // 2. NotificaÃ§Ã£o Push Real (Via Edge Function)
-      // Isso envia para o Firebase/FCM e chega no celular do usuÃ¡rio
+      // 2. Notificação Push Real (Via Edge Function)
+      // Isso envia para o Firebase/FCM e chega no celular do usuário
       const { data: pushData, error: pushError } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: userId,
@@ -238,12 +238,12 @@ function App() {
       showToast(title, 'info');
 
       if (pushError || (pushData && !pushData.success)) {
-        console.log("[NOTIFY] NotificaÃ§Ã£o push ignorada (usuÃ¡rio sem token).");
+        console.log("[NOTIFY] Notificação push ignorada (usuário sem token).");
       } else {
-        console.log("[NOTIFY] NotificaÃ§Ã£o interna e push enviada com sucesso.");
+        console.log("[NOTIFY] Notificação interna e push enviada com sucesso.");
       }
     } catch (e) {
-      console.error("[NOTIFY] Erro ao criar notificaÃ§Ã£o:", e);
+      console.error("[NOTIFY] Erro ao criar notificação:", e);
     }
   };
 
@@ -275,12 +275,12 @@ function App() {
     }
   }, [subView]);
 
-  // Sincroniza o endereÃ§o padrÃ£o (ativo) do usuÃ¡rio com o userLocation global
+  // Sincroniza o endereço padrão (ativo) do usuário com o userLocation global
   useEffect(() => {
     if (userId && savedAddresses.length > 0) {
       const activeAddr = savedAddresses.find(a => a.active);
       if (activeAddr) {
-        console.log("[LOCATION] Sincronizando endereÃ§o ativo do usuÃ¡rio:", activeAddr.street);
+        console.log("[LOCATION] Sincronizando endereço ativo do usuário:", activeAddr.street);
         setUserLocation({
           address: activeAddr.street,
           lat: activeAddr.lat,
@@ -307,7 +307,7 @@ function App() {
 
 
 
-  // As funÃ§Ãµes de endereÃ§o e cartÃµes foram migradas para AddressContext e WalletContext
+  // As funções de endereço e cartões foram migradas para AddressContext e WalletContext
 
   useEffect(() => {
     fetchMarketData();
@@ -325,7 +325,7 @@ function App() {
     };
   }, [userId]);
 
-  // SincronizaÃƒÂ§ÃƒÂ£o em Tempo Real de Pedidos (Webhooks/Status)
+  // Sincronização em Tempo Real de Pedidos (Webhooks/Status)
   useEffect(() => {
     if (!userId) return;
 
@@ -336,7 +336,7 @@ function App() {
         table: 'orders_delivery',
         filter: `user_id=eq.${userId}`
       }, (payload) => {
-        console.log("[REALTIME] AtualizaÃ§Ã£o de Pedido:", payload);
+        console.log("[REALTIME] Atualização de Pedido:", payload);
         fetchOrders(); // Atualiza lista global
         
         const newOrder = payload.new as any;
@@ -345,12 +345,12 @@ function App() {
         if (selectedItem && newOrder && newOrder.id === selectedItem.id) {
           setSelectedItem(newOrder);
           
-          // TransiÃ§Ãµes AutomÃ¡ticas de Tela baseadas no Status
+          // Transições Automáticas de Tela baseadas no Status
           if (newOrder.status !== oldOrder?.status) {
              const statusMap: any = {
                "confirmado": { title: "Pedido Confirmado", body: `A loja ${newOrder.merchant_name} aceitou seu pedido!` },
-               "preparando": { title: "Em Preparo", body: "Seu pedido jÃ¡ estÃ¡ sendo preparado." },
-               "em_rota": { title: "Saiu para Entrega", body: "O entregador jÃ¡ estÃ¡ a caminho do seu endereÃ§o!" },
+               "preparando": { title: "Em Preparo", body: "Seu pedido já está sendo preparado." },
+               "em_rota": { title: "Saiu para Entrega", body: "O entregador já está a caminho do seu endereço!" },
                "coletado": { title: "Pedido Coletado", body: "O entregador acabou de retirar seu pedido." },
                "picked_up": { title: "Pedido Coletado", body: "O entregador acabou de retirar seu pedido." },
                "no_local": { title: "Entregador no Local", body: "O entregador chegou! Prepare-se para receber." },
@@ -363,7 +363,7 @@ function App() {
              }
 
              if (newOrder.status === "confirmado") {
-                toastSuccess("Pedido aceito! A loja jÃ¡ estÃ¡ preparando.");
+                toastSuccess("Pedido aceito! A loja já está preparando.");
                 setSubView("active_order");
              } else if (newOrder.status === "em_rota") {
                 toastSuccess("Pedido em rota! Prepare-se para receber.");
@@ -374,16 +374,16 @@ function App() {
              }
           }
 
-          // ConfirmaÃ§Ã£o de Pagamento Digital (Webhooks do MP/BTCPay)
+          // Confirmação de Pagamento Digital (Webhooks do MP/BTCPay)
           const isPaid = (newOrder.payment_status === "paid" || newOrder.payment_status === "approved");
           const wasNotPaid = (oldOrder?.payment_status !== "paid" && oldOrder?.payment_status !== "approved");
           
           if (isPaid && wasNotPaid) {
              toastSuccess("Pagamento confirmado com sucesso!");
              
-             // Limpa o carrinho apÃƒÂ³s a confirmaÃƒÂ§ÃƒÂ£o do pagamento (para pedidos digitais)
+             // Limpa o carrinho após a confirmação do pagamento (para pedidos digitais)
              if (cartRef.current && cartRef.current.length > 0) {
-               console.log("[REALTIME] Limpando carrinho apÃƒÂ³s pagamento confirmado do pedido:", newOrder.id);
+               console.log("[REALTIME] Limpando carrinho após pagamento confirmado do pedido:", newOrder.id);
                clearCart(newOrder.id).catch(err => console.error("Erro ao limpar carrinho:", err));
              }
 
@@ -400,7 +400,7 @@ function App() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcast_notifications' }, async (payload) => {
         const notif = payload.new as any;
         if (notif.target_type === 'all' || notif.target_type === 'users') {
-          // Web Push Notification (Apenas web, no APK jÃ¡ serÃ¡ coberto pelo Capacitor/FCM)
+          // Web Push Notification (Apenas web, no APK já será coberto pelo Capacitor/FCM)
           if (!Capacitor.isNativePlatform() && 'Notification' in window) {
               if (Notification.permission === 'granted') {
                   new Notification(notif.title, { body: notif.message, icon: notif.image_url || '/Favicon.png.png' });
@@ -448,8 +448,8 @@ function App() {
         if (Capacitor.getPlatform() === 'android') {
           await PushNotifications.createChannel({
             id: 'izi_notifications',
-            name: 'NotificaÃ§Ãµes IZI',
-            description: 'Canal principal de notificaÃ§Ãµes do IZI Delivery',
+            name: 'Notificações IZI',
+            description: 'Canal principal de notificações do IZI Delivery',
             sound: 'notification_izi',
             importance: 5,
             visibility: 1,
@@ -515,7 +515,7 @@ function App() {
         if (userData) {
           setTransferTarget(userData);
         } else {
-          showToast("UsuÃ¡rio nÃ£o encontrado.", "error");
+          showToast("Usuário não encontrado.", "error");
         }
       }
     } catch (err) {
@@ -549,34 +549,34 @@ function App() {
   const isLoaded = true; // Loaded via index.html
 
   const updateLocation = (force = false, onSuccess?: (address: string, lat: number, lng: number) => void) => {
-    // Se o endereÃƒÂ§o foi definido manualmente e nÃƒÂ£o for um "force", ignoramos a atualizaÃƒÂ§ÃƒÂ£o automÃƒÂ¡tica
-    // Isso evita que o GPS do dispositivo sobrescreva um endereÃƒÂ§o salvo ou selecionado.
+    // Se o endereço foi definido manualmente e não for um "force", ignoramos a atualização automática
+    // Isso evita que o GPS do dispositivo sobrescreva um endereço salvo ou selecionado.
     const processCoords = async (latitude: number, longitude: number, accuracy?: number) => {
-      // Se for forÃƒÂ§ado ou estivermos em tela de mobilidade, removemos o bloqueio manual
+      // Se for forçado ou estivermos em tela de mobilidade, removemos o bloqueio manual
       const mobilityViews = ["taxi_wizard", "freight_wizard", "logistics_tracking", "excursion_wizard", "van_wizard"];
       const isMobility = mobilityViews.includes(subView);
       
       if (force || isMobility) {
         setUserLocation(prev => ({ ...prev, isManual: false }));
       } else if (userLocation.isManual && !force) {
-        console.log("[GPS] Ignorando atualizaÃ§Ã£o automÃ¡tica pois o endereÃ§o Ã© manual.");
+        console.log("[GPS] Ignorando atualização automática pois o endereço é manual.");
         return;
       }
 
       try {
-        // PROTEÃ‡ÃƒO: Nunca sobrescrever coordenadas boas com piores
-        // Se jÃ¡ temos coords com boa precisÃ£o, rejeita atualizaÃ§Ãµes com precisÃ£o muito pior
+        // PROTEá‡áƒO: Nunca sobrescrever coordenadas boas com piores
+        // Se já temos coords com boa precisão, rejeita atualizações com precisão muito pior
         setUserLocation(prev => {
           const prevAccuracy = prev.accuracy as number | undefined;
           if (prevAccuracy && accuracy && prevAccuracy < 200 && accuracy > prevAccuracy * 3) {
-            console.log(`[GPS] Ignorando coords ruins (${accuracy.toFixed(0)}m) â€” jÃ¡ temos ${prevAccuracy.toFixed(0)}m`);
-            return prev; // MantÃ©m as coords atuais, melhores
+            console.log(`[GPS] Ignorando coords ruins (${accuracy.toFixed(0)}m) â€” já temos ${prevAccuracy.toFixed(0)}m`);
+            return prev; // Mantém as coords atuais, melhores
           }
           return { ...prev, lat: latitude, lng: longitude, accuracy, loading: false };
         });
         
         setTransitData(prev => {
-          // Se for mobilidade e ainda nÃƒÂ£o tiver origem, ou se for forÃƒÂ§ado, atualiza a origem
+          // Se for mobilidade e ainda não tiver origem, ou se for forçado, atualiza a origem
           const shouldUpdateOrigin = isMobility || force || !prev.origin?.lat;
           if (!shouldUpdateOrigin) return prev;
           
@@ -587,7 +587,7 @@ function App() {
             ...prev,
             origin: isObj 
               ? { ...currentOrigin, lat: latitude, lng: longitude }
-              : { address: currentOrigin || "Minha localizaÃ§Ã£o", lat: latitude, lng: longitude }
+              : { address: currentOrigin || "Minha localização", lat: latitude, lng: longitude }
           };
         });
 
@@ -595,7 +595,7 @@ function App() {
         let snappedLat = latitude;
         let snappedLng = longitude;
 
-        // 2. BUSCA ENDEREÃƒâ€¡O EM SEGUNDO PLANO
+        // 2. BUSCA ENDEREáƒâ€¡O EM SEGUNDO PLANO
         // Tenta reverse geocode via Google Maps Geocoder (browser)
         if ((window as any).google?.maps) {
           try {
@@ -637,7 +637,7 @@ function App() {
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
             );
             const nomData = await nomRes.json();
-            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "LocalizaÃƒÂ§ÃƒÂ£o atual";
+            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
             if (nomData.lat && nomData.lon) {
               snappedLat = parseFloat(nomData.lat);
               snappedLng = parseFloat(nomData.lon);
@@ -645,10 +645,10 @@ function App() {
           } catch { /* silent */ }
         }
 
-        if (!address) address = "LocalizaÃƒÂ§ÃƒÂ£o atual";
+        if (!address) address = "Localização atual";
 
-        // 3. ATUALIZA APENAS O ENDEREÃ‡O QUANDO CHEGAR
-        // VerificaÃ§Ã£o dupla: se no meio do caminho o endereÃ§o virou manual (ex: carregou endereÃ§o salvo), abortamos.
+        // 3. ATUALIZA APENAS O ENDEREá‡O QUANDO CHEGAR
+        // Verificação dupla: se no meio do caminho o endereço virou manual (ex: carregou endereço salvo), abortamos.
         setUserLocation(prev => {
           if (prev.isManual && !force) return prev;
           return { ...prev, address, loading: false };
@@ -683,10 +683,10 @@ function App() {
             });
             await processCoords(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
           } else {
-            setUserLocation({ address: "PermissÃ£o de localizaÃ§Ã£o negada", loading: false });
+            setUserLocation({ address: "Permissão de localização negada", loading: false });
           }
         } catch {
-          setUserLocation({ address: "Erro ao obter localizaÃ§Ã£o", loading: false });
+          setUserLocation({ address: "Erro ao obter localização", loading: false });
         }
       })();
       return;
@@ -694,7 +694,7 @@ function App() {
 
     // --- Caminho Web (Browser via navigator.geolocation) ---
     if (!("geolocation" in navigator)) {
-      setUserLocation({ address: "GeolocalizaÃ§Ã£o nÃ£o disponÃ­vel", loading: false });
+      setUserLocation({ address: "Geolocalização não disponível", loading: false });
       return;
     }
 
@@ -707,7 +707,7 @@ function App() {
         );
         const data = await res.json();
         if (data.location) {
-          console.log(`[GPS] Google Geolocation API: ${data.location.lat}, ${data.location.lng} (precisÃ£o: ${data.accuracy}m)`);
+          console.log(`[GPS] Google Geolocation API: ${data.location.lat}, ${data.location.lng} (precisão: ${data.accuracy}m)`);
           await processCoords(data.location.lat, data.location.lng, data.accuracy);
           return true;
         }
@@ -720,21 +720,21 @@ function App() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude, accuracy } = position.coords;
-        console.log(`[GPS] Browser geolocation: ${latitude}, ${longitude} (precisÃ£o: ${accuracy?.toFixed(0)}m)`);
+        console.log(`[GPS] Browser geolocation: ${latitude}, ${longitude} (precisão: ${accuracy?.toFixed(0)}m)`);
         await processCoords(latitude, longitude, accuracy);
       },
       async (error) => {
         console.warn("[GPS] Browser geolocation falhou:", error.message);
-        // SÃ³ usa Google Geolocation API se NÃƒO temos coordenadas prÃ©vias
+        // Só usa Google Geolocation API se NáƒO temos coordenadas prévias
         const hasExistingCoords = userLocation.lat && userLocation.lng;
         if (!hasExistingCoords) {
-          console.log("[GPS] Sem coords prÃ©vias. Tentando Google Geolocation API...");
+          console.log("[GPS] Sem coords prévias. Tentando Google Geolocation API...");
           const ok = await tryGoogleGeolocationAPI();
           if (!ok) {
-            setUserLocation(prev => ({ ...prev, address: "NÃ£o foi possÃ­vel obter localizaÃ§Ã£o", loading: false }));
+            setUserLocation(prev => ({ ...prev, address: "Não foi possível obter localização", loading: false }));
           }
         } else {
-          console.log("[GPS] Mantendo coords existentes (browser timeout mas jÃ¡ temos GPS).");
+          console.log("[GPS] Mantendo coords existentes (browser timeout mas já temos GPS).");
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -750,7 +750,7 @@ function App() {
     let watchId: any = null;
 
     if (mobilityViews.includes(subView)) {
-      console.log("[GEO] Ativando monitoramento contÃ­nuo para subView:", subView);
+      console.log("[GEO] Ativando monitoramento contínuo para subView:", subView);
       if (Capacitor.isNativePlatform()) {
         Geolocation.watchPosition({
           enableHighAccuracy: true,
@@ -789,7 +789,7 @@ function App() {
             });
           },
           (err) => {
-            // watchPosition pode dar timeout em desktop - nÃƒÂ£o faz nada, mantÃƒÂ©m coords existentes
+            // watchPosition pode dar timeout em desktop - não faz nada, mantá©m coords existentes
             console.log("[GEO] Watch timeout/erro (normal em desktop):", err?.message);
           },
           { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
@@ -833,36 +833,36 @@ function App() {
           
           if (!newOrder || newOrder.user_id !== userIdRef.current) return;
 
-          // Sempre atualizar a lista local para refletir no F5 ou navegaÃƒÂ§ÃƒÂµes
+          // Sempre atualizar a lista local para refletir no F5 ou navegações
           if (userIdRef.current) fetchOrders();
 
           // Monitoramento de Sucesso de Pagamento (Bitcoin / Pix / Geral)
           const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && oldOrder?.status === 'pendente_pagamento');
 
-          // Verificar transiÃ§Ãµes de status para Toasts
+          // Verificar transições de status para Toasts
           const statusChanged = oldOrder && oldOrder.status && newOrder.status !== oldOrder.status;
           
           if (statusChanged || !oldOrder) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Pagamento aprovado! O lojista jÃ¡ recebeu seu pedido. âš¡',
-              'pendente_pagamento': 'Aguardando confirmaÃ§Ã£o do pagamento... ðŸ’³',
+              'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. âš¡',
+              'pendente_pagamento': 'Aguardando confirmação do pagamento... ðŸ’³',
               'pendente': 'O lojista recebeu seu pedido! ðŸ¥³',
               'aceito': 'O estabelecimento aceitou seu pedido! ðŸ¥³',
-              'confirmado': 'Pedido confirmado! O preparo comeÃ§ou. âœ…',
-              'preparando': 'Seu pedido estÃ¡ sendo preparado com carinho! ðŸ¥—',
-              'no_preparo': 'Seu pedido jÃ¡ estÃ¡ no preparo! ðŸ¥—',
-              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para vocÃª. ðŸ›µ',
+              'confirmado': 'Pedido confirmado! O preparo começou. âœ…',
+              'preparando': 'Seu pedido está sendo preparado com carinho! ðŸ¥—',
+              'no_preparo': 'Seu pedido já está no preparo! ðŸ¥—',
+              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. ðŸ›µ',
               'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
-              'saiu_para_coleta': 'O motoboy aceitou e estÃ¡ indo retirar seu pedido! ðŸ›µ',
+              'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! ðŸ›µ',
               'chegou_coleta': 'O motoboy chegou ao estabelecimento para retirar seu pedido! ðŸ›µ',
-              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para vocÃª. ðŸš€',
-              'a_caminho': 'Motoboy a caminho! Sua entrega estÃ¡ em rota. ðŸ›µ',
+              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. ðŸš€',
+              'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. ðŸ›µ',
               'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
               'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ›µ',
-              'no_local': 'O motoboy chegou ao seu endereÃ§o! ðŸ””',
+              'no_local': 'O motoboy chegou ao seu endereço! ðŸ””',
               'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
-              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. âš ï¸ ',
-              'recusado': 'Desculpe, o estabelecimento nÃ£o pÃ´de aceitar o pedido agora. âš ï¸ '
+              'cancelado': 'Ah não! Seu pedido foi cancelado. âš ï¸ ',
+              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. âš ï¸ '
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -906,7 +906,7 @@ function App() {
             }
           }
 
-          // Feedback de conclusÃƒÂ£o
+          // Feedback de conclusão
           if (newOrder.status === 'concluido' && (oldOrder?.status !== 'concluido' || !oldOrder)) {
             setSelectedItem(newOrder);
             setTimeout(() => {
@@ -924,7 +924,7 @@ function App() {
             }, 2000);
           }
 
-          // TransiÃƒÂ§ÃƒÂµes de estados de espera
+          // Transições de estados de espera
           if ((navigationSubViewRef.current === "waiting_merchant" || navigationSubViewRef.current === "lightning_payment" || navigationSubViewRef.current === "pix_payment") && 
               ["novo", "paid", "pago", "aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
             showToast("Pagamento confirmado! âœ…", "success");
@@ -962,20 +962,20 @@ function App() {
   useEffect(() => {
     if (!userId) return;
 
-    // SincronizaÃƒÂ§ÃƒÂ£o em tempo real de Perfil (Saldo, XP, Coins, Izi Black, Carrinho)
+    // Sincronização em tempo real de Perfil (Saldo, XP, Coins, Izi Black, Carrinho)
     const userSub = supabase
       .channel(`user_sync_${userId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "users_delivery", filter: `id=eq.${userId}` },
         (payload: any) => {
-          console.log("[SYNC] Perfil do usuÃƒÂ¡rio atualizado remotamente.");
+          console.log("[SYNC] Perfil do usuário atualizado remotamente.");
           fetchWalletData();
           
-          // Sincronizar carrinho se a mudanÃƒÂ§a veio de outro dispositivo
+          // Sincronizar carrinho se a mudança veio de outro dispositivo
           const remoteCart = payload.new?.cart_data;
           if (Array.isArray(remoteCart)) {
-            // Verificar se o carrinho local ÃƒÂ© diferente para evitar loops infinitos ou 'ressurreiÃƒÂ§ÃƒÂ£o' indesejada
+            // Verificar se o carrinho local á© diferente para evitar loops infinitos ou 'ressurreição' indesejada
             const localCartStr = JSON.stringify(cartRef.current);
             const remoteCartStr = JSON.stringify(remoteCart);
             
@@ -988,27 +988,27 @@ function App() {
       )
       .subscribe();
 
-    // SincronizaÃƒÂ§ÃƒÂ£o de EndereÃƒÂ§os Salvos em tempo real
+    // Sincronização de Endereços Salvos em tempo real
     const addrSub = supabase
       .channel(`addr_sync_${userId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "saved_addresses", filter: `user_id=eq.${userId}` },
         () => {
-          console.log("[SYNC] EndereÃƒÂ§os salvos atualizados, sincronizando...");
+          console.log("[SYNC] Endereços salvos atualizados, sincronizando...");
           fetchSavedAddresses(userId);
         }
       )
       .subscribe();
 
-    // SincronizaÃƒÂ§ÃƒÂ£o de Pedidos em tempo real para o cliente
+    // Sincronização de Pedidos em tempo real para o cliente
     const orderSub = supabase
       .channel(`order_sync_${userId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders_delivery", filter: `user_id=eq.${userId}` },
         (payload) => {
-          console.log("[SYNC] Pedido atualizado, atualizando lista e visualizaÃƒÂ§ÃƒÂ£o...");
+          console.log("[SYNC] Pedido atualizado, atualizando lista e visualização...");
           fetchOrders();
           // Se o pedido atual for o que estamos vendo, atualiza o item selecionado
           if (selectedItemRef.current && (payload.new as any).id === selectedItemRef.current.id) {
@@ -1030,7 +1030,7 @@ function App() {
 
   const handleCancelOrder = async (orderId: string) => {
     if (!orderId) {
-      toastError("ID do pedido nÃ£o encontrado.");
+      toastError("ID do pedido não encontrado.");
       return;
     }
 
@@ -1045,7 +1045,7 @@ function App() {
       if (error) throw error;
 
       if (!data || data.status !== "cancelado") {
-        throw new Error("NÃ£o foi possÃ­vel cancelar. Tente novamente.");
+        throw new Error("Não foi possível cancelar. Tente novamente.");
       }
 
       toastSuccess("Pedido cancelado com sucesso!");
@@ -1056,13 +1056,13 @@ function App() {
       setSubView("none");
     } catch (err: any) {
       console.error("Erro ao cancelar pedido:", err);
-      toastError(`NÃ£o foi possÃ­vel cancelar: ${err.message || 'Erro de rede'}`);
+      toastError(`Não foi possível cancelar: ${err.message || 'Erro de rede'}`);
     }
   };
 
   const handleCancelCoinOrder = async (orderId: string) => {
     if (!orderId) {
-      toastError("ID da recarga nÃƒÂ£o encontrado.");
+      toastError("ID da recarga não encontrado.");
       return;
     }
 
@@ -1240,23 +1240,23 @@ function App() {
 
   const validateCouponRules = async (coupon: any, subtotal: number) => {
     if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-      return "Este cupom jÃƒÂ¡ expirou.";
+      return "Este cupom já expirou.";
     }
 
     if (subtotal < (coupon.min_order_value || 0)) {
-      return `O valor mÃƒÂ­nimo para este cupom ÃƒÂ© R$ ${coupon.min_order_value.toFixed(2)}.`;
+      return `O valor mínimo para este cupom á© R$ ${coupon.min_order_value.toFixed(2)}.`;
     }
 
     if (coupon.usage_count >= coupon.max_usage) {
-      return "Este cupom jÃƒÂ¡ atingiu o limite de usos.";
+      return "Este cupom já atingiu o limite de usos.";
     }
 
     if (coupon.is_vip && !isIziBlackMembership) {
-      return "Este cupom ÃƒÂ© exclusivo para membros IZI Black.";
+      return "Este cupom á© exclusivo para membros IZI Black.";
     }
 
     if (coupon.first_order_only && !(await isUserFirstOrder())) {
-      return "Este cupom ÃƒÂ© vÃƒÂ¡lido apenas para sua primeira compra.";
+      return "Este cupom á© válido apenas para sua primeira compra.";
     }
 
     if (coupon.id) {
@@ -1264,12 +1264,12 @@ function App() {
       const limitPerUser = coupon.max_usage_per_user || 1; // Default to 1 if not specified but rule exists?
       // Wait, if max_usage_per_user is null/0, it's unlimited.
       if (coupon.max_usage_per_user && usageCount >= coupon.max_usage_per_user) {
-        return `VocÃƒÂª jÃƒÂ¡ atingiu o limite de ${coupon.max_usage_per_user} uso(s) deste cupom por CPF.`;
+        return `Você já atingiu o limite de ${coupon.max_usage_per_user} uso(s) deste cupom por CPF.`;
       }
       
       // Keep legacy check for coupons that don't have max_usage_per_user set but were intended for single use
       if (!coupon.max_usage_per_user && usageCount > 0) {
-        return "Este cupom jÃƒÂ¡ foi utilizado por este CPF/usuÃƒÂ¡rio.";
+        return "Este cupom já foi utilizado por este CPF/usuário.";
       }
     }
 
@@ -1281,16 +1281,16 @@ function App() {
     if (!item?.is_flash_offer || !sourceId) return null;
 
     if (item.first_order_only && !(await isUserFirstOrder())) {
-      return "Esta oferta ÃƒÂ© vÃƒÂ¡lida apenas para sua primeira compra.";
+      return "Esta oferta á© válida apenas para sua primeira compra.";
     }
 
     const usageCount = await getBenefitUsageCount("flash_offer", sourceId);
     if (item.max_usage_per_user && usageCount >= item.max_usage_per_user) {
-      return `VocÃƒÂª jÃƒÂ¡ atingiu o limite de ${item.max_usage_per_user} uso(s) desta oferta por CPF.`;
+      return `Você já atingiu o limite de ${item.max_usage_per_user} uso(s) desta oferta por CPF.`;
     }
 
     if (!item.max_usage_per_user && usageCount > 0) {
-      return "Esta oferta jÃƒÂ¡ foi utilizada por este CPF/usuÃƒÂ¡rio.";
+      return "Esta oferta já foi utilizada por este CPF/usuário.";
     }
 
     return null;
@@ -1313,7 +1313,7 @@ function App() {
         console.warn("[BENEFIT] Erro ao registrar uso:", error.message);
       }
     } catch (e) {
-      console.warn("[BENEFIT] Falha crÃƒÂ­tica ao registrar uso:", e);
+      console.warn("[BENEFIT] Falha crítica ao registrar uso:", e);
     }
   };
 
@@ -1331,13 +1331,13 @@ function App() {
       if (couponError) return couponError;
     }
 
-    // ValidaÃƒÂ§ÃƒÂ£o de Ofertas Flash com dados completos
+    // Validação de Ofertas Flash com dados completos
     const flashOfferItems = cart.filter((item: any) => item.is_flash_offer);
     for (const item of flashOfferItems) {
       const sourceId = getFlashOfferSourceId(item);
       if (!sourceId) continue;
 
-      // Buscamos os dados atuais da oferta para garantir que as regras (1Ã‚Âª compra, limite CPF) sejam validadas
+      // Buscamos os dados atuais da oferta para garantir que as regras (1á‚Âª compra, limite CPF) sejam validadas
       const { data: fullOffer } = await supabase
         .from('flash_offers')
         .select('*')
@@ -1387,7 +1387,7 @@ function App() {
         .single();
 
       if (error || !data) {
-        setCouponError("Cupom invÃƒÂ¡lido ou expirado.");
+        setCouponError("Cupom inválido ou expirado.");
         setAppliedCoupon(null);
         return;
       }
@@ -1427,7 +1427,7 @@ function App() {
   const handleAddToCart = async (item: any, e?: React.MouseEvent) => {
     if (processingItemsRef.current.has(item.id)) return;
 
-    // 1. Feedback Visual Imediato (AnimaÃƒÂ§ÃƒÂ£o)
+    // 1. Feedback Visual Imediato (Animação)
     if (e && triggerCartAnimation) {
       triggerCartAnimation(e, item.img || "");
     }
@@ -1435,7 +1435,7 @@ function App() {
     processingItemsRef.current.add(item.id);
 
     try {
-      // 2. ValidaÃƒÂ§ÃƒÂµes bÃƒÂ¡sicas rÃƒÂ¡pidas
+      // 2. Validações básicas rápidas
       const flashOfferError = await validateFlashOfferRules(item);
       if (flashOfferError) {
         showToast(flashOfferError, "error" as any);
@@ -1443,28 +1443,28 @@ function App() {
         return;
       }
 
-      // VerificaÃƒÂ§ÃƒÂ£o de Estabelecimento Aberto
+      // Verificação de Estabelecimento Aberto
       const merchantId = item.merchant_id;
       let shop = selectedShop?.id === merchantId ? selectedShop : ESTABLISHMENTS.find(s => s.id === merchantId);
       
       if (!shop && merchantId) {
-        // Tentar buscar rÃƒÂ¡pido no banco se nÃƒÂ£o estiver no cache (ex: busca global ou deep link)
+        // Tentar buscar rápido no banco se não estiver no cache (ex: busca global ou deep link)
         const { data: m } = await supabase.from('admin_users').select('opening_hours, is_open, opening_mode, store_name').eq('id', merchantId).maybeSingle();
         if (m) {
           const isOpen = isStoreOpen(m.opening_hours, m.is_open, m.opening_mode);
           if (!isOpen) {
-            showToast(`Desculpe! ${m.store_name || "A loja"} estÃƒÂ¡ fechada no momento e nÃƒÂ£o pode receber novos pedidos. Ã°Å¸â€¢â€™`, "error");
+            showToast(`Desculpe! ${m.store_name || "A loja"} está fechada no momento e não pode receber novos pedidos. á°Å¸â€¢â€™`, "error");
             processingItemsRef.current.delete(item.id);
             return;
           }
         }
       } else if (shop && !shop.isOpen) {
-        showToast(`Desculpe! ${shop.name || "A loja"} estÃƒÂ¡ fechada no momento e nÃƒÂ£o pode receber novos pedidos. Ã°Å¸â€¢â€™`, "error");
+        showToast(`Desculpe! ${shop.name || "A loja"} está fechada no momento e não pode receber novos pedidos. á°Å¸â€¢â€™`, "error");
         processingItemsRef.current.delete(item.id);
         return;
       }
 
-      // 3. VerificaÃƒÂ§ÃƒÂ£o de Opcionais
+      // 3. Verificação de Opcionais
       const { data: groups } = await supabase
         .from('product_options_groups_delivery')
         .select('id')
@@ -1481,7 +1481,7 @@ function App() {
       console.error("Erro no fluxo do carrinho:", err);
     }
 
-    // 4. AdiÃƒÂ§ÃƒÂ£o Real ao Carrinho
+    // 4. Adição Real ao Carrinho
     setCart((prev: any[]) => [...prev, { ...item, timestamp: Date.now() }]);
     setUserXP((prev: number) => prev + 10);
     processingItemsRef.current.delete(item.id);
@@ -1500,7 +1500,7 @@ function App() {
 
   const handleShopClick = async (shop: any) => {
     if (!shop.isOpen) {
-      toastError(`Desculpe! ${shop.name} estÃƒÂ¡ fechado no momento. Ã°Å¸â€¢â€™`);
+      toastError(`Desculpe! ${shop.name} está fechado no momento. á°Å¸â€¢â€™`);
       return;
     }
     
@@ -1519,7 +1519,7 @@ function App() {
         .order("created_at", { ascending: false });
 
 
-      // 2. Buscar redenÃƒÂ§ÃƒÂµes do usuÃƒÂ¡rio para desativar ofertas jÃƒÂ¡ utilizadas
+      // 2. Buscar redenções do usuário para desativar ofertas já utilizadas
       let usedSourceIds = new Set<string>();
       if (userId) {
         const trackedCpf = getBenefitTrackingCpf();
@@ -1538,7 +1538,7 @@ function App() {
 
       console.log("Produtos recebidos:", products?.length, products?.[0]);
       if (products && products.length > 0) {
-        // 3. Filtrar ofertas ativas que o usuÃƒÂ¡rio ainda NÃƒÆ’O utilizou
+        // 3. Filtrar ofertas ativas que o usuário ainda NáƒÆ’O utilizou
         const activeProductOffers = (flashOffers || []).filter((offer: any) =>
           offer?.merchant_id === shop.id &&
           offer?.is_active &&
@@ -1564,7 +1564,7 @@ function App() {
 
         const grouped: Record<string, any[]> = {};
         products.forEach((p: any) => {
-          const cat = p.category || p.subcategory || (isRestaurant ? "CardÃƒÂ¡pio" : "Produtos");
+          const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
           if (!grouped[cat]) grouped[cat] = [];
           
           const linkedOffer =
@@ -1615,7 +1615,7 @@ function App() {
       .single();
 
     if (error || !data) {
-      toastError("Cupom invÃƒÂ¡lido ou expirado.");
+      toastError("Cupom inválido ou expirado.");
       return;
     }
 
@@ -1639,16 +1639,16 @@ function App() {
     
     const total = Math.max(0, subtotal - couponDiscount);
     
-    // BENEFÃƒ CIO IZI BLACK: Multiplicadores DinÃƒÂ¢micos
+    // BENEFáƒ CIO IZI BLACK: Multiplicadores Dinâmicos
     const baseRate = Number(globalSettings?.izi_coin_value || 1);
     const blackRate = Number(globalSettings?.izi_black_cashback || 5);
     const coinRate = isIziBlackMembership ? blackRate : baseRate;
     
-    // O cashback ÃƒÂ© em porcentagem (ex: 1 = 1%, 5 = 5%)
+    // O cashback á© em porcentagem (ex: 1 = 1%, 5 = 5%)
     const earnedCoins = Number((total * (coinRate / 100)).toFixed(8));
     const finalCoins = useCoins ? earnedCoins : (Number(iziCoins) + earnedCoins);
     
-    // BENEFÃƒ CIO IZI BLACK: XP DinÃƒÂ¢mico
+    // BENEFáƒ CIO IZI BLACK: XP Dinâmico
     const baseXP = 50;
     const xpMult = Number(globalSettings?.izi_black_xp_multiplier || 2);
     const earnedXP = isIziBlackMembership ? (baseXP * xpMult) : baseXP;
@@ -1710,7 +1710,7 @@ function App() {
 
   const fetchFlashOffers = async () => {
     try {
-      // 1. Busca todas as ofertas relÃ¢mpago marcadas como ativas
+      // 1. Busca todas as ofertas relâmpago marcadas como ativas
       const { data, error: offersError } = await supabase
         .from('flash_offers')
         .select('*, admin_users(store_name, store_logo)')
@@ -1719,7 +1719,7 @@ function App() {
 
       if (offersError) throw offersError;
       
-      // 2. Filtra por expiraÃ§Ã£o no JS para evitar problemas de timezone/drift
+      // 2. Filtra por expiração no JS para evitar problemas de timezone/drift
       const now = new Date();
       const activeOffers = (data || []).filter(o => new Date(o.expires_at) > now);
 
@@ -1728,7 +1728,7 @@ function App() {
         return;
       }
 
-      // 3. Busca resgates do usuÃ¡rio para marcar como 'Resgatado' em vez de ocultar
+      // 3. Busca resgates do usuário para marcar como 'Resgatado' em vez de ocultar
       let redeemedIds = new Set<string>();
       
       const userId = user?.id || localStorage.getItem('user_id');
@@ -1750,7 +1750,7 @@ function App() {
         }
       }
 
-      // 3. Marca cada oferta como resgatada ou nÃ£o
+      // 3. Marca cada oferta como resgatada ou não
       const offersWithStatus = activeOffers.map((offer: any) => ({
         ...offer,
         is_redeemed: redeemedIds.has(offer.id)
@@ -1758,7 +1758,7 @@ function App() {
 
       setFlashOffers(offersWithStatus);
     } catch (error) {
-      console.error("Erro ao buscar ofertas relÃƒÂ¢mpago:", error);
+      console.error("Erro ao buscar ofertas relâmpago:", error);
     }
   };
 
@@ -1808,9 +1808,9 @@ function App() {
   const [pendingReservation, setPendingReservation] = useState<any>(null);
 
   const [quests] = useState([
-    { id: 1, title: 'Explorador Urbano', desc: 'PeÃƒÂ§a em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
+    { id: 1, title: 'Explorador Urbano', desc: 'Peça em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
     { id: 2, title: 'Amigo do Peito', desc: 'Indique um amigo para a Izi', xp: 1000, progress: 0, total: 1, icon: 'group_add', color: '#10b981' },
-    { id: 3, title: 'Madrugador Izi', desc: 'PeÃƒÂ§a cafÃƒÂ© da manhÃƒÂ£ antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
+    { id: 3, title: 'Madrugador Izi', desc: 'Peça cafá© da manhã antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
   ]);
 
 
@@ -1824,8 +1824,8 @@ function App() {
     waiting_driver: "Buscando Entregador",
     aceito: "Confirmado",
     confirmado: "Confirmado",
-    preparando: "Em PreparaÃƒÂ§ÃƒÂ£o",
-    no_preparo: "Em PreparaÃƒÂ§ÃƒÂ£o",
+    preparando: "Em Preparação",
+    no_preparo: "Em Preparação",
     pronto: "Pronto para Retirada",
     a_caminho_coleta: "Entregador Vindo Coletar",
     chegou_coleta: "Entregador no Local de Retirada",
@@ -1835,7 +1835,7 @@ function App() {
     em_rota: "A Caminho da Entrega",
     saiu_para_entrega: "Pedido Saiu para Entrega",
     no_local: "Entregador no seu Local!",
-    concluido: "ConcluÃƒÂ­do",
+    concluido: "Concluído",
     cancelado: "Cancelado",
   };
 
@@ -1873,8 +1873,8 @@ function App() {
     ].includes(status || "");
 
   const getOrderAddress = (raw: any) => {
-    if (!raw) return "EndereÃƒÂ§o nÃƒÂ£o informado";
-    if (typeof raw !== "string") return raw.formatted_address || raw.address || "EndereÃƒÂ§o";
+    if (!raw) return "Endereço não informado";
+    if (typeof raw !== "string") return raw.formatted_address || raw.address || "Endereço";
     
     let clean = raw.split("| ITENS:")[0].split("| OBS:")[0].trim();
     try {
@@ -1909,7 +1909,7 @@ function App() {
       selectedItem?.merchant_name ||
       "time Izi";
 
-    return `OlÃƒÂ¡! Aqui ÃƒÂ© ${contactName}. Como posso ajudar com seu pedido?`;
+    return `Olá! Aqui á© ${contactName}. Como posso ajudar com seu pedido?`;
   };
 
   const openOrderChat = (topic?: string) => {
@@ -1946,17 +1946,17 @@ function App() {
 
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(`${title}\n${text}`);
-        showToast("InformaÃƒÂ§ÃƒÂ£es copiadas para compartilhar.", "success");
+        showToast("Informaçães copiadas para compartilhar.", "success");
         return;
       }
     } catch (error: any) {
       if (error?.name !== "AbortError") {
-        showToast("NÃƒÂ£o foi possÃƒÂ­vel compartilhar agora.", "warning");
+        showToast("Não foi possível compartilhar agora.", "warning");
       }
       return;
     }
 
-    showToast("Compartilhamento nÃƒÂ£o disponÃƒÂ­vel neste dispositivo.", "warning");
+    showToast("Compartilhamento não disponível neste dispositivo.", "warning");
   };
 
   const handleFavoriteAction = (label: string) => {
@@ -1966,7 +1966,7 @@ function App() {
   const handleCallOrderContact = () => {
     const rawPhone = selectedItem?.driver_phone || selectedItem?.merchant_phone || selectedItem?.phone;
     if (!rawPhone) {
-      openOrderChat("Preciso falar com alguÃƒÂ©m sobre este pedido");
+      openOrderChat("Preciso falar com alguá©m sobre este pedido");
       return;
     }
 
@@ -2006,7 +2006,7 @@ function App() {
 
       // [Comentario Limpo pelo Sistema]
   useEffect(() => {
-    // Se o browser preservou o state apÃ³s um F5, restaura as variÃ¡veis do React em vez de sobrescrever
+    // Se o browser preservou o state após um F5, restaura as variáveis do React em vez de sobrescrever
     if (window.history.state && window.history.state.view) {
       const { view: v, tab: t, subView: sv } = window.history.state;
       if (v) setView(v);
@@ -2046,7 +2046,7 @@ function App() {
     };
     window.addEventListener("popstate", handlePopState);
 
-    // [NOVO] Handler para o botÃƒÂ£o voltar fÃƒÂ­sico do dispositivo (Android)
+    // [NOVO] Handler para o botão voltar físico do dispositivo (Android)
     const backHandler = CapacitorApp.addListener('backButton', () => {
       if (navigationSubViewRef.current !== 'none') {
         window.history.back();
@@ -2081,14 +2081,14 @@ function App() {
     const activeShop = selectedShop || (cart.length > 0 ? ESTABLISHMENTS.find(e => e.id === cart[0].merchant_id || e.id === cart[0].store_id) : null);
     if (!activeShop) return 0;
 
-    // 2. Frete GrÃƒÂ¡tis do Lojista (toggle explÃƒÂ­cito no painel)
+    // 2. Frete Grátis do Lojista (toggle explícito no painel)
     const isExplicitlyFree = activeShop.free_delivery === true || activeShop.freeDelivery === true;
     if (isExplicitlyFree) {
-      console.log(`[DELIVERY] Frete GrÃƒÂ¡tis aplicado pela loja: ${activeShop.name}`);
+      console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${activeShop.name}`);
       return 0;
     }
 
-    // 3. IZI Black (BenefÃƒÂ­cio do UsuÃƒÂ¡rio)
+    // 3. IZI Black (Benefício do Usuário)
     if (isIziBlackMembership) {
        const minOrderIziBlack = Number(appSettings?.iziBlackMinOrderFreeShipping || 0);
        const subtotal = cart.reduce((sum, item: any) => {
@@ -2098,12 +2098,12 @@ function App() {
        }, 0);
        
        if (minOrderIziBlack === 0 || subtotal >= minOrderIziBlack) {
-         console.log(`[DELIVERY] Frete GrÃƒÂ¡tis via Izi Black (Subtotal: R$${subtotal.toFixed(2)} >= MÃƒÂ­n: R$${minOrderIziBlack})`);
+         console.log(`[DELIVERY] Frete Grátis via Izi Black (Subtotal: R$${subtotal.toFixed(2)} >= Mín: R$${minOrderIziBlack})`);
          return 0;
        }
     }
 
-    // 4. Fallback legado: Frete grÃƒÂ¡tis no item do carrinho
+    // 4. Fallback legado: Frete grátis no item do carrinho
     if (cart.length > 0) {
        const first = cart[0];
        if (first.merchant_free_delivery === true || first.free_delivery === true) {
@@ -2111,7 +2111,7 @@ function App() {
        }
     }
 
-    // 5. PADRÃƒÆ’O: Modo Bairros
+    // 5. PADRáƒÆ’O: Modo Bairros
     if (activeShop.coverageMode === 'neighborhoods' && activeShop.zones) {
        const userAddrLower = (userLocation.address || "").toLowerCase();
        const matchedZone = Object.entries(activeShop.zones as Record<string, {active: boolean, price: number}>)
@@ -2123,7 +2123,7 @@ function App() {
        }
     }
 
-    // 6. MODO RAIO Ã¢â‚¬â€ CÃƒÂ¡lculo proporcional por KM + metros
+    // 6. MODO RAIO ââ‚¬â€ Cálculo proporcional por KM + metros
     const bv = marketConditions.settings.baseValues;
     const surge = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
     
@@ -2140,8 +2140,8 @@ function App() {
     const baseFare  = parseFloat(String(bv[metric.min] ?? fallbackBase));
     const distRate  = parseFloat(String(bv[metric.km] ?? 1.0));
 
-    // --- CÃƒÂ¡lculo de DistÃƒÂ¢ncia Real em Tempo Real ---
-    // Usa lat/lng ATUAL do usuÃƒÂ¡rio (pode ter mudado depois do primeiro fetch dos lojistas)
+    // --- Cálculo de Distância Real em Tempo Real ---
+    // Usa lat/lng ATUAL do usuário (pode ter mudado depois do primeiro fetch dos lojistas)
     let distKm: number;
     const userLat = userLocation.lat;
     const userLng = userLocation.lng;
@@ -2149,7 +2149,7 @@ function App() {
     const shopLng = activeShop.longitude;
 
     if (userLat && userLng && shopLat && shopLng) {
-      // FÃƒÂ³rmula de Haversine (resultado em km)
+      // Fórmula de Haversine (resultado em km)
       const R = 6371;
       const dLat = (shopLat - userLat) * (Math.PI / 180);
       const dLon = (shopLng - userLng) * (Math.PI / 180);
@@ -2157,18 +2157,18 @@ function App() {
       const straightLine = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       // Multiplicador de rota real vs linha reta (~30% a mais)
       distKm = straightLine * 1.3;
-      // console.log(`[DELIVERY] DistÃƒÂ¢ncia calculada em tempo real: ${distKm.toFixed(3)} km (linha reta: ${straightLine.toFixed(3)} km)`);
+      // console.log(`[DELIVERY] Distância calculada em tempo real: ${distKm.toFixed(3)} km (linha reta: ${straightLine.toFixed(3)} km)`);
     } else {
-      // Fallback: distÃƒÂ¢ncia prÃƒÂ©-computada no carregamento dos lojistas ou padrÃƒÂ£o
+      // Fallback: distância prá©-computada no carregamento dos lojistas ou padrão
       distKm = activeShop.distKm || 1.5;
-      // console.warn(`[DELIVERY] GPS do usuÃƒÂ¡rio nÃƒÂ£o disponÃƒÂ­vel. Usando distÃƒÂ¢ncia estimada de ${distKm.toFixed(1)} km`);
+      // console.warn(`[DELIVERY] GPS do usuário não disponível. Usando distância estimada de ${distKm.toFixed(1)} km`);
     }
 
-    // CÃƒÂ¡lculo PROPORCIONAL (sem arredondamento por km)
-    // Ex: 1.3 km Ã¢â€ â€™ baseFare + 1.3 * distRate (nÃƒÂ£o cobra 2 km inteiros)
+    // Cálculo PROPORCIONAL (sem arredondamento por km)
+    // Ex: 1.3 km ââ€ â€™ baseFare + 1.3 * distRate (não cobra 2 km inteiros)
     const dynamicCalculated = parseFloat((baseFare + (distRate * distKm * surge)).toFixed(2));
 
-    // Se o lojista tem taxa fixa configurada e NÃƒÆ’O estÃƒÂ¡ em modo raio, usa a taxa fixa
+    // Se o lojista tem taxa fixa configurada e NáƒÆ’O está em modo raio, usa a taxa fixa
     const fixedShopFee = activeShop.service_fee !== undefined && activeShop.service_fee !== null && Number(activeShop.service_fee) > 0
       ? Number(activeShop.service_fee)
       : null;
@@ -2184,21 +2184,21 @@ function App() {
 
   const handlePlaceOrder = async (useCoins = false) => {
     if (globalSettings?.maintenance_mode) {
-      toastError("Plataforma em manutenÃ§Ã£o. Tente novamente em instantes.");
+      toastError("Plataforma em manutenção. Tente novamente em instantes.");
       return;
     }
 
     if (!paymentMethod) { toastWarning("Selecione uma forma de pagamento."); return; }
-    if (!userId) { toastWarning("FaÃ§a login para continuar."); return; }
-    if (cart.length === 0) { toastWarning("Seu carrinho estÃ¡ vazio."); return; }
+    if (!userId) { toastWarning("Faça login para continuar."); return; }
+    if (cart.length === 0) { toastWarning("Seu carrinho está vazio."); return; }
 
-    // VerificaÃƒÂ§ÃƒÂ£o de Estabelecimento Aberto antes de prosseguir
+    // Verificação de Estabelecimento Aberto antes de prosseguir
     const currentShopId = selectedShop?.id || cart[0]?.merchant_id || cart.find(i => i.merchant_id)?.merchant_id || null;
     const shopName = selectedShop?.name || cart[0]?.merchant_name || cart[0]?.store || "Estabelecimento";
     const activeShop = ESTABLISHMENTS.find(e => e.id === currentShopId) || selectedShop;
 
     if (activeShop && !activeShop.isOpen) {
-      toastError(`Desculpe! ${shopName} estÃƒÂ¡ fechado no momento e nÃƒÂ£o pode receber este pedido. Ã°Å¸â€¢â€™`);
+      toastError(`Desculpe! ${shopName} está fechado no momento e não pode receber este pedido. á°Å¸â€¢â€™`);
       return;
     }
     
@@ -2239,7 +2239,7 @@ function App() {
       service_fee: Number(serviceFeeAmount.toFixed(2)),
       items: cart,
       pickup_address: activeShop?.store_address || activeShop?.address || shopName,
-      delivery_address: `${userLocation?.address || "EndereÃ§o nÃ£o informado"}`,
+      delivery_address: `${userLocation?.address || "Endereço não informado"}`,
       delivery_lat: userLocation?.lat,
       delivery_lng: userLocation?.lng,
       payment_method: paymentMethod,
@@ -2251,12 +2251,12 @@ function App() {
     console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, currentShopId });
 
     if (total < 0) {
-       toastError("O valor total do pedido nÃƒÂ£o pode ser negativo.");
+       toastError("O valor total do pedido não pode ser negativo.");
        setIsLoading(false);
        return;
     }
 
-    // 1. VerificaÃƒÂ§ÃƒÂ£o Centralizada de Regras de BenefÃƒÂ­cios (Cupons e Izi Flash)
+    // 1. Verificação Centralizada de Regras de Benefícios (Cupons e Izi Flash)
     const benefitError = await ensureCartBenefitsAreAvailable();
     if (benefitError) {
       toastError(benefitError);
@@ -2282,7 +2282,7 @@ function App() {
           const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...restOfOrderBase, status: "pendente_pagamento", payment_status: "pending" }).select().single();
           if (insertError) throw insertError;
 
-          // DeduÃƒÂ§ÃƒÂ£o de Izi Coins se houver desconto aplicado
+          // Dedução de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
             const coinValue = globalSettings?.izi_coin_value || 1.0;
             const discountApplied = (iziCoins * coinValue);
@@ -2302,7 +2302,7 @@ function App() {
 
           if (lnErr || !lnData?.payment_request) {
             console.error("LN Error Details:", lnErr, lnData);
-            throw new Error(lnData?.error || "NÃƒÂ£o foi possÃƒÂ­vel gerar a fatura Bitcoin.");
+            throw new Error(lnData?.error || "Não foi possível gerar a fatura Bitcoin.");
           }
 
           setSelectedItem({ ...order, total_price: total, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
@@ -2314,20 +2314,20 @@ function App() {
             btc_price_brl: lnData.btc_price_brl
           }).eq("id", order.id);
 
-          // O cart NÃƒÆ’O deve ser limpo aqui. SÃƒÂ³ apÃƒÂ³s o pagamento ser confirmado via Realtime/Webhook
+          // O cart NáƒÆ’O deve ser limpo aqui. Só após o pagamento ser confirmado via Realtime/Webhook
           navigateSubView("lightning_payment");
           return;
         } catch (e: any) {
           console.error("LN Error:", e);
-          toastError(`Erro ao iniciar pagamento Bitcoin: ${e.message || "Tente outro mÃ©todo."}`);
+          toastError(`Erro ao iniciar pagamento Bitcoin: ${e.message || "Tente outro método."}`);
           return;
         }
       }
 
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
         if (!currentShopId) { 
-          console.error("[CRITICAL] Checkout abortado: merchant_id nÃƒÂ£o encontrado no carrinho nem na loja.", { cart });
-          toastError("Houve um erro tÃƒÂ©cnico: Loja nÃƒÂ£o identificada. Por favor, tente adicionar os itens novamente.");
+          console.error("[CRITICAL] Checkout abortado: merchant_id não encontrado no carrinho nem na loja.", { cart });
+          toastError("Houve um erro tá©cnico: Loja não identificada. Por favor, tente adicionar os itens novamente.");
           setIsLoading(false);
           return; 
         }
@@ -2349,12 +2349,12 @@ function App() {
             body: {
               merchant_id: currentShopId,
               title: 'ðŸ”” Novo Pedido IZI!',
-              body: `VocÃª recebeu um novo pedido de ${userName || 'um cliente'}. Abra o painel para aceitar!`,
+              body: `Você recebeu um novo pedido de ${userName || 'um cliente'}. Abra o painel para aceitar!`,
               data: { orderId: order.id, type: 'new_order' }
             }
           }).catch(err => console.error('Erro ao notificar lojista (offline):', err));
 
-          // DeduÃƒÂ§ÃƒÂ£o de Izi Coins se houver desconto aplicado
+          // Dedução de Izi Coins se houver desconto aplicado
           if (useCoins && iziCoins > 0) {
             const coinValue = globalSettings?.izi_coin_value || 1.0;
             const discountApplied = (iziCoins * coinValue);
@@ -2369,11 +2369,11 @@ function App() {
 
           setSelectedItem(order);
           
-          // Limpeza do carrinho em bloco try/catch isolado para nÃƒÂ£o afetar a criaÃƒÂ§ÃƒÂ£o com sucesso
+          // Limpeza do carrinho em bloco try/catch isolado para não afetar a criação com sucesso
           try {
             if (cart.length > 0) await clearCart(order.id);
           } catch (clearErr) {
-            console.warn("Aviso: Carrinho nÃƒÂ£o foi limpo, mas pedido foi criado:", clearErr);
+            console.warn("Aviso: Carrinho não foi limpo, mas pedido foi criado:", clearErr);
           }
 
           setIsLoading(false);
@@ -2384,7 +2384,7 @@ function App() {
           navigateSubView("waiting_merchant");
         } catch (dbErr) {
           console.error("DB Error:", dbErr);
-          toastError("Erro de conexÃƒÂ£o. Verifique sua rede.");
+          toastError("Erro de conexão. Verifique sua rede.");
           setIsLoading(false);
         }
         return;
@@ -2428,15 +2428,15 @@ function App() {
            }
         }
 
-        // 2. Debitar no Banco de Dados PRIMEIRO (Garantia de CobranÃƒÂ§a)
+        // 2. Debitar no Banco de Dados PRIMEIRO (Garantia de Cobrança)
         const { error: updateErr } = await supabase.from("users_delivery").update({ 
           wallet_balance: Number(tempNewWalletBalance.toFixed(2)),
           izi_coins: Number(tempNewIziCoins.toFixed(8))
         }).eq("id", userId);
 
         if (updateErr) {
-          console.error("Erro crÃƒÂ­tico ao debitar saldo:", updateErr);
-          throw new Error("NÃƒÂ£o foi possÃƒÂ­vel processar o dÃƒÂ©bito na sua carteira. Tente novamente.");
+          console.error("Erro crítico ao debitar saldo:", updateErr);
+          throw new Error("Não foi possível processar o dá©bito na sua carteira. Tente novamente.");
         }
 
         // 3. Criar o pedido com status pago
@@ -2447,7 +2447,7 @@ function App() {
           .single();
 
         if (orderErr || !order) {
-           // ESTORNO SE FALHAR A CRIAÃƒâ€¡ÃƒÆ’O DO PEDIDO
+           // ESTORNO SE FALHAR A CRIAáƒâ€¡áƒÆ’O DO PEDIDO
            await supabase.from("users_delivery").update({ 
              wallet_balance: walletBalance,
              izi_coins: iziCoins
@@ -2460,12 +2460,12 @@ function App() {
           body: {
             merchant_id: currentShopId,
             title: 'ðŸ”” Novo Pedido IZI!',
-            body: `VocÃª recebeu um novo pedido de ${userName || 'um cliente'}. Abra o painel para aceitar!`,
+            body: `Você recebeu um novo pedido de ${userName || 'um cliente'}. Abra o painel para aceitar!`,
             data: { orderId: order.id, type: 'new_order' }
           }
         }).catch(err => console.error('Erro ao notificar lojista (saldo):', err));
 
-        // 4. Registrar no histÃƒÂ³rico e atualizar estado local
+        // 4. Registrar no histórico e atualizar estado local
         await supabase.from("wallet_transactions_delivery").insert({
           user_id: userId,
           type: "pagamento",
@@ -2489,7 +2489,7 @@ function App() {
            return;
         }
 
-        // DeduÃ§Ã£o de Izi Coins se houver desconto aplicado
+        // Dedução de Izi Coins se houver desconto aplicado
         if (useCoins && iziCoins > 0) {
           const coinValue = globalSettings?.izi_coin_value || 1.0;
           const discountApplied = (iziCoins * coinValue);
@@ -2571,7 +2571,7 @@ const navigateSubView = (target: string) => {
     return () => { supabase.removeChannel(channel); };
   }, [selectedItem?.driver_id]);
   
-  // SincronizaÃƒÂ§ÃƒÂ£o em tempo real do status do pedido para o cliente
+  // Sincronização em tempo real do status do pedido para o cliente
   useEffect(() => {
     if (!selectedItem?.id) return;
 
@@ -2608,7 +2608,7 @@ const navigateSubView = (target: string) => {
            setSelectedItem(payload.new);
         }
 
-        // Atualizar lista de pedidos tambÃƒÂ©m se o usuÃƒÂ¡rio estiver logado
+        // Atualizar lista de pedidos tambá©m se o usuário estiver logado
         if (userId) fetchOrders();
       })
       .subscribe();
@@ -2651,15 +2651,15 @@ const navigateSubView = (target: string) => {
     // 1. Garantir que manualOpen seja tratado corretamente (default true se null)
     const isManualOpen = manualOpen !== false;
 
-    // 2. Prioridade MÃƒÂ¡xima: BotÃƒÂ£o de Override Manual (is_open)
+    // 2. Prioridade Máxima: Botão de Override Manual (is_open)
     // Se o lojista DESLIGOU a loja manualmente, ela fica FECHADA independente do modo.
     if (isManualOpen === false) return false;
 
-    // 3. Se o modo for 'manual' e o botÃƒÂ£o estiver ligado (true), a loja estÃƒÂ¡ ABERTA.
+    // 3. Se o modo for 'manual' e o botão estiver ligado (true), a loja está ABERTA.
     if (mode === 'manual') return isManualOpen === true;
 
-    // 4. Modo AutomÃƒÂ¡tico: Segue o horÃƒÂ¡rio programado
-    // Se nÃƒÂ£o houver horÃƒÂ¡rios configurados, assume que estÃƒÂ¡ aberta se isManualOpen for true.
+    // 4. Modo Automático: Segue o horário programado
+    // Se não houver horários configurados, assume que está aberta se isManualOpen for true.
     if (!openingHours || Object.keys(openingHours).length === 0) return isManualOpen;
 
     const now = new Date();
@@ -2681,12 +2681,12 @@ const navigateSubView = (target: string) => {
       const openInMinutes = openH * 60 + openM;
       let closeInMinutes = closeH * 60 + closeM;
 
-      // Suporte para HorÃƒÂ¡rio que vira a noite (Ex: 18:00 atÃƒÂ© 02:00)
+      // Suporte para Horário que vira a noite (Ex: 18:00 atá© 02:00)
       if (closeInMinutes < openInMinutes) {
         return nowInMinutes >= openInMinutes || nowInMinutes <= closeInMinutes;
       }
 
-      // Caso especial: 24h (00:00 ÃƒÂ s 00:00 ou 00:00 ÃƒÂ s 23:59)
+      // Caso especial: 24h (00:00 às 00:00 ou 00:00 às 23:59)
       if (openInMinutes === closeInMinutes && openInMinutes === 0) return true;
 
       return nowInMinutes >= openInMinutes && nowInMinutes <= closeInMinutes;
@@ -2726,7 +2726,7 @@ const navigateSubView = (target: string) => {
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
       };
 
-      // Blindagem: Busca de itens em promoÃƒÂ§ÃƒÂ£o via Fetch Direto
+      // Blindagem: Busca de itens em promoção via Fetch Direto
       const getPromoItems = async () => {
         try {
           const sUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -2735,7 +2735,7 @@ const navigateSubView = (target: string) => {
             headers: { 'apikey': sKey, 'Authorization': `Bearer ${sKey}` }
           });
           if (res.ok) return await res.json();
-        } catch (e) { console.error("[PROMO] Erro na blindagem de promoÃƒÂ§ÃƒÂµes:", e); }
+        } catch (e) { console.error("[PROMO] Erro na blindagem de promoções:", e); }
         return [];
       };
 
@@ -2744,7 +2744,7 @@ const navigateSubView = (target: string) => {
 
       const promoMerchantIds = new Set(
         promoItems
-          ?.filter(p => (p.name || "").toLowerCase().includes("oferta especial") || (p.description || "").toLowerCase().includes("promoÃƒÂ§ÃƒÂ£o"))
+          ?.filter(p => (p.name || "").toLowerCase().includes("oferta especial") || (p.description || "").toLowerCase().includes("promoção"))
           .map(p => p.merchant_id) || []
       );
       
@@ -2755,7 +2755,7 @@ const navigateSubView = (target: string) => {
           let distKm = 1.5; // fallback
           if (userLocation.lat && userLocation.lng && m.latitude && m.longitude) {
             distKm = getDistanceKm(userLocation.lat, userLocation.lng, m.latitude, m.longitude);
-            // Multiplique por 1.3 por causa de conversÃƒÂ£o (distÃƒÂ¢ncia de ruas vs linha reta)
+            // Multiplique por 1.3 por causa de conversão (distância de ruas vs linha reta)
             distKm = distKm * 1.3;
           }
           
@@ -2783,7 +2783,7 @@ const navigateSubView = (target: string) => {
             freeDelivery: !!m.free_delivery,
             free_delivery: !!m.free_delivery,
             service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : null),
-            fee: m.free_delivery ? "GrÃƒÂ¡tis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
+            fee: m.free_delivery ? "Grátis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
             latitude: m.latitude,
             longitude: m.longitude,
             coverageMode: m.delivery_coverage_mode || 'radius',
@@ -2806,11 +2806,11 @@ const navigateSubView = (target: string) => {
 
     // AI Dynamic Suggestions Cycle
     const aiTips = [
-      "Percebi que vocÃƒÂª gosta de culinÃƒÂ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?",
-      "Hoje ÃƒÂ© sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃƒÆ’Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â°ÃƒÆ’ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€š ÃƒÆ’ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â»",
-      "Baseado no seu histÃƒÂ³rico, vocÃƒÂª costuma pedir em mercados ÃƒÆ’Ãƒâ€ Ã¢â‚¬â„¢ s 19h. Deseja agendar suas compras?",
-      "O trÃƒÆ’Ãƒâ€šÃ‚Â¢nsito estÃƒÂ¡ pesado hoje. Sugiro usar o MototÃƒÂ¡xi para chegar mais rÃƒÂ¡pido ao seu destino.",
-      "VocÃƒÂª estÃƒÂ¡ a apenas 250 XP de subir para o nÃƒÂ­vel 13! Que tal um pedido extra hoje?"
+      "Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
+      "Hoje á© sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. áƒÆ’áƒâ€ ââ‚¬â„¢áƒâ€šá‚Â°áƒÆ’âââ€šÂ¬á‚Â¦áƒâ€šá‚Â¸áƒÆ’âââ€šÂ¬á…Â¡áƒâ€š áƒÆ’âââ€šÂ¬á…Â¡áƒâ€šá‚Â»",
+      "Baseado no seu histórico, você costuma pedir em mercados áƒÆ’áƒâ€ ââ‚¬â„¢ s 19h. Deseja agendar suas compras?",
+      "O tráƒÆ’áƒâ€šá‚Â¢nsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
+      "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
     ];
     let index = 0;
     const interval = setInterval(() => {
@@ -2839,7 +2839,7 @@ const navigateSubView = (target: string) => {
               const newArr = [...prev];
               const existing = newArr[idx];
               
-              // CRITICO: Mesclar dados novos com os existentes para nÃƒÂ£o perder o 'opening_mode'
+              // CRITICO: Mesclar dados novos com os existentes para não perder o 'opening_mode'
               // Supabase Realtime pode enviar apenas os campos alterados.
               const merged = { ...existing, ...updated };
               
@@ -2862,12 +2862,12 @@ const navigateSubView = (target: string) => {
 
               newArr[idx] = updatedItem;
               
-              // Se o cliente estÃƒÂ¡ visualizando este restaurante, atualizar o selectedShop instantaneamente
+              // Se o cliente está visualizando este restaurante, atualizar o selectedShop instantaneamente
               if (selectedShopRef.current?.id === updated.id) {
                 setSelectedShop(prev => prev ? { ...prev, ...updatedItem } : null);
               }
               
-              // Manter ordenaÃ§Ã£o de abertos no topo
+              // Manter ordenação de abertos no topo
               return newArr.sort((a, b) => (a.isOpen === b.isOpen ? 0 : a.isOpen ? -1 : 1));
             });
           }
@@ -2880,7 +2880,7 @@ const navigateSubView = (target: string) => {
     };
   }, [fetchRealEstablishments, isStoreOpen]);
 
-  // Sincronizar selectedShop com ESTABLISHMENTS para feedback instantÃƒÂ¢neo no Menu
+  // Sincronizar selectedShop com ESTABLISHMENTS para feedback instantâneo no Menu
   useEffect(() => {
     if (selectedShop && subView === "restaurant_menu") {
       const updated = ESTABLISHMENTS.find(e => e.id === selectedShop.id);
@@ -2917,7 +2917,7 @@ const navigateSubView = (target: string) => {
   
 
 
-  // Sincroniza o selectedItem com as atualizaÃƒÂ§ÃƒÂµes em tempo real
+  // Sincroniza o selectedItem com as atualizações em tempo real
   useEffect(() => {
     if (selectedItem?.id) {
       const updated = orders.find(o => o.id === selectedItem.id);
@@ -2928,7 +2928,7 @@ const navigateSubView = (target: string) => {
   }, [orders]);
 
   // Atualiza automaticamente as telas PIX/Lightning se o pagamento for confirmado em tempo real
-  // Usa selectedItem.id (nÃƒÂ£o o objeto inteiro) como dependÃƒÂªncia para evitar loops de re-render
+  // Usa selectedItem.id (não o objeto inteiro) como dependência para evitar loops de re-render
   useEffect(() => {
     if ((subView !== "pix_payment" && subView !== "lightning_payment")) return;
     if (!selectedItem?.id || selectedItem.id === "temp") return;
@@ -2948,8 +2948,8 @@ const navigateSubView = (target: string) => {
         setSubView("none");
         setTab("orders");
       }
-      toastSuccess("Pagamento Confirmado! Ã°Å¸Å½â€°");
-      return; // Sair imediatamente para nÃƒÂ£o processar o bloco abaixo
+      toastSuccess("Pagamento Confirmado! 🎉");
+      return; // Sair imediatamente para não processar o bloco abaixo
     }
 
     // PRIORIDADE 2: Pedido cancelado/recusado enquanto aguardando pagamento
@@ -2978,12 +2978,12 @@ const navigateSubView = (target: string) => {
       setSelectedItem((prev: any) => ({ ...prev, ...liveOrder }));
     }
 
-    // Se pedido concluÃƒÂ­do, atualiza UI
+    // Se pedido concluído, atualiza UI
     if (liveOrder.status === "concluido") {
-      toastSuccess("Entrega concluÃƒÂ­da com sucesso! Ã°Å¸Å½â€°");
+      toastSuccess("Entrega concluída com sucesso! 🎉");
     }
 
-    // Se cancelado â€” nÃ£o exibir toast aqui, pois o handleCancelOrder jÃ¡ notifica o usuÃ¡rio
+    // Se cancelado â€” não exibir toast aqui, pois o handleCancelOrder já notifica o usuário
   }, [orders, subView, selectedItem?.id, selectedItem?.status, selectedItem?.driver_id]);
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
@@ -3014,14 +3014,14 @@ const navigateSubView = (target: string) => {
     isManual?: boolean;
   }>(() => {
     return {
-      address: "Buscando satÃƒÂ©lite...",
+      address: "Buscando satá©lite...",
       loading: true,
       lat: null,
       lng: null
     };
   });
 
-  // Taxa de entrega REATIVA Ã¢â‚¬â€ recalcula quando GPS, carrinho, lojista ou membership mudam.
+  // Taxa de entrega REATIVA ââ‚¬â€ recalcula quando GPS, carrinho, lojista ou membership mudam.
 
   // paymentMethod centralizado no useApp
   const [changeFor, setChangeFor] = useState("");
@@ -3059,7 +3059,7 @@ const navigateSubView = (target: string) => {
   // marketConditions movido para o AppContext
 
 
-  // Taxa de entrega REATIVA Ã¢â‚¬â€ recalcula quando GPS, carrinho, lojista, membership ou surge mudam.
+  // Taxa de entrega REATIVA ââ‚¬â€ recalcula quando GPS, carrinho, lojista, membership ou surge mudam.
   const currentDeliveryFee = useMemo(
     () => calculateDeliveryFee(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3088,7 +3088,7 @@ const navigateSubView = (target: string) => {
   }, []);
 
   const dynamicFoodCategories = useMemo(() => {
-    // Categorias Master que compÃƒÂµem o ecossistema de "Food"
+    // Categorias Master que compõem o ecossistema de "Food"
     const foodMasterValues = ['restaurant', 'candy', 'comida'];
     const foodMasterParents = establishmentTypes.filter(t => foodMasterValues.includes(t.value) && !t.parent_id);
     const foodMasterIds = foodMasterParents.map(p => p.id);
@@ -3098,7 +3098,7 @@ const navigateSubView = (target: string) => {
 
     const base = [
       { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-      { id: "promocoes",  name: "PromoÃƒÂ§ÃƒÂµes",     icon: "percent",       action: () => { setRestaurantInitialCategory("PromoÃƒÂ§ÃƒÂµes"); navigateSubView("explore_restaurants"); } },
+      { id: "promocoes",  name: "Promoções",     icon: "percent",       action: () => { setRestaurantInitialCategory("Promoções"); navigateSubView("explore_restaurants"); } },
     ];
 
     const dynamic = specialties.map(s => ({
@@ -3108,14 +3108,14 @@ const navigateSubView = (target: string) => {
       action: () => { setRestaurantInitialCategory(s.value); navigateSubView("explore_restaurants"); }
     }));
 
-    // Fallback se nÃƒÂ£o houver dinÃƒÂ¢micas ainda
+    // Fallback se não houver dinâmicas ainda
     if (dynamic.length === 0) {
       return [
         ...base,
         { id: "burguer",    name: "Burguer",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("burguer"); navigateSubView("explore_restaurants"); } },
         { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("pizza"); navigateSubView("explore_restaurants"); } },
         { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("doces"); navigateSubView("explore_restaurants"); } },
-        { id: "japones",    name: "JaponÃƒÂªs",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("japones"); navigateSubView("explore_restaurants"); } },
+        { id: "japones",    name: "Japonês",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("japones"); navigateSubView("explore_restaurants"); } },
       ];
     }
 
@@ -3124,7 +3124,7 @@ const navigateSubView = (target: string) => {
 
   const lunchCategories = [
     { id: "all",     name: "Todos",           icon: "restaurant" },
-    { id: "promo",   name: "PromoÃ§Ã£o do Dia", icon: "percent" },
+    { id: "promo",   name: "Promoção do Dia", icon: "percent" },
     { id: "monte",   name: "Monte o seu",     icon: "flatware" },
     { id: "pratos",  name: "Pratos feitos",   icon: "rice_bowl" },
     { id: "marmita", name: "Marmitas",        icon: "lunch_dining" },
@@ -3173,15 +3173,15 @@ const navigateSubView = (target: string) => {
     }
   }, [subView, userLocation.address]);
 
-  // Capturar localizaÃƒÂ§ÃƒÂ£o atual obrigatoriamente ao entrar em fluxos de mobilidade/logÃƒÂ­stica
+  // Capturar localização atual obrigatoriamente ao entrar em fluxos de mobilidade/logística
   useEffect(() => {
     const mobilityWizardViews = ["taxi_wizard", "freight_wizard", "van_wizard", "excursion_wizard", "transit_selection"];
     if (mobilityWizardViews.includes(subView)) {
-      updateLocation(); // Garante atualizaÃƒÂ§ÃƒÂ£o real e recente
+      updateLocation(); // Garante atualização real e recente
     }
   }, [subView]);
 
-  // Definir tipo de serviÃƒÂ§o correto ao entrar no FreightWizard
+  // Definir tipo de serviço correto ao entrar no FreightWizard
   useEffect(() => {
     if (subView === "freight_wizard") {
       setTransitData(prev => ({ ...prev, type: "frete" }));
@@ -3247,7 +3247,7 @@ const navigateSubView = (target: string) => {
   };
 
   const renderExploreRestaurants = () => {
-    const isLunchMode = restaurantInitialCategory === "AlmoÃƒÂ§o";
+    const isLunchMode = restaurantInitialCategory === "Almoço";
     
     return (
       <ExploreRestaurantsView 
@@ -3281,8 +3281,8 @@ const navigateSubView = (target: string) => {
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">CardÃƒÂ¡pios do Dia</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">SugestÃƒÂµes Especiais</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Cardápios do Dia</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">Sugestões Especiais</p>
               </div>
             </div>
           </div>
@@ -3291,7 +3291,7 @@ const navigateSubView = (target: string) => {
         <main className="p-6 space-y-10 pt-8">
            <div className="bg-pink-500/5 p-8 rounded-[45px] border border-pink-500/10 mb-2">
              <h2 className="text-lg font-black text-pink-600  mb-2 leading-none uppercase tracking-tighter">Ofertas de Hoje</h2>
-             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preÃƒÂ§os exclusivos para hoje.</p>
+             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preços exclusivos para hoje.</p>
            </div>
 
            <div className="grid grid-cols-2 gap-4">
@@ -3352,7 +3352,7 @@ const navigateSubView = (target: string) => {
         off: f.original_price && f.discounted_price 
           ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
           : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-        desc: (f.description || 'Oferta imperdÃ­vel por tempo limitado!') + `\n\nðŸ“Œ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
+        desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\nðŸ“Œ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
       })) : [];
     }
 
@@ -3449,15 +3449,15 @@ const navigateSubView = (target: string) => {
 
     const categoryIcons: Record<string, string> = {
       "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
-      "FarmÃƒÂ¡cia": "local_pharmacy", "Mercado": "local_mall",
-      "GÃƒÂ¡s & ÃƒÆ’ gua": "propane_tank", "AÃƒÂ§ougue": "kebab_dining", "Padaria": "bakery_dining", "Izi Envios": "package_2"
+      "Farmácia": "local_pharmacy", "Mercado": "local_mall",
+      "Gás & áƒÆ’ gua": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Izi Envios": "package_2"
     };
     const icon = categoryIcons[title] || "storefront";
 
     return (
       <EstablishmentListView
         title={title}
-        subtitle="DisponÃƒÂ­vel agora"
+        subtitle="Disponível agora"
         icon={icon}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -3499,8 +3499,8 @@ const navigateSubView = (target: string) => {
 
   const renderPharmacyList = () => (
     <EstablishmentListView
-      title="FarmÃƒÂ¡cias"
-      subtitle="SaÃƒÂºde e bem-estar"
+      title="Farmácias"
+      subtitle="Saúde e bem-estar"
       icon="local_pharmacy"
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
@@ -3516,8 +3516,8 @@ const navigateSubView = (target: string) => {
 
   const renderAllPharmacies = () => (
     <EstablishmentListView
-      title="Todas as FarmÃƒÂ¡cias"
-      subtitle="Unidades PrÃƒÂ³ximas"
+      title="Todas as Farmácias"
+      subtitle="Unidades Próximas"
       icon="local_pharmacy"
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
@@ -3561,7 +3561,7 @@ const navigateSubView = (target: string) => {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Ofertas Geladas</h1>
-            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">SeleÃƒÂ§ÃƒÂ£o Premium de Ofertas</p>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">Seleção Premium de Ofertas</p>
           </div>
           <button onClick={() => navigateSubView("cart")} className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
             <Icon name="shopping_bag" />
@@ -3647,7 +3647,7 @@ const navigateSubView = (target: string) => {
   };
 
   const renderFlashOffersList = () => {
-    // Re-computar activeStories similar ao HomeView para consistÃƒÂªncia
+    // Re-computar activeStories similar ao HomeView para consistência
     const activeStorieslist = (flashOffers || [])
       .map((offer: any) => {
       const expiresAt = new Date(offer.expires_at);
@@ -3668,8 +3668,8 @@ const navigateSubView = (target: string) => {
       return {
         id: offer.id,
         merchant: merchantData.store_name || offer.merchant_name || "Izi Partner",
-        name: offer.product_name || offer.title || "Oferta RelÃ¢mpago",
-        finalPrice: finalPrice ? finalPrice.toFixed(2).replace('.', ',') : "PreÃ§o sob consulta",
+        name: offer.product_name || offer.title || "Oferta Relâmpago",
+        finalPrice: finalPrice ? finalPrice.toFixed(2).replace('.', ',') : "Preço sob consulta",
         originalPrice: originalPrice ? originalPrice.toFixed(2).replace('.', ',') : "",
         timeLeft,
         img: offer.product_image || merchantData.store_logo || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&auto=format&fit=crop",
@@ -3715,7 +3715,7 @@ const navigateSubView = (target: string) => {
   const renderLightningPayment = () => {
     const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
     
-    // NormalizaÃƒÂ§ÃƒÂ£o agressiva de cotaÃƒÂ§ÃƒÂ£o
+    // Normalização agressiva de cotação
     const btcPrice = Number(
       selectedItem?.btcPrice || 
       selectedItem?.btc_price_brl || 
@@ -3742,7 +3742,7 @@ const navigateSubView = (target: string) => {
     let category = '';
     let title = '';
     
-    if (subView === 'explore_excursions') { category = 'excursions'; title = 'ExcursÃµes'; }
+    if (subView === 'explore_excursions') { category = 'excursions'; title = 'Excursões'; }
     else if (subView === 'explore_daytrips') { category = 'daytrips'; title = 'Bate e Volta'; }
     else if (subView === 'explore_hotels') { category = 'hotels'; title = 'Hospedagens'; }
     else if (subView === 'explore_nightlife') { category = 'nightlife'; title = 'Noite (Bar)'; }
@@ -3766,7 +3766,7 @@ const navigateSubView = (target: string) => {
   };
 
   const getServicePresentation = (o: any) => {
-    if (!o) return { label: 'ServiÃ§o', icon: 'shopping_bag', color: 'text-yellow-400', glow: 'rgba(250,205,5,0.5)', name: 'Pedido', bg: 'bg-yellow-400/10' };
+    if (!o) return { label: 'Serviço', icon: 'shopping_bag', color: 'text-yellow-400', glow: 'rgba(250,205,5,0.5)', name: 'Pedido', bg: 'bg-yellow-400/10' };
     const type = o.service_type;
     if (['mototaxi', 'carro', 'van'].includes(type)) {
       return { 
@@ -3789,7 +3789,7 @@ const navigateSubView = (target: string) => {
       };
     }
     return { 
-      label: 'AlimentaÃ§Ã£o',
+      label: 'Alimentação',
       icon: 'restaurant',
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
@@ -3856,11 +3856,11 @@ const navigateSubView = (target: string) => {
       setSelectedItem(orderData);
       setPaymentsOrigin("profile");
       
-      // Fecha o modal de depÃ³sito imediatamente apÃ³s ter os dados do pedido
+      // Fecha o modal de depósito imediatamente após ter os dados do pedido
       setShowDepositModal(false);
 
       if (method === "cartao") {
-        console.log("[RECHARGE] Indo para fluxo de cartÃ£o transparente");
+        console.log("[RECHARGE] Indo para fluxo de cartão transparente");
         navigateSubView("card_payment");
       } else if (method === "lightning") {
         console.log("[RECHARGE] Gerando invoice Lightning...");
@@ -3881,9 +3881,9 @@ const navigateSubView = (target: string) => {
         navigateSubView("pix_payment");
       }
       
-      console.log("[RECHARGE] TransiÃ§Ã£o de tela solicitada com sucesso para:", method);
+      console.log("[RECHARGE] Transição de tela solicitada com sucesso para:", method);
       
-      console.log("[RECHARGE] Fluxo inicial concluÃ­do com sucesso.");
+      console.log("[RECHARGE] Fluxo inicial concluído com sucesso.");
     } catch (e: any) {
       console.error("[RECHARGE ERROR]", e);
       toastError("Erro ao processar recarga: " + (e.message || "Tente novamente."));
@@ -3991,7 +3991,7 @@ const navigateSubView = (target: string) => {
                   <div className="flex items-center gap-2 mt-1">
                     <div className="size-1.5 rounded-full bg-yellow-400" />
                     <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em]">
-                      {isFinishingPayment ? "Escolha como pagar" : "Izi Pay InstantÃ¢neo"}
+                      {isFinishingPayment ? "Escolha como pagar" : "Izi Pay Instantâneo"}
                     </p>
                   </div>
                 </div>
@@ -4011,7 +4011,7 @@ const navigateSubView = (target: string) => {
               <div className="flex-1 overflow-y-auto no-scrollbar px-8 pb-10 space-y-10 relative z-10">
                 {/* Visualizador de Saldo Final */}
                 <section className="relative py-12 rounded-[32px] bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center overflow-hidden">
-                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mb-4">ConversÃ£o Prevista</p>
+                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mb-4">Conversão Prevista</p>
                       <div className="flex items-baseline justify-center">
                          <span className="text-7xl font-black text-zinc-900 tracking-tighter tabular-nums">
                            {integerPart.toLocaleString('pt-BR')}
@@ -4028,7 +4028,7 @@ const navigateSubView = (target: string) => {
                    </div>
                 </section>
 
-                {/* SeleÃƒÂ§ÃƒÂ£o de Valores */}
+                {/* Seleção de Valores */}
                 {!isFinishingPayment && (
                   <section className="space-y-6">
                     <div className="flex justify-between items-end px-2">
@@ -4081,14 +4081,14 @@ const navigateSubView = (target: string) => {
                   </div>
                 )}
 
-                {/* MÃƒÂ©todos de Pagamento */}
+                {/* Má©todos de Pagamento */}
                 <section className="space-y-4">
                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] px-2">Meio de Pagamento</h3>
                    <div className="grid grid-cols-3 gap-3">
                       {[
                         { id: 'lightning', icon: 'bolt', label: 'Lightning' },
                         { id: 'pix', icon: 'pix', label: 'Pix', isImage: true },
-                        { id: 'cartao', icon: 'credit_card', label: 'CartÃ£o' }
+                        { id: 'cartao', icon: 'credit_card', label: 'Cartão' }
                       ].map((method) => (
                        <button
                          key={method.id}
@@ -4123,7 +4123,7 @@ const navigateSubView = (target: string) => {
                     <div className="size-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar DepÃ³sito</span>
+                      <span className="uppercase tracking-[0.4em] text-xs font-black">Confirmar Depósito</span>
                       <span className="material-symbols-rounded text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
                     </>
                   )}
@@ -4205,7 +4205,7 @@ const navigateSubView = (target: string) => {
       <motion.div key="time-picker-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md flex items-end justify-center p-4">
         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="w-full max-w-[500px] bg-zinc-900 rounded-[40px] border border-white/10 p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-black text-white">Escolha o HorÃƒÂ¡rio</h3>
+            <h3 className="text-xl font-black text-white">Escolha o Horário</h3>
             <button onClick={() => setShowTimePicker(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400">
               <span className="material-symbols-outlined">close</span>
             </button>
@@ -4238,7 +4238,7 @@ const navigateSubView = (target: string) => {
 
   const BottomNav = () => {
     const navItems = [
-      { id: "home", icon: "home", label: "InÃ­cio" },
+      { id: "home", icon: "home", label: "Início" },
       { id: "busca", icon: "search", label: "Busca" },
       { id: "wallet", icon: "payments", label: "Izi Pay" },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
@@ -4333,7 +4333,7 @@ const navigateSubView = (target: string) => {
     iziCoins,
     globalSettings,
     selectedCard,
-    // NavegaÃ§Ã£o e UI
+    // Navegação e UI
     userLevel,
     showToast: toastError,
     toastSuccess,
@@ -4358,7 +4358,7 @@ const navigateSubView = (target: string) => {
                   <span className="text-2xl font-black text-yellow-400 tracking-tighter">IZI</span>
                 </div>
               </div>
-              <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando ExperiÃªncia</p>
+              <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
             </motion.div>
           )}
 
@@ -4486,11 +4486,11 @@ const navigateSubView = (target: string) => {
                            } else if (['beverages', 'bebidas'].includes(slug)) {
                               navigateSubView("explore_beverages");
                            } else {
-                              // Fallback para lista genÃ©rica
+                              // Fallback para lista genérica
                               setExploreCategoryState({
                                 id: slug,
                                 title: cat.name || cat.label,
-                                tagline: `Tudo de ${cat.name || cat.label} para vocÃª`,
+                                tagline: `Tudo de ${cat.name || cat.label} para você`,
                                 icon: cat.icon || 'storefront',
                                 primaryColor: 'bg-yellow-400'
                               });
@@ -4786,7 +4786,7 @@ const navigateSubView = (target: string) => {
                       onPay={(method) => {
                         showToast(`Reserva confirmada via ${method}!`, "success");
                         setSubView('none');
-                        // Aqui entraria a lÃ³gica real de processamento e desconto de saldo
+                        // Aqui entraria a lógica real de processamento e desconto de saldo
                       }}
                     />
                   </motion.div>
@@ -5087,7 +5087,7 @@ const navigateSubView = (target: string) => {
           )}
         </AnimatePresence>
 
-        {/* Popup de NotificaÃ§Ã£o do Sistema Minimalista */}
+        {/* Popup de Notificação do Sistema Minimalista */}
         <AnimatePresence>
             {systemNotification && (
                 <motion.div

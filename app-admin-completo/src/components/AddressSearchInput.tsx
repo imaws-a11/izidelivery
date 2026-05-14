@@ -101,7 +101,7 @@ export const AddressSearchInput = ({
     setApiError(null);
     
     if (!isLoaded) {
-      console.warn("Maps SDK nÃ£o carregado ainda...");
+      console.warn("Maps SDK não carregado ainda...");
       return;
     }
 
@@ -213,7 +213,7 @@ export const AddressSearchInput = ({
         }
       }
 
-      // ESTRATÃ‰GIA 4: SearchByText (Ãšltimo recurso)
+      // ESTRATÉGIA 4: SearchByText (Ãšltimo recurso)
       if (results.length === 0 && input.length > 5) {
         try {
           const { Place } = await (window.google.maps as any).importLibrary("places");
@@ -231,19 +231,19 @@ export const AddressSearchInput = ({
             }));
           }
         } catch (e) {
-          console.warn("EstratÃ©gia 4 falhou:", e);
+          console.warn("Estratégia 4 falhou:", e);
         }
       }
 
       if (results.length === 0) {
-        setApiError("NÃ£o foi possÃ­vel carregar sugestÃµes. Verifique sua chave de API ou conexÃ£o.");
+        setApiError("Não foi possível carregar sugestões. Verifique sua chave de API ou conexão.");
       }
 
       setSuggestions(results);
       updateDropdownPos();
     } catch (error) {
-      console.error("Falha crÃ­tica na busca:", error);
-      setApiError("Erro ao processar busca de endereÃ§o.");
+      console.error("Falha crítica na busca:", error);
+      setApiError("Erro ao processar busca de endereço.");
       setSuggestions([]);
     } finally {
       setLoading(false);
