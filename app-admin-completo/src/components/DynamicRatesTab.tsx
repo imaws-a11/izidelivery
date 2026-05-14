@@ -321,7 +321,6 @@ export default function DynamicRatesTab() {
               { title: 'MotoTáxi', minKey: 'mototaxi_min', kmKey: 'mototaxi_km' },
               { title: 'Carro Executivo', minKey: 'carro_min', kmKey: 'carro_km' },
               { title: 'Van de Transporte', minKey: 'van_min', kmKey: 'van_km' },
-              { title: 'Entrega Avulsa (Standalone)', minKey: 'standalone_min', kmKey: 'standalone_km' },
               { 
                 title: 'Logística / Frete', 
                 minKey: 'logistica_min', 
@@ -341,7 +340,7 @@ export default function DynamicRatesTab() {
                 ]
               }
             ].map((cat: any) => (
-              <div key={cat.title} className={`flex flex-col gap-6 p-8 rounded-[38px] ${cat.vehicles ? 'col-span-1 md:col-span-2' : ''} bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50`}>
+              <div key={cat.minKey} className={`flex flex-col gap-6 p-8 rounded-[38px] ${cat.vehicles ? 'col-span-1 md:col-span-2' : ''} bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm">
@@ -488,6 +487,95 @@ export default function DynamicRatesTab() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Configurações de Entrega Avulsa (Standalone) */}
+        <section className="bg-slate-900 px-6 py-10 sm:p-10 rounded-[56px] border border-white/5 shadow-2xl relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 -mr-48 -mt-48 rounded-full blur-[100px]"></div>
+           
+           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10 relative z-10">
+             <div className="flex items-center gap-4">
+               <div className="p-4 rounded-3xl bg-primary/10 text-primary border border-primary/20 shadow-inner">
+                 <span className="material-symbols-outlined font-black text-2xl">local_shipping</span>
+               </div>
+               <div>
+                 <h2 className="text-2xl font-black text-white tracking-tight italic">Entrega Avulsa (Izi Express)</h2>
+                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1 italic">Taxas base para solicitações diretas via painel</p>
+               </div>
+             </div>
+             <div className="px-5 py-2 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Configuração Master
+             </div>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+              <div className="p-8 rounded-[40px] bg-white/5 border border-white/5 hover:border-primary/30 transition-all space-y-6">
+                 <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-primary">payments</span>
+                    <span className="text-xs font-black text-white uppercase tracking-widest">Preços de Partida</span>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Taxa Mínima</label>
+                       <div className="relative">
+                          <input
+                             type="text"
+                             value={String(dynamicRatesState.baseValues?.standalone_min ?? '10,00')}
+                             onChange={(e) => {
+                               const newBase = { ...dynamicRatesState.baseValues, standalone_min: e.target.value };
+                               setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                             }}
+                             className="w-full bg-slate-950 border border-white/10 rounded-2xl py-4 px-5 font-black text-primary text-xl shadow-inner focus:ring-2 focus:ring-primary/20 transition-all text-right pr-12"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">R$</span>
+                       </div>
+                    </div>
+                    <div className="space-y-2">
+                       <div className="flex items-center justify-between ml-1 mb-1">
+                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Add a cada</label>
+                         <div className="flex items-center gap-1">
+                            <input
+                               type="text"
+                               value={String(dynamicRatesState.baseValues?.standalone_km_interval ?? '1')}
+                               onChange={(e) => {
+                                 const newBase = { ...dynamicRatesState.baseValues, standalone_km_interval: e.target.value };
+                                 setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                               }}
+                               className="w-8 text-center bg-transparent border-b border-white/20 outline-none font-black text-primary text-[10px] pb-0.5"
+                            />
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">km</span>
+                         </div>
+                       </div>
+                       <div className="relative">
+                          <input
+                             type="text"
+                             value={String(dynamicRatesState.baseValues?.standalone_km ?? '2,00')}
+                             onChange={(e) => {
+                               const newBase = { ...dynamicRatesState.baseValues, standalone_km: e.target.value };
+                               setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                             }}
+                             className="w-full bg-slate-950 border border-white/10 rounded-2xl py-4 px-5 font-black text-primary text-xl shadow-inner focus:ring-2 focus:ring-primary/20 transition-all text-right pr-12"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">R$</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="p-8 rounded-[40px] bg-white/5 border border-white/5 flex items-center gap-6">
+                 <div className="size-20 rounded-[30px] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-emerald-500 text-4xl font-black">info</span>
+                 </div>
+                 <div className="space-y-1">
+                    <h4 className="text-sm font-black text-white uppercase tracking-wider">Regra de Cálculo</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                       O sistema utiliza: <span className="text-emerald-400 font-bold">Mínima + ((Distância / Intervalo) × Valor)</span>. 
+                       Se o lojista possuir taxas por bairro ativas, o sistema priorizará o valor fixo do bairro.
+                    </p>
+                 </div>
+              </div>
+           </div>
         </section>
 
         {/* Equilíbrio de Marketplace Section */}

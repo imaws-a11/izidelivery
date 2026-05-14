@@ -10,7 +10,7 @@ export interface AdminContextType {
   // Auth
   session: any;
   userRole: UserRole;
-  merchantProfile: MerchantProfile | null;
+  merchantProfile: (MerchantProfile & { delivery_coverage_mode?: 'radius' | 'neighborhoods' }) | null;
   setMerchantProfile: (p: MerchantProfile | null) => void;
   handleLogout: () => Promise<void>;
 
@@ -52,6 +52,9 @@ export interface AdminContextType {
   dynamicRatesState: DynamicRatesState;
   setDynamicRatesState: (d: any) => void;
   partnersList: PartnerStore[];
+  merchantZones: any[];
+  setMerchantZones: (z: any[]) => void;
+  fetchMerchantZones: (id?: string) => Promise<void>;
 
   // Loading
   isLoadingList: boolean;

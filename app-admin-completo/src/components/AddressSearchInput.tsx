@@ -5,7 +5,7 @@ import { useAdmin } from "../context/AdminContext";
 interface AddressSearchInputProps {
   placeholder: string;
   initialValue?: string;
-  onSelect: (addr: { formatted_address: string; lat?: number; lng?: number }) => void;
+  onSelect: (addr: { formatted_address: string; lat?: number; lng?: number; neighborhood?: string }) => void;
   onClear?: () => void;
   className?: string;
   /** Localização do usuário para usar como referência de bias nas sugestões */
@@ -260,9 +260,9 @@ export const AddressSearchInput = ({
   };
 
   /**
-   * Busca lat/lng do place selecionado via Places API (New) GET
+   * Busca lat/lng e bairro do place selecionado via Places API (New) GET
    */
-  const fetchPlaceDetails = async (placeId: string): Promise<{ lat: number; lng: number } | null> => {
+  const fetchPlaceDetails = async (placeId: string): Promise<{ lat: number; lng: number; neighborhood?: string } | null> => {
     if (!isLoaded || !window.google) return null;
     
     try {
@@ -270,11 +270,21 @@ export const AddressSearchInput = ({
       const { Place } = await (window.google.maps as any).importLibrary("places");
       if (Place) {
         const place = new Place({ id: placeId });
-        await place.fetchFields({ fields: ['location'] });
+        await place.fetchFields({ fields: ['location', 'addressComponents'] });
+        
+        let neighborhood = '';
+        if (place.addressComponents) {
+          const sublocality = place.addressComponents.find((c: any) => 
+            c.types.includes('sublocality_level_1') || c.types.includes('neighborhood')
+          );
+          if (sublocality) neighborhood = sublocality.longText;
+        }
+
         if (place.location) {
           return {
             lat: place.location.lat(),
-            lng: place.location.lng()
+            lng: place.location.lng(),
+            neighborhood
           };
         }
       }
@@ -289,12 +299,21 @@ export const AddressSearchInput = ({
         const service = new window.google.maps.places.PlacesService(div);
         service.getDetails({
           placeId,
-          fields: ['geometry.location']
+          fields: ['geometry.location', 'address_components']
         }, (place, status) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+            let neighborhood = '';
+            if (place.address_components) {
+              const sublocality = place.address_components.find((c: any) => 
+                c.types.includes('sublocality_level_1') || c.types.includes('neighborhood')
+              );
+              if (sublocality) neighborhood = sublocality.long_name;
+            }
+
             resolve({
               lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng()
+              lng: place.geometry.location.lng(),
+              neighborhood
             });
           } else {
             resolve(null);
@@ -333,17 +352,17 @@ export const AddressSearchInput = ({
     setOpen(false);
     setSuggestions([]);
 
-    // Busca coordenadas do lugar para melhor precisão de rota
-    let coords: { lat: number; lng: number } | null = null;
+    // Busca coordenadas e bairro do lugar para melhor precisão de rota
+    let details: any = null;
     if (prediction.place_id) {
-      coords = await fetchPlaceDetails(prediction.place_id);
+      details = await fetchPlaceDetails(prediction.place_id);
     }
 
     if (typeof onSelect === 'function') {
       onSelect({
         formatted_address: description,
         place_id: prediction.place_id,
-        ...(coords ?? {}),
+        ...(details ?? {}),
       });
     }
   };

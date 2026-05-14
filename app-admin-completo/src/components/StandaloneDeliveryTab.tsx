@@ -11,7 +11,7 @@ export default function StandaloneDeliveryTab() {
   const { 
     merchantProfile, appSettings, session, userRole, merchantBalance, 
     fetchMerchantFinance, setShowAddCreditModal, dynamicRatesState,
-    draftStandaloneOrder, setDraftStandaloneOrder
+    draftStandaloneOrder, setDraftStandaloneOrder, merchantZones
   } = useAdmin();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,7 +34,11 @@ export default function StandaloneDeliveryTab() {
       
       // Se tiver endereço, já calcula o frete
       if (draftStandaloneOrder.delivery_address) {
-        calculateFee(draftStandaloneOrder.delivery_address.split('| ITENS:')[0]?.trim());
+        calculateFee(
+          draftStandaloneOrder.delivery_address.split('| ITENS:')[0]?.trim(),
+          { lat: draftStandaloneOrder.lat, lng: draftStandaloneOrder.lng },
+          draftStandaloneOrder.neighborhood
+        );
       }
 
       // Limpa o rascunho para não preencher de novo se sair e voltar
@@ -57,38 +61,76 @@ export default function StandaloneDeliveryTab() {
   const [estimatedFee, setEstimatedFee] = useState<number>(0);
   const [estimatedDistance, setEstimatedDistance] = useState<number>(0);
 
-  const calculateFee = async (address: string) => {
+  const calculateFee = async (address: string, coords?: { lat: number; lng: number }, selectedNeighborhood?: string) => {
     if (!address || !merchantProfile?.latitude || !merchantProfile?.longitude) return;
     try {
-       toastInfo('Calculando rota e taxa...');
-       
-       // Em um cenário real, usar Google Distance Matrix API
-       // Aqui pegamos os valores configurados pelo Admin
        const baseValues = (dynamicRatesState as any)?.baseValues || {};
        const minFee = parseFloat((baseValues.standalone_min || '10,00').replace(',', '.'));
        const kmFee = parseFloat((baseValues.standalone_km || '2,00').replace(',', '.'));
+       const kmInterval = parseFloat((baseValues.standalone_km_interval || '1').replace(',', '.'));
 
-       const distanceKm = Math.random() * 5 + 1; // 1 to 6 km
+       // 1. Verificar se é modo Bairros
+       const isNeighborhoodMode = merchantProfile?.delivery_coverage_mode === 'neighborhoods';
+       const targetNeighborhood = selectedNeighborhood || neighborhood;
+
+       if (isNeighborhoodMode && targetNeighborhood) {
+         const zone = (merchantZones || []).find(z => 
+           z.neighborhood?.toLowerCase().trim() === targetNeighborhood.toLowerCase().trim()
+         );
+         if (zone) {
+           const fee = typeof zone.fee === 'string' ? parseFloat(zone.fee.replace(',', '.')) : zone.fee;
+           setEstimatedFee(fee);
+           setEstimatedDistance(0); // Distância não é relevante em taxas por bairro fixo
+           return;
+         }
+       }
+
+       // 2. Cálculo por KM (fallback ou se modo radius)
+       let distanceKm = 1.5; // Default fallback
+       
+       if (coords?.lat && coords?.lng && (window as any).google?.maps?.geometry?.spherical) {
+         const p1 = new (window as any).google.maps.LatLng(merchantProfile.latitude, merchantProfile.longitude);
+         const p2 = new (window as any).google.maps.LatLng(coords.lat, coords.lng);
+         const meters = (window as any).google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
+         distanceKm = meters / 1000;
+       } else if (coords?.lat && coords?.lng) {
+         // Fallback manual se a lib geometry não estiver carregada
+         const R = 6371; // km
+         const dLat = (coords.lat - merchantProfile.latitude) * Math.PI / 180;
+         const dLon = (coords.lng - merchantProfile.longitude) * Math.PI / 180;
+         const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                   Math.cos(merchantProfile.latitude * Math.PI / 180) * Math.cos(coords.lat * Math.PI / 180) *
+                   Math.sin(dLon/2) * Math.sin(dLon/2);
+         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+         distanceKm = R * c;
+       }
+
        setEstimatedDistance(distanceKm);
        
-       const fee = minFee + (distanceKm * kmFee);
-       setEstimatedFee(fee);
-       toastSuccess('Taxa calculada com base nas configurações vigentes.');
+       const finalFee = minFee + ((distanceKm / Math.max(0.1, kmInterval)) * kmFee);
+       
+       setEstimatedFee(finalFee);
     } catch (err) {
        console.error('Erro ao calcular taxa:', err);
     }
   };
 
   const handleAddressSelect = (addressObj: any) => {
-    const addressStr = typeof addressObj === 'string' ? addressObj : (addressObj?.formatted_address || '');
+    const addressStr = addressObj?.formatted_address || '';
     setDeliveryAddress(addressStr);
     
-    // Extrair bairro aproximado ou manter logica anterior
-    const parts = addressStr.split('-');
-    if (parts.length > 1) {
-       setNeighborhood(parts[1].trim().split(',')[0]);
+    const extractedNeighborhood = addressObj?.neighborhood || '';
+    if (extractedNeighborhood) {
+      setNeighborhood(extractedNeighborhood);
+    } else {
+      // Fallback manual se o Google não retornar bairro
+      const parts = addressStr.split('-');
+      if (parts.length > 1) {
+         setNeighborhood(parts[1].trim().split(',')[0]);
+      }
     }
-    calculateFee(addressStr);
+
+    calculateFee(addressStr, { lat: addressObj?.lat, lng: addressObj?.lng }, extractedNeighborhood);
   };
 
   const handleCreateDelivery = async (e: React.FormEvent) => {

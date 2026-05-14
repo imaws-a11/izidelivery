@@ -35,6 +35,8 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({ child
           id: addr.id,
           label: addr.label,
           street: addr.street,
+          neighborhood: addr.neighborhood, // Added
+          address: addr.address, // Added
           details: addr.details,
           city: addr.city,
           active: addr.is_active,
@@ -56,7 +58,8 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({ child
         await supabase.from('saved_addresses').update({
           label: addr.label,
           street: addr.street,
-          address: addr.street,
+          neighborhood: addr.neighborhood, // Added
+          address: addr.address || addr.street, // Updated
           details: addr.details,
           city: addr.city,
         }).eq('id', addr.id);
@@ -66,7 +69,8 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({ child
           user_id: userId,
           label: addr.label,
           street: addr.street,
-          address: addr.street,
+          neighborhood: addr.neighborhood, // Added
+          address: addr.address || addr.street, // Updated
           details: addr.details,
           city: addr.city,
           is_active: savedAddresses.length === 0,

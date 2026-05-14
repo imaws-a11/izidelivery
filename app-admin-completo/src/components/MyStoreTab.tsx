@@ -431,17 +431,14 @@ export default function MyStoreTab() {
               </div>
 
               {/* Seletor de Modo */}
-              <div className="grid grid-cols-2 gap-3 mb-8 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5">
+              <div className="grid grid-cols-2 gap-3 mb-4 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5">
                 {[
                   { id: 'radius', icon: 'radar', label: 'Por Raio de Entrega', desc: 'Distância em km do estabelecimento' },
                   { id: 'neighborhoods', icon: 'location_city', label: 'Por Bairros', desc: 'Selecione os bairros atendidos' },
                 ].map((mode) => (
                   <button
                     key={mode.id}
-                    onClick={() => {
-                      setCoverageMode(mode.id as 'radius' | 'neighborhoods');
-                      updateProfileField('delivery_coverage_mode', mode.id);
-                    }}
+                    onClick={() => setCoverageMode(mode.id as 'radius' | 'neighborhoods')}
                     className={`flex items-center gap-4 p-5 rounded-[24px] font-black text-left transition-all ${
                       coverageMode === mode.id
                         ? 'bg-white dark:bg-slate-900 shadow-md border border-violet-200 dark:border-violet-500/30 text-violet-600 dark:text-violet-400'
@@ -465,6 +462,46 @@ export default function MyStoreTab() {
                   </button>
                 ))}
               </div>
+
+              {/* Botão salvar modo de cobertura — SEMPRE VISÍVEL */}
+              <button
+                onClick={async () => {
+                  setIsSaving(true);
+                  try {
+                    const { error } = await supabase
+                      .from('admin_users')
+                      .update({ delivery_coverage_mode: coverageMode })
+                      .eq('id', merchantProfile.merchant_id);
+                    
+                    if (error) {
+                      console.error('Erro ao salvar modo:', error);
+                      toastError('Erro ao salvar modo: ' + error.message);
+                    } else {
+                      setMerchantProfile({ ...merchantProfile, delivery_coverage_mode: coverageMode });
+                      toastSuccess(`Modo ativado: ${coverageMode === 'radius' ? 'Por Raio (KM)' : 'Por Bairros (Taxa fixa)'}`);
+                    }
+                  } catch (err: any) {
+                    console.error('Exceção ao salvar:', err);
+                    toastError('Falha crítica: ' + err.message);
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                disabled={isSaving}
+                className={`w-full mb-6 py-4 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 ${
+                  coverageMode === (merchantProfile?.delivery_coverage_mode || 'radius')
+                    ? 'bg-emerald-500 shadow-emerald-500/20'
+                    : 'bg-violet-500 hover:bg-violet-600 shadow-violet-500/20 animate-pulse'
+                }`}
+              >
+                <span className="material-symbols-outlined text-base">
+                  {coverageMode === (merchantProfile?.delivery_coverage_mode || 'radius') ? 'check_circle' : 'save'}
+                </span>
+                {isSaving ? 'Salvando...' : coverageMode === (merchantProfile?.delivery_coverage_mode || 'radius')
+                  ? `Modo Ativo: ${coverageMode === 'radius' ? 'Por Raio' : 'Por Bairros'}`
+                  : `Salvar Modo: ${coverageMode === 'radius' ? 'Por Raio' : 'Por Bairros'}`
+                }
+              </button>
 
               {/* Conteúdo condicional */}
               <AnimatePresence mode="wait">

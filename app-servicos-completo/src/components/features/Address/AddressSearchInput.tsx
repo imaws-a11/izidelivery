@@ -6,7 +6,7 @@ import { GMAPS_KEY } from '../../../config';
 interface AddressSearchInputProps {
   placeholder: string;
   initialValue?: string | any;
-  onSelect: (addr: { address?: string; formatted_address: string; lat?: number; lng?: number }) => void;
+  onSelect: (addr: { address?: string; formatted_address: string; lat?: number; lng?: number; neighborhood?: string }) => void;
   onClear?: () => void;
   className?: string;
   /** Localização do usuário para usar como referência de bias nas sugestões */
@@ -140,15 +140,26 @@ export const AddressSearchInput = ({
   /**
    * Busca lat/lng do place selecionado via Places API (New) GET
    */
-  const fetchPlaceDetails = async (placeId: string): Promise<{ lat: number; lng: number } | null> => {
+  const fetchPlaceDetails = async (placeId: string): Promise<{ lat: number; lng: number; neighborhood?: string } | null> => {
     try {
       const res = await fetch(
-        `https://places.googleapis.com/v1/places/${placeId}?fields=location&key=${GMAPS_KEY}&languageCode=pt-BR`,
+        `https://places.googleapis.com/v1/places/${placeId}?fields=location,addressComponents&key=${GMAPS_KEY}&languageCode=pt-BR`,
         { method: "GET" }
       );
       const data = await res.json();
+      
+      let neighborhood = undefined;
+      if (data?.addressComponents) {
+        const comp = data.addressComponents.find((c: any) => c.types.includes("sublocality_level_1") || c.types.includes("neighborhood"));
+        if (comp) neighborhood = comp.longText;
+      }
+
       if (data?.location) {
-        return { lat: data.location.latitude, lng: data.location.longitude };
+        return { 
+          lat: data.location.latitude, 
+          lng: data.location.longitude,
+          neighborhood 
+        };
       }
     } catch { /* silent */ }
     return null;

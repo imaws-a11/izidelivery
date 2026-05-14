@@ -299,18 +299,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               let address = "";
               
               if (status === "OK" && results && results[0]) {
-                // Filtra para remover códigos postais ou partes genéricas se desejar, 
-                // mas formatted_address costuma ser o melhor
                 address = results[0].formatted_address;
                 console.log("[GPS] Endereço geocodificado:", address);
+                
+                // Extração do bairro
+                const neighborhoodComp = results[0].address_components.find(c => 
+                  c.types.includes("sublocality_level_1") || c.types.includes("neighborhood")
+                );
+                const neighborhood = neighborhoodComp ? neighborhoodComp.long_name : "";
+                
+                const newData = { lat, lng, address, neighborhood, loading: false, error: null };
+                setUserLocation(newData);
+                resolve(newData);
               } else {
                 address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                 console.warn("[GPS] Geocoder falhou ou não retornou resultados precisos");
+                const newData = { lat, lng, address, loading: false, error: null };
+                setUserLocation(newData);
+                resolve(newData);
               }
-              
-              const newData = { lat, lng, address, loading: false, error: null };
-              setUserLocation(newData);
-              resolve(newData);
             });
           } else {
             const newData = { lat, lng, address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, loading: false, error: null };

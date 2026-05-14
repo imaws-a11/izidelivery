@@ -5,6 +5,7 @@ export interface SavedAddress {
   address?: string;
   details: string;
   city: string;
+  neighborhood?: string;
   active: boolean;
   lat?: number;
   lng?: number;

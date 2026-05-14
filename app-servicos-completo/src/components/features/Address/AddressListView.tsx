@@ -9,25 +9,70 @@ import { showConfirm } from "../../../lib/useToast";
 export const AddressListView = () => {
   const { 
     savedAddresses, 
-    handleSaveAddress, 
-    handleDeleteAddress, 
-    handleSetActiveAddress,
-    isSavingAddress,
-    resetAddressForm,
-    newAddrLabel,
-    setNewAddrLabel,
-    newAddrStreet,
-    setNewAddrStreet,
-    newAddrDetails,
-    setNewAddrDetails,
-    newAddrCity,
-    setNewAddrCity,
-    editingAddress,
-    openEditAddress
+    saveAddress, 
+    deleteAddress, 
+    setActiveAddress,
   } = useAddress();
 
   const { setSubView, userLocation } = useApp();
+  
+  // Local state for address form (missing in useAddress hook)
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<any>(null);
+  
+  const [newAddrLabel, setNewAddrLabel] = useState("");
+  const [newAddrStreet, setNewAddrStreet] = useState("");
+  const [newAddrDetails, setNewAddrDetails] = useState("");
+  const [newAddrCity, setNewAddrCity] = useState("");
+  const [newAddrNeighborhood, setNewAddrNeighborhood] = useState("");
+  const [newAddrFullAddress, setNewAddrFullAddress] = useState("");
+
+  const resetAddressForm = () => {
+    setNewAddrLabel("");
+    setNewAddrStreet("");
+    setNewAddrDetails("");
+    setNewAddrCity("");
+    setNewAddrNeighborhood("");
+    setNewAddrFullAddress("");
+    setEditingAddress(null);
+  };
+
+  const openEditAddress = (addr: any) => {
+    setEditingAddress(addr);
+    setNewAddrLabel(addr.label || "");
+    setNewAddrStreet(addr.street || "");
+    setNewAddrDetails(addr.details || "");
+    setNewAddrCity(addr.city || "");
+    setNewAddrNeighborhood(addr.neighborhood || "");
+    setNewAddrFullAddress(addr.address || "");
+    setIsAddingAddress(true);
+  };
+
+  const handleSaveAddress = async () => {
+    setIsSavingAddress(true);
+    try {
+      await saveAddress({
+        id: editingAddress?.id,
+        label: newAddrLabel,
+        street: newAddrStreet,
+        details: newAddrDetails,
+        city: newAddrCity,
+        neighborhood: newAddrNeighborhood,
+        address: newAddrFullAddress || newAddrStreet,
+        lat: userLocation.lat, // Fallback coordinates
+        lng: userLocation.lng
+      } as any);
+      resetAddressForm();
+      setIsAddingAddress(false);
+      return true;
+    } catch (error) {
+      console.error("Error saving address:", error);
+      return false;
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
 
   const handleBack = () => {
     if (isAddingAddress) {
@@ -127,6 +172,8 @@ export const AddressListView = () => {
                     userCoords={userLocation?.lat && userLocation?.lng ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                     onSelect={(place: any) => {
                       setNewAddrStreet(place.formatted_address || "");
+                      setNewAddrFullAddress(place.formatted_address || "");
+                      setNewAddrNeighborhood(place.neighborhood || "");
                       if (place.address_components) {
                         const cityComp = place.address_components.find((c: any) => c.types.includes("administrative_area_level_2"));
                         if (cityComp) setNewAddrCity(cityComp.long_name);
@@ -139,12 +186,12 @@ export const AddressListView = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Complemento</label>
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Bairro</label>
                       <input
                         type="text"
-                        value={newAddrDetails}
-                        onChange={(e) => setNewAddrDetails(e.target.value)}
-                        placeholder="Apto/Bloco"
+                        value={newAddrNeighborhood}
+                        onChange={(e) => setNewAddrNeighborhood(e.target.value)}
+                        placeholder="Bairro"
                         className="w-full bg-zinc-50 border border-zinc-100 rounded-3xl px-6 py-5 text-sm font-bold text-zinc-900 placeholder:text-zinc-300 outline-none focus:border-yellow-400 transition-colors shadow-sm"
                       />
                    </div>
@@ -158,6 +205,17 @@ export const AddressListView = () => {
                         className="w-full bg-zinc-50 border border-zinc-100 rounded-3xl px-6 py-5 text-sm font-bold text-zinc-900 placeholder:text-zinc-300 outline-none focus:border-yellow-400 transition-colors shadow-sm"
                       />
                    </div>
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Complemento / Referência</label>
+                   <input
+                     type="text"
+                     value={newAddrDetails}
+                     onChange={(e) => setNewAddrDetails(e.target.value)}
+                     placeholder="Apto, Bloco, Próximo a..."
+                     className="w-full bg-zinc-50 border border-zinc-100 rounded-3xl px-6 py-5 text-sm font-bold text-zinc-900 placeholder:text-zinc-300 outline-none focus:border-yellow-400 transition-colors shadow-sm"
+                   />
                 </div>
               </div>
 
@@ -213,7 +271,7 @@ export const AddressListView = () => {
                   }`}
                 >
                   <button
-                    onClick={() => handleSetActiveAddress(addr.id)}
+                    onClick={() => setActiveAddress(addr.id)}
                     className="flex items-center gap-4 flex-1 min-w-0 text-left active:opacity-60 transition-all"
                   >
                     <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
@@ -248,7 +306,7 @@ export const AddressListView = () => {
                       whileTap={{ scale: 0.9 }}
                       onClick={async () => {
                         const confirm = await showConfirm({ message: "Remover este endereço?", danger: true });
-                        if(confirm) handleDeleteAddress(addr.id);
+                        if(confirm) deleteAddress(addr.id);
                       }}
                       className={`size-10 rounded-xl flex items-center justify-center border transition-all ${
                         addr.active ? 'bg-zinc-900 border-zinc-800 text-red-400/50' : 'bg-white border-zinc-100 text-red-500/30'

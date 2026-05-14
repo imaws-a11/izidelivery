@@ -282,7 +282,8 @@ function App() {
       if (activeAddr) {
         console.log("[LOCATION] Sincronizando endereço ativo do usuário:", activeAddr.street);
         setUserLocation({
-          address: activeAddr.street,
+          address: activeAddr.address || activeAddr.street,
+          neighborhood: activeAddr.neighborhood,
           lat: activeAddr.lat,
           lng: activeAddr.lng,
           isManual: true, // Bloqueia sobrescrita pelo GPS
@@ -2111,11 +2112,20 @@ function App() {
        }
     }
 
-    // 5. PADRáƒÆ’O: Modo Bairros
+    // 5. PADRãƒÆ’O: Modo Bairros
     if (activeShop.coverageMode === 'neighborhoods' && activeShop.zones) {
        const userAddrLower = (userLocation.address || "").toLowerCase();
+       const userNeighborhoodLower = (userLocation.neighborhood || "").toLowerCase();
+       
        const matchedZone = Object.entries(activeShop.zones as Record<string, {active: boolean, price: number}>)
-           .find(([zName, cfg]) => cfg.active && userAddrLower.includes(zName.toLowerCase()));
+           .find(([zName, cfg]) => {
+              if (!cfg.active) return false;
+              const zoneNameLower = zName.toLowerCase();
+              // Match prioritário pelo campo bairro explícito
+              if (userNeighborhoodLower && userNeighborhoodLower === zoneNameLower) return true;
+              // Fallback por inclusão no endereço completo
+              return userAddrLower.includes(zoneNameLower);
+           });
            
        if (matchedZone) {
           console.log(`[DELIVERY] Zona de bairro encontrada: ${matchedZone[0]} -> R$ ${matchedZone[1].price}`);
@@ -3008,6 +3018,7 @@ const navigateSubView = (target: string) => {
   };
   const [userLocation, setUserLocation] = useState<{
     address: string;
+    neighborhood?: string;
     loading: boolean;
     lat?: number | null;
     lng?: number | null;

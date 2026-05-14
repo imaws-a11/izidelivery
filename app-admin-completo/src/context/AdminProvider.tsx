@@ -540,6 +540,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             free_delivery: data.free_delivery ?? false,
             estimated_time: data.estimated_time || '30-45 min',
             store_type: data.store_type || 'restaurant',
+            delivery_coverage_mode: data.delivery_coverage_mode || 'radius',
             food_category: Array.isArray(data.food_category) ? data.food_category : [data.food_category || 'all'],
             payment_enabled: data.payment_enabled ?? true,
             document: data.document || '',
@@ -3247,6 +3248,31 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [dashboardOrders, merchantsList, appSettings, userRole, merchantProfile?.id]);
 
+  const [merchantZones, setMerchantZones] = useState<any[]>([]);
+
+  const fetchMerchantZones = useCallback(async (explicitId?: string) => {
+    const idToUse = explicitId || merchantProfile?.id || selectedMerchantPreview?.id;
+    if (!idToUse) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('merchant_delivery_zones')
+        .select('*')
+        .eq('merchant_id', idToUse);
+      
+      if (error) throw error;
+      if (data) setMerchantZones(data);
+    } catch (err: any) {
+      console.error('Erro ao buscar zonas do lojista:', err.message);
+    }
+  }, [merchantProfile?.id, selectedMerchantPreview?.id]);
+
+  useEffect(() => {
+    if (merchantProfile?.id) {
+      fetchMerchantZones(merchantProfile.id);
+    }
+  }, [merchantProfile?.id, fetchMerchantZones]);
+
   const value: AdminContextType = {
     session,
     activeTab,
@@ -3258,7 +3284,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isLoadingList, isInitialLoading, stats, recentOrders, usersList, driversList, 
     allOrders, dashboardOrders, setDashboardOrders, myDriversList, merchantsList, partnersList, productsList, menuCategoriesList, 
     categoriesState, setCategoriesState, promotionsList, auditLogsList, myDedicatedSlots, 
-    subscriptionOrders, dynamicRatesState, setDynamicRatesState, ordersPage, setOrdersPage, 
+    subscriptionOrders, dynamicRatesState, setDynamicRatesState, merchantZones, setMerchantZones, fetchMerchantZones, ordersPage, setOrdersPage, 
     ordersTotalCount, merchantOrdersPage, setMerchantOrdersPage, merchantOrdersTotalCount, 
     subscriptionOrdersPage, setSubscriptionOrdersPage, subscriptionOrdersTotalCount, 
     driversPage, setDriversPage, filteredDrivers: [], paginatedDrivers: [], 
