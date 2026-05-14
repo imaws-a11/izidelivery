@@ -3152,54 +3152,60 @@ function MainApp() {
 
  setIsAccepting(true);
  
- try {
- const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
- let token = await getSecureToken();
+  try {
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  let token = await getSecureToken();
 
- const authHeaders = { 
- 'apikey': supabaseKey, 
- 'Authorization': `Bearer ${token}`,
- 'Content-Type': 'application/json',
- 'Prefer': 'return=representation'
- };
- 
- // A regra RLS exige que o status mude para 'confirmado' para validar o aceite.
- // Também permitimos aceitar se o driver_id já for o meu (atribuição manual do lojista).
- const updateRes = await iziFetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}&or=(driver_id.is.null,driver_id.eq.${driverId})`, {
- method: 'PATCH',
- headers: authHeaders,
- body: JSON.stringify({
- status: 'confirmado',
- driver_id: driverId,
- updated_at: new Date().toISOString()
- })
- });
+  const authHeaders = { 
+  'apikey': supabaseKey, 
+  'Authorization': `Bearer ${token}`,
+  'Content-Type': 'application/json'
+  };
+  
+  // RPC atômica — SELECT FOR UPDATE SKIP LOCKED impede race condition
+  const rpcRes = await iziFetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/claim_order`, {
+  method: 'POST',
+  headers: authHeaders,
+  body: JSON.stringify({
+  p_order_id: targetId,
+  p_driver_id: driverId,
+  p_new_status: newStatus
+  })
+  });
 
- if (!updateRes.ok) throw new Error('Falha na comunicação com o servidor.');
+  if (!rpcRes.ok) throw new Error('Falha na comunicação com o servidor.');
 
- const updatedData = await updateRes.json();
- 
- if (!updatedData || updatedData.length === 0) {
- stopIziSounds(); // Garante que o som pare mesmo no erro
- toastError('Não foi possível assumir esta corrida. Verifique se ela ainda está disponível.');
- setOrders(previousOrders);
- setActiveMission(previousActiveMission);
- setActiveMissions(previousActiveMissions);
- setActiveTab(previousActiveTab);
- if (!previousActiveMission) localStorage.removeItem('Izi_active_mission');
- setIsAccepting(false);
- return;
- }
+  const result = await rpcRes.json();
+  
+  if (!result?.success) {
+  stopIziSounds();
+  const errorMsg = result?.error === 'ALREADY_CLAIMED'
+  ? 'Este pedido já foi aceito por outro entregador!'
+  : result?.error === 'ORDER_LOCKED'
+  ? 'Pedido em processamento. Tente outro.'
+  : result?.message || 'Pedido indisponível.';
+  toastError(errorMsg);
+  setOrders(previousOrders);
+  setActiveMission(previousActiveMission);
+  setActiveMissions(previousActiveMissions);
+  setActiveTab(previousActiveTab);
+  if (!previousActiveMission) localStorage.removeItem('Izi_active_mission');
+  if (result?.error === 'ALREADY_CLAIMED') {
+  setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
+  }
+  setIsAccepting(false);
+  return;
+  }
 
- const realOrder = updatedData[0];
- const finalMission = { ...optimisticMission, ...realOrder };
- 
- if (!isScheduled) {
- setActiveMission(finalMission);
- localStorage.setItem('Izi_active_mission', JSON.stringify(finalMission));
- } else {
- setScheduledOrders(prev => prev.map(s => s.id === targetId || s.realId === targetId ? { ...s, ...finalMission } : s));
- }
+  const realOrder = result.order;
+  const finalMission = { ...optimisticMission, ...realOrder };
+  
+  if (!isScheduled) {
+  setActiveMission(finalMission);
+  localStorage.setItem('Izi_active_mission', JSON.stringify(finalMission));
+  } else {
+  setScheduledOrders(prev => prev.map(s => s.id === targetId || s.realId === targetId ? { ...s, ...finalMission } : s));
+  }
 
  } catch (e: any) {
  toastError('Erro ao confirmar: ' + e.message);
@@ -4437,7 +4443,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </li>
  <li className="flex gap-3 text-xs text-yellow-600 font-bold items-start leading-relaxed uppercase tracking-tight">
  <span className="text-yellow-500 font-bold">â€¢</span> 
- O início da missão só é liberado no horário exato.
+ O início da missão é liberado 1 hora antes do horário agendado.
  </li>
  </ul>
  </div>
@@ -4471,7 +4477,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  (() => {
  const now = new Date();
  const scheduledDate = new Date(order.scheduled_at);
- const canStartVisible = now.getTime() >= scheduledDate.getTime();
+  const oneHourBefore = new Date(scheduledDate.getTime() - 60 * 60 * 1000);
+  const canStartVisible = now.getTime() >= oneHourBefore.getTime();
  
  if (!canStartVisible) {
  return (
@@ -4481,7 +4488,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <span className="text-yellow-600 font-bold uppercase tracking-widest text-[11px]">Início Bloqueado</span>
  </div>
  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">
- Disponível em {scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h
+  {(() => { const dMs = oneHourBefore.getTime() - now.getTime(); const dH = Math.floor(dMs / 3600000); const dM = Math.ceil((dMs % 3600000) / 60000); return dH > 0 ? `Liberado 1h antes — faltam ${dH}h ${dM}min` : `Liberado 1h antes — faltam ${dM} min`; })()}
  </p>
  </div>
  );
@@ -6156,8 +6163,26 @@ const handleUpdateStatus = async (newStatus: string) => {
  'atribuido', 'accepted', 'waiting_driver', 'pending', 'novo'
  ].includes(s);
  
- if (isStartable) 
- return { label: (s === 'scheduled' || s === 'agendado' || s === 'agendamento') ? 'Iniciar Missão' : 'Cheguei na Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
+  if (isStartable) {
+  // Para agendamentos, verificar se falta menos de 1h
+  if (s === 'scheduled' || s === 'agendado' || s === 'agendamento') {
+    const scheduledAt = activeMission.scheduled_at;
+    if (scheduledAt) {
+      const now = new Date();
+      const scheduledDate = new Date(scheduledAt);
+      const oneHourBefore = new Date(scheduledDate.getTime() - 60 * 60 * 1000);
+      if (now.getTime() < oneHourBefore.getTime()) {
+        const diffMs = oneHourBefore.getTime() - now.getTime();
+        const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffM = Math.ceil((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const timeStr = diffH > 0 ? `${diffH}h ${diffM}min` : `${diffM} min`;
+        return { label: `Bloqueado — faltam ${timeStr}`, action: () => toastError(`Início liberado 1h antes do agendamento (${scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h)`), icon: 'schedule', disabled: true };
+      }
+    }
+    return { label: 'Iniciar Missão', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
+  }
+  return { label: 'Cheguei na Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
+  }
  if (['chegou_coleta', 'no_local_coleta'].includes(s) || s === 'pronto') 
  return { label: 'Confirmar Coleta', action: () => handleUpdateStatus('picked_up'), icon: 'inventory_2' };
  if (s === 'picked_up') 
@@ -6515,7 +6540,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  // Para status terminal (concluído/cancelado), o botão nunca deve ser bloqueado por isAccepting
  const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
  const isTerminal = terminalStatuses.includes((activeMission.status || '').toLowerCase().trim());
- const isDisabled = isTerminal ? false : isAccepting;
+ const isDisabled = isTerminal ? false : (isAccepting || btn.disabled);
  return (
  <motion.button 
  whileHover={{ scale: 1.02 }}
