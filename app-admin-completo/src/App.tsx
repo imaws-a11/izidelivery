@@ -41,6 +41,7 @@ import MerchantProfileTab from './components/MerchantProfileTab';
 import WalletHistoryTab from './components/WalletHistoryTab';
 import GlobalOrderDetailsModal from './components/GlobalOrderDetailsModal';
 import LiveOrderTracking from './components/LiveOrderTracking';
+import IntegrationsTab from './components/IntegrationsTab';
 // import EstablishmentTypesTab from './components/EstablishmentTypesTab';
 
 
@@ -231,6 +232,7 @@ export default function App() {
                        <NavTab id="financial" icon="account_balance_wallet" label="Financeiro" />
                        <NavTab id="merchant_profile" icon="person" label="Perfil" />
                        <NavTab id="settings" icon="settings" label="Config" />
+                       <NavTab id="integrations" icon="api" label="Integrações" />
                      </>
                    )}
 
@@ -242,6 +244,7 @@ export default function App() {
                         )}
                         <NavTab id="merchant_profile" icon="person" label="Perfil" />
                         <NavTab id="settings" icon="settings" label="Config" />
+                        <NavTab id="integrations" icon="api" label="Integrações" />
                      </>
                    )}
                    
@@ -268,6 +271,7 @@ export default function App() {
                   <NavTab id="audit_logs" icon="history" label="Logs" />
                   <NavTab id="support" icon="support_agent" label="Suporte" />
                   <NavTab id="settings" icon="settings" label="Sistema" />
+                  <NavTab id="integrations" icon="api" label="Integrações" />
                </>
              )}
           </div>
@@ -326,6 +330,7 @@ export default function App() {
               {activeTab === 'notifications' && <NotificationsTab />}
               {activeTab === 'gamification' && <GamificationTab />}
               {activeTab === 'live_tracking' && <LiveOrderTracking />}
+              {activeTab === 'integrations' && <IntegrationsTab />}
             </motion.div>
           </AnimatePresence>
         </main>
