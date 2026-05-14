@@ -22,6 +22,7 @@ import NotificationsCenterView from './components/features/NotificationsCenterVi
 import Icon from './components/common/Icon';
 import { incrementMissionProgress } from './lib/gamification';
 import HistoryView from './components/features/HistoryView';
+import { DashboardView } from './components/features/DashboardView';
 import EarningsView from './components/features/EarningsView';
 import ProfileView from './components/features/ProfileView';
 import ScheduledView from './components/features/ScheduledView';
@@ -399,37 +400,6 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
 
 
 
-// Normaliza aliases variados de service_type que vêm do banco de dados para os tipos canónicos
-const normalizeServiceType = (raw: string | undefined | null): string => {
-    if (!raw) return 'delivery';
-    try {
-        const t = String(raw).toLowerCase().trim();
-        // Tipos de comida / restaurante
-        if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
-             'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
-             'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
-        // Mercado / supermercado
-        if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
-        // Farmácia / saúde
-        if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
-        if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
-        // Mobilidade
-        if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
-        if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
-        if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
-        // Logística
-        if (['van'].includes(t)) return 'van';
-        if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
-        if (['logistica', 'logistics'].includes(t)) return 'logistica';
-        if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
-        if (['motoboy', 'courier', 'moto', 'motoboy_express', 'entrega_avulsa'].includes(t)) return 'motoboy';
-        if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
-        return t; 
-    } catch (e) {
-        return 'delivery';
-    }
-};
-
 const getTypeDetails = (rawType: string) => {
     const type = normalizeServiceType(rawType);
     switch (type) {
@@ -459,16 +429,7 @@ const normalizeLookupText = (value: unknown): string =>
 
 const includesAny = (text: string, terms: string[]) => terms.some(term => text.includes(term));
 
-const cleanAddressText = (value: string | undefined | null): string => {
-    let raw = String(value || '').trim();
-    if (raw.startsWith('{')) {
-        try {
-            const parsed = JSON.parse(raw);
-            if (parsed.address) raw = parsed.address;
-        } catch (e) {}
-    }
-    return raw.split('|')[0].trim();
-};
+
 
 const getAddressMeta = (value: string | undefined | null): string => {
     const raw = String(value || '');
@@ -583,7 +544,7 @@ const getServicePresentation = (order: any) => {
 
     let summary = '';
     if (itemCount > 0) {
-        summary = itemNames.slice(0, 2).join(' • ');
+        summary = itemNames.slice(0, 2).join(' â€¢ ');
         if (itemCount > 2) summary += ` +${itemCount - 2}`;
     } else if (addressMeta) {
         summary = addressMeta
@@ -710,7 +671,7 @@ function MainApp() {
         }
     }, []);
 
-    // --- SINCRONIZAÇÃO E BOOTSTRAP ---
+    // --- SINCRONIZAÇÁO E BOOTSTRAP ---
     useEffect(() => {
         let isMounted = true;
 
@@ -902,6 +863,7 @@ function MainApp() {
         setIsSavingProfile(true);
         try {
             const sUrl = import.meta.env.VITE_SUPABASE_URL;
+            const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             const token = await getSecureToken();
             
             console.log('[DEBUG] Enviando update para drivers_delivery:', {
@@ -974,7 +936,7 @@ function MainApp() {
     /**
      * @CRITICAL_LOGIC - BUSCA DIRETA (BYPASS) DE VAGAS DEDICADAS
      * @AUTHOR Antigravity (Senior AI Dev)
-     * @WARNING NÃƒO ALTERAR PARA SUPABASE-JS LIBRARY. 
+     * @WARNING NÃO ALTERAR PARA SUPABASE-JS LIBRARY. 
      * Este método via fetch nativo foi implementado para contornar travamentos persistentes 
      * na biblioteca cliente. Qualquer mudança para o método tradicional resultará em 
      * falha de carregamento das vagas na tela do entregador.
@@ -1046,7 +1008,7 @@ function MainApp() {
     const [activeTab, setActiveTab] = useState<View>(() => {
         const saved = localStorage.getItem('izi_driver_active_tab') as View;
         // Abas que são overlays (fixos full-screen) ou dependem de estado dinâmico
-        // NÃO devem ser restauradas no refresh para evitar telas vazias/sobrepostas
+        // NÁO devem ser restauradas no refresh para evitar telas vazias/sobrepostas
         const overlaytabs: View[] = ['profile', 'notifications', 'active_mission'];
         const validTabs: View[] = ['dashboard', 'history', 'earnings', 'missions', 'dedicated', 'scheduled'];
         if (overlaytabs.includes(saved)) return 'dashboard';
@@ -1168,8 +1130,8 @@ function MainApp() {
             // 2. Notificação Web Push (Apenas se disponível)
             const servicePreview = getServicePresentation(latest);
             if (!Capacitor.isNativePlatform() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                new Notification('🚀 Nova Missão Izi!', { 
-                    body: `${servicePreview.headline} • ${servicePreview.pickupText || latest.pickup_address}`, 
+                new Notification('ðŸš€ Nova Missão Izi!', { 
+                    body: `${servicePreview.headline} â€¢ ${servicePreview.pickupText || latest.pickup_address}`, 
                     icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                 });
             }
@@ -1239,7 +1201,7 @@ function MainApp() {
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
     const hasBootedRef = useRef(false);
-    const isLoggingOutRef = useRef(false); // Garante que syncMissionWithDB e restauração sÂ³ ocorrem 1x por sessão
+    const isLoggingOutRef = useRef(false); // Garante que syncMissionWithDB e restauração só ocorrem 1x por sessão
     const lastLocationUpdateRef = useRef<number>(0); // Throttle de update de GPS no banco
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
@@ -1626,7 +1588,7 @@ function MainApp() {
             setSelectedOrder(null);
             setSelectedScheduledOrder(null);
             
-            // Só limpa o slot selecionado se NÃO estiver indo para a aba de vagas
+            // Só limpa o slot selecionado se NÁO estiver indo para a aba de vagas
             // Isso permite que o dashboard abra o detalhe da vaga
             if (activeTab !== 'dedicated') {
                 setSelectedSlot(null);
@@ -1796,7 +1758,7 @@ function MainApp() {
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
-        // Permite GPS se estiver ONLINE ou em uma MISSÃO ATIVA
+        // Permite GPS se estiver ONLINE ou em uma MISSÁO ATIVA
         if (!isOnline && !activeMission) return;
         
         const updateLocation = (lat: number, lng: number) => {
@@ -1813,7 +1775,7 @@ function MainApp() {
         let webWatchId: number | undefined;
 
         const startNativeTracking = async () => {
-            // ── AMBIENTE NATIVO (APK Android/iOS) ──
+            // â”€â”€ AMBIENTE NATIVO (APK Android/iOS) â”€â”€
             if (Capacitor.isNativePlatform()) {
                 try {
                     const permissions = await Geolocation.checkPermissions();
@@ -1844,7 +1806,7 @@ function MainApp() {
                 return;
             }
 
-            // ── AMBIENTE WEB (browser) ─ usa API nativa do browser ──
+            // â”€â”€ AMBIENTE WEB (browser) â”€ usa API nativa do browser â”€â”€
             if (!navigator.geolocation) {
                 return;
             }
@@ -1919,7 +1881,7 @@ function MainApp() {
                 return;
             }
 
-            // --- SINCRONIZAÇÃO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
+            // --- SINCRONIZAÇÁO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
             
             // 1. Nome e Avatar
             const currentName = profile.name || userName || 'Entregador Izi';
@@ -2058,7 +2020,7 @@ function MainApp() {
         }
     }, [activeTab]);
 
-    // SINCRONIZAÇÃO MULTIDISPOSITIVO (Perfil, Status e Vínculo)
+    // SINCRONIZAÇÁO MULTIDISPOSITIVO (Perfil, Status e Vínculo)
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
@@ -2212,7 +2174,7 @@ function MainApp() {
 
 
     // =====================================================================
-    // RESTAURAÇÃO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
+    // RESTAURAÇÁO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
     // =====================================================================
     useEffect(() => {
         if (!driverId || !isAuthenticated || !isProfileLoaded) return;
@@ -2236,7 +2198,7 @@ function MainApp() {
                 if (typeof ForegroundService !== 'undefined') {
                     ForegroundService.startForegroundService({
                         id: 1001,
-                        title: "Izi Entregador: Online ✅",
+                        title: "Izi Entregador: Online âœ…",
                         body: "Buscando novas chamadas em tempo real...",
                         importance: 5,
                         icon: 'notification_icon'
@@ -2325,7 +2287,7 @@ function MainApp() {
                     if (nextState && !activeMission) {
                         await ForegroundService.startForegroundService({
                             id: 1001,
-                            title: "Izi Entregador: Online ✅",
+                            title: "Izi Entregador: Online âœ…",
                             body: "Buscando novas chamadas em tempo real...",
                             importance: 5,
                             icon: 'notification_icon'
@@ -2571,7 +2533,7 @@ function MainApp() {
                         
                         setShowApprovedSlotModal(true);
 
-                        toastSuccess("🚀 VAGA CONFIRMADA! Clique para ver os detalhes.");
+                        toastSuccess("ðŸš€ VAGA CONFIRMADA! Clique para ver os detalhes.");
                     }
                     
                     // Sincroniza estados após qualquer atualização minha
@@ -2801,7 +2763,7 @@ function MainApp() {
                 const hasDriver = o.driver_id && String(o.driver_id).trim() !== '' && String(o.driver_id).trim() !== String(driverId).trim();
                 if (hasDriver) return false;
 
-                // FILTRO DE COMPATIBILIDADE DE VEÍCULO
+                // FILTRO DE COMPATIBILIDADE DE VEÃCULO
                 // Evita que motos vejam fretes, etc.
                 const myV = driverVehicle?.toLowerCase() || 'moto';
                 const allowedForVehicle = VEHICLE_COMPATIBILITY[myV] || [];
@@ -2888,7 +2850,7 @@ function MainApp() {
                 const currentMission = activeMissionRef.current;
                 const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
 
-                // 1. GESTÃO DA MISSÃO ATIVA DESTE MOTORISTA
+                // 1. GESTÁO DA MISSÁO ATIVA DESTE MOTORISTA
                 if (isMyOrder) {
                     const status = String(o.status || '').toLowerCase().trim();
                     const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered', 'rejected', 'recusado'];
@@ -2909,7 +2871,7 @@ function MainApp() {
                     const isNowReady = o.preparation_status === 'pronto';
                     if (wasPreparing && isNowReady) {
                         playIziSound('driver', true);
-                        toastSuccess('🔔 O Pedido está PRONTO para coleta!');
+                        toastSuccess('ðŸ”” O Pedido está PRONTO para coleta!');
                     }
 
                     const mission = { 
@@ -2938,7 +2900,7 @@ function MainApp() {
                     return;
                 }
 
-                // 2. GESTÃO DO RADAR (Pedidos disponíveis)
+                // 2. GESTÁO DO RADAR (Pedidos disponíveis)
                 // Removemos 'confirmado' e 'accepted' dos actionableStatuses pois eles indicam que alguém já pegou
                 const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'];
                 const isAcceptable = o.status && actionableStatuses.includes(o.status);
@@ -2949,8 +2911,8 @@ function MainApp() {
                 }
 
                 // --- REGRA DE EXCLUSIVIDADE (Realtime) ---
-                // Pedido de lojista EXCLUSIVO → só o entregador vinculado a esse lojista pode ver
-                // Pedido de lojista GLOBAL → TODOS os entregadores podem ver
+                // Pedido de lojista EXCLUSIVO â†’ só o entregador vinculado a esse lojista pode ver
+                // Pedido de lojista GLOBAL â†’ TODOS os entregadores podem ver
                 const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
                 const orderMerchantId = o.merchant_id ? String(o.merchant_id) : null;
                 const isOrderFromExclusiveMerchant = orderMerchantId && (exclusiveMerchantIdsRef.current || []).includes(orderMerchantId);
@@ -3088,7 +3050,7 @@ function MainApp() {
         const targetId = order.realId || order.id;
         if (!targetId) return;
 
-        // 1. ATUALIZAÇÃO OTIMISTA: Feedback Imediato
+        // 1. ATUALIZAÇÁO OTIMISTA: Feedback Imediato
         const isScheduled = !!order.scheduled_at;
         const newStatus = isScheduled ? 'confirmado' : 'a_caminho_coleta';
         const optimisticMission = { 
@@ -3526,7 +3488,7 @@ function MainApp() {
         const missionId = activeMission.realId || activeMission.id;
         if (!missionId) return;
 
-        // 1. ATUALIZAÇÃO OTIMISTA: Feedback Imediato
+        // 1. ATUALIZAÇÁO OTIMISTA: Feedback Imediato
         const updatedMission = { 
             ...activeMission, 
             status: newStatus.toLowerCase(), 
@@ -3566,7 +3528,7 @@ function MainApp() {
             toastSuccess(`Status: ${newStatus === 'chegou_coleta' ? 'Na Coleta' : newStatus === 'saiu_para_entrega' ? 'Em Rota' : newStatus}`);
         }
 
-        // 2. SINCRONIZAÇÃO EM BACKGROUND
+        // 2. SINCRONIZAÇÁO EM BACKGROUND
         const syncStatus = async () => {
             try {
                 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -3940,7 +3902,7 @@ function MainApp() {
             return;
         }
 
-        // --- TRAVA DE SEGURANÃ‡A: Verificação de duplicados ---
+        // --- TRAVA DE SEGURANÇA: Verificação de duplicados ---
         const alreadyApplied = myApplications.some(app => String(app.slot_id) === String(slot.id) && app.status !== 'rejected');
         
         if (alreadyApplied) {
@@ -4022,7 +3984,7 @@ function MainApp() {
 
             setShowSlotAppliedSuccess(true);
             
-            // --- ATUALIZAÇÃO OTIMISTA ---
+            // --- ATUALIZAÇÁO OTIMISTA ---
             const newApp = {
                 slot_id: slot.id,
                 driver_id: driverId,
@@ -4191,7 +4153,7 @@ function MainApp() {
                                                     <div className="flex items-center gap-1.5">
                                                         {!isAccepted && <div className="size-1 rounded-full bg-yellow-500 animate-ping" />}
                                                         <span className={`text-[8px] font-bold uppercase ${isAccepted ? 'opacity-70' : 'text-zinc-400'}`}>
-                                                            {isAccepted ? 'VOCÃŠ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
+                                                            {isAccepted ? 'VOCÊ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -4376,19 +4338,19 @@ function MainApp() {
                         </div>
                         <ul className="space-y-4">
                             <li className="flex gap-4 text-xs text-zinc-500 font-bold items-start leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-500 font-black">•</span> 
+                                <span className="text-yellow-500 font-black">â€¢</span> 
                                 Comparecer ao local com 15 min de antecedência.
                             </li>
                             <li className="flex gap-4 text-xs text-zinc-500 font-bold items-start leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-500 font-black">•</span> 
+                                <span className="text-yellow-500 font-black">â€¢</span> 
                                 Estar com bateria do celular acima de 80%.
                             </li>
                             <li className="flex gap-4 text-xs text-zinc-500 font-bold items-start leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-500 font-black">•</span> 
+                                <span className="text-yellow-500 font-black">â€¢</span> 
                                 Traje profissional e baú limpo.
                             </li>
                             <li className="flex gap-4 text-xs text-yellow-600 font-black items-start leading-relaxed uppercase tracking-tight">
-                                <span className="text-yellow-500 font-black">•</span> 
+                                <span className="text-yellow-500 font-black">â€¢</span> 
                                 O início da missão só é liberado no horário exato.
                             </li>
                         </ul>
@@ -4452,7 +4414,7 @@ function MainApp() {
                                         className="w-full h-20 bg-zinc-900 text-white rounded-[28px] font-black text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3"
                                     >
                                         <Icon name="check_circle" className="text-emerald-400" />
-                                        Missão Concluída • Fechar
+                                        Missão Concluída â€¢ Fechar
                                     </button>
                                 );
                             }
@@ -4579,7 +4541,7 @@ function MainApp() {
                                 }
                                 
                                 if (isToday && s.working_hours) {
-                                    const match = s.working_hours.match(/(?:as|às|ate|até|-)\s*(\d{1,2})(?:[:h]\d{2})?/i);
+                                    const match = s.working_hours.match(/(?:as|À s|ate|até|-)\s*(\d{1,2})(?:[:h]\d{2})?/i);
                                     if (match) {
                                         let endHour = parseInt(match[1], 10);
                                         if (endHour <= 4) endHour += 24;
@@ -4976,7 +4938,7 @@ function MainApp() {
                             <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Data e Hora</span>
                                 <span className="text-[10px] font-bold text-zinc-900 uppercase">
-                                    {new Date(tx.created_at).toLocaleDateString('pt-BR')} às {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(tx.created_at).toLocaleDateString('pt-BR')} À s {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
@@ -5201,7 +5163,7 @@ function MainApp() {
                     </header>
 
                     <div className="px-6 pt-8 pb-32 space-y-8">
-                        {/* SEÇÃO 1: VEÍCULO ATIVO */}
+                        {/* SEÇÁO 1: VEÃCULO ATIVO */}
                         <div className="space-y-4">
                             <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículo em Uso</h3>
                             <div className="bg-zinc-900 rounded-[32px] p-6 text-white shadow-2xl relative overflow-hidden group">
@@ -5227,7 +5189,7 @@ function MainApp() {
                             </div>
                         </div>
 
-                        {/* SEÇÃO 2: OUTROS VEÍCULOS APROVADOS */}
+                        {/* SEÇÁO 2: OUTROS VEÃCULOS APROVADOS */}
                         {myVehicles.filter(v => !v.is_active).length > 0 && (
                             <div className="space-y-4">
                                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículos Aprovados</h3>
@@ -5243,7 +5205,7 @@ function MainApp() {
                                                     <Icon name={v.vehicle_type === 'mototaxi' ? 'two_wheeler' : 'directions_car'} size={20} />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-sm font-black text-zinc-900 leading-none capitalize">{v.vehicle_type} • {v.plate}</p>
+                                                    <p className="text-sm font-black text-zinc-900 leading-none capitalize">{v.vehicle_type} â€¢ {v.plate}</p>
                                                     <p className="text-[10px] font-bold text-zinc-400 mt-1">{v.model}</p>
                                                 </div>
                                             </div>
@@ -5268,7 +5230,7 @@ function MainApp() {
                                                     <Icon name="history" size={20} />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-sm font-black text-amber-900 leading-none capitalize">{req.vehicle_type} • {req.plate || 'Bike'}</p>
+                                                    <p className="text-sm font-black text-amber-900 leading-none capitalize">{req.vehicle_type} â€¢ {req.plate || 'Bike'}</p>
                                                     <p className="text-[10px] font-bold text-amber-600/70 mt-1">{req.model}</p>
                                                 </div>
                                             </div>
@@ -5282,7 +5244,7 @@ function MainApp() {
                             </div>
                         )}
 
-                        {/* BOTÃO NOVO VEÍCULO */}
+                        {/* BOTÁO NOVO VEÃCULO */}
                         <div className="pt-4">
                             <button 
                                 onClick={() => setShowNewVehicleForm(true)}
@@ -5323,7 +5285,7 @@ function MainApp() {
                                     </button>
                                 </div>
                                 <p className="text-[10px] text-zinc-400 font-bold leading-relaxed bg-blue-50 border border-blue-100 rounded-[16px] p-4">
-                                    <span className="text-blue-600">ℹ️</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
+                                    <span className="text-blue-600">â„¹ï¸</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
                                 </p>
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -5561,16 +5523,6 @@ function MainApp() {
             )}
         </AnimatePresence>
     );
-
-                                    Salvar Dados
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </motion.div>
-        );
-    };
 
     const renderHelpModal = () => {
         const supportPhone = '5531995610728';
@@ -5957,7 +5909,7 @@ function MainApp() {
     };
 
     const renderActiveMissionView = () => {
-        // TELA DE SELEÇÃO: Se não tem missão selecionada, mostra a lista de missões ativas
+        // TELA DE SELEÇÁO: Se não tem missão selecionada, mostra a lista de missões ativas
         if (!activeMission) {
             // Se tem missões ativas no array, mostra os cards de seleção
             if (activeMissions.length > 0) {
@@ -5988,7 +5940,7 @@ function MainApp() {
                                         }}
                                         className="w-full p-5 rounded-[28px] bg-white border border-zinc-100 text-left flex items-start gap-4 transition-all active:bg-zinc-50"
                                     >
-                                        {/* Ícone de status */}
+                                        {/* Ãcone de status */}
                                         <div className={`size-14 rounded-2xl ${st.bg} flex items-center justify-center shrink-0`}>
                                             <Icon name={st.icon} size={28} className={st.color} />
                                         </div>
@@ -5997,7 +5949,7 @@ function MainApp() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className={`text-[9px] font-black uppercase tracking-widest ${st.color}`}>{st.label}</span>
-                                                <span className="text-[9px] text-zinc-200">•</span>
+                                                <span className="text-[9px] text-zinc-200">â€¢</span>
                                                 <span className="text-[9px] text-zinc-400 font-bold">#{(m.realId || m.id || '').slice(0,6)}</span>
                                             </div>
                                             <p className="text-sm font-black text-zinc-950 truncate">{storeName}</p>
@@ -6102,7 +6054,7 @@ function MainApp() {
             // CASO TERMINAL: Se a missão já acabou mas ainda está na tela, o botão serve para fechar.
             if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s)) {
                 return { 
-                    label: 'Concluído • Fechar', 
+                    label: 'Concluído â€¢ Fechar', 
                     action: () => {
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
@@ -6390,7 +6342,7 @@ function MainApp() {
 
                         {/* Izi Pay Premium Section */}
                         <section className="space-y-4 pb-4">
-                             <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
+                             <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay â€¢ Rendimento</h2>
                              <div className="bg-white border border-zinc-100 p-6 rounded-3xl relative overflow-hidden shadow-sm">
                                  
                                  <div className="flex justify-between items-center relative z-10">
@@ -6625,7 +6577,7 @@ function MainApp() {
                         <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white border border-zinc-200 text-zinc-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-black transition-all shadow-sm">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
                     </div>
                 </div>
-                <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
+                <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 â€¢ Conexão Segura</p>
             </motion.div>
         );
     };
@@ -6909,11 +6861,11 @@ function MainApp() {
                                     {(() => {
                                         const itemNotes = selectedOrder.items
                                             ?.filter((item: any) => item.observation)
-                                            .map((item: any) => `• ${item.name || item.product_name}:\n  "${item.observation}"`)
+                                            .map((item: any) => `â€¢ ${item.name || item.product_name}:\n  "${item.observation}"`)
                                             .join('\n\n');
                                         
                                         const notesList = [];
-                                        if (selectedOrder.notes) notesList.push(`• Geral:\n  "${selectedOrder.notes}"`);
+                                        if (selectedOrder.notes) notesList.push(`â€¢ Geral:\n  "${selectedOrder.notes}"`);
                                         if (itemNotes) notesList.push(itemNotes);
                                         
                                         const displayNotes = notesList.length > 0 ? notesList.join('\n\n') : 'Sem observações especiais dos produtos.';
@@ -7146,7 +7098,7 @@ function MainApp() {
                                     )}
                                     
                                     <p className="text-zinc-400 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase leading-relaxed">
-                                        Seu perfil premium foi enviado para análise. Fique atento às suas notificações!
+                                        Seu perfil premium foi enviado para análise. Fique atento À s suas notificações!
                                     </p>
 
                                     <button
@@ -7295,7 +7247,7 @@ function MainApp() {
                                                     </div>
                                                     <div className="text-left flex-1">
                                                         <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-0.5">Em Andamento</p>
-                                                        <p className="text-sm font-black leading-tight">Retornar à Missão</p>
+                                                        <p className="text-sm font-black leading-tight">Retornar À  Missão</p>
                                                     </div>
                                                     <Icon name="chevron_right" className="text-emerald-100" />
                                                 </button>
@@ -7893,9 +7845,9 @@ function MainApp() {
 
 export default function App() {
     return (
-        <GlobalErrorBoundary>
+        <ErrorBoundary>
             <MainApp />
-        </GlobalErrorBoundary>
+        </ErrorBoundary>
     );
 }
 

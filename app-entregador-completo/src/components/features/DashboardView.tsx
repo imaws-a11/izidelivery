@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Icon from '../ui/Icon';
+import Icon from '../common/Icon';
 
 const cleanAddressText = (text: string | null | undefined): string => {
     if (!text) return '';
@@ -604,6 +604,7 @@ export const DashboardView = React.memo(({
                         )}
                     </div>
                 </section>
+                </div>
             </div>
         </div>
     );
