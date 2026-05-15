@@ -95,26 +95,30 @@ export const ScheduledCheckoutView: React.FC<ScheduledCheckoutViewProps> = ({
     if (!isDetailsValid) return;
     setIsSubmitting(true);
     try {
+      const extraNotes = [
+        notes,
+        buildingName ? `Prédio/Loja: ${buildingName}` : "",
+        blockFloor ? `Bloco/Andar: ${blockFloor}` : "",
+        confirmationNumber ? `Confirmação: ${confirmationNumber}` : ""
+      ].filter(Boolean).join(" | ");
+
       const orderData = {
         user_id: userId,
-        type: "shipping",
+        service_type: "shipping",
         subtype: "agendado",
         status: "pending",
-        origin: transitData.origin || "A definir",
-        destination: transitData.destination || "A definir",
-        building_name: buildingName,
-        block_floor: blockFloor,
-        confirmation_number: confirmationNumber,
+        pickup_address: typeof transitData.origin === 'object' ? (transitData.origin.address || transitData.origin.formatted_address) : (transitData.origin || "A definir"),
+        delivery_address: typeof transitData.destination === 'object' ? (transitData.destination.address || transitData.destination.formatted_address) : (transitData.destination || "A definir"),
         scheduled_at: `${schedDate}T${schedTime}:00`,
         item_type: itemType,
         item_description: description,
         quantity,
         weight: weight || null,
         dimensions: dimensions || null,
-        notes: notes || null,
+        notes: extraNotes || null,
         payment_method: paymentMethod,
         receipt_photo: receiptPhoto,
-        price: transitData.price || 0,
+        total_price: transitData.price || 0,
         priority: transitData.priority || "scheduled",
       };
 
