@@ -72,7 +72,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const isCancelled = ['cancelado', 'cancelled'].includes(order.status);
   const isActive = !isPending && !isCompleted && !isCancelled;
   const canDelete = isCompleted || isCancelled;
-  const canCancelStatus = ['novo', 'pendente', 'pendente_pagamento', 'waiting_driver', 'waiting_merchant', 'aceito', 'confirmado', 'a_caminho_coleta'].includes(order.status);
+  const canCancelStatus = ['novo', 'pendente', 'pendente_pagamento', 'waiting_driver', 'waiting_merchant', 'aceito', 'confirmado', 'a_caminho_coleta', 'agendado', 'scheduled'].includes(order.status);
 
   const handleCancel = async () => {
     if (!onCancelOrder) return;
@@ -213,7 +213,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <button
               onClick={handleCancel}
               disabled={isCancelling}
-              className="w-full py-4 border-2 border-zinc-100 text-zinc-400 font-black text-xs uppercase tracking-widest rounded-2xl active:bg-zinc-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-4 border-2 border-rose-100 text-rose-500 font-black text-xs uppercase tracking-widest rounded-2xl active:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isCancelling ? (
                 <div className="size-4 border-2 border-zinc-300 border-t-zinc-500 rounded-full animate-spin" />

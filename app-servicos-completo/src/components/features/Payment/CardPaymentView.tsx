@@ -140,6 +140,9 @@ export const CardPaymentView: React.FC = () => {
               setSubView("none");
             } else if (isSubscription) {
               setSubView("izi_black_purchase");
+            } else if (selectedItem) {
+              // Se já existe um pedido (Agendamento ou Pedido Pendente), volta para os detalhes dele
+              setSubView("order_detail");
             } else {
               setSubView("checkout");
             }
