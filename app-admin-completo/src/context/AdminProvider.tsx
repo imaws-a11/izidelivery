@@ -804,7 +804,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Caso seja Lojista, fazemos um fetch padrão + um fetch de segurança para pedidos pendentes
         const { data, error, count } = await supabase
           .from('orders_delivery')
-          .select('*', { count: 'exact' })
+          .select('*, driver:drivers_delivery(name, phone, vehicle_type, license_plate, avatar_url)', { count: 'exact' })
           .eq('merchant_id', merchantProfile.id)
           .order('created_at', { ascending: false })
           .range(from, to);
@@ -818,7 +818,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (targetPage === 1) {
           const { data: actionableData } = await supabase
             .from('orders_delivery')
-            .select('*')
+            .select('*, driver:drivers_delivery(name, phone, vehicle_type, license_plate, avatar_url)')
             .eq('merchant_id', merchantProfile.id)
             .in('status', ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado', 'agendado', 'scheduled'])
             .order('created_at', { ascending: false });
@@ -831,13 +831,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
 
-        if (data) setAllOrders(finalOrders);
+        if (data) {
+          finalOrders = finalOrders.map((o: any) => ({
+             ...o,
+             driver_name: o.driver?.name || o.driver_name,
+             driver_phone: o.driver?.phone || o.driver_phone,
+             driver_vehicle: o.driver?.vehicle_type || o.driver_vehicle,
+             driver_plate: o.driver?.license_plate || o.driver_plate,
+             driver_avatar: o.driver?.avatar_url || o.driver_avatar,
+          }));
+          setAllOrders(finalOrders);
+        }
         if (count !== null) setMerchantOrdersTotalCount(count);
         setMerchantOrdersPage(targetPage);
       } else {
         let query = supabase
           .from('orders_delivery')
-          .select('*, user:users_delivery(*)', { count: 'exact' })
+          .select('*, user:users_delivery(*), driver:drivers_delivery(name, phone, vehicle_type, license_plate, avatar_url)', { count: 'exact' })
           .neq('service_type', 'subscription');
         
         // Segregação de Dados: Lojistas só buscam seus próprios pedidos
@@ -850,7 +860,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .range(from, to);
 
         if (error) throw error;
-        if (data) setAllOrders(data as Order[]);
+        if (data) {
+          const mappedData = data.map((o: any) => ({
+             ...o,
+             driver_name: o.driver?.name || o.driver_name,
+             driver_phone: o.driver?.phone || o.driver_phone,
+             driver_vehicle: o.driver?.vehicle_type || o.driver_vehicle,
+             driver_plate: o.driver?.license_plate || o.driver_plate,
+             driver_avatar: o.driver?.avatar_url || o.driver_avatar,
+          }));
+          setAllOrders(mappedData as Order[]);
+        }
         if (count !== null) setOrdersTotalCount(count);
         setOrdersPage(targetPage);
       }
