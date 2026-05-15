@@ -356,7 +356,12 @@ export const ExploreIziEnviosView: React.FC<ExploreIziEnviosViewProps> = ({ onBa
                       'normal': 'explore_express',
                       'scheduled': 'scheduled_checkout'
                     };
-                    setTransitData((prev: any) => ({ ...prev, priority: selectedPriority, subService: selectedPriority === 'scheduled' ? 'agendado' : 'express' }));
+                    setTransitData((prev: any) => ({ 
+                      ...prev, 
+                      priority: selectedPriority, 
+                      subService: selectedPriority === 'scheduled' ? 'agendado' : 'express',
+                      price: dynamicServices.find(s => s.id === selectedPriority)?.price || prev.estPrice || 0
+                    }));
                     setSubView(routeMap[selectedPriority] as any || "explore_express");
                   }} 
                   className="w-full bg-black text-white h-[74px] rounded-[32px] font-black text-lg shadow-[0_20px_40px_rgba(0,0,0,0.15)] uppercase tracking-widest"
