@@ -40,7 +40,7 @@ export const ScheduledCheckoutView: React.FC<ScheduledCheckoutViewProps> = ({
   userId,
   showToast,
 }) => {
-  const { setSubView } = useApp();
+  const { setSubView, navigateSubView } = useApp();
   const [step, setStep] = useState<Step>("details");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -126,7 +126,7 @@ export const ScheduledCheckoutView: React.FC<ScheduledCheckoutViewProps> = ({
       if (error) throw error;
 
       showToast?.("Agendamento confirmado!", "success");
-      setSubView("home");
+      navigateSubView("orders");
     } catch {
       showToast?.("Erro ao confirmar. Tente novamente.", "error");
     } finally {
