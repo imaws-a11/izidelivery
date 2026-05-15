@@ -35,6 +35,14 @@ Atualizado: 2026-05-15 (Sessão: Estabilização de Agendamentos e Radar)
 ### 📦 Logística e Izi Entrega Avulsa
 - **Arquitetura**: Reutiliza `orders_delivery` com `service_type = 'entrega_avulsa'`.
 - **Mapeamento**: Entregadores da categoria `'motoboy'` visualizam entregas avulsas como pagas (taxa retida).
+- **Auditoria Financeira & Transparência:**
+    *   Implementado pop-up de detalhes de ganho no histórico do entregador, exibindo Valor Bruto, Taxas IZI, Valor Líquido e Forma de Pagamento real.
+    *   **Correção de Bug Crítico (Sincronização de Saldo):** Identificado e corrigido bug onde o App do Entregador registrava transações mas não atualizava a coluna `wallet_balance` na tabela `drivers_delivery`.
+    *   **Sincronização Global:** Executada varredura completa no banco de dados para recalcular e sincronizar o saldo de toda a base de entregadores com base no histórico de transações.
+- **Melhorias Estruturais:**
+    *   Ajustada lógica de busca de pedidos por range de UUID para evitar erros 404 em consultas parciais.
+    *   Implementada visualização de senha em texto simples (`plain_password`) para suporte administrativo.
+    *   Exibição de fotos reais (`avatar_url`) na listagem e edição de entregadores.
 - **Compatibilidade de Tipos (Radar)**: O `service_type` `'shipping'` (usado em envios manuais e agendamentos) DEVE ser mapeado como `'package'` no `normalizeServiceType` do app do entregador para ser visível no radar de veículos compatíveis.
 - **Precificação (Novo)**: Implementação de modelo linear contínuo configurado dinamicamente no painel Admin, garantindo paridade com as taxas locais.
 

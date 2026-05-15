@@ -115,19 +115,33 @@ const EarningsView = React.memo<EarningsViewProps>(({ stats, onShowBankDetails, 
  </span>
  </div>
  
- <div className="mt-8 flex items-center gap-3">
- <div className="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full flex items-center gap-2">
- <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
- <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">
- Saldo: R$ {stats.balance.toFixed(2).replace('.', ',')}
+ <div className="mt-8 w-full bg-zinc-900 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between shadow-2xl">
+ <div className="absolute -right-8 -top-8 w-32 h-32 bg-yellow-400/20 rounded-full blur-2xl pointer-events-none" />
+ <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+ 
+ <div className="flex items-center justify-between mb-4 relative z-10">
+ <div className="flex items-center gap-2">
+ <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+ <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Saldo Disponível</span>
+ </div>
+ <Icon name="account_balance_wallet" className="text-yellow-400/80" size={24} />
+ </div>
+ 
+ <div className="flex items-end justify-between relative z-10">
+ <div className="flex items-baseline gap-1">
+ <span className="text-xl font-black text-zinc-500 mb-1">R$</span>
+ <span className="text-4xl font-black text-white tracking-tighter">
+ {stats.balance.toFixed(2).replace('.', ',')}
  </span>
  </div>
  <button 
  onClick={onWithdrawRequest}
- className="px-6 py-2 bg-zinc-900 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em] active:scale-95 transition-all"
+ className="px-5 py-3 bg-yellow-400 text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 transition-all shadow-[0_4px_14px_rgba(250,204,21,0.3)] flex items-center gap-1.5 hover:bg-yellow-300"
  >
- Sacar Agora
+ Sacar
+ <Icon name="arrow_forward" size={14} className="text-zinc-900" />
  </button>
+ </div>
  </div>
  </div>
  </div>

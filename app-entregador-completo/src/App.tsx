@@ -3948,20 +3948,21 @@ const handleUpdateStatus = async (newStatus: string) => {
  };
 
 
- const handleLogout = useCallback(() => {
- setIsProfileNotFound(false);
- isLoggingOutRef.current = true;
+  const handleLogout = useCallback(async () => {
+    setIsProfileNotFound(false);
+    isLoggingOutRef.current = true;
 
- 
- // 1. Deslogar do Supabase em background (sem travar a interface)
- supabase.auth.signOut().catch(err => console.warn('[AUTH] Erro no signOut remoto:', err));
- 
- // 2. Limpar o estado local e LocalStorage (limpa dados de UI imediatamente)
- clearDriverSessionState();
- 
- // 3. Forçar recarregamento para limpar estados residuais de memória
- window.location.href = '/';
- }, [clearDriverSessionState]);
+    try {
+      await supabase.auth.signOut();
+      clearDriverSessionState();
+      window.location.href = "/";
+      setTimeout(() => window.location.reload(), 100);
+    } catch (err) {
+      console.error("[AUTH] Erro no logout:", err);
+      clearDriverSessionState();
+      window.location.href = "/";
+    }
+  }, [clearDriverSessionState]);
 
  const renderHeader = () => (
  <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
@@ -7113,15 +7114,26 @@ const handleUpdateStatus = async (newStatus: string) => {
  )}
 
 
- <AnimatePresence mode="wait">
- {!isAuthenticated && (
- <div key="auth-container" className="h-full">
- {renderLoginView()}
- </div>
- )}
- {isAuthenticated && (
- <>
- <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
+   <AnimatePresence mode="wait">
+    {!isAuthenticated && (
+      <motion.div 
+        key="auth-container" 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="h-full w-full"
+      >
+        {renderLoginView()}
+      </motion.div>
+    )}
+    {isAuthenticated && (
+      <motion.div 
+        key="app-main-container"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="flex flex-col h-full overflow-hidden bg-zinc-50"
+      >
  {/* Popup flutuante de nova chamada — sobrepõe tudo */}
  
  <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
@@ -7417,34 +7429,29 @@ const handleUpdateStatus = async (newStatus: string) => {
  )}
  </AnimatePresence>
 
- {renderBottomNavigation()}
- </div>
- </div>
-
- {showOnboarding && (
- <OnboardingView 
- userId={driverId || ''} 
- onApproved={() => {
- setShowOnboarding(false);
- setIsProfileLoaded(true);
- toastSuccess('Cadastro aprovado!');
- // Recarrega perfil para atualizar status
- if (driverId) {
- loadProfileAndEnforceOnboarding(driverId, authEmail || '', authName || '');
- }
- }} 
- onLogout={() => {
- setShowOnboarding(false);
- handleLogout();
- }}
- onClose={() => setShowOnboarding(false)}
- />
- )}
-
- {renderPendingApprovalModal()}
- </>
- )}
- </AnimatePresence>
+       {renderBottomNavigation()}
+      {showOnboarding && (
+        <OnboardingView 
+          userId={driverId || ''} 
+          onApproved={() => {
+            setShowOnboarding(false);
+            setIsProfileLoaded(true);
+            toastSuccess('Cadastro aprovado!');
+            if (driverId) {
+              loadProfileAndEnforceOnboarding(driverId, authEmail || '', authName || '');
+            }
+          }} 
+          onLogout={() => {
+            setShowOnboarding(false);
+            handleLogout();
+          }}
+          onClose={() => setShowOnboarding(false)}
+        />
+      )}
+      {renderPendingApprovalModal()}
+    </motion.div>
+  )}
+</AnimatePresence>
 
  <AnimatePresence>
  {showWithdrawModal && (

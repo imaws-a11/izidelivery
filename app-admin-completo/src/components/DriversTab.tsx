@@ -18,6 +18,44 @@ export default function DriversTab() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [selectedTransactionOrder, setSelectedTransactionOrder] = useState<any>(null);
+  const [isTxLoading, setIsTxLoading] = useState(false);
+
+  const handleViewTransactionDetails = async (tx: any) => {
+    // Para saques ou débitos manuais que não tem ID de pedido na descrição
+    const match = tx.description?.match(/#([a-zA-Z0-9]{8})/);
+    if (!match) {
+      if (tx.type !== 'saque' && !tx.description?.toLowerCase().includes('ajuste')) {
+        toastError("Essa transação não possui um ID de pedido rastreável.");
+      }
+      return;
+    }
+    const shortId = match[1].toLowerCase();
+    const minId = `${shortId}-0000-0000-0000-000000000000`;
+    const maxId = `${shortId}-ffff-ffff-ffff-ffffffffffff`;
+
+    setIsTxLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders_delivery')
+        .select('*')
+        .gte('id', minId)
+        .lte('id', maxId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (!data) {
+        toastError("Pedido original não encontrado na base de dados.");
+      } else {
+        setSelectedTransactionOrder({...data, _tx_amount: tx.amount, _tx_type: tx.type, _tx_desc: tx.description});
+      }
+    } catch(e) {
+      toastError("Erro ao buscar detalhes do ganho.");
+    } finally {
+      setIsTxLoading(false);
+    }
+  };
+
   const loadDrivers = async () => {
     const { data } = await supabase
       .from('drivers_delivery')
@@ -216,8 +254,12 @@ export default function DriversTab() {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="relative">
-                        <div className={`size-10 rounded-full flex items-center justify-center font-black text-white ${isOnline ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-100 text-slate-400 grayscale'}`}>
-                           {d.name?.charAt(0) || 'D'}
+                        <div className={`size-10 rounded-full flex items-center justify-center font-black text-white overflow-hidden bg-slate-100 ${isOnline ? 'shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500' : 'text-slate-400 grayscale'}`}>
+                           {d.avatar_url ? (
+                             <img src={d.avatar_url} alt={d.name} className="size-full object-cover" />
+                           ) : (
+                             d.name?.charAt(0) || 'D'
+                           )}
                         </div>
                         {isOnline && (
                           <span className="absolute -top-0.5 -right-0.5 size-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
@@ -328,7 +370,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           <div className="flex flex-col items-center gap-4">
             <div className="size-44 rounded-[48px] bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-2xl overflow-hidden relative group">
               <img 
-                src={`https://ui-avatars.com/api/?name=${selectedDriverStudio.name || 'D'}&background=ffd900&color=000&size=256&bold=true`} 
+                src={selectedDriverStudio.avatar_url || `https://ui-avatars.com/api/?name=${selectedDriverStudio.name || 'D'}&background=ffd900&color=000&size=256&bold=true`} 
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
@@ -564,24 +606,37 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           </div>
 
           <div className="space-y-3">
-            {partnerTransactions.length > 0 ? partnerTransactions.map((t, idx) => (
-              <div key={idx} className="bg-white dark:bg-slate-900/50 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-emerald-500/30 transition-all">
+            {partnerTransactions.length > 0 ? partnerTransactions.map((t, idx) => {
+              const isNegative = t.type === 'saque' || t.type === 'debit';
+              const isClickable = t.description?.match(/#([a-zA-Z0-9]{8})/);
+              return (
+              <div key={idx} 
+                   onClick={() => isClickable && handleViewTransactionDetails(t)}
+                   className={`bg-white dark:bg-slate-900/50 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group transition-all ${isClickable ? 'cursor-pointer hover:border-emerald-500/30' : ''}`}>
                 <div className="flex items-center gap-5">
-                  <div className={`size-12 rounded-2xl flex items-center justify-center ${t.type === 'saque' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                    <span className="material-symbols-outlined">{t.type === 'saque' ? 'account_balance_wallet' : 'add_card'}</span>
+                  <div className={`size-12 rounded-2xl flex items-center justify-center ${isNegative ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                    <span className="material-symbols-outlined">{t.type === 'saque' ? 'account_balance_wallet' : isNegative ? 'payments' : 'add_card'}</span>
                   </div>
                   <div>
-                    <p className="font-black text-sm uppercase tracking-tight dark:text-white">{t.description || 'Movimentação'}</p>
+                    <p className="font-black text-sm uppercase tracking-tight dark:text-white flex items-center gap-2">
+                       {t.description || 'Movimentação'}
+                       {isClickable && (
+                          <span className={`material-symbols-outlined text-[10px] opacity-0 group-hover:opacity-100 transition-opacity ${isTxLoading ? 'animate-spin' : ''}`}>
+                            {isTxLoading ? 'sync' : 'open_in_new'}
+                          </span>
+                       )}
+                    </p>
                     <p className="text-[10px] font-bold text-slate-400">{new Date(t.created_at).toLocaleDateString()} às {new Date(t.created_at).toLocaleTimeString()}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`text-lg font-black tracking-tighter ${t.type === 'saque' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                    {t.type === 'saque' ? '-' : '+'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.amount))}
+                  <p className={`text-lg font-black tracking-tighter ${isNegative ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {isNegative ? '-' : '+'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.amount))}
                   </p>
                 </div>
               </div>
-            )) : (
+            )
+            }) : (
               <div className="py-20 flex flex-col items-center gap-4 opacity-20">
                 <span className="material-symbols-outlined text-6xl">receipt_long</span>
                 <p className="text-[10px] font-black uppercase tracking-widest">Sem histórico financeiro</p>
@@ -741,7 +796,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
             </div>
 
             {/* Footer Actions */}
-            <div className="p-8 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-8 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between relative z-10">
 <div className="flex gap-4">
   <button 
     onClick={async () => {
@@ -857,6 +912,151 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
   </button>
 </div>
             </div>
+
+            {/* Modal Sub-Overlay for Transaction Details */}
+            {selectedTransactionOrder && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 text-slate-900">
+                <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setSelectedTransactionOrder(null)}></div>
+                <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[48px] overflow-hidden shadow-2xl z-10 flex flex-col font-sans border border-slate-100 dark:border-slate-800">
+                  <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                    <div>
+                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Detalhes do Ganho</p>
+                       <h3 className="text-2xl font-black uppercase tracking-tighter dark:text-white italic">#{selectedTransactionOrder.id.slice(0,8)}</h3>
+                    </div>
+                    <button onClick={() => setSelectedTransactionOrder(null)} className="size-12 flex items-center justify-center rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-rose-500 dark:bg-slate-800 dark:border-slate-700 shadow-sm transition-all active:scale-90">
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                  <div className="p-8 space-y-8">
+                     {/* Status e Data */}
+                     <div className="flex items-center justify-between">
+                       <div className="flex flex-col">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status do Pedido</span>
+                         <span className={`mt-1 px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-[0.15em] w-fit ${
+                           selectedTransactionOrder.status === 'concluido' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                           selectedTransactionOrder.status === 'cancelado' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
+                           'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                         }`}>
+                           {selectedTransactionOrder.status || 'Pendente'}
+                         </span>
+                       </div>
+                       <div className="text-right">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data e Hora</span>
+                         <p className="text-xs font-bold dark:text-slate-200">
+                           {new Date(selectedTransactionOrder.created_at).toLocaleDateString()} • {new Date(selectedTransactionOrder.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                         </p>
+                       </div>
+                     </div>
+
+                     {/* Rota (De/Para) */}
+                     <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 space-y-4">
+                        <div className="flex gap-4">
+                           <div className="flex flex-col items-center py-1">
+                              <div className="size-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10"></div>
+                              <div className="w-0.5 h-8 bg-slate-200 dark:bg-slate-700 my-1"></div>
+                              <div className="size-2.5 rounded-full bg-rose-500 ring-4 ring-rose-500/10"></div>
+                           </div>
+                           <div className="flex flex-col justify-between flex-1 overflow-hidden">
+                              <div className="flex flex-col">
+                                 <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Ponto de Coleta</span>
+                                 <p className="text-[10px] font-bold dark:text-slate-300 truncate">
+                                   {(() => {
+                                      try {
+                                        const p = typeof selectedTransactionOrder.pickup_address === 'string' && selectedTransactionOrder.pickup_address.startsWith('{') 
+                                          ? JSON.parse(selectedTransactionOrder.pickup_address).address 
+                                          : selectedTransactionOrder.pickup_address;
+                                        return p || 'Endereço não disponível';
+                                      } catch { return selectedTransactionOrder.pickup_address || 'Endereço não disponível'; }
+                                   })()}
+                                 </p>
+                              </div>
+                              <div className="flex flex-col mt-3">
+                                 <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Destino da Entrega</span>
+                                 <p className="text-[10px] font-bold dark:text-slate-300 truncate">
+                                   {selectedTransactionOrder.delivery_address || 'Endereço não disponível'}
+                                 </p>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="space-y-4 pt-2">
+                        <div className="flex items-center gap-2 mb-4">
+                           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Resumo Financeiro</span>
+                           <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+                        </div>
+
+                        {(() => {
+                          const gross = Number(selectedTransactionOrder.delivery_fee) || Number(selectedTransactionOrder.total_price) || Number(selectedTransactionOrder.price) || 0;
+                          const net = Math.abs(Number(selectedTransactionOrder._tx_amount));
+                          const diff = gross - net;
+                          const serviceFee = Number(selectedTransactionOrder.service_fee || 0);
+                          
+                          return (
+                            <>
+                              <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800/50">
+                                <span className="text-xs font-black uppercase tracking-widest text-slate-500">Valor Bruto da Corrida</span>
+                                <span className="text-sm font-black dark:text-slate-300">R$ {gross.toFixed(2).replace('.', ',')}</span>
+                              </div>
+                              
+                              {serviceFee > 0 && (
+                                <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800/50 text-slate-400">
+                                  <span className="text-xs font-black uppercase tracking-widest italic">Taxa de Serviço (App)</span>
+                                  <span className="text-sm font-black">R$ {serviceFee.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                              )}
+
+                              <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800/50">
+                                <span className="text-xs font-black uppercase tracking-widest text-slate-500">Taxa de Intermediação IZI</span>
+                                <span className={`text-sm font-black ${diff > 0.01 ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600'}`}>
+                                  {diff > 0.01 ? `- R$ ${diff.toFixed(2).replace('.', ',')}` : 'Isento'}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center py-4 px-6 rounded-[32px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-black uppercase tracking-widest text-emerald-600/70">Valor Líquido Recebido</span>
+                                  <span className="text-[8px] font-bold uppercase text-emerald-600/40 tracking-widest italic">Creditado na Carteira</span>
+                                </div>
+                                <span className="text-3xl font-black italic tracking-tighter">R$ {net.toFixed(2).replace('.', ',')}</span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                        
+                        <div className="mt-8 p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center gap-4 group hover:bg-white dark:hover:bg-slate-800 transition-all cursor-default">
+                           <div className="size-14 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-primary flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                             <span className="material-symbols-outlined text-3xl font-bold">
+                               {selectedTransactionOrder.payment_method === 'pix' ? 'pix' : 
+                                selectedTransactionOrder.payment_method === 'dinheiro' ? 'payments' : 
+                                selectedTransactionOrder.payment_method?.includes('cartao') ? 'credit_card' : 'account_balance_wallet'}
+                             </span>
+                           </div>
+                           <div className="flex-1">
+                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Forma de Pagamento</p>
+                             <p className="text-base font-black dark:text-white uppercase tracking-tight">
+                               {(() => {
+                                 const method = selectedTransactionOrder.payment_method === 'entrega_avulsa' 
+                                   ? selectedTransactionOrder.delivery_payment_method 
+                                   : selectedTransactionOrder.payment_method;
+                                 
+                                 const m = method || 'Não Informada';
+                                 if (m === 'dinheiro') return 'Dinheiro (Pagar ao Motoboy)';
+                                 if (m === 'pix') return 'PIX Instantâneo';
+                                 if (m === 'cartao_entrega' || m === 'cartao_credito' || m === 'cartao_debito') return 'Cartão (Na Entrega)';
+                                 if (m === 'saldo') return 'Saldo da Carteira';
+                                 if (m === 'loja') return 'Pago na Loja';
+                                 if (m === 'ja_pago') return 'Já Pago Online';
+                                 return m.replace('_', ' ');
+                               })()}
+                             </p>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       )}
