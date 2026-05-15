@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Resumo Executivo)
-Atualizado: 2026-05-14
+Atualizado: 2026-05-15 (Sessão: Estabilização de Agendamentos e Radar)
 
 ---
 
@@ -35,7 +35,17 @@ Atualizado: 2026-05-14
 ### 📦 Logística e Izi Entrega Avulsa
 - **Arquitetura**: Reutiliza `orders_delivery` com `service_type = 'entrega_avulsa'`.
 - **Mapeamento**: Entregadores da categoria `'motoboy'` visualizam entregas avulsas como pagas (taxa retida).
+- **Compatibilidade de Tipos (Radar)**: O `service_type` `'shipping'` (usado em envios manuais e agendamentos) DEVE ser mapeado como `'package'` no `normalizeServiceType` do app do entregador para ser visível no radar de veículos compatíveis.
 - **Precificação (Novo)**: Implementação de modelo linear contínuo configurado dinamicamente no painel Admin, garantindo paridade com as taxas locais.
+
+### 📅 Fluxo de Agendamento (Novo: Maio/2026)
+- **Status Inicial**: Pedidos agendados DEVEM ser criados com `status = 'agendado'` e `subtype = 'agendado'`. Isso impede que o radar global dispare alertas sonoros imediatos para os entregadores.
+- **Navegação Checkout**: Ao confirmar um agendamento no app de serviços, deve-se usar `navigateSubView("orders")` para garantir que o usuário seja levado à aba correta e a `subView` de checkout seja limpa.
+- **Visibilidade**: Pedidos com status `'agendado'` são ocultados do Radar de Entregas (Mapa) e exibidos exclusivamente na aba **Agenda** do aplicativo do entregador.
+
+### 🏪 Filtros de Radar e Aceite de Lojistas
+- **Proteção de Lojista**: Pedidos originados em lojas (com `merchant_id` ou tipos `restaurant`, `market`, `pharmacy`, etc.) com status iniciais (`novo`, `pending`, `paid`, `waiting_merchant`) DEVEM ser ocultados do radar dos entregadores até que o lojista aceite o pedido.
+- **Exceção**: Envios manuais e agendamentos diretos (`service_type = 'shipping'` ou `'package'`) sem lojista vinculado ignoram esse filtro e aparecem imediatamente no radar (se o status for compatível).
 
 ### 🔌 Integrações Externas (API & Webhooks)
 - **API Pública (Inbound)**: Edge Function `integration-api` permite criar pedidos e cotar fretes via API Key, facilitando a injeção de corridas por ERPs ou apps como TchauFome.
