@@ -31,11 +31,15 @@ export const useAuth = () => {
 
     // Timer de segurança para evitar carregamento infinito
     const authTimeout = setTimeout(() => {
-      if (authInitLoading) {
-        console.warn("[AUTH] Timeout de inicialização atingido. Forçando encerramento do loading.");
-        setAuthInitLoading(false);
-      }
+      setAuthInitLoading(prev => {
+        if (prev) {
+          console.warn("[AUTH] Timeout de inicialização atingido. Forçando encerramento do loading.");
+        }
+        return false;
+      });
     }, 10000);
+
+    let isMounted = true;
 
     // Check initial session
     const checkSession = async () => {
@@ -45,9 +49,14 @@ export const useAuth = () => {
           console.error("Erro ao recuperar sessão inicial (auth):", error.message);
           if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
             console.warn("[AUTH] Refresh token inválido detectado no início. Limpando sessão...");
-            logout();
+            if (isMounted) {
+              setUser(null);
+              setUserId(null);
+            }
+            return;
           }
         }
+        if (!isMounted) return;
         const u = session?.user || null;
         setUser(u);
         setUserId(u ? u.id : null);
@@ -57,41 +66,57 @@ export const useAuth = () => {
         }
       } catch (err: any) {
         console.error("Exceção fatal no getSession:", err);
-        if (err.message?.includes("Refresh Token Not Found")) {
-          logout();
-        }
       } finally {
-        setAuthInitLoading(false);
-        clearTimeout(authTimeout);
+        if (isMounted) {
+          setAuthInitLoading(false);
+          clearTimeout(authTimeout);
+        }
       }
     };
 
     checkSession();
 
+    // Listener multi-dispositivo: captura login/logout de outras abas e dispositivos
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Log de evento removido para limpeza de console
-      
-      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-        setUser(null);
-        setUserId(null);
-        setIsUserAdmin(false);
-        setAdminProfile(null);
-      } else {
-        const u = session?.user || null;
-        setUser(u);
-        setUserId(u ? u.id : null);
-        if (u) {
-          setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
-          checkRoles(u.id);
-        } else {
+      if (!isMounted) return;
+
+      switch (event) {
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+        case 'USER_UPDATED': {
+          const u = session?.user || null;
+          setUser(u);
+          setUserId(u ? u.id : null);
+          if (u) {
+            setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
+            checkRoles(u.id);
+          }
+          break;
+        }
+        case 'SIGNED_OUT':
+          setUser(null);
+          setUserId(null);
           setIsUserAdmin(false);
           setAdminProfile(null);
+          break;
+        default: {
+          const u = session?.user || null;
+          setUser(u);
+          setUserId(u ? u.id : null);
+          if (u) {
+            setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
+          } else {
+            setIsUserAdmin(false);
+            setAdminProfile(null);
+          }
+          break;
         }
       }
       setAuthInitLoading(false);
     });
 
     return () => {
+      isMounted = false;
       clearTimeout(authTimeout);
       subscription.unsubscribe();
     };
@@ -204,24 +229,13 @@ export const useAuth = () => {
       localStorage.removeItem("izi_remembered_email");
       localStorage.removeItem("izi_remembered_pass");
       localStorage.removeItem("izi_remember_me");
-
-      // Limpeza agressiva do LocalStorage para chaves do Supabase
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-          localStorage.removeItem(key);
-        }
-      });
-
-      // Limpa dados de sessão de memória
-      setUser(null);
-      setUserId(null);
-
-      // Forçar recarregamento para limpar estados residuais
-      window.location.href = '/';
     } catch (error) {
       console.error("[AUTH] Erro no logout:", error);
-      window.location.href = '/';
     }
+    // Sempre limpa estado local
+    setUser(null);
+    setUserId(null);
+    window.location.href = '/';
   };
 
   return {

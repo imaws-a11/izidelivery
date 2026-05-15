@@ -53,7 +53,7 @@ export default function TrackingTab() {
   const getDriverActivity = (driverId: string) => {
     const activeOrder = allOrders.find(o => 
       o.driver_id === driverId && 
-      ['aceito', 'preparando', 'picked_up', 'pendente', 'em_rota', 'a_caminho', 'no_local', 'waiting_merchant', 'waiting_driver'].includes(o.status)
+      ['aceito', 'preparando', 'picked_up', 'pendente', 'em_rota', 'a_caminho', 'no_local', 'waiting_merchant', 'waiting_driver', 'agendado', 'scheduled'].includes(o.status)
     );
     return activeOrder ? 'busy' : 'available';
   };
@@ -255,7 +255,7 @@ export default function TrackingTab() {
             {(() => {
                const activeOrder = allOrders.find(o => 
                  o.driver_id === selectedTrackingItem.id && 
-                 ['aceito', 'preparando', 'picked_up', 'pendente', 'em_rota', 'a_caminho', 'no_local', 'waiting_merchant', 'waiting_driver'].includes(o.status)
+                 ['aceito', 'preparando', 'picked_up', 'pendente', 'em_rota', 'a_caminho', 'no_local', 'waiting_merchant', 'waiting_driver', 'agendado', 'scheduled'].includes(o.status)
                );
                const statusLabel = activeOrder ? 'Em Rota' : 'Disponível';
                const statusColor = activeOrder ? 'text-emerald-500' : 'text-primary';

@@ -29,6 +29,8 @@ const statusConfig: Record<string, { label: string; color: string; icon: string 
   'delivering': { label: 'Em Entrega', color: 'bg-purple-500', icon: 'delivery_dining' },
   'delivered': { label: 'Entregue', color: 'bg-emerald-500', icon: 'check_circle' },
   'cancelled': { label: 'Cancelado', color: 'bg-red-500', icon: 'cancel' },
+  'agendado': { label: 'Agendado', color: 'bg-indigo-400', icon: 'calendar_today' },
+  'scheduled': { label: 'Agendado', color: 'bg-indigo-400', icon: 'calendar_today' },
 };
 
 export default function MerchantOrdersTracking() {

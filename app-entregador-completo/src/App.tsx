@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, supabaseUrl } from './lib/supabase';
@@ -714,7 +714,8 @@ function MainApp() {
  return;
  }
 
- if (event === 'SIGNED_IN' && session?.user) {
+ // Sincroniza sessão para SIGNED_IN, TOKEN_REFRESHED e USER_UPDATED
+ if (session?.user) {
  setDriverId(session.user.id);
  setIsAuthenticated(true);
  
@@ -724,7 +725,10 @@ function MainApp() {
  if (!authEmail) setAuthEmail(userEmail);
  if (!authName) setAuthName(name);
 
- await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
+ // Só recarrega perfil completo em SIGNED_IN (evita re-fetch desnecessário)
+ if (event === 'SIGNED_IN') {
+  await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
+ }
  }
  });
 

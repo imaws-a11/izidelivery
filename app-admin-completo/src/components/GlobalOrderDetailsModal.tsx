@@ -275,6 +275,95 @@ export default function GlobalOrderDetailsModal() {
                               {parseOrderAddress(selectedOrder.delivery_address || '').address}
                           </p>
                       </div>
+
+                      {/* Informações do Entregador */}
+                      {selectedOrder.driver_id && (
+                        <div className="md:col-span-2 p-6 rounded-[32px] bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-slate-800/20 dark:to-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+                          <div className="flex items-center gap-3 mb-5">
+                              <div className="size-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                                <span className="material-symbols-outlined text-blue-500">sports_motorsports</span>
+                              </div>
+                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Entregador Responsável</h4>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className="size-14 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                                {selectedOrder.driver_avatar ? (
+                                  <img src={selectedOrder.driver_avatar} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="material-symbols-outlined text-2xl text-slate-400">person</span>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-slate-900 dark:text-white uppercase">
+                                  {selectedOrder.driver_name || 'Motoboy IZI'}
+                                </p>
+                                {selectedOrder.driver_phone && (
+                                  <a href={`tel:${selectedOrder.driver_phone}`} className="text-[10px] font-bold text-blue-500 uppercase tracking-widest hover:underline flex items-center gap-1 mt-0.5">
+                                    <span className="material-symbols-outlined text-xs">phone</span>
+                                    {selectedOrder.driver_phone}
+                                  </a>
+                                )}
+                                {selectedOrder.driver_vehicle && (
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-xs">two_wheeler</span>
+                                    {selectedOrder.driver_vehicle}
+                                    {selectedOrder.driver_plate && ` • ${selectedOrder.driver_plate}`}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              {selectedOrder.delivery_payment_method && (
+                                <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pgto. na Entrega</span>
+                                  <span className="text-xs font-black text-slate-900 dark:text-white uppercase flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm text-emerald-500">
+                                      {selectedOrder.delivery_payment_method === 'dinheiro' ? 'payments' : 
+                                       selectedOrder.delivery_payment_method === 'pix' ? 'qr_code_2' : 
+                                       selectedOrder.delivery_payment_method === 'cartao' ? 'credit_card' : 'receipt'}
+                                    </span>
+                                    {selectedOrder.delivery_payment_method === 'dinheiro' ? 'Dinheiro' :
+                                     selectedOrder.delivery_payment_method === 'pix' ? 'PIX' :
+                                     selectedOrder.delivery_payment_method === 'cartao' ? 'Cartão' :
+                                     selectedOrder.delivery_payment_method === 'ja_pago' ? 'Já Pago' :
+                                     selectedOrder.delivery_payment_method}
+                                  </span>
+                                </div>
+                              )}
+                              {selectedOrder.delivery_fee > 0 && (
+                                <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Entrega</span>
+                                  <span className="text-xs font-black text-blue-500 italic">
+                                    R$ {Number(selectedOrder.delivery_fee).toFixed(2).replace('.', ',')}
+                                  </span>
+                                </div>
+                              )}
+                              {selectedOrder.notes && (
+                                <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
+                                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block mb-1">Observações</span>
+                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{selectedOrder.notes}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Caso não tenha entregador ainda */}
+                      {!selectedOrder.driver_id && ['waiting_driver', 'agendado', 'scheduled'].includes(selectedOrder.status || '') && (
+                        <div className="md:col-span-2 p-6 rounded-[32px] bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20">
+                          <div className="flex items-center gap-3">
+                            <div className="size-10 bg-amber-500/10 rounded-xl flex items-center justify-center animate-pulse">
+                              <span className="material-symbols-outlined text-amber-500">search</span>
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Buscando Entregador...</p>
+                              <p className="text-[10px] font-bold text-slate-400 mt-0.5">Aguardando um motoboy aceitar a corrida</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                   </div>
 
                   {/* Financial Summary */}

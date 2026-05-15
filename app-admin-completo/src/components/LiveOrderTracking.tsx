@@ -53,7 +53,7 @@ export default function LiveOrderTracking() {
   const [loading, setLoading] = useState(true);
 
   const fetchActiveOrders = async () => {
-    const mId = merchantProfile?.merchant_id || merchantProfile?.id;
+    const mId = merchantProfile?.id;
     if (!mId) return;
 
     const { data, error } = await supabase
@@ -83,7 +83,7 @@ export default function LiveOrderTracking() {
   useEffect(() => {
     fetchActiveOrders();
 
-    const mId = merchantProfile?.merchant_id || merchantProfile?.id;
+    const mId = merchantProfile?.id;
     if (!mId) return;
 
     const channel = supabase
@@ -105,7 +105,7 @@ export default function LiveOrderTracking() {
 
   const getOrderStageIndex = (status: string) => {
     const s = status?.toLowerCase();
-    if (['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado'].includes(s)) return 0;
+    if (['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado', 'agendado', 'scheduled'].includes(s)) return 0;
     if (s === 'preparando') return 1;
     if (s === 'pronto' || s === 'waiting_driver') return 2;
     if (['accepted', 'picked_up', 'em_rota', 'a_caminho', 'a_caminho_coleta', 'chegou_coleta', 'no_local_coleta'].includes(s)) return 3;

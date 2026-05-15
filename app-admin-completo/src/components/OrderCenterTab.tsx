@@ -43,7 +43,7 @@ export default function OrderCenterTab() {
 
   // Filtrar pedidos do lojista logado
   const merchantOrders = useMemo(() => {
-    const mId = merchantProfile?.merchant_id || merchantProfile?.id;
+    const mId = merchantProfile?.id;
     if (!mId) return [];
     return allOrders.filter((o: any) => String(o.merchant_id) === String(mId));
   }, [allOrders, merchantProfile]);
@@ -51,7 +51,7 @@ export default function OrderCenterTab() {
   // Agrupamento de pedidos por status
   const groups = useMemo(() => {
     return {
-      pending: merchantOrders.filter(o => ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado'].includes(o.status)),
+      pending: merchantOrders.filter(o => ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado', 'agendado', 'scheduled'].includes(o.status)),
       preparing: merchantOrders.filter(o => o.status === 'preparando' || (o.preparation_status === 'preparando' && o.status !== 'concluido' && o.status !== 'cancelado')),
       ready: merchantOrders.filter(o => (o.status === 'pronto' || o.preparation_status === 'pronto' || o.status === 'waiting_driver') && !['picked_up', 'em_rota', 'concluido', 'cancelado'].includes(o.status)),
       shipped: merchantOrders.filter(o => ['accepted', 'picked_up', 'em_rota', 'a_caminho', 'a_caminho_coleta', 'chegou_coleta', 'no_local_coleta'].includes(o.status)),
@@ -84,10 +84,10 @@ export default function OrderCenterTab() {
 
   const getStatusBadge = (status: string) => {
     const s = status?.toLowerCase();
-    if (['novo', 'waiting_merchant'].includes(s)) return { label: 'Novo', color: 'bg-orange-500' };
+    if (['novo', 'waiting_merchant', 'agendado', 'scheduled'].includes(s)) return { label: s === 'agendado' || s === 'scheduled' ? 'Agendado' : 'Novo', color: s === 'agendado' || s === 'scheduled' ? 'bg-indigo-500' : 'bg-orange-500' };
     if (s === 'preparando') return { label: 'Produção', color: 'bg-amber-500' };
     if (s === 'pronto' || s === 'waiting_driver') return { label: 'Pronto', color: 'bg-emerald-500' };
-    if (['picked_up', 'em_rota'].includes(s)) return { label: 'Em Rota', color: 'bg-blue-500' };
+    if (['picked_up', 'em_rota', 'delivering'].includes(s)) return { label: 'Em Rota', color: 'bg-blue-500' };
     if (s === 'concluido' || s === 'delivered') return { label: 'Concluído', color: 'bg-zinc-400' };
     if (s === 'cancelado') return { label: 'Cancelado', color: 'bg-rose-500' };
     return { label: status, color: 'bg-zinc-400' };

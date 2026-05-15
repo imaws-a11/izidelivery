@@ -19,7 +19,7 @@ export default function MerchantDashboardTab() {
   }, [fetchAllOrders]);
 
   // Filtrar ordens do lojista de forma robusta
-  const merchantId = merchantProfile?.id || merchantProfile?.merchant_id;
+  const merchantId = merchantProfile?.id;
   const merchantOrders = allOrders.filter(o => String(o.merchant_id) === String(merchantId));
   const completedOrders = merchantOrders.filter(o => o.status === 'concluido' || o.status === 'delivered');
   
@@ -312,6 +312,7 @@ export default function MerchantDashboardTab() {
                       <tr>
                           <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Pedido</th>
                           <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
+                          <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Motoboy</th>
                           <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                           <th className="px-10 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
                       </tr>
@@ -334,6 +335,29 @@ export default function MerchantDashboardTab() {
                                   <span className="text-[10px] font-bold text-slate-400 block mt-1 uppercase">
                                     {o.user_id ? 'Via App IZI' : 'Entrega Avulsa'}
                                   </span>
+                              </td>
+                              <td className="px-10 py-6">
+                                {(o as any).driver_name ? (
+                                  <div>
+                                    <span className="text-sm font-black text-slate-900 dark:text-slate-100 italic flex items-center gap-1.5">
+                                      <span className="material-symbols-outlined text-sm text-blue-500">sports_motorsports</span>
+                                      {(o as any).driver_name}
+                                    </span>
+                                    {(o as any).delivery_payment_method && (
+                                      <span className="text-[10px] font-bold text-slate-400 block mt-1 uppercase">
+                                        Pgto: {(o as any).delivery_payment_method === 'dinheiro' ? 'Dinheiro' :
+                                               (o as any).delivery_payment_method === 'pix' ? 'PIX' :
+                                               (o as any).delivery_payment_method === 'cartao' ? 'Cartão' :
+                                               (o as any).delivery_payment_method === 'ja_pago' ? 'Já Pago' :
+                                               (o as any).delivery_payment_method}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-slate-400 italic uppercase">
+                                    {['waiting_driver', 'agendado', 'scheduled'].includes(o.status) ? 'Buscando...' : '—'}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-10 py-6">
                                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${

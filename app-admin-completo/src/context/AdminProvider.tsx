@@ -578,25 +578,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } catch (err: any) {
       console.error('Erro RBAC:', err);
-    } finally {
-      setIsInitialLoading(false);
+      setIsInitialLoading(false); // Só finaliza loading em caso de erro
     }
   }, [MASTER_ADMIN_EMAIL, handleLogout]);
 
 
 
-  useEffect(() => {
-    if (isAuthLoading) return;
 
-    if (session?.user?.email) {
-      setIsInitialLoading(true);
-      fetchUserRole(session.user.email);
-      fetchEstablishmentTypes();
-      fetchGlobalSettings();
-    } else {
-      setIsInitialLoading(false);
-    }
-  }, [session?.user?.email, fetchUserRole, isAuthLoading, fetchEstablishmentTypes]);
 
   // Sincronização em tempo real "mão-dupla" absoluta (Auto-refresh de stats)
   useEffect(() => {
@@ -832,7 +820,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             .from('orders_delivery')
             .select('*')
             .eq('merchant_id', merchantProfile.id)
-            .in('status', ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado'])
+            .in('status', ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado', 'agendado', 'scheduled'])
             .order('created_at', { ascending: false });
 
           if (actionableData && actionableData.length > 0) {
@@ -3273,6 +3261,31 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchMerchantZones(merchantProfile.id);
     }
   }, [merchantProfile?.id, fetchMerchantZones]);
+
+  // ====== BOOTSTRAP SEQUENCIAL (APÓS todas as definições de useCallback) ======
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    const init = async () => {
+      if (session?.user?.email) {
+        setIsInitialLoading(true);
+        try {
+          // Execução sequencial para evitar conflitos de Lock no Auth Token do Supabase
+          await fetchUserRole(session.user.email);
+          await fetchEstablishmentTypes();
+          await fetchGlobalSettings();
+        } catch (err) {
+          console.error('[BOOTSTRAP] Erro na inicialização:', err);
+        } finally {
+          setIsInitialLoading(false);
+        }
+      } else {
+        setIsInitialLoading(false);
+      }
+    };
+
+    init();
+  }, [session?.user?.email, fetchUserRole, isAuthLoading, fetchEstablishmentTypes, fetchGlobalSettings]);
 
   const value: AdminContextType = {
     session,
