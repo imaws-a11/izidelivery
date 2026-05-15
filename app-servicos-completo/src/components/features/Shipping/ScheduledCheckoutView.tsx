@@ -106,7 +106,7 @@ export const ScheduledCheckoutView: React.FC<ScheduledCheckoutViewProps> = ({
         user_id: userId,
         service_type: "shipping",
         subtype: "agendado",
-        status: "pending",
+        status: "agendado",
         pickup_address: typeof transitData.origin === 'object' ? (transitData.origin.address || transitData.origin.formatted_address) : (transitData.origin || "A definir"),
         delivery_address: typeof transitData.destination === 'object' ? (transitData.destination.address || transitData.destination.formatted_address) : (transitData.destination || "A definir"),
         scheduled_at: `${schedDate}T${schedTime}:00`,
