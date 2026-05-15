@@ -26,7 +26,7 @@ export const normalizeServiceType = (raw: string | undefined | null): string => 
  if (['logistica', 'logistics'].includes(t)) return 'logistica';
  if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
  if (['motoboy', 'courier', 'moto', 'motoboy_express', 'entrega_avulsa'].includes(t)) return 'motoboy';
- if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
+ if (['package', 'pacote', 'encomenda', 'express', 'delivery', 'shipping'].includes(t)) return 'package';
  return t;
  } catch (e) {
  return 'delivery';
