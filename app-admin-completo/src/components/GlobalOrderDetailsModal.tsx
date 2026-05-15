@@ -115,6 +115,10 @@ export default function GlobalOrderDetailsModal() {
                   <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Detalhes do Pedido</p>
                       <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">#DT-{selectedOrder.id.slice(0, 8).toUpperCase()}</h2>
+                      <p className="text-xs font-bold text-slate-500 mt-1 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                          {new Date(selectedOrder.created_at || Date.now()).toLocaleDateString('pt-BR')} às {new Date(selectedOrder.created_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                   </div>
                   <button 
                     onClick={() => setSelectedOrder(null)}

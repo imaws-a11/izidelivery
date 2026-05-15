@@ -196,7 +196,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
  let originVal, destVal;
  
  if (!isDelivery) {
- // Fase 1: Trajeto do Motoboy atÃ© a Loja (Coleta)
+ // Fase 1: Trajeto do Motoboy até a Loja (Coleta)
  if (driverCoords && isValidCoord(driverCoords)) {
  originVal = { location: { latLng: { latitude: driverCoords.lat, longitude: driverCoords.lng } } };
  } else {
@@ -209,7 +209,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
  ? { location: { latLng: { latitude: vPickup.lat, longitude: vPickup.lng } } } 
  : { address: (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress) };
  } else {
- // Fase 2: Trajeto do Motoboy/Loja atÃ© o Cliente (Entrega)
+ // Fase 2: Trajeto do Motoboy/Loja até o Cliente (Entrega)
  if (driverCoords && isValidCoord(driverCoords)) {
  originVal = { location: { latLng: { latitude: driverCoords.lat, longitude: driverCoords.lng } } };
  } else {
@@ -282,7 +282,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
  const paddingBottom = typeof window !== 'undefined' ? window.innerHeight * 0.45 : 400;
  map.fitBounds(bounds, { top: 100, bottom: paddingBottom, left: 80, right: 80 });
  
- // Garantir zoom de helicÃ³ptero (mÃ¡ximo 14) mesmo se os pontos estiverem prÃ³ximos
+ // Garantir zoom de helicóptero (máximo 14) mesmo se os pontos estiverem próximos
  const listener = google.maps.event.addListener(map, 'idle', () => {
  if (map.getZoom()! > 14) {
  map.setZoom(14);
@@ -310,7 +310,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
 
  const containerStyle = useMemo(() => ({ width: '100%', height: '100%' }), []);
 
- // Memoizar decodificaÃ§Ã£o de polyline (operaÃ§Ã£o pesada)
+ // Memoizar decodificação de polyline (operação pesada)
  const decodedPath = useMemo(() => {
  if (!routePolyline || !window.google?.maps?.geometry?.encoding) return [];
  return window.google.maps.geometry.encoding.decodePath(routePolyline);
@@ -362,7 +362,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
  </OverlayView>
  )}
 
- {/* Marcador de Destino (Cliente) - usa routeInfo.end como fallback quando delivery_lat estÃ¡ vazio */}
+ {/* Marcador de Destino (Cliente) - usa routeInfo.end como fallback quando delivery_lat está vazio */}
  {(() => {
  const clientPos = (vDelivery && isValidCoord(vDelivery)) ? vDelivery : routeInfo?.end;
  if (!clientPos) return null;
@@ -380,7 +380,7 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
  })()}
  </GoogleMap>
  
- {/* BotÃ£o de LocalizaÃ§Ã£o Atual (Centraliza no Motorista) */}
+ {/* Botão de Localização Atual (Centraliza no Motorista) */}
  <motion.button 
  whileHover={{ scale: 1.1 }}
  whileTap={{ scale: 0.9 }}
@@ -544,7 +544,7 @@ const getServicePresentation = (order: any) => {
 
  let summary = '';
  if (itemCount > 0) {
- summary = itemNames.slice(0, 2).join(' Ã¢â‚¬Â¢ ');
+ summary = itemNames.slice(0, 2).join(' ââ‚¬¢ ');
  if (itemCount > 2) summary += ` +${itemCount - 2}`;
  } else if (addressMeta) {
  summary = addressMeta
@@ -671,7 +671,7 @@ function MainApp() {
  }
  }, []);
 
- // --- SINCRONIZAÃ‡ÃO E BOOTSTRAP ---
+ // --- SINCRONIZAÇÁO E BOOTSTRAP ---
  useEffect(() => {
  let isMounted = true;
 
@@ -732,7 +732,7 @@ function MainApp() {
  }
  });
 
- // Timer de seguranÃ§a para o Splash
+ // Timer de segurança para o Splash
  const safetyTimer = setTimeout(() => {
  if (isMounted) setShowSplash(false);
  }, 3500);
@@ -754,7 +754,7 @@ function MainApp() {
  const token = session?.access_token || supabaseKey;
  const authHeaders = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
  
- // Busca cÃ©rebro global (Fonte da Verdade)
+ // Busca cérebro global (Fonte da Verdade)
  const resGlobal = await fetch(`${supabaseUrl}/rest/v1/admin_settings_delivery?key=eq.global&select=*`, {
  headers: authHeaders
  });
@@ -763,7 +763,7 @@ function MainApp() {
  if (dataGlobal && dataGlobal[0]?.value) setGlobalSettings(dataGlobal[0].value);
  }
 
- // Busca configuraÃ§Ãµes locais (retrocompatibilidade)
+ // Busca configurações locais (retrocompatibilidade)
  const res = await fetch(`${supabaseUrl}/rest/v1/app_settings_delivery?select=*`, {
  headers: authHeaders
  });
@@ -772,7 +772,7 @@ function MainApp() {
  if (data && data[0]) setAppSettings(data[0]);
  }
 
- // Busca taxas dinÃ¢micas
+ // Busca taxas dinâmicas
  const resRates = await fetch(`${supabaseUrl}/rest/v1/dynamic_rates_delivery?type=eq.base_values&select=*`, {
  headers: authHeaders
  });
@@ -792,13 +792,13 @@ function MainApp() {
  }
  }
  } catch (e) {
- console.error('[SETTINGS] Erro ao buscar configuraÃ§Ãµes:', e);
+ console.error('[SETTINGS] Erro ao buscar configurações:', e);
  }
  }, []);
 
  const [orders, setOrders] = useState<Order[]>([]);
  
- // EstatÃ­sticas de rejeiÃ§Ã£o para lÃ³gica de loop inteligente (2x = cooldown 30s, 4x = bloqueio permanente)
+ // Estatísticas de rejeição para lógica de loop inteligente (2x = cooldown 30s, 4x = bloqueio permanente)
  const [declinedStats, setDeclinedStats] = useState<Record<string, { count: number, lastDecline: number, isPermanent: boolean }>>({});
 
  // Sincronizar stats com localStorage
@@ -811,14 +811,14 @@ function MainApp() {
  return saved ? JSON.parse(saved) : null;
  });
 
- // Lista de TODAS as missÃµes ativas do entregador (multi-missÃ£o)
+ // Lista de TODAS as missões ativas do entregador (multi-missão)
  const [activeMissions, setActiveMissions] = useState<Order[]>([]);
 
- // Sons nÃ£o sÃ£o mais bloqueados por missÃ£o ativa â€” o entregador precisa ouvir novas chamadas sempre
+ // Sons não são mais bloqueados por missão ativa — o entregador precisa ouvir novas chamadas sempre
  const activeMissionRef = useRef(activeMission);
  useEffect(() => { activeMissionRef.current = activeMission; }, [activeMission]);
 
- // Efeito para persistir dados bÃ¡sicos de autenticaÃ§Ã£o no localStorage
+ // Efeito para persistir dados básicos de autenticação no localStorage
  useEffect(() => {
  if (isLoggingOutRef.current) return;
  if (isAuthenticated && driverId) {
@@ -855,12 +855,12 @@ function MainApp() {
  const handleUpdateProfile = async () => {
  console.log('[DEBUG] handleUpdateProfile iniciado. DriverId:', driverId);
  if (!driverId) {
- toastError('Erro: SessÃ£o nÃ£o encontrada.');
+ toastError('Erro: Sessão não encontrada.');
  return;
  }
 
  if (editProfileData.cpf && !validateCPF(editProfileData.cpf)) {
- toastError('O CPF informado Ã© invÃ¡lido.');
+ toastError('O CPF informado é inválido.');
  return;
  }
  
@@ -926,12 +926,12 @@ function MainApp() {
  );
  setShowPersonalDataModal(false);
  
- // SincronizaÃ§Ã£o completa final
+ // Sincronização completa final
  await loadProfileAndEnforceOnboarding(driverId, editProfileData.email, editProfileData.name);
 
  } catch (err: any) {
  console.error('[DEBUG] Erro em handleUpdateProfile:', err);
- toastError('Erro ao salvar: ' + (err.message || 'Falha na conexÃ£o'));
+ toastError('Erro ao salvar: ' + (err.message || 'Falha na conexão'));
  } finally {
  setIsSavingProfile(false);
  }
@@ -940,9 +940,9 @@ function MainApp() {
  /**
  * @CRITICAL_LOGIC - BUSCA DIRETA (BYPASS) DE VAGAS DEDICADAS
  * @AUTHOR Antigravity (Senior AI Dev)
- * @WARNING NÃƒO ALTERAR PARA SUPABASE-JS LIBRARY. 
- * Este mÃ©todo via fetch nativo foi implementado para contornar travamentos persistentes 
- * na biblioteca cliente. Qualquer mudanÃ§a para o mÃ©todo tradicional resultarÃ¡ em 
+ * @WARNING NÁO ALTERAR PARA SUPABASE-JS LIBRARY. 
+ * Este método via fetch nativo foi implementado para contornar travamentos persistentes 
+ * na biblioteca cliente. Qualquer mudança para o método tradicional resultará em 
  * falha de carregamento das vagas na tela do entregador.
  */
  const fetchDedicatedSlotsRealtime = useCallback(async () => {
@@ -957,7 +957,7 @@ function MainApp() {
  // Busca principal de vagas ativas + Vagas Aceitas (Agenda)
  const today = new Date().toLocaleDateString('en-CA');
  
- // Pega IDs de vagas onde o entregador jÃ¡ foi aceito para garantir que elas apareÃ§am mesmo se o lojista as "desativar" no mercado
+ // Pega IDs de vagas onde o entregador já foi aceito para garantir que elas apareçam mesmo se o lojista as "desativar" no mercado
  const cachedAppsRaw = localStorage.getItem(`izi_apps_${driverId}`);
  const acceptedSlotIds = cachedAppsRaw 
  ? JSON.parse(cachedAppsRaw)
@@ -1002,8 +1002,8 @@ function MainApp() {
 
  setDedicatedSlots(mergedData);
  } catch (err: any) {
- console.error("[CRITICAL] Falha na sincronizaÃ§Ã£o de vagas:", err.message);
- // MantÃ©m o estado anterior em caso de erro de rede momentÃ¢neo
+ console.error("[CRITICAL] Falha na sincronização de vagas:", err.message);
+ // Mantém o estado anterior em caso de erro de rede momentâneo
  }
  }, [driverId]);
 
@@ -1011,8 +1011,8 @@ function MainApp() {
  const [view, setView] = useState<View>('dashboard');
  const [activeTab, setActiveTab] = useState<View>(() => {
  const saved = localStorage.getItem('izi_driver_active_tab') as View;
- // Abas que sÃ£o overlays (fixos full-screen) ou dependem de estado dinÃ¢mico
- // NÃO devem ser restauradas no refresh para evitar telas vazias/sobrepostas
+ // Abas que são overlays (fixos full-screen) ou dependem de estado dinâmico
+ // NÁO devem ser restauradas no refresh para evitar telas vazias/sobrepostas
  const overlaytabs: View[] = ['profile', 'notifications', 'active_mission'];
  const validTabs: View[] = ['dashboard', 'history', 'earnings', 'missions', 'dedicated', 'scheduled'];
  if (overlaytabs.includes(saved)) return 'dashboard';
@@ -1045,7 +1045,7 @@ function MainApp() {
  const total = contentRange.split('/')[1];
  setUnreadNotifsCount(parseInt(total || '0'));
  } else {
- // Fallback se nÃ£o vier Content-Range
+ // Fallback se não vier Content-Range
  const data = await response.json();
  setUnreadNotifsCount(data.length);
  }
@@ -1083,12 +1083,12 @@ function MainApp() {
  const isOnlineRef = useRef(localStorage.getItem('izi_driver_online') === 'true');
  useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
- // Vigilante de Som (PadrÃ£o Lojista - Alta Confiabilidade)
+ // Vigilante de Som (Padrão Lojista - Alta Confiabilidade)
  const heardOrderIds = useRef<Set<string>>(new Set());
  const isFirstLoad = useRef(true);
 
  // Timer de now removido (performance: causava re-render completo a cada 10s sem utilidade)
- // visibleOrders simplificado: referÃªncia direta sem useMemo desnecessÃ¡rio
+ // visibleOrders simplificado: referência direta sem useMemo desnecessário
  const visibleOrders = orders;
 
  const announcedOrderIds = useRef<Set<string>>(new Set());
@@ -1125,16 +1125,16 @@ function MainApp() {
  return;
  }
 
- // FIX BUG 5: Marcar primeiro carregamento como concluÃ­do quando hÃ¡ pedidos
- // Isso evita som/anÃºncio de pedidos jÃ¡ existentes ao entrar online
+ // FIX BUG 5: Marcar primeiro carregamento como concluído quando há pedidos
+ // Isso evita som/anúncio de pedidos já existentes ao entrar online
  if (isFirstLoad.current) {
  isFirstLoad.current = false;
- // Apenas silenciosamente marcar todos os pedidos atuais como jÃ¡ "vistos"
+ // Apenas silenciosamente marcar todos os pedidos atuais como já "vistos"
  visibleOrders.forEach(o => announcedOrderIds.current.add(o.realId || o.id));
  return;
  }
 
- // Detectar ordens que ainda nÃ£o foram anunciadas (som + popup + foreground)
+ // Detectar ordens que ainda não foram anunciadas (som + popup + foreground)
  const newOrders = visibleOrders.filter(o => !announcedOrderIds.current.has(o.realId || o.id));
  
  if (newOrders.length > 0) {
@@ -1149,22 +1149,22 @@ function MainApp() {
  playIziSound('driver', true);
  }
 
- // 2. NotificaÃ§Ã£o Web Push (Apenas se disponÃ­vel)
+ // 2. Notificação Web Push (Apenas se disponível)
  const servicePreview = getServicePresentation(latest);
  if (!Capacitor.isNativePlatform() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
- new Notification('Ã°Å¸Å¡â‚¬ Nova MissÃ£o Izi!', { 
- body: `${servicePreview.headline} Ã¢â‚¬Â¢ ${servicePreview.pickupText || latest.pickup_address}`, 
+ new Notification('🚀 Nova Missão Izi!', { 
+ body: `${servicePreview.headline} ââ‚¬¢ ${servicePreview.pickupText || latest.pickup_address}`, 
  icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
  });
  }
 
- // 3. Overlay nativo removido temporariamente a pedido do usuÃ¡rio
- // A permissÃ£o continua existindo, mas o popup nativo nÃ£o serÃ¡ mais desenhado.
+ // 3. Overlay nativo removido temporariamente a pedido do usuário
+ // A permissão continua existindo, mas o popup nativo não será mais desenhado.
  }
  }, [visibleOrders, isAuthenticated, isOnline]);
 
- // Loop de reforÃ§o de Ã¡udio e vibraÃ§Ã£o (Android Foreground)
- // Garante que o som continue tocando e vibrando enquanto houver missÃµes visÃ­veis
+ // Loop de reforço de áudio e vibração (Android Foreground)
+ // Garante que o som continue tocando e vibrando enquanto houver missões visíveis
  useEffect(() => {
  const hasOrders = visibleOrders.length > 0 && !activeMission;
  
@@ -1173,7 +1173,7 @@ function MainApp() {
  return;
  }
 
- // Disparo imediato se nÃ£o houver som ativo
+ // Disparo imediato se não houver som ativo
  if (localStorage.getItem('pref_sound') !== 'false') {
  playIziSound('driver', true);
  }
@@ -1223,7 +1223,7 @@ function MainApp() {
  const isFirstRender = useRef(true);
  const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
  const hasBootedRef = useRef(false);
- const isLoggingOutRef = useRef(false); // Garante que syncMissionWithDB e restauraÃ§Ã£o sÃ³ ocorrem 1x por sessÃ£o
+ const isLoggingOutRef = useRef(false); // Garante que syncMissionWithDB e restauração só ocorrem 1x por sessão
  const lastLocationUpdateRef = useRef<number>(0); // Throttle de update de GPS no banco
  const [isMenuOpen, setIsMenuOpen] = useState(false);
  const [isSOSActive, setIsSOSActive] = useState(false);
@@ -1246,7 +1246,7 @@ function MainApp() {
  const [audioBlocked, setAudioBlocked] = useState(false);
 
 
- // Efeito para checar se o Ã¡udio estÃ¡ bloqueado
+ // Efeito para checar se o áudio está bloqueado
  useEffect(() => {
  const checkAudio = () => {
  if (typeof window !== 'undefined') {
@@ -1254,8 +1254,8 @@ function MainApp() {
  if (AudioContextClass) {
  const ctx = new AudioContextClass();
  
- // No web normal, suspended Ã© o gatilho. No APK, as vezes o estado inicia como running 
- // mas requer interaÃ§Ã£o. ForÃ§amos a exibiÃ§Ã£o se for nativo e nÃ£o houver flag de desbloqueio.
+ // No web normal, suspended é o gatilho. No APK, as vezes o estado inicia como running 
+ // mas requer interação. Forçamos a exibição se for nativo e não houver flag de desbloqueio.
  const isNative = Capacitor.isNativePlatform();
  const hasUnlocked = localStorage.getItem('izi_audio_unlocked') === 'true';
 
@@ -1273,7 +1273,7 @@ function MainApp() {
  playIziSound('success');
  setAudioBlocked(false);
  localStorage.setItem('izi_audio_unlocked', 'true');
- toastSuccess('NotificaÃ§Ãµes sonoras ativas!');
+ toastSuccess('Notificações sonoras ativas!');
  };
 
  const [myApplications, setMyApplications] = useState<any[]>(() => {
@@ -1303,12 +1303,12 @@ function MainApp() {
 
  if (['restaurant', 'restaurante', 'food', 'bakery'].includes(t)) return 'Restaurante';
  if (['market', 'mercado', 'fruit'].includes(t)) return 'Mercado';
- if (['pharmacy', 'farmacia'].includes(t)) return 'FarmÃ¡cia';
+ if (['pharmacy', 'farmacia'].includes(t)) return 'Farmácia';
  if (['mototaxi', 'moto_taxi'].includes(t)) return 'Mototaxi';
  if (['car_ride'].includes(t)) return 'Corrida Carro';
  if (['motorista_particular'].includes(t)) return 'Motorista Particular';
  if (['van'].includes(t)) return 'Van';
- if (['utilitario'].includes(t)) return 'UtilitÃ¡rio';
+ if (['utilitario'].includes(t)) return 'Utilitário';
  if (['frete', 'carreto', 'logistica'].includes(t)) return 'Frete';
  if (['beverages', 'bebidas'].includes(t)) return 'Bebidas';
  if (['petshop', 'pets'].includes(t)) return 'Petshop';
@@ -1356,7 +1356,7 @@ function MainApp() {
  });
  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
- // O formulÃ¡rio de ediÃ§Ã£o (editProfileData) Ã© alimentado via loadProfileAndEnforceOnboarding
+ // O formulário de edição (editProfileData) é alimentado via loadProfileAndEnforceOnboarding
  // garantindo que apenas dados frescos do banco de dados sejam exibidos.
 
  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -1383,7 +1383,7 @@ function MainApp() {
  const [showPlateModal, setShowPlateModal] = useState(false);
  const [isEditingPlate, setIsEditingPlate] = useState(false);
  const [isSavingPlate, setIsSavingPlate] = useState(false);
- // Estados para cadastro de novo veÃ­culo
+ // Estados para cadastro de novo veículo
  const [showNewVehicleForm, setShowNewVehicleForm] = useState(false);
  const [newVehicleType, setNewVehicleType] = useState('');
  const [newVehiclePlate, setNewVehiclePlate] = useState('');
@@ -1405,7 +1405,7 @@ function MainApp() {
  const [showReceipt, setShowReceipt] = useState(false);
  const [selectedReceiptUrl, setSelectedReceiptUrl] = useState('');
 
- // PreferÃªncias do entregador
+ // Preferências do entregador
  const [prefSoundEnabled, setPrefSoundEnabled] = useState(() => localStorage.getItem('pref_sound') !== 'false');
  const [prefVibrationEnabled, setPrefVibrationEnabled] = useState(() => localStorage.getItem('pref_vibration') !== 'false');
  const [prefNavApp, setPrefNavApp] = useState<'google' | 'waze' | 'apple'>(() => (localStorage.getItem('pref_nav_app') as any) || 'google');
@@ -1437,7 +1437,7 @@ function MainApp() {
  const clearDriverSessionState = useCallback(() => {
  setIsProfileNotFound(false);
 
- // Captura o ID atual antes de limpar para remover o cache especÃ­fico
+ // Captura o ID atual antes de limpar para remover o cache específico
  const currentUid = driverId || localStorage.getItem('izi_driver_uid');
 
  setIsMenuOpen(false);
@@ -1461,7 +1461,7 @@ function MainApp() {
  setShowReceipt(false);
  setSelectedReceiptUrl('');
 
- // Remove chaves crÃ­ticas de sessÃ£o e perfil
+ // Remove chaves críticas de sessão e perfil
  const keysToRemove = [
  'izi_driver_authenticated',
  'izi_driver_uid',
@@ -1521,7 +1521,7 @@ function MainApp() {
  if (selectedSlot) {
  const fresh = dedicatedSlots.find(s => s.id === selectedSlot.id);
  if (fresh) {
- // SÃ³ atualiza se houver mudanÃ§a real para evitar re-renders infinitos
+ // Só atualiza se houver mudança real para evitar re-renders infinitos
  if (JSON.stringify(fresh.slot_applications) !== JSON.stringify(selectedSlot.slot_applications)) {
  setSelectedSlot(fresh);
  }
@@ -1529,7 +1529,7 @@ function MainApp() {
  }
  }, [dedicatedSlots]);
  
- // Efeito para calcular distÃ¢ncia e rota quando um pedido Ã© selecionado
+ // Efeito para calcular distância e rota quando um pedido é selecionado
  useEffect(() => {
  if (!selectedOrder || !showOrderModal) {
  setCalculatedDistance(null);
@@ -1593,7 +1593,7 @@ function MainApp() {
  setCalculatedDistance((route.distanceMeters / 1000).toFixed(1) + ' km');
  }
  } else {
- setCalculatedDistance(selectedOrder.distance || 'DistÃ¢ncia indisponÃ­vel');
+ setCalculatedDistance(selectedOrder.distance || 'Distância indisponível');
  }
  } catch (err) {
  }
@@ -1610,7 +1610,7 @@ function MainApp() {
  setSelectedOrder(null);
  setSelectedScheduledOrder(null);
  
- // SÃ³ limpa o slot selecionado se NÃO estiver indo para a aba de vagas
+ // Só limpa o slot selecionado se NÁO estiver indo para a aba de vagas
  // Isso permite que o dashboard abra o detalhe da vaga
  if (activeTab !== 'dedicated') {
  setSelectedSlot(null);
@@ -1620,18 +1620,18 @@ function MainApp() {
  }, [activeTab]);
 
  const getPaymentLabel = (order: any) => {
- if (!order) return 'NÃ£o informado';
+ if (!order) return 'Não informado';
  if (order.payment_method === 'online') return 'Pagamento Online';
  
  // Mapeamento comum
  const map: Record<string, string> = {
  'dinheiro': 'Dinheiro (Local)',
  'pix': 'Pix',
- 'cartao_credito': 'CartÃ£o de CrÃ©dito',
- 'cartao_debito': 'CartÃ£o de DÃ©bito',
- 'maquininha': 'CartÃ£o (Maquininha)',
+ 'cartao_credito': 'Cartão de Crédito',
+ 'cartao_debito': 'Cartão de Débito',
+ 'maquininha': 'Cartão (Maquininha)',
  'wallet': 'Carteira Izi',
- 'not_required': 'NÃ£o requerido'
+ 'not_required': 'Não requerido'
  };
  
  return map[order.payment_method] || order.payment_method_label || (order.payment_method ? order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1).replace('_', ' ') : 'Local');
@@ -1680,11 +1680,11 @@ function MainApp() {
  if (typeof NativeOrderOverlay !== 'undefined') {
  NativeOrderOverlay.openOverlaySettings();
  } else {
- toast('SobreposiÃ§Ã£o nÃ£o disponÃ­vel nesta versÃ£o.', 'info');
+ toast('Sobreposição não disponível nesta versão.', 'info');
  }
  } catch (e) {}
  } else {
- toast('SobreposiÃ§Ã£o disponÃ­vel apenas no APK.', 'info');
+ toast('Sobreposição disponível apenas no APK.', 'info');
  }
  };
 
@@ -1694,7 +1694,7 @@ function MainApp() {
  const rawType = order.service_type || order.type || 'generic';
  const type = normalizeServiceType(rawType);
  
- // VerificaÃ§Ã£o de pagamento em dinheiro
+ // Verificação de pagamento em dinheiro
  const driverBaseAmount = getGrossEarnings(order);
  const deliveryCommission = Number(appSettings?.driver_freight_commission ?? appSettings?.app_commission ?? 7);
  const privateDriverCommission = Number(appSettings?.private_driver_commission ?? appSettings?.driver_freight_commission ?? appSettings?.app_commission ?? 7);
@@ -1715,7 +1715,7 @@ function MainApp() {
  return;
  }
  try {
- // Verificamos permissÃµes antes
+ // Verificamos permissões antes
  let permStatus = await PushNotifications.checkPermissions();
  if (permStatus.receive === 'prompt') {
  permStatus = await PushNotifications.requestPermissions();
@@ -1728,8 +1728,8 @@ function MainApp() {
  if (Capacitor.getPlatform() === 'android') {
  await PushNotifications.createChannel({
  id: 'izi_notifications',
- name: 'NotificaÃ§Ãµes IZI',
- description: 'Canal principal de notificaÃ§Ãµes do IZI Delivery',
+ name: 'Notificações IZI',
+ description: 'Canal principal de notificações do IZI Delivery',
  sound: 'mission_call',
  importance: 5,
  visibility: 1,
@@ -1761,7 +1761,7 @@ function MainApp() {
 
  PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
  
- // Se o usuÃ¡rio clicar, trazer para o dashboard ou aba ativa
+ // Se o usuário clicar, trazer para o dashboard ou aba ativa
  setActiveTab('dashboard');
  });
 
@@ -1780,12 +1780,12 @@ function MainApp() {
 
  useEffect(() => {
  if (!isAuthenticated || !driverId) return;
- // Permite GPS se estiver ONLINE ou em uma MISSÃO ATIVA
+ // Permite GPS se estiver ONLINE ou em uma MISSÁO ATIVA
  if (!isOnline && !activeMission) return;
  
  const updateLocation = (lat: number, lng: number) => {
  setDriverCoords({ lat, lng });
- // Throttle: atualiza o banco no mÃ¡ximo a cada 15 segundos para nÃ£o saturar HTTP
+ // Throttle: atualiza o banco no máximo a cada 15 segundos para não saturar HTTP
  const now = Date.now();
  if (now - lastLocationUpdateRef.current > 15000) {
  lastLocationUpdateRef.current = now;
@@ -1797,7 +1797,7 @@ function MainApp() {
  let webWatchId: number | undefined;
 
  const startNativeTracking = async () => {
- // Ã¢â€â‚¬Ã¢â€â‚¬ AMBIENTE NATIVO (APK Android/iOS) Ã¢â€â‚¬Ã¢â€â‚¬
+ // ââ€â‚¬ââ€â‚¬ AMBIENTE NATIVO (APK Android/iOS) ââ€â‚¬ââ€â‚¬
  if (Capacitor.isNativePlatform()) {
  try {
  const permissions = await Geolocation.checkPermissions();
@@ -1805,7 +1805,7 @@ function MainApp() {
  await Geolocation.requestPermissions();
  }
 
- // PosiÃ§Ã£o imediata para agilizar a primeira abertura do mapa
+ // Posição imediata para agilizar a primeira abertura do mapa
  const pos = await Geolocation.getCurrentPosition({ 
  enableHighAccuracy: true,
  timeout: 20000,
@@ -1814,7 +1814,7 @@ function MainApp() {
  
  if (pos) await updateLocation(pos.coords.latitude, pos.coords.longitude);
 
- // Watch contÃ­nuo
+ // Watch contínuo
  watchId = await Geolocation.watchPosition(
  { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
  (position) => {
@@ -1828,7 +1828,7 @@ function MainApp() {
  return;
  }
 
- // Ã¢â€â‚¬Ã¢â€â‚¬ AMBIENTE WEB (browser) Ã¢â€â‚¬ usa API nativa do browser Ã¢â€â‚¬Ã¢â€â‚¬
+ // ââ€â‚¬ââ€â‚¬ AMBIENTE WEB (browser) ââ€â‚¬ usa API nativa do browser ââ€â‚¬ââ€â‚¬
  if (!navigator.geolocation) {
  return;
  }
@@ -1860,7 +1860,7 @@ function MainApp() {
 
 
 
- // FunÃ§Ã£o centralizada de carregamento de perfil â€” usada no boot, no resume e no auth change
+ // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
  const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
  if (!userId) return;
 
@@ -1873,7 +1873,7 @@ function MainApp() {
 
  if (profileError) {
  console.error('Erro ao carregar perfil:', profileError);
- // Mesmo com erro, tentamos inicializar o formulÃ¡rio com o que temos do Auth
+ // Mesmo com erro, tentamos inicializar o formulário com o que temos do Auth
  setEditProfileData(prev => ({
  ...prev,
  name: userName || prev.name,
@@ -1888,7 +1888,7 @@ function MainApp() {
  setIsOnline(false);
  localStorage.setItem('izi_driver_online', 'false');
  setShowOnboarding(true);
- // Aguarda a criaÃ§Ã£o do registro para garantir consistÃªncia
+ // Aguarda a criação do registro para garantir consistência
  await ensureDriverRecord(userId, userEmail, userName);
  
  // Se acabou de criar, inicializa o editProfileData com o que temos
@@ -1903,7 +1903,7 @@ function MainApp() {
  return;
  }
 
- // --- SINCRONIZAÃ‡ÃO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
+ // --- SINCRONIZAÇÁO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
  
  // 1. Nome e Avatar
  const currentName = profile.name || userName || 'Entregador Izi';
@@ -1915,7 +1915,7 @@ function MainApp() {
  localStorage.setItem('izi_driver_avatar', profile.avatar_url);
  }
 
- // 2. VeÃ­culo e Placa
+ // 2. Veículo e Placa
  if (profile.vehicle_type) {
  setDriverVehicle(profile.vehicle_type);
  localStorage.setItem('izi_driver_vehicle', profile.vehicle_type);
@@ -1932,14 +1932,14 @@ function MainApp() {
  if (profile.address) localStorage.setItem('izi_driver_address', profile.address);
  if (profile.vehicle_model) localStorage.setItem('izi_driver_vehicle_model', profile.vehicle_model);
  
- // 4. Dados BancÃ¡rios e VÃ­nculos
+ // 4. Dados Bancários e Vínculos
  if (profile.merchant_id) {
  localStorage.setItem('izi_driver_merchant_id', profile.merchant_id);
  } else {
  localStorage.removeItem('izi_driver_merchant_id');
  }
 
- // 5. Sincroniza o buffer de ediÃ§Ã£o (editProfileData) para evitar dados incorretos nos modais
+ // 5. Sincroniza o buffer de edição (editProfileData) para evitar dados incorretos nos modais
  setEditProfileData({
  name: profile.name || userName || '',
  phone: profile.phone || '',
@@ -1956,7 +1956,7 @@ function MainApp() {
  localStorage.setItem('izi_driver_pix', profile.bank_info.pix_key);
  }
 
- // 6. PreferÃªncias
+ // 6. Preferências
  if (profile.preferences) {
  const p = profile.preferences as any;
  if (p.pref_sound !== undefined) {
@@ -1973,20 +1973,20 @@ function MainApp() {
  }
  }
 
- // 7. Status de AprovaÃ§Ã£o e VÃ­nculo
+ // 7. Status de Aprovação e Vínculo
  const active = !!profile.is_active;
  setIsApproved(active);
  
- // Sincroniza Status Online: RESPEITA o LocalStorage primeiro para nÃ£o derrubar o radar no refresh
+ // Sincroniza Status Online: RESPEITA o LocalStorage primeiro para não derrubar o radar no refresh
  const localWantsOnline = localStorage.getItem('izi_driver_online') === 'true';
  
- // Se o motorista nÃ£o for ativo, forÃ§amos offline
+ // Se o motorista não for ativo, forçamos offline
  if (!active) {
  setIsOnline(false);
  isOnlineRef.current = false;
  localStorage.setItem('izi_driver_online', 'false');
  } else {
- // Se tem missÃ£o ativa em cache, FORÃ‡AR online para nÃ£o perder acesso
+ // Se tem missão ativa em cache, FORÇAR online para não perder acesso
  const hasCachedMission = !!localStorage.getItem('Izi_active_mission');
  const shouldBeOnline = localWantsOnline || hasCachedMission;
  
@@ -1994,10 +1994,10 @@ function MainApp() {
  isOnlineRef.current = shouldBeOnline;
  localStorage.setItem('izi_driver_online', shouldBeOnline.toString());
  
- // Se forÃ§amos online por causa de missÃ£o ativa, atualiza o DB tambÃ©m
+ // Se forçamos online por causa de missão ativa, atualiza o DB também
  if (hasCachedMission && !localWantsOnline) {
  supabase.from('drivers_delivery').update({ is_online: true }).eq('id', userId).then(() => {
- console.log('[BOOT] Motorista forÃ§ado online por missÃ£o ativa em andamento.');
+ console.log('[BOOT] Motorista forçado online por missão ativa em andamento.');
  });
  }
  }
@@ -2033,8 +2033,8 @@ function MainApp() {
  };
  }, []);
 
- // Salva a aba ativa para persistÃªncia no F5
- // Overlays nÃ£o sÃ£o salvos para evitar tela branca no reload
+ // Salva a aba ativa para persistência no F5
+ // Overlays não são salvos para evitar tela branca no reload
  useEffect(() => {
  const overlaytabs: View[] = ['profile', 'notifications', 'active_mission'];
  if (!overlaytabs.includes(activeTab)) {
@@ -2042,7 +2042,7 @@ function MainApp() {
  }
  }, [activeTab]);
 
- // SINCRONIZAÃ‡ÃO MULTIDISPOSITIVO (Perfil, Status e VÃ­nculo)
+ // SINCRONIZAÇÁO MULTIDISPOSITIVO (Perfil, Status e Vínculo)
  useEffect(() => {
  if (!isAuthenticated || !driverId) return;
 
@@ -2054,7 +2054,7 @@ function MainApp() {
  filter: `id=eq.${driverId}`
  }, (payload) => {
  if (payload.eventType === 'DELETE') {
- console.log('[REALTIME] Conta do entregador foi excluÃ­da!');
+ console.log('[REALTIME] Conta do entregador foi excluída!');
  handleLogout();
  return;
  }
@@ -2068,7 +2068,7 @@ function MainApp() {
  localStorage.setItem('izi_driver_online', String(updated.is_online));
  }
  
- // Sincroniza VÃ­nculo de Lojista
+ // Sincroniza Vínculo de Lojista
  if (updated.merchant_id !== undefined) {
  if (updated.merchant_id) {
  localStorage.setItem('izi_driver_merchant_id', String(updated.merchant_id));
@@ -2083,7 +2083,7 @@ function MainApp() {
  return () => { supabase.removeChannel(channel); };
  }, [isAuthenticated, driverId]);
 
- // Effect dedicado para TransmissÃµes Administrativas (Popups)
+ // Effect dedicado para Transmissões Administrativas (Popups)
  useEffect(() => {
  if (!driverId) return;
 
@@ -2117,7 +2117,7 @@ function MainApp() {
  const notif = payload.new as any;
  if (!notif) return;
 
- // SÃ³ dispara se for um novo insert 'sent' ou um update que mudou para 'sent'
+ // Só dispara se for um novo insert 'sent' ou um update que mudou para 'sent'
  const isSent = notif.status === 'sent';
  const isNewSent = payload.eventType === 'INSERT' && isSent;
  const isUpdateSent = payload.eventType === 'UPDATE' && isSent && (payload.old as any)?.status !== 'sent';
@@ -2136,7 +2136,7 @@ function MainApp() {
  });
  }
 
- // 3. System Toast (banner flutuante para tipo 'push' puro â€” nÃ£o popup fullscreen)
+ // 3. System Toast (banner flutuante para tipo 'push' puro — não popup fullscreen)
  if (notif.type === 'push') {
  setSystemNotification({
  title: notif.title,
@@ -2188,8 +2188,8 @@ function MainApp() {
  setAuthLoading(true); setAuthError('');
  if (!authName.trim()) { setAuthError('Informe seu nome completo.'); setAuthLoading(false); return; }
  if (!authCpf.trim()) { setAuthError('Informe seu CPF.'); setAuthLoading(false); return; }
- if (!validateCPF(authCpf)) { setAuthError('O CPF informado Ã© invÃ¡lido.'); setAuthLoading(false); return; }
- if (authPassword.length < 6) { setAuthError('A senha deve ter no mÃ­nimo 6 caracteres.'); setAuthLoading(false); return; }
+ if (!validateCPF(authCpf)) { setAuthError('O CPF informado é inválido.'); setAuthLoading(false); return; }
+ if (authPassword.length < 6) { setAuthError('A senha deve ter no mínimo 6 caracteres.'); setAuthLoading(false); return; }
  try {
  const { data, error } = await supabase.auth.signUp({
  email: authEmail,
@@ -2222,7 +2222,7 @@ function MainApp() {
  setDriverVehicle(authVehicle);
  }
  } catch (e: any) {
- setAuthError(e.message?.includes('already registered') ? 'Este email jÃ¡ estÃ¡ cadastrado. FaÃ§a login.' : e.message);
+ setAuthError(e.message?.includes('already registered') ? 'Este email já está cadastrado. Faça login.' : e.message);
  } finally { setAuthLoading(false); }
  };
 
@@ -2231,12 +2231,12 @@ function MainApp() {
 
 
  // =====================================================================
- // RESTAURAÃ‡ÃO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
+ // RESTAURAÇÁO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
  // =====================================================================
  useEffect(() => {
  if (!driverId || !isAuthenticated || !isProfileLoaded) return;
 
- // SE O PERFIL ESTÃ EXPLICITAMENTE DESATIVADO, FORÃ‡A OFFLINE.
+ // SE O PERFIL ESTÁ EXPLICITAMENTE DESATIVADO, FORÇA OFFLINE.
  if (isApproved === false) {
  setIsOnline(false);
  localStorage.setItem('izi_driver_online', 'false');
@@ -2255,7 +2255,7 @@ function MainApp() {
  if (typeof ForegroundService !== 'undefined') {
  ForegroundService.startForegroundService({
  id: 1001,
- title: "Izi Entregador: Online Ã¢Å“â€¦",
+ title: "Izi Entregador: Online âÅ“â€¦",
  body: "Buscando novas chamadas em tempo real...",
  importance: 5,
  icon: 'notification_icon'
@@ -2265,14 +2265,14 @@ function MainApp() {
  }
 
  if (localWantsOnline) {
- // Sincronizar banco em background para garantir consistÃªncia
+ // Sincronizar banco em background para garantir consistência
  supabase.from('drivers_delivery')
  .update({ is_online: true, last_seen_at: new Date().toISOString() })
  .eq('id', driverId);
  }
  }, [driverId, isAuthenticated, isProfileLoaded]);
 
- // SincronizaÃ§Ã£o entre mÃºltiplos dispositivos (Online status, Carteira, Perfil)
+ // Sincronização entre múltiplos dispositivos (Online status, Carteira, Perfil)
  useEffect(() => {
  if (!driverId || !isAuthenticated) return;
  const dId = String(driverId).trim();
@@ -2323,9 +2323,9 @@ function MainApp() {
  const handleToggleOnline = async () => {
  const nextState = !isOnline;
  
- // Bloqueio: NÃ£o permite ficar offline se houver missÃ£o ativa
+ // Bloqueio: Não permite ficar offline se houver missão ativa
  if (!nextState && (activeMission || localStorage.getItem('Izi_active_mission'))) {
- toastError("VocÃª nÃ£o pode ficar offline enquanto tiver uma missÃ£o em andamento!");
+ toastError("Você não pode ficar offline enquanto tiver uma missão em andamento!");
  return;
  }
 
@@ -2337,14 +2337,14 @@ function MainApp() {
  localStorage.setItem('izi_driver_online', nextState.toString());
  setIsOnline(nextState);
 
- // Gerenciar Foreground Service com seguranÃ§a mÃ¡xima
+ // Gerenciar Foreground Service com segurança máxima
  if (Capacitor.isNativePlatform()) {
  try {
  if (typeof ForegroundService !== 'undefined') {
  if (nextState && !activeMission) {
  await ForegroundService.startForegroundService({
  id: 1001,
- title: "Izi Entregador: Online Ã¢Å“â€¦",
+ title: "Izi Entregador: Online âÅ“â€¦",
  body: "Buscando novas chamadas em tempo real...",
  importance: 5,
  icon: 'notification_icon'
@@ -2366,7 +2366,7 @@ function MainApp() {
  : { is_online: false };
  await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
  
- // Se ficou online, forÃ§a um sync imediato para recuperar missÃµes
+ // Se ficou online, força um sync imediato para recuperar missões
  if (nextState) {
  syncMissionWithDB();
  }
@@ -2415,7 +2415,7 @@ function MainApp() {
  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dedicated_slots_delivery' }, async (payload) => {
  await fetchDedicatedSlotsRealtimeRef.current();
  playIziSound('driver', false);
- toastSuccess('Nova vaga dedicada disponÃ­vel!');
+ toastSuccess('Nova vaga dedicada disponível!');
  })
  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dedicated_slots_delivery' }, async (payload) => {
  await fetchDedicatedSlotsRealtimeRef.current();
@@ -2429,11 +2429,11 @@ function MainApp() {
  fetchDeep();
  refreshMyApplicationsRef.current();
 
- // NotificaÃ§Ã£o de aprovaÃ§Ã£o
+ // Notificação de aprovação
  const data = payload.new as any;
  if (payload.eventType === 'UPDATE' && data.status === 'accepted' && String(data.driver_id) === String(driverId)) {
  playIziSound('success');
- toastSuccess('ParabÃ©ns! Sua vaga foi confirmada!');
+ toastSuccess('Parabéns! Sua vaga foi confirmada!');
  }
  })
  .subscribe();
@@ -2441,7 +2441,7 @@ function MainApp() {
  return () => { supabase.removeChannel(slotsChannel); };
  }, [isAuthenticated, driverId]);
  
- // Auxiliar centralizado para obter token de auth seguro (com refresh se necessÃ¡rio)
+ // Auxiliar centralizado para obter token de auth seguro (com refresh se necessário)
  const getSecureToken = useCallback(async () => {
  const sUrl = import.meta.env.VITE_SUPABASE_URL;
  const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -2480,7 +2480,7 @@ function MainApp() {
  if (ls) {
  const parsed = JSON.parse(ls);
  const expiresAt = parsed?.expires_at ? parsed.expires_at * 1000 : 0;
- // SÃ³ usa o localstorage token se ele for vÃ¡lido
+ // Só usa o localstorage token se ele for válido
  if (parsed?.access_token && (expiresAt === 0 || expiresAt > Date.now() + 60000)) {
  return parsed.access_token;
  }
@@ -2537,7 +2537,7 @@ function MainApp() {
  if (isAuthenticated) {
  await supabase.auth.refreshSession();
  }
- throw new Error('SessÃ£o expirada. Por favor, reinicie o aplicativo.');
+ throw new Error('Sessão expirada. Por favor, reinicie o aplicativo.');
  }
 
  if (!res.ok) {
@@ -2547,12 +2547,12 @@ function MainApp() {
  return await res.json();
  } catch (error: any) {
  clearTimeout(timeoutId);
- if (error.name === 'AbortError') throw new Error('Timeout na conexÃ£o com o banco');
+ if (error.name === 'AbortError') throw new Error('Timeout na conexão com o banco');
  throw error;
  }
  }, [isAuthenticated]);
 
- // Monitorar aprovaÃ§Ã£o de vagas dedicadas em tempo real
+ // Monitorar aprovação de vagas dedicadas em tempo real
  useEffect(() => {
  if (!isAuthenticated || !driverId) return;
 
@@ -2590,10 +2590,10 @@ function MainApp() {
  
  setShowApprovedSlotModal(true);
 
- toastSuccess("Ã°Å¸Å¡â‚¬ VAGA CONFIRMADA! Clique para ver os detalhes.");
+ toastSuccess("🚀 VAGA CONFIRMADA! Clique para ver os detalhes.");
  }
  
- // Sincroniza estados apÃ³s qualquer atualizaÃ§Ã£o minha
+ // Sincroniza estados após qualquer atualização minha
  refreshMyApplications();
  fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone)&is_active=eq.true&order=created_at.desc');
  }
@@ -2626,13 +2626,13 @@ function MainApp() {
  refreshFinanceData();
  }, [isAuthenticated, driverId, refreshMyApplications]);
 
- // Buscar Agendamentos disponÃ­veis e aceitos
+ // Buscar Agendamentos disponíveis e aceitos
  useEffect(() => {
  if (!isAuthenticated || !driverId) return;
 
  const fetchScheduled = async () => {
  const now = new Date();
- const referenceDate = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString(); // 12h atrÃ¡s para cobrir qualquer delay de confirmaÃ§Ã£o
+ const referenceDate = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString(); // 12h atrás para cobrir qualquer delay de confirmação
  
  try {
  const data = await fetchFromDB('orders_delivery', `scheduled_at=gte.${referenceDate}&order=scheduled_at.asc`);
@@ -2685,16 +2685,16 @@ function MainApp() {
  })
  .subscribe();
 
- // ConfiguraÃ§Ã£o de Push Nativo (Android)
+ // Configuração de Push Nativo (Android)
  if (Capacitor.isNativePlatform()) {
  PushNotifications.addListener('pushNotificationReceived', (notification) => {
- // No Android, isso garante que o banner apareÃ§a se o canal estiver configurado
+ // No Android, isso garante que o banner apareça se o canal estiver configurado
  });
 
  PushNotifications.createChannel({
  id: 'izi_notifications',
- name: 'NotificaÃ§Ãµes IZI',
- description: 'Canal principal de notificaÃ§Ãµes do IZI Delivery',
+ name: 'Notificações IZI',
+ description: 'Canal principal de notificações do IZI Delivery',
  importance: 5, // Max importance para banner
  visibility: 1,
  sound: 'mission_call',
@@ -2708,12 +2708,12 @@ function MainApp() {
  }, [isAuthenticated, fetchFromDB]);
 
  const handleDeclineOrder = (orderId: string) => {
- // Agora unificamos com o handleDecline que tem cooldown e inteligÃªncia
+ // Agora unificamos com o handleDecline que tem cooldown e inteligência
  const orderToDecline = orders.find(o => (o.realId || o.id) === orderId);
  if (orderToDecline) {
  handleDecline(orderToDecline);
  } else {
- // Fallback caso o objeto do pedido nÃ£o seja encontrado (id puro)
+ // Fallback caso o objeto do pedido não seja encontrado (id puro)
  setOrders(prev => prev.filter(o => (o.realId || o.id) !== orderId));
  stopIziSounds();
  }
@@ -2735,7 +2735,7 @@ function MainApp() {
  const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
  const token = await getSecureToken();
 
- // Usando Promise.all com Fetch Nativo para mÃ¡xima performance e zero travamento
+ // Usando Promise.all com Fetch Nativo para máxima performance e zero travamento
  const [ordersRes, exclusiveRes] = await Promise.all([
  iziFetch(`${sUrl}/rest/v1/orders_delivery?status=not.in.(concluido,cancelado,finalizado,entregue)&select=*&order=created_at.desc&limit=50`, {
  headers: { 'apikey': sKey, 'Authorization': `Bearer ${token}` }
@@ -2783,25 +2783,25 @@ function MainApp() {
  const isFinancial = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
  if (isFinancial) return false;
 
- // Se o pedido jÃ¡ estÃ¡ confirmado/aceito, ele nÃ£o estÃ¡ mais disponÃ­vel no radar global
+ // Se o pedido já está confirmado/aceito, ele não está mais disponível no radar global
  const isAlreadyTaken = ['confirmado', 'confirmed', 'accepted', 'a_caminho_coleta', 'picking_up', 'delivering'].includes(rawStatus);
  if (isAlreadyTaken) return false;
 
- // Se for agendado, nÃ£o entra no radar normal
+ // Se for agendado, não entra no radar normal
  if (rawStatus === 'agendado') return false;
 
  const hasDriver = o.driver_id && String(o.driver_id).trim() !== '' && String(o.driver_id).trim() !== String(driverId).trim();
  if (hasDriver) return false;
 
- // FILTRO DE COMPATIBILIDADE DE VEÃƒÂCULO
+ // FILTRO DE COMPATIBILIDADE DE VEÍCULO
  // Evita que motos vejam fretes, etc.
  const myV = driverVehicle?.toLowerCase() || 'moto';
  const allowedForVehicle = VEHICLE_COMPATIBILITY[myV] || [];
  const orderType = normalizeServiceType(o.service_type);
  
  if (!allowedForVehicle.includes(orderType)) {
- // Se nÃ£o estiver explicitamente no mapa, permitimos apenas se for entrega bÃ¡sica (restaurant, etc)
- // Mas o mapa acima jÃ¡ cobre as entregas bÃ¡sicas para todos.
+ // Se não estiver explicitamente no mapa, permitimos apenas se for entrega básica (restaurant, etc)
+ // Mas o mapa acima já cobre as entregas básicas para todos.
  return false;
  }
 
@@ -2849,7 +2849,7 @@ function MainApp() {
  const fetchOrdersRef = useRef(fetchOrders);
  useEffect(() => { fetchOrdersRef.current = fetchOrders; }, [fetchOrders]);
 
- // Fetch inicial Ãºnico â€” o canal Realtime (linha ~2901) jÃ¡ cuida de atualizaÃ§Ãµes contÃ­nuas.
+ // Fetch inicial único — o canal Realtime (linha ~2901) já cuida de atualizações contínuas.
  // O polling de 5s foi removido para economizar ~12 re-renders/min e bateria.
  useEffect(() => {
  if (!isAuthenticated || !driverId) return;
@@ -2889,19 +2889,19 @@ function MainApp() {
  const currentMission = activeMissionRef.current;
  const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
 
- // 1. GESTÃO DA MISSÃO ATIVA DESTE MOTORISTA
+ // 1. GESTÁO DA MISSÁO ATIVA DESTE MOTORISTA
  if (isMyOrder) {
  const status = String(o.status || '').toLowerCase().trim();
  const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered', 'rejected', 'recusado'];
  
  if (terminalStatuses.includes(status)) {
- // Limpa a missÃ£o selecionada se for esta
+ // Limpa a missão selecionada se for esta
  if (currentMission && (currentMission.realId === o.id || currentMission.id === o.id)) {
  setActiveMission(null);
  localStorage.removeItem('Izi_active_mission');
  if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
  }
- // Remove do array de missÃµes mÃºltiplas
+ // Remove do array de missões múltiplas
  setActiveMissions(prev => prev.filter(m => m.realId !== o.id && m.id !== o.id));
  return;
  }
@@ -2910,7 +2910,7 @@ function MainApp() {
  const isNowReady = o.preparation_status === 'pronto';
  if (wasPreparing && isNowReady) {
  playIziSound('driver', true);
- toastSuccess('Ã°Å¸â€â€ O Pedido estÃ¡ PRONTO para coleta!');
+ toastSuccess('â€â€ O Pedido está PRONTO para coleta!');
  }
 
  const mission = { 
@@ -2925,22 +2925,22 @@ function MainApp() {
  };
  localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
 
- // Atualizar a missÃ£o na lista multi-missÃ£o
+ // Atualizar a missão na lista multi-missão
  setActiveMissions(prev => {
  const exists = prev.find(m => m.realId === o.id || m.id === o.id);
  if (exists) return prev.map(m => (m.realId === o.id || m.id === o.id) ? mission : m);
  return [...prev, mission];
  });
 
- // SÃ³ atualiza activeMission se o usuÃ¡rio jÃ¡ estiver vendo ESTA missÃ£o especÃ­fica
+ // Só atualiza activeMission se o usuário já estiver vendo ESTA missão específica
  if (currentMission && (currentMission.realId === o.id || currentMission.id === o.id)) {
  setActiveMission(mission);
  }
  return;
  }
 
- // 2. GESTÃO DO RADAR (Pedidos disponÃ­veis)
- // Removemos 'confirmado' e 'accepted' dos actionableStatuses pois eles indicam que alguÃ©m jÃ¡ pegou
+ // 2. GESTÁO DO RADAR (Pedidos disponíveis)
+ // Removemos 'confirmado' e 'accepted' dos actionableStatuses pois eles indicam que alguém já pegou
   const actionableStatuses = ['novo', 'pendente', 'pending', 'paid', 'pago', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'];
   let isAcceptable = o.status && actionableStatuses.includes(o.status);
 
@@ -2968,14 +2968,14 @@ function MainApp() {
  }
 
  // --- REGRA DE EXCLUSIVIDADE (Realtime) ---
- // Pedido de lojista EXCLUSIVO Ã¢â€ â€™ sÃ³ o entregador vinculado a esse lojista pode ver
- // Pedido de lojista GLOBAL Ã¢â€ â€™ TODOS os entregadores podem ver
+ // Pedido de lojista EXCLUSIVO ââ€ â€™ só o entregador vinculado a esse lojista pode ver
+ // Pedido de lojista GLOBAL ââ€ â€™ TODOS os entregadores podem ver
  const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
  const orderMerchantId = o.merchant_id ? String(o.merchant_id) : null;
  const isOrderFromExclusiveMerchant = orderMerchantId && (exclusiveMerchantIdsRef.current || []).includes(orderMerchantId);
 
  if (isOrderFromExclusiveMerchant) {
- // Pedido exclusivo: bloqueia quem nÃ£o Ã© o entregador deste lojista
+ // Pedido exclusivo: bloqueia quem não é o entregador deste lojista
  if (!myMerchantId || myMerchantId !== orderMerchantId) {
  setOrders(prev => prev.filter(x => x.realId !== o.id));
  return;
@@ -3018,9 +3018,9 @@ function MainApp() {
  try {
  ForegroundService.startForegroundService({
  id: 1001,
- title: "ðŸš€ NOVA ENTREGA DISPONÃVEL!",
+ title: "🚀 NOVA ENTREGA DISPONÍVEL!",
  body: `R$ ${Number(o.total_price || 0).toFixed(2)} â€¢ ${o.pickup_address?.split(',')[0]}`,
- importance: 5, // ImportÃ¢ncia mÃ¡xima para aparecer no topo (Heads-up)
+ importance: 5, // Importância máxima para aparecer no topo (Heads-up)
  icon: 'notification_icon',
  buttons: [
  { id: 'accept_order', title: 'âœ… ACEITAR AGORA' },
@@ -3047,7 +3047,7 @@ function MainApp() {
  return () => { supabase.removeChannel(channel); };
  }, [isAuthenticated, driverId, getServicePresentation]);
 
- // Startup / Session Recovery: Buscar missÃ£o ativa no banco se o driverId estiver presente
+ // Startup / Session Recovery: Buscar missão ativa no banco se o driverId estiver presente
  useEffect(() => {
  const recoverActiveMission = async () => {
  if (!driverId || activeMission) return;
@@ -3075,7 +3075,7 @@ function MainApp() {
  recoverActiveMission();
  }, [driverId, isAuthenticated]);
 
- // Carregar solicitaÃ§Ãµes de veÃ­culo do entregador
+ // Carregar solicitações de veículo do entregador
  useEffect(() => {
  if (!driverId || !isAuthenticated) return;
  loadVehicleRequests(driverId);
@@ -3128,7 +3128,7 @@ function MainApp() {
  const targetId = order.realId || order.id;
  if (!targetId) return;
 
- // 1. ATUALIZAÃ‡ÃO OTIMISTA: Feedback Imediato
+ // 1. ATUALIZAÇÁO OTIMISTA: Feedback Imediato
  const isScheduled = !!order.scheduled_at;
  const newStatus = isScheduled ? 'confirmado' : 'a_caminho_coleta';
  const optimisticMission = { 
@@ -3146,7 +3146,7 @@ function MainApp() {
 
  if (!isScheduled) {
  setActiveMission(optimisticMission);
- // Atualizar tambÃ©m a lista de mÃºltiplas missÃµes
+ // Atualizar também a lista de múltiplas missões
  setActiveMissions(prev => {
  const exists = prev.find(m => (m.realId || m.id) === targetId);
  if (exists) return prev.map(m => (m.realId || m.id) === targetId ? optimisticMission : m);
@@ -3175,7 +3175,7 @@ function MainApp() {
   'Content-Type': 'application/json'
   };
   
-  // RPC atÃ´mica â€” SELECT FOR UPDATE SKIP LOCKED impede race condition
+  // RPC atômica — SELECT FOR UPDATE SKIP LOCKED impede race condition
   const rpcRes = await iziFetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/claim_order`, {
   method: 'POST',
   headers: authHeaders,
@@ -3186,17 +3186,17 @@ function MainApp() {
   })
   });
 
-  if (!rpcRes.ok) throw new Error('Falha na comunicaÃ§Ã£o com o servidor.');
+  if (!rpcRes.ok) throw new Error('Falha na comunicação com o servidor.');
 
   const result = await rpcRes.json();
   
   if (!result?.success) {
   stopIziSounds();
   const errorMsg = result?.error === 'ALREADY_CLAIMED'
-  ? 'Este pedido jÃ¡ foi aceito por outro entregador!'
+  ? 'Este pedido já foi aceito por outro entregador!'
   : result?.error === 'ORDER_LOCKED'
   ? 'Pedido em processamento. Tente outro.'
-  : result?.message || 'Pedido indisponÃ­vel.';
+  : result?.message || 'Pedido indisponível.';
   toastError(errorMsg);
   setOrders(previousOrders);
   setActiveMission(previousActiveMission);
@@ -3231,7 +3231,7 @@ function MainApp() {
  }
  };
  
- // Atualiza a ref para o overlay nativo sempre ter a versÃ£o mais recente
+ // Atualiza a ref para o overlay nativo sempre ter a versão mais recente
  useEffect(() => {
  handleAcceptRef.current = handleAccept;
  }, [handleAccept]);
@@ -3242,7 +3242,7 @@ function MainApp() {
  // Parar o som imediatamente ao recusar
  stopIziSounds();
 
- // LÃ³gica de loop inteligente: 2 rejeiÃ§Ãµes = 30s cooldown, 4 rejeiÃ§Ãµes = permanente
+ // Lógica de loop inteligente: 2 rejeições = 30s cooldown, 4 rejeições = permanente
  setDeclinedStats(prev => {
  const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
  const newCount = current.count + 1;
@@ -3366,7 +3366,7 @@ function MainApp() {
  ? ((weeklySum - previousWeeklySum) / previousWeeklySum) * 100 
  : (weeklySum > 0 ? 100 : 0);
 
- // 3. CÃ¡lculo de Performance (Contagem de entregas Ãºltimos 7 dias)
+ // 3. Cálculo de Performance (Contagem de entregas últimos 7 dias)
  const performance = [0, 0, 0, 0, 0, 0, 0]; 
  const now = new Date();
  const sevenDaysAgo = new Date();
@@ -3463,7 +3463,7 @@ function MainApp() {
  });
 
 
- // Helper local para formatar missÃµes
+ // Helper local para formatar missões
  const formatMission = async (ao: any) => {
  let pickup = ao.pickup_address || 'Origem';
  let pLat = ao.pickup_lat;
@@ -3503,7 +3503,7 @@ function MainApp() {
  };
  };
 
- // Formatar TODAS as missÃµes ativas
+ // Formatar TODAS as missões ativas
  const formattedMissions = await Promise.all(allActiveOrders.map(o => formatMission(o)));
  setActiveMissions(formattedMissions);
 
@@ -3517,18 +3517,18 @@ function MainApp() {
  setActiveTab('active_mission');
  }
  } else if (formattedMissions.length === 1 && !currentActiveId) {
- // Auto-seleciona se houver apenas uma missÃ£o e nada selecionado
+ // Auto-seleciona se houver apenas uma missão e nada selecionado
  setActiveMission(formattedMissions[0]);
  localStorage.setItem('Izi_active_mission', JSON.stringify(formattedMissions[0]));
  if (activeTabRef.current === 'dashboard' || activeTabRef.current === 'missions') {
  setActiveTab('active_mission');
  }
  } else if (currentActiveId && !updatedSelectedMission) {
- // Se a missÃ£o selecionada nÃ£o estÃ¡ mais ativa, limpa a seleÃ§Ã£o
+ // Se a missão selecionada não está mais ativa, limpa a seleção
  setActiveMission(null);
  localStorage.removeItem('Izi_active_mission');
  } else if (formattedMissions.length > 1 && !currentActiveId) {
- // Se houver mÃºltiplas e nenhuma selecionada, garante que mostre a lista
+ // Se houver múltiplas e nenhuma selecionada, garante que mostre a lista
  setActiveMission(null);
  localStorage.removeItem('Izi_active_mission');
  } else if (formattedMissions.length === 0) {
@@ -3536,7 +3536,7 @@ function MainApp() {
  localStorage.removeItem('Izi_active_mission');
  }
 
- // Toast removido para evitar spam infinito durante syncs automÃ¡ticos
+ // Toast removido para evitar spam infinito durante syncs automáticos
 
  } catch (err: any) {
  console.error("[SYNC-MISSION] Erro:", err);
@@ -3564,7 +3564,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  let missionId = activeMission.realId || activeMission.id;
   
- // Se o ID estÃ¡ truncado (display ID de 8 chars), recuperar o UUID completo
+ // Se o ID está truncado (display ID de 8 chars), recuperar o UUID completo
  if (missionId && missionId.length < 36) {
    const fullMission = activeMissions.find(m => 
      m.realId?.toUpperCase().startsWith(missionId.toUpperCase()) || 
@@ -3573,7 +3573,7 @@ const handleUpdateStatus = async (newStatus: string) => {
    if (fullMission?.realId) {
      missionId = fullMission.realId;
    } else {
-     toastError("Sincronizando dados da missÃ£o...");
+     toastError("Sincronizando dados da missão...");
      syncMissionWithDB();
      return;
    }
@@ -3590,7 +3590,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  if (!paymentConfirmedMode) return;
  }
 
- // 1. ATUALIZAÃ‡ÃO OTIMISTA: Feedback Imediato
+ // 1. ATUALIZAÇÁO OTIMISTA: Feedback Imediato
  const updatedMission = { 
  ...activeMission, 
  status: newStatus.toLowerCase(), 
@@ -3598,7 +3598,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  };
 
  if (isFinishing) {
- // Se for finalizar, limpamos a missÃ£o ativa IMEDIATAMENTE para liberar o driver
+ // Se for finalizar, limpamos a missão ativa IMEDIATAMENTE para liberar o driver
  setActiveMission(null);
  setActiveMissions(prev => prev.filter(m => (m.realId || m.id) !== missionId));
  localStorage.removeItem('Izi_active_mission');
@@ -3623,14 +3623,14 @@ const handleUpdateStatus = async (newStatus: string) => {
  cashDiscount: paymentConfirmedMode === 'dinheiro' ? totalOrderPrice : undefined
  });
  } else {
- // Status intermediÃ¡rio: atualiza UI na hora
+ // Status intermediário: atualiza UI na hora
  setActiveMission(updatedMission);
  setActiveMissions(prev => prev.map(m => (m.realId || m.id) === missionId ? updatedMission : m));
  localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
  toastSuccess(`Status: ${newStatus === 'chegou_coleta' ? 'Na Coleta' : newStatus === 'saiu_para_entrega' ? 'Em Rota' : newStatus}`);
  }
 
- // 2. SINCRONIZAÃ‡ÃO EM BACKGROUND
+ // 2. SINCRONIZAÇÁO EM BACKGROUND
  const syncStatus = async () => {
  try {
  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -3638,7 +3638,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  const payload: any = {
  status: newStatus.toLowerCase(),
- driver_id: driverId, // Adicionado para satisfazer a polÃ­tica with_check do RLS
+ driver_id: driverId, // Adicionado para satisfazer a política with_check do RLS
  updated_at: new Date().toISOString()
  };
  if (paymentConfirmedMode === 'dinheiro') {
@@ -3663,7 +3663,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const ordShortId = missionId.slice(0,8).toUpperCase();
  const netEarned = getNetEarnings(updatedMission);
 
- // Registrar TransaÃ§Ãµes Financeiras
+ // Registrar Transações Financeiras
  const financialTasks = [];
 
  // Ganho do motorista
@@ -3676,12 +3676,12 @@ const handleUpdateStatus = async (newStatus: string) => {
  amount: netEarned,
  type: 'deposito',
  status: 'completed',
- description: `Ganhos: MissÃ£o #${ordShortId}`
+ description: `Ganhos: Missão #${ordShortId}`
  })
  })
  );
 
- // DÃ©bito se pago em dinheiro
+ // Débito se pago em dinheiro
  if (paymentConfirmedMode === 'dinheiro') {
  const totalOrderPrice = Number(activeMission.total_price || activeMission.price || 0);
  financialTasks.push(
@@ -3701,13 +3701,13 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  await Promise.all(financialTasks);
  
- // GamificaÃ§Ã£o
+ // Gamificação
  if (driverId) {
  incrementMissionProgress({ driverId, missionKey: 'complete_delivery', token })
  .then(results => {
  const completedMission = results.find(r => r.isCompleted);
  if (completedMission) {
- toastSuccess(`ParabÃ©ns! MissÃ£o ConcluÃ­da: ${completedMission.title}`);
+ toastSuccess(`Parabéns! Missão Concluída: ${completedMission.title}`);
  window.dispatchEvent(new CustomEvent('izi:mission_completed', {
  detail: { missionId: completedMission.missionId }
  }));
@@ -3717,7 +3717,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  
  refreshFinanceData();
  } else {
- // Sincroniza missÃ£o apÃ³s atualizaÃ§Ã£o de status intermediÃ¡rio
+ // Sincroniza missão após atualização de status intermediário
  setTimeout(() => syncMissionWithDB(), 1000);
  }
  } catch (e) {
@@ -3729,10 +3729,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  };
 
  const handleWithdrawRequest = () => {
- if (!pixKey || pixKey.trim().length < 3) { toastError('Cadastre uma chave PIX vÃ¡lida.'); setIsEditingPix(true); return; }
- if (stats.balance <= 0) { toastError('Sem saldo disponÃ­vel.'); return; }
+ if (!pixKey || pixKey.trim().length < 3) { toastError('Cadastre uma chave PIX válida.'); setIsEditingPix(true); return; }
+ if (stats.balance <= 0) { toastError('Sem saldo disponível.'); return; }
  const minAmount = Number(appSettings?.min_withdrawal_amount ?? 0);
- if (stats.balance < minAmount) { toastError(`Saque mÃ­nimo: R$ ${minAmount.toFixed(2)}`); return; }
+ if (stats.balance < minAmount) { toastError(`Saque mínimo: R$ ${minAmount.toFixed(2)}`); return; }
  setShowWithdrawModal(true);
  };
 
@@ -3740,7 +3740,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  if (isWithdrawLoading) return;
  
  if (!stats.balance || stats.balance <= 0) {
- toastError("VocÃª nÃ£o possui saldo para sacar.");
+ toastError("Você não possui saldo para sacar.");
  setShowWithdrawModal(false);
  return;
  }
@@ -3750,7 +3750,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const feeAmount = stats.balance * (Number(appSettings?.withdrawal_fee_percent ?? 0) / 100);
  try {
  const uid = driverId || localStorage.getItem('izi_driver_uid');
- if (!uid) throw new Error("SessÃ£o invÃ¡lida. FaÃ§a login novamente.");
+ if (!uid) throw new Error("Sessão inválida. Faça login novamente.");
 
  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -3788,7 +3788,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  }, 4000);
 
  } catch (err: any) {
- console.error('[WITHDRAW] ExceÃ§Ã£o capturada ao solicitar saque:', err);
+ console.error('[WITHDRAW] Exceção capturada ao solicitar saque:', err);
  toastError(err.message || "Erro ao processar saque.");
  } finally { 
  setIsWithdrawLoading(false); 
@@ -3800,7 +3800,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const bankToSave = (bankVal || bankName).trim();
 
  if (!keyToSave) { toastError('Informe a chave PIX'); return; }
- if (!driverId) { toastError('SessÃ£o expirada. FaÃ§a login novamente.'); return; }
+ if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
 
  setIsSavingPix(true);
  try {
@@ -3830,7 +3830,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  setIsEditingPix(false);
  showSystemPopup(
  'Dados Salvos!',
- 'Suas informaÃ§Ãµes bancÃ¡rias e chave PIX foram atualizadas.',
+ 'Suas informações bancárias e chave PIX foram atualizadas.',
  'success'
  );
  } catch (e: any) {
@@ -3873,27 +3873,27 @@ const handleUpdateStatus = async (newStatus: string) => {
  }
 
  showSystemPopup(
- 'SolicitaÃ§Ã£o de AlteraÃ§Ã£o!',
- 'Sua solicitaÃ§Ã£o de alteraÃ§Ã£o de veÃ­culo foi enviada com sucesso e serÃ¡ analisada pelo administrador.',
+ 'Solicitação de Alteração!',
+ 'Sua solicitação de alteração de veículo foi enviada com sucesso e será analisada pelo administrador.',
  'success'
  );
  await loadVehicleRequests(driverId);
  setIsEditingPlate(false);
  setShowPlateModal(false);
  } catch (e: any) {
- console.error('[PLATE] Erro ao solicitar alteraÃ§Ã£o:', e);
- toastError('Erro ao enviar solicitaÃ§Ã£o: ' + (e.message || 'Tente novamente'));
+ console.error('[PLATE] Erro ao solicitar alteração:', e);
+ toastError('Erro ao enviar solicitação: ' + (e.message || 'Tente novamente'));
  } finally {
  setIsSavingPlate(false);
  }
  };
 
  const handleSubmitNewVehicle = async () => {
- if (!newVehicleType) { toastError('Selecione o tipo de veÃ­culo'); return; }
+ if (!newVehicleType) { toastError('Selecione o tipo de veículo'); return; }
  const needsPlate = newVehicleType !== 'bicicleta';
- if (needsPlate && newVehiclePlate.trim().length < 7) { toastError('Informe a placa (mÃ­n. 7 caracteres)'); return; }
- if (!newVehicleModel.trim()) { toastError('Informe o modelo do veÃ­culo'); return; }
- if (!driverId) { toastError('SessÃ£o invÃ¡lida. Por favor, faÃ§a login novamente.'); return; }
+ if (needsPlate && newVehiclePlate.trim().length < 7) { toastError('Informe a placa (mín. 7 caracteres)'); return; }
+ if (!newVehicleModel.trim()) { toastError('Informe o modelo do veículo'); return; }
+ if (!driverId) { toastError('Sessão inválida. Por favor, faça login novamente.'); return; }
 
  setIsSavingNewVehicle(true);
 
@@ -3927,8 +3927,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  }
 
  showSystemPopup(
- 'SolicitaÃ§Ã£o Enviada!', 
- 'Seu novo veÃ­culo foi cadastrado com sucesso e estÃ¡ aguardando a aprovaÃ§Ã£o do administrador.',
+ 'Solicitação Enviada!', 
+ 'Seu novo veículo foi cadastrado com sucesso e está aguardando a aprovação do administrador.',
  'success'
  );
  
@@ -3941,7 +3941,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  await loadVehicleRequests(driverId);
  } catch (e: any) {
  console.error('[NEW_VEHICLE] Erro:', e);
- toastError('Erro ao enviar solicitaÃ§Ã£o: ' + (e.message || 'Tente novamente'));
+ toastError('Erro ao enviar solicitação: ' + (e.message || 'Tente novamente'));
  } finally {
  setIsSavingNewVehicle(false);
  }
@@ -3959,7 +3959,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  // 2. Limpar o estado local e LocalStorage (limpa dados de UI imediatamente)
  clearDriverSessionState();
  
- // 3. ForÃ§ar recarregamento para limpar estados residuais de memÃ³ria
+ // 3. Forçar recarregamento para limpar estados residuais de memória
  window.location.href = '/';
  }, [clearDriverSessionState]);
 
@@ -4000,15 +4000,15 @@ const handleUpdateStatus = async (newStatus: string) => {
  
  const handleApplyToSlot = async (slot: any) => {
  if (!driverId) {
- toastError("Erro: ID do entregador nÃ£o encontrado.");
+ toastError("Erro: ID do entregador não encontrado.");
  return;
  }
 
- // --- TRAVA DE SEGURANÃ‡A: VerificaÃ§Ã£o de duplicados ---
+ // --- TRAVA DE SEGURANÇA: Verificação de duplicados ---
  const alreadyApplied = myApplications.some(app => String(app.slot_id) === String(slot.id) && app.status !== 'rejected');
  
  if (alreadyApplied) {
- toastError("VocÃª jÃ¡ possui uma candidatura ativa para esta vaga!");
+ toastError("Você já possui uma candidatura ativa para esta vaga!");
  return;
  }
  // ---------------------------------------------------
@@ -4033,7 +4033,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  }
  }
  } catch (e) {
- console.warn("Aviso: nÃ£o foi possÃ­vel ler o token do localStorage.");
+ console.warn("Aviso: não foi possível ler o token do localStorage.");
  }
 
  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -4074,10 +4074,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  console.error("Erro Supabase detalhado:", errorDetails);
  
  if (response.status === 401 || response.status === 403) {
- throw new Error('SessÃ£o expirada. Por favor, deslogue e logue novamente.');
+ throw new Error('Sessão expirada. Por favor, deslogue e logue novamente.');
  }
  if (response.status === 409 || errorDetails.includes('duplicate key')) {
- throw new Error('VocÃª jÃ¡ se candidatou a esta vaga.');
+ throw new Error('Você já se candidatou a esta vaga.');
  }
  throw new Error(`Erro na API (${response.status})`);
  }
@@ -4086,7 +4086,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  setShowSlotAppliedSuccess(true);
  
- // --- ATUALIZAÃ‡ÃO OTIMISTA ---
+ // --- ATUALIZAÇÁO OTIMISTA ---
  const newApp = {
  slot_id: slot.id,
  driver_id: driverId,
@@ -4111,7 +4111,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  };
 
  const renderBottomNavigation = () => {
- if (activeTab === 'active_mission' && activeMission) return null; // Esconde navbar apenas quando estÃ¡ na tela de mapa de uma missÃ£o especÃ­fica
+ if (activeTab === 'active_mission' && activeMission) return null; // Esconde navbar apenas quando está na tela de mapa de uma missão específica
  const isSlotDetailActive = !!selectedSlot;
 
  return (
@@ -4131,10 +4131,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  className="flex items-center justify-between w-full"
  >
  {[
- { id: 'dashboard', label: 'InÃ­cio', icon: 'grid_view' },
- { id: 'missions', label: 'BÃ´nus', icon: 'stars' },
+ { id: 'dashboard', label: 'Início', icon: 'grid_view' },
+ { id: 'missions', label: 'Bônus', icon: 'stars' },
  { id: 'active_mission', label: 'Entrega', icon: 'route', badge: activeMissions.length },
- { id: 'history', label: 'HistÃ³rico', icon: 'history' },
+ { id: 'history', label: 'Histórico', icon: 'history' },
  { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
  { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active && !myApplications.some(app => String(app.slot_id) === String(s.id))).length },
  { id: 'earnings', label: 'Ganhos', icon: 'payments' }
@@ -4160,10 +4160,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  setShowWithdrawHistory(false);
  setShowWithdrawDetail(false);
  
- // Removemos o reset do selectedSlot aqui para permitir navegaÃ§Ã£o direta do Dashboard
+ // Removemos o reset do selectedSlot aqui para permitir navegação direta do Dashboard
  
  if (item.id === 'active_mission') {
- // Ao clicar em "MissÃ£o" na navbar, limpa a seleÃ§Ã£o para mostrar a lista
+ // Ao clicar em "Missão" na navbar, limpa a seleção para mostrar a lista
  setActiveMission(null);
  syncMissionWithDB();
  }
@@ -4184,7 +4184,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  className={isActive ? 'text-zinc-900 drop-' : 'text-zinc-400'} 
  />
  
- {/* Indicador de Pedidos DisponÃ­veis */}
+ {/* Indicador de Pedidos Disponíveis */}
  {hasPendingOrders && (
  <span className="absolute -top-1 -right-1 flex h-4 w-4">
  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
@@ -4255,7 +4255,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="flex items-center gap-1.5">
  {!isAccepted && <div className="size-1 rounded-full bg-yellow-500 animate-ping" />}
  <span className={`text-[8px] font-bold uppercase ${isAccepted ? 'opacity-70' : 'text-zinc-400'}`}>
- {isAccepted ? 'VOCÃŠ Ã‰ EXCLUSIVO' : 'EM ANÃLISE PELO PARCEIRO'}
+ {isAccepted ? 'VOCÊ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
  </span>
  </div>
  </div>
@@ -4365,7 +4365,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="flex justify-between items-start mb-6">
  <div className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Detalhes da Escala</div>
  <div className="text-right">
- <p className="text-[10px] font-bold text-zinc-400 uppercase">Ganho LÃ­quido</p>
+ <p className="text-[10px] font-bold text-zinc-400 uppercase">Ganho Líquido</p>
  <p className="text-3xl font-bold">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
  </div>
  </div>
@@ -4384,7 +4384,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
  </div>
  <div>
- <p className="text-xs font-bold uppercase text-zinc-400 tracking-widest">HorÃ¡rio de InÃ­cio</p>
+ <p className="text-xs font-bold uppercase text-zinc-400 tracking-widest">Horário de Início</p>
  <p className="text-lg font-bold uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
  </div>
  </div>
@@ -4403,9 +4403,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
  </div>
  <div>
- <p className="text-[10px] font-bold uppercase text-zinc-400 mb-1">EndereÃ§o de Entrega</p>
+ <p className="text-[10px] font-bold uppercase text-zinc-400 mb-1">Endereço de Entrega</p>
  <p className="font-semibold text-sm leading-tight">
- {cleanAddressText(order.delivery_address || 'Destino nÃ£o informado')}
+ {cleanAddressText(order.delivery_address || 'Destino não informado')}
  </p>
  </div>
  </div>
@@ -4423,7 +4423,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
  </div>
  <div>
- <p className="text-[10px] font-bold uppercase text-zinc-400 mb-1">ObservaÃ§Ãµes do Cliente</p>
+ <p className="text-[10px] font-bold uppercase text-zinc-400 mb-1">Observações do Cliente</p>
  <p className="font-semibold text-sm leading-snug">{obsText}</p>
  </div>
  </div>
@@ -4443,20 +4443,20 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <ul className="space-y-3 pl-2">
  <li className="flex gap-3 text-xs text-zinc-600 font-semibold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">Ã¢â‚¬Â¢</span> 
- Comparecer ao local com 15 min de antecedÃªncia.
+ <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
+ Comparecer ao local com 15 min de antecedência.
  </li>
  <li className="flex gap-3 text-xs text-zinc-600 font-semibold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">Ã¢â‚¬Â¢</span> 
+ <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
  Estar com bateria do celular acima de 80%.
  </li>
  <li className="flex gap-3 text-xs text-zinc-600 font-semibold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">Ã¢â‚¬Â¢</span> 
- Traje profissional e baÃº limpo.
+ <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
+ Traje profissional e baú limpo.
  </li>
  <li className="flex gap-3 text-xs text-yellow-600 font-bold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">Ã¢â‚¬Â¢</span> 
- O inÃ­cio da missÃ£o Ã© liberado 1 hora antes do horÃ¡rio agendado.
+ <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
+ O início da missão é liberado 1 hora antes do horário agendado.
  </li>
  </ul>
  </div>
@@ -4498,10 +4498,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="w-full h-16 border border-zinc-200 flex flex-col items-center justify-center gap-1 bg-white rounded-lg">
  <div className="flex items-center gap-2">
  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
- <span className="text-yellow-600 font-bold uppercase tracking-widest text-[11px]">InÃ­cio Bloqueado</span>
+ <span className="text-yellow-600 font-bold uppercase tracking-widest text-[11px]">Início Bloqueado</span>
  </div>
  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">
-  {(() => { const dMs = oneHourBefore.getTime() - now.getTime(); const dH = Math.floor(dMs / 3600000); const dM = Math.ceil((dMs % 3600000) / 60000); return dH > 0 ? `Liberado 1h antes â€” faltam ${dH}h ${dM}min` : `Liberado 1h antes â€” faltam ${dM} min`; })()}
+  {(() => { const dMs = oneHourBefore.getTime() - now.getTime(); const dH = Math.floor(dMs / 3600000); const dM = Math.ceil((dMs % 3600000) / 60000); return dH > 0 ? `Liberado 1h antes — faltam ${dH}h ${dM}min` : `Liberado 1h antes — faltam ${dM} min`; })()}
  </p>
  </div>
  );
@@ -4520,7 +4520,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  className="w-full h-16 bg-zinc-900 text-white rounded-lg font-bold text-sm uppercase tracking-widest transition-colors flex items-center justify-center gap-3 hover:bg-zinc-800"
  >
  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
- MissÃ£o ConcluÃ­da Ã¢â‚¬Â¢ Fechar
+ Missão Concluída ââ‚¬¢ Fechar
  </button>
  );
  }
@@ -4542,14 +4542,14 @@ const handleUpdateStatus = async (newStatus: string) => {
  className="w-full h-16 bg-emerald-500 text-white rounded-lg font-bold text-lg uppercase tracking-tight transition-colors flex items-center justify-center gap-3 hover:bg-emerald-600"
  >
  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
- Iniciar MissÃ£o
+ Iniciar Missão
  </button>
  );
  })()
  ) : isAccepted ? (
  <div className="w-full h-16 rounded-lg border border-emerald-500 bg-emerald-50 flex items-center justify-center gap-3">
  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
- <span className="text-emerald-600 font-bold uppercase tracking-widest text-xs">JÃ¡ estÃ¡ na sua agenda</span>
+ <span className="text-emerald-600 font-bold uppercase tracking-widest text-xs">Já está na sua agenda</span>
  </div>
  ) : (
  <button 
@@ -4592,7 +4592,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {dedicatedSlots.length === 0 ? (
  <div className="py-20 bg-zinc-900 border border-zinc-800 border-dashed rounded-xl flex flex-col items-center gap-4 text-center">
  <Icon name="sentiment_dissatisfied" className="text-4xl text-zinc-200" />
- <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest">Nenhuma vaga disponÃ­vel</p>
+ <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest">Nenhuma vaga disponível</p>
  </div>
  ) : (
  <div className="space-y-4">
@@ -4647,7 +4647,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  }
  
  if (isToday && s.working_hours) {
- const match = s.working_hours.match(/(?:as|Ã€Â s|ate|atÃ©|-)\s*(\d{1,2})(?:[:h]\d{2})?/i);
+ const match = s.working_hours.match(/(?:as|às|ate|até|-)\s*(\d{1,2})(?:[:h]\d{2})?/i);
  if (match) {
  let endHour = parseInt(match[1], 10);
  if (endHour <= 4) endHour += 24;
@@ -4690,7 +4690,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  >
  {isAccepted && <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />}
  
- {/* Selo removido para evitar sobreposiÃ§Ã£o */}
+ {/* Selo removido para evitar sobreposição */}
 
  <div className={`size-16 rounded-xl border flex items-center justify-center shrink-0 overflow-hidden group-hover:scale-105 transition-transform duration-500 ${
  isAccepted ? 'bg-emerald-100 border-emerald-200' : 'bg-zinc-50 border-zinc-100'
@@ -4728,7 +4728,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="text-right shrink-0 flex flex-col items-end gap-1">
  <div className={`${isAccepted ? 'bg-emerald-500 text-white' : 'bg-yellow-400 text-zinc-900'} px-5 py-3 rounded-2xl transition-all flex flex-col items-center min-w-[80px]`}>
  <p className={`text-xl font-black leading-none`}>R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
- <p className={`text-[8px] font-black uppercase tracking-tighter opacity-70`}>diÃ¡ria</p>
+ <p className={`text-[8px] font-black uppercase tracking-tighter opacity-70`}>diária</p>
  </div>
  {hasApplied && (
  <div className="mt-2">
@@ -4742,9 +4742,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  {isAccepted ? (
  <><Icon name="verified" size={12} /> Confirmada</>
  ) : application?.status === 'rejected' ? (
- <><Icon name="cancel" size={12} /> NÃ£o Selecionado</>
+ <><Icon name="cancel" size={12} /> Não Selecionado</>
  ) : (
- <><Icon name="hourglass_empty" size={12} className="animate-spin-slow" /> Em AnÃ¡lise</>
+ <><Icon name="hourglass_empty" size={12} className="animate-spin-slow" /> Em Análise</>
  )}
  </div>
  </div>
@@ -4828,17 +4828,17 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
  isAccepted ? 'bg-emerald-500 text-white' : 'bg-white border border-yellow-400 text-yellow-600'
  }`}>
- {isAccepted ? 'Piloto Exclusivo' : 'Em AnÃ¡lise'}
+ {isAccepted ? 'Piloto Exclusivo' : 'Em Análise'}
  </div>
  </div>
  <div className="h-px bg-zinc-200 border-dashed border-t" />
  <div className="grid grid-cols-2 gap-4">
  <div>
- <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">HorÃ¡rio</p>
+ <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Horário</p>
  <p className="text-xs font-black text-zinc-800 uppercase tracking-tight">{slot.working_hours}</p>
  </div>
  <div>
- <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">InÃ­cio</p>
+ <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Início</p>
  <p className="text-xs font-black text-zinc-800 uppercase tracking-tight">
  {slot.slot_date ? new Date(slot.slot_date + 'T12:00:00').toLocaleDateString('pt-BR') : 'Imediato'}
  </p>
@@ -4849,7 +4849,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  ) : (
  <div className="bg-zinc-900 rounded-xl p-8 text-white relative overflow-hidden ">
  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl -mr-16 -mt-16 rounded-full" />
- <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 opacity-50">DiÃ¡ria Garantida</p>
+ <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 opacity-50">Diária Garantida</p>
  <div className="flex items-baseline gap-2">
  <span className="text-2xl font-black text-yellow-400">R$</span>
  <span className="text-7xl font-black tracking-tighter leading-none">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
@@ -4861,7 +4861,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  )}
 
- {/* Detalhes e BenefÃ­cios */}
+ {/* Detalhes e Benefícios */}
  <div className="space-y-8">
  <section className="space-y-4">
  <h3 className="text-lg font-black text-zinc-900 tracking-tight uppercase flex items-center gap-2">
@@ -4878,7 +4878,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="bg-zinc-50 p-5 rounded-xl border border-zinc-100 flex flex-col items-center text-center gap-2">
  <Icon name="inventory_2" size={20} className="text-zinc-400" />
  <div className="space-y-1">
- <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Incluso na diÃ¡ria</p>
+ <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Incluso na diária</p>
  <p className="text-xs font-black text-zinc-900">{slot.metadata?.base_deliveries || 0} entregas</p>
  </div>
  </div>
@@ -4888,7 +4888,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {customBenefits.length > 0 && (
  <section className="space-y-4">
  <h3 className="text-lg font-black text-zinc-900 tracking-tight uppercase flex items-center gap-2">
- <div className="size-1.5 rounded-full bg-yellow-400" /> BÃ´nus Adicionais
+ <div className="size-1.5 rounded-full bg-yellow-400" /> Bônus Adicionais
  </h3>
  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
  {customBenefits.map((ben: any, idx: number) => (
@@ -4924,7 +4924,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </div>
 
- {/* BotÃ£o de AÃ§Ã£o Fixo no Bottom Sheet */}
+ {/* Botão de Ação Fixo no Bottom Sheet */}
  <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
  {!hasApplied ? (
  <button 
@@ -4967,9 +4967,9 @@ const handleUpdateStatus = async (newStatus: string) => {
 
 
 
- // renderHistoryView extraÃ­do para componente HistoryView.tsx (performance: React.memo)
+ // renderHistoryView extraído para componente HistoryView.tsx (performance: React.memo)
 
- // renderEarningsView extraÃ­do para componente EarningsView.tsx (performance: React.memo)
+ // renderEarningsView extraído para componente EarningsView.tsx (performance: React.memo)
 
  const renderWithdrawHistoryView = () => (
  <WithdrawHistoryView 
@@ -5038,23 +5038,23 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  <div className="space-y-4 bg-zinc-100/50 rounded-xl p-6 border border-zinc-100 ">
  <div className="flex justify-between items-center">
- <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID TransaÃ§Ã£o</span>
+ <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ID Transação</span>
  <span className="text-[10px] font-mono text-zinc-900">#{tx.id.slice(0, 12).toUpperCase()}</span>
  </div>
  <div className="flex justify-between items-center">
  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Data e Hora</span>
  <span className="text-[10px] font-bold text-zinc-900 uppercase">
- {new Date(tx.created_at).toLocaleDateString('pt-BR')} Ã€Â s {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+ {new Date(tx.created_at).toLocaleDateString('pt-BR')} às {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
  </span>
  </div>
  <div className="flex justify-between items-center">
- <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">MÃ©todo</span>
+ <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Método</span>
  <span className="text-[10px] font-bold text-zinc-900 uppercase">PIX</span>
  </div>
  <div className="w-full h-[1px] bg-zinc-200" />
  <div className="flex flex-col gap-1">
  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Chave PIX Utilizada</span>
- <span className="text-xs font-black text-zinc-900 truncate">{pixKey || 'Chave nÃ£o registrada'}</span>
+ <span className="text-xs font-black text-zinc-900 truncate">{pixKey || 'Chave não registrada'}</span>
  </div>
  </div>
  </div>
@@ -5085,7 +5085,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="w-full h-[1px] bg-zinc-200" />
 
  <div className="flex justify-between items-end pt-2">
- <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Valor LÃ­quido</span>
+ <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Valor Líquido</span>
  <span className="text-3xl font-black text-primary drop-">
  R$ {netAmount.toFixed(2).replace('.', ',')}
  </span>
@@ -5122,14 +5122,14 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  const driverId = localStorage.getItem('izi_driver_uid');
  if (!driverId) {
- console.error('[AVATAR] DriverId nÃ£o encontrado');
- toastError('Erro de autenticaÃ§Ã£o. Tente deslogar e logar novamente.');
+ console.error('[AVATAR] DriverId não encontrado');
+ toastError('Erro de autenticação. Tente deslogar e logar novamente.');
  return;
  }
 
  // Limite de 5MB
  if (file.size > 5 * 1024 * 1024) {
- toastError('A imagem deve ter no mÃ¡ximo 5MB.');
+ toastError('A imagem deve ter no máximo 5MB.');
  return;
  }
 
@@ -5137,7 +5137,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  console.log('[AVATAR] Preparando upload...', { name: file.name, size: file.size, type: file.type });
 
  try {
- // ConversÃ£o de arquivo para ArrayBuffer/Blob
+ // Conversão de arquivo para ArrayBuffer/Blob
  let arrayBuffer: ArrayBuffer;
  if (typeof file.arrayBuffer === 'function') {
  try {
@@ -5167,7 +5167,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
  
- // Recuperar JWT para autenticaÃ§Ã£o manual via fetch
+ // Recuperar JWT para autenticação manual via fetch
  let authToken = supabaseKey;
  try {
  for (let i = 0; i < localStorage.length; i++) {
@@ -5202,7 +5202,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
  const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`; 
 
- // 2. AtualizaÃ§Ã£o do Perfil no Banco
+ // 2. Atualização do Perfil no Banco
  const dbUrl = `${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`;
  const dbRes = await iziFetch(dbUrl, {
  method: 'PATCH',
@@ -5217,7 +5217,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  if (!dbRes.ok) throw new Error('Falha ao atualizar perfil no banco de dados');
 
- // 3. AtualizaÃ§Ã£o do Estado Local
+ // 3. Atualização do Estado Local
  setDriverAvatar(publicUrl);
  localStorage.setItem('izi_driver_avatar', publicUrl);
  toastSuccess('Foto de perfil atualizada!');
@@ -5230,7 +5230,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  }
  };
 
- // renderProfileView extraÃ­do para componente ProfileView.tsx (performance: React.memo)
+ // renderProfileView extraído para componente ProfileView.tsx (performance: React.memo)
 
  const renderPlateEditView = () => {
  const nvVehicleOptions = [
@@ -5241,9 +5241,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  { id: 'caminhonete', icon: 'rv_hookup', label: 'Pickup' },
  { id: 'van', icon: 'directions_bus', label: 'Van' },
  { id: 'vuc', icon: 'local_shipping', label: 'VUC' },
- { id: 'bau_p', icon: 'inventory_2', label: 'BaÃº P' },
- { id: 'bau_m', icon: 'inventory_2', label: 'BaÃº M' },
- { id: 'bau_g', icon: 'inventory_2', label: 'BaÃº G' },
+ { id: 'bau_p', icon: 'inventory_2', label: 'Baú P' },
+ { id: 'bau_m', icon: 'inventory_2', label: 'Baú M' },
+ { id: 'bau_g', icon: 'inventory_2', label: 'Baú G' },
  ];
  const nvNeedsPlate = newVehicleType !== 'bicicleta';
  const nvCanSubmit = !!newVehicleType && !!newVehicleModel.trim() && (!nvNeedsPlate || newVehiclePlate.trim().length >= 7);
@@ -5263,15 +5263,15 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="arrow_back" className="text-white" size={24} />
  </button>
  <div className="flex flex-col items-end">
- <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">GestÃ£o</p>
- <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meus VeÃ­culos</h2>
+ <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Gestão</p>
+ <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Meus Veículos</h2>
  </div>
  </header>
 
  <div className="px-6 pt-8 pb-32 space-y-8">
- {/* SEÃ‡ÃO 1: VEÃƒÂCULO ATIVO */}
+ {/* SEÇÁO 1: VEÍCULO ATIVO */}
  <div className="space-y-4">
- <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">VeÃ­culo em Uso</h3>
+ <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículo em Uso</h3>
  <div className="bg-zinc-900 rounded-xl p-6 text-white relative overflow-hidden group">
  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/10 transition-all" />
  <div className="flex items-start justify-between relative z-10">
@@ -5285,7 +5285,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div>
  <h4 className="text-2xl font-black tracking-tighter leading-none">{driverVehicle === 'mototaxi' ? 'Moto' : driverVehicle === 'carro' ? 'Carro' : driverVehicle === 'bicicleta' ? 'Bike' : driverVehicle?.toUpperCase()}</h4>
- <p className="text-[11px] font-bold text-white/50 uppercase tracking-widest mt-1">{editProfileData.vehicle_model || 'Modelo nÃ£o informado'}</p>
+ <p className="text-[11px] font-bold text-white/50 uppercase tracking-widest mt-1">{editProfileData.vehicle_model || 'Modelo não informado'}</p>
  </div>
  </div>
  <div className="bg-yellow-400 text-zinc-900 px-4 py-2 rounded-xl font-black text-xs tracking-tighter ">
@@ -5295,10 +5295,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </div>
 
- {/* SEÃ‡ÃO 2: OUTROS VEÃƒÂCULOS APROVADOS */}
+ {/* SEÇÁO 2: OUTROS VEÍCULOS APROVADOS */}
  {myVehicles.filter(v => !v.is_active).length > 0 && (
  <div className="space-y-4">
- <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">VeÃ­culos Aprovados</h3>
+ <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículos Aprovados</h3>
  <div className="grid grid-cols-1 gap-3">
  {myVehicles.filter(v => !v.is_active).map(v => (
  <button 
@@ -5311,7 +5311,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name={v.vehicle_type === 'mototaxi' ? 'two_wheeler' : 'directions_car'} size={20} />
  </div>
  <div className="text-left">
- <p className="text-sm font-black text-zinc-900 leading-none capitalize">{v.vehicle_type} Ã¢â‚¬Â¢ {v.plate}</p>
+ <p className="text-sm font-black text-zinc-900 leading-none capitalize">{v.vehicle_type} ââ‚¬¢ {v.plate}</p>
  <p className="text-[10px] font-bold text-zinc-400 mt-1">{v.model}</p>
  </div>
  </div>
@@ -5324,10 +5324,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  )}
 
- {/* SEÃ‡ÃƒO 3: SOLICITAÃ‡Ã•ES PENDENTES */}
+ {/* SEÇÁO 3: SOLICITAÇÕES PENDENTES */}
  {myVehicleRequests.length > 0 && (
  <div className="space-y-4">
- <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Em AnÃ¡lise</h3>
+ <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Em Análise</h3>
  <div className="grid grid-cols-1 gap-3">
  {myVehicleRequests.map(req => (
  <div key={req.id} className="w-full bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex items-center justify-between">
@@ -5336,7 +5336,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="history" size={20} />
  </div>
  <div className="text-left">
- <p className="text-sm font-black text-amber-900 leading-none capitalize">{req.vehicle_type} Ã¢â‚¬Â¢ {req.plate || 'Bike'}</p>
+ <p className="text-sm font-black text-amber-900 leading-none capitalize">{req.vehicle_type} ââ‚¬¢ {req.plate || 'Bike'}</p>
  <p className="text-[10px] font-bold text-amber-600/70 mt-1">{req.model}</p>
  </div>
  </div>
@@ -5350,7 +5350,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  )}
 
- {/* BOTÃO NOVO VEÃƒÂCULO */}
+ {/* BOTÁO NOVO VEÍCULO */}
  <div className="pt-4">
  <button 
  onClick={() => setShowNewVehicleForm(true)}
@@ -5359,7 +5359,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="size-10 rounded-2xl bg-zinc-900 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
  <Icon name="add" size={24} />
  </div>
- <span className="text-sm font-black text-zinc-900 uppercase tracking-widest">Novo VeÃ­culo</span>
+ <span className="text-sm font-black text-zinc-900 uppercase tracking-widest">Novo Veículo</span>
  </button>
  </div>
  </div>
@@ -5384,18 +5384,18 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="flex items-center justify-between">
  <div>
  <p className="text-[9px] font-black text-yellow-600 uppercase tracking-[0.3em]">Cadastro</p>
- <h3 className="text-xl font-black text-zinc-900 tracking-tighter">Novo VeÃ­culo</h3>
+ <h3 className="text-xl font-black text-zinc-900 tracking-tighter">Novo Veículo</h3>
  </div>
  <button onClick={() => setShowNewVehicleForm(false)} className="size-10 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center active:scale-95">
  <Icon name="close" className="text-zinc-400" />
  </button>
  </div>
  <p className="text-[10px] text-zinc-400 font-bold leading-relaxed bg-blue-50 border border-blue-100 rounded-xl p-4">
- <span className="text-blue-600">Ã¢â€žÂ¹Ã¯Â¸Â</span> ApÃ³s o envio, o Admin irÃ¡ avaliar seu veÃ­culo. Quando aprovado, vocÃª poderÃ¡ ativÃ¡-lo para receber chamadas compatÃ­veis.
+ <span className="text-blue-600">ℹ️</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
  </p>
  <div className="space-y-3">
  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
- <Icon name="directions_car" size={13} className="text-zinc-300" /> Tipo de VeÃ­culo
+ <Icon name="directions_car" size={13} className="text-zinc-300" /> Tipo de Veículo
  </label>
  <div className="grid grid-cols-5 gap-2">
  {nvVehicleOptions.map((v) => (
@@ -5445,7 +5445,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  : 'bg-zinc-100 text-zinc-300 cursor-not-allowed'
  }`}>
  {isSavingNewVehicle ? <Icon name="sync" className="animate-spin" size={18} /> : <Icon name="send" size={18} />}
- {isSavingNewVehicle ? 'Enviando...' : 'Enviar para AvaliaÃ§Ã£o'}
+ {isSavingNewVehicle ? 'Enviando...' : 'Enviar para Avaliação'}
  </button>
  </motion.div>
  </motion.div>
@@ -5471,9 +5471,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  </h2>
  
  <p className="text-zinc-400 font-bold text-sm leading-relaxed mb-10 max-w-xs">
- NÃ£o encontramos um perfil de entregador ativo para o e-mail <span className="text-zinc-900 font-black">{localStorage.getItem('izi_auth_email') || 'vinculado'}</span>. 
+ Não encontramos um perfil de entregador ativo para o e-mail <span className="text-zinc-900 font-black">{localStorage.getItem('izi_auth_email') || 'vinculado'}</span>. 
  <br /><br />
- Se vocÃª jÃ¡ enviou seus documentos, aguarde a aprovaÃ§Ã£o. Caso contrÃ¡rio, cadastre-se no app principal.
+ Se você já enviou seus documentos, aguarde a aprovação. Caso contrário, cadastre-se no app principal.
  </p>
 
  <div className="w-full space-y-4">
@@ -5498,7 +5498,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  onClick={async () => {
  if (await showConfirm({ 
  title: 'Sair da Conta', 
- message: 'Deseja realmente encerrar sua sessÃ£o?',
+ message: 'Deseja realmente encerrar sua sessão?',
  confirmLabel: 'Sair Agora',
  danger: true
  })) {
@@ -5581,8 +5581,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  )}
  </AnimatePresence>
  );
- // renderPersonalDataModal extraÃ­do para componente PersonalDataModal.tsx
- // renderBankDetailsView extraÃ­do para componente BankDetailsModal.tsx
+ // renderPersonalDataModal extraído para componente PersonalDataModal.tsx
+ // renderBankDetailsView extraído para componente BankDetailsModal.tsx
 
  const renderPendingApprovalModal = () => (
  <AnimatePresence>
@@ -5618,11 +5618,11 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
 
  <h2 className="text-2xl font-black text-zinc-900 leading-tight mb-4 uppercase tracking-tighter">
- Cadastro em AnÃ¡lise
+ Cadastro em Análise
  </h2>
  
  <p className="text-zinc-500 font-bold text-sm leading-relaxed mb-10">
- Sua conta estÃ¡ sendo verificada pela nossa equipe. VocÃª receberÃ¡ uma notificaÃ§Ã£o assim que for aprovado para realizar entregas.
+ Sua conta está sendo verificada pela nossa equipe. Você receberá uma notificação assim que for aprovado para realizar entregas.
  </p>
  </motion.div>
  </motion.div>
@@ -5660,7 +5660,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="space-y-2">
  <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Central de Ajuda</h3>
  <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
- Estamos aqui para ajudar vocÃª com qualquer problema.
+ Estamos aqui para ajudar você com qualquer problema.
  </p>
  </div>
 
@@ -5677,7 +5677,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="support_agent" className="text-white text-2xl" />
  </div>
  <div className="text-left">
- <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">AdministraÃ§Ã£o Izi</p>
+ <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">Administração Izi</p>
  <p className="text-[10px] font-bold text-zinc-400 mt-1">Falar via WhatsApp</p>
  </div>
  </div>
@@ -5686,10 +5686,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </div>
 
- {/* Contato com UsuÃ¡rios */}
+ {/* Contato com Usuários */}
  <div className="space-y-8">
  <div className="space-y-6">
- <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Contatos da MissÃ£o</h4>
+ <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Contatos da Missão</h4>
  {activeMission ? (
  <div className="divide-y divide-zinc-50">
  {activeCustomerPhone && (
@@ -5741,7 +5741,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="history" className="text-zinc-200" size={32} />
  </div>
  <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.2em] px-4 leading-relaxed">
- Nenhuma missÃ£o ativa.<br />Contatos aparecem aqui nas entregas.
+ Nenhuma missão ativa.<br />Contatos aparecem aqui nas entregas.
  </p>
  </div>
  )}
@@ -5754,9 +5754,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Perguntas Frequentes</h4>
  <div className="divide-y divide-zinc-50">
  {[
- { q: 'Como recebo meus ganhos?', a: 'Os ganhos sÃ£o creditados na sua conta Izi e podem ser sacados via PIX instantaneamente apÃ³s a conclusÃ£o.' },
- { q: 'Problemas na entrega?', a: 'Se nÃ£o conseguir localizar o cliente ou encontrar o endereÃ§o, entre em contato com o suporte imediatamente.' },
- { q: 'MudanÃ§a de veÃ­culo?', a: 'Para trocar de veÃ­culo, acesse "VeÃ­culo & Placa" e envie a solicitaÃ§Ã£o de alteraÃ§Ã£o.' }
+ { q: 'Como recebo meus ganhos?', a: 'Os ganhos são creditados na sua conta Izi e podem ser sacados via PIX instantaneamente após a conclusão.' },
+ { q: 'Problemas na entrega?', a: 'Se não conseguir localizar o cliente ou encontrar o endereço, entre em contato com o suporte imediatamente.' },
+ { q: 'Mudança de veículo?', a: 'Para trocar de veículo, acesse "Veículo & Placa" e envie a solicitação de alteração.' }
  ].map((faq, i) => (
  <div key={i} className="py-6 space-y-2">
  <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">{faq.q}</p>
@@ -5815,7 +5815,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const mobilityOptions = [
  { key: 'mototaxi', label: 'Mototaxi', icon: 'two_wheeler', sub: 'Transporte de passageiros em moto' },
  { key: 'frete', label: 'Fretes', icon: 'local_shipping', sub: 'Transporte de cargas e volumes' },
- { key: 'mudanca', label: 'MudanÃ§as', icon: 'move_up', sub: 'Ajuda com pequenas mudanÃ§as' },
+ { key: 'mudanca', label: 'Mudanças', icon: 'move_up', sub: 'Ajuda com pequenas mudanças' },
  { key: 'motorista', label: 'Motorista Particular', icon: 'directions_car', sub: 'Transporte privado de passageiros' },
  ];
 
@@ -5834,7 +5834,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const allowedServices = VEHICLE_COMPATIBILITY[myVehicle] || [];
 
  if (!allowedServices.includes(key)) {
- toastError("Este serviÃ§o nÃ£o estÃ¡ disponÃ­vel para suas categorias de veÃ­culos selecionadas");
+ toastError("Este serviço não está disponível para suas categorias de veículos selecionadas");
  return;
  }
  const updated = prefServiceTypes.includes(key)
@@ -5862,26 +5862,26 @@ const handleUpdateStatus = async (newStatus: string) => {
  </button>
  <div className="flex flex-col items-end">
  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Ajustes</p>
- <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">PreferÃªncias</h2>
+ <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">Preferências</h2>
  </div>
  </header>
 
  <div className="flex-1 overflow-y-auto no-scrollbar px-6 pt-10 pb-32 space-y-12">
  <div className="space-y-2">
- <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Minhas PreferÃªncias</h3>
+ <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">Minhas Preferências</h3>
  <p className="text-[11px] text-zinc-400 font-bold leading-relaxed max-w-xs">
- Personalize sua experiÃªncia de trabalho.
+ Personalize sua experiência de trabalho.
  </p>
  </div>
 
- {/* NotificaÃ§Ãµes */}
+ {/* Notificações */}
  <div className="space-y-8">
  <div className="space-y-6">
- <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">NotificaÃ§Ãµes</h3>
+ <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Notificações</h3>
  <div className="flex items-center justify-between py-2">
  <div>
  <p className="text-sm font-bold text-zinc-900">Sons de Pedidos</p>
- <p className="text-[10px] text-zinc-400 mt-0.5">Alerta sonoro ao receber novas missÃµes</p>
+ <p className="text-[10px] text-zinc-400 mt-0.5">Alerta sonoro ao receber novas missões</p>
  </div>
  <MinimalToggle enabled={prefSoundEnabled} onToggle={() => {
  const v = !prefSoundEnabled;
@@ -5891,8 +5891,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div className="flex items-center justify-between px-6 py-5">
  <div>
- <p className="text-sm font-bold text-zinc-900">VibraÃ§Ã£o</p>
- <p className="text-[10px] text-zinc-400 mt-0.5">Vibrar ao receber pedido ou atualizaÃ§Ã£o</p>
+ <p className="text-sm font-bold text-zinc-900">Vibração</p>
+ <p className="text-[10px] text-zinc-400 mt-0.5">Vibrar ao receber pedido ou atualização</p>
  </div>
  <MinimalToggle enabled={prefVibrationEnabled} onToggle={() => {
  const v = !prefVibrationEnabled;
@@ -5903,14 +5903,14 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </div>
 
- {/* NavegaÃ§Ã£o */}
+ {/* Navegação */}
  <div className="space-y-8">
  <div className="space-y-6">
- <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">App de NavegaÃ§Ã£o</h3>
+ <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">App de Navegação</h3>
  <div className="grid grid-cols-1 gap-3">
  {[
  { key: 'google', label: 'Google Maps', sub: 'Recomendado' },
- { key: 'waze', label: 'Waze', sub: 'TrÃ¢nsito em tempo real' },
+ { key: 'waze', label: 'Waze', sub: 'Trânsito em tempo real' },
  { key: 'apple', label: 'Apple Maps', sub: 'Apenas iOS' },
  ].map(nav => (
  <button
@@ -5933,14 +5933,14 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </div>
 
- {/* ServiÃ§os de Entrega */}
+ {/* Serviços de Entrega */}
  <div className="space-y-8">
  <div className="space-y-6">
- <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">ServiÃ§os</h3>
+ <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Serviços</h3>
  <div className="flex items-center justify-between py-2">
  <div>
- <p className="text-sm font-bold text-zinc-900">Aceitar Todos os ServiÃ§os</p>
- <p className="text-[10px] text-zinc-400 mt-0.5">Restaurantes, Mercados, FarmÃ¡cias...</p>
+ <p className="text-sm font-bold text-zinc-900">Aceitar Todos os Serviços</p>
+ <p className="text-[10px] text-zinc-400 mt-0.5">Restaurantes, Mercados, Farmácias...</p>
  </div>
  <MinimalToggle enabled={allServicesEnabled} onToggle={toggleAllServices} />
  </div>
@@ -5970,14 +5970,14 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </div>
 
- {/* Raio MÃ¡ximo */}
+ {/* Raio Máximo */}
  <div className="space-y-8 pb-10">
  <div className="space-y-6">
- <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Raio de AtuaÃ§Ã£o</h3>
+ <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Raio de Atuação</h3>
  <div className="space-y-6">
  <div className="flex items-end justify-between">
  <p className="text-4xl font-black text-zinc-900 tracking-tighter">{prefMaxRadius}km</p>
- <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">DistÃ¢ncia MÃ¡xima</p>
+ <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Distância Máxima</p>
  </div>
  <input
  type="range"
@@ -6015,9 +6015,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  };
 
  const renderActiveMissionView = () => {
- // TELA DE SELEÃ‡ÃO: Se nÃ£o tem missÃ£o selecionada, mostra a lista de missÃµes ativas
+ // TELA DE SELEÇÁO: Se não tem missão selecionada, mostra a lista de missões ativas
  if (!activeMission) {
- // Se tem missÃµes ativas no array, mostra os cards de seleÃ§Ã£o
+ // Se tem missões ativas no array, mostra os cards de seleção
  if (activeMissions.length > 0) {
  return (
  <motion.div key="mission-selector" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col bg-zinc-50 pt-14 pb-36 px-4 font-['Plus_Jakarta_Sans'] overflow-y-auto">
@@ -6026,8 +6026,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="arrow_back" size={20} className="text-zinc-400" />
  </button>
  <div>
- <h2 className="text-lg font-black text-zinc-900 tracking-tight">MissÃµes Ativas</h2>
- <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">{activeMissions.length} missÃ£o(Ãµes) em andamento</p>
+ <h2 className="text-lg font-black text-zinc-900 tracking-tight">Missões Ativas</h2>
+ <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">{activeMissions.length} missão(ões) em andamento</p>
  </div>
  </div>
 
@@ -6046,7 +6046,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  }}
  className="w-full p-5 rounded-[28px] bg-white border border-zinc-100 text-left flex items-start gap-4 transition-all active:bg-zinc-50"
  >
- {/* ÃƒÂcone de status */}
+ {/* Ícone de status */}
  <div className={`size-14 rounded-2xl ${st.bg} flex items-center justify-center shrink-0`}>
  <Icon name={st.icon} size={28} className={st.color} />
  </div>
@@ -6055,11 +6055,11 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-2 mb-1">
  <span className={`text-[9px] font-black uppercase tracking-widest ${st.color}`}>{st.label}</span>
- <span className="text-[9px] text-zinc-200">Ã¢â‚¬Â¢</span>
+ <span className="text-[9px] text-zinc-200">ââ‚¬¢</span>
  <span className="text-[9px] text-zinc-400 font-bold">#{(m.realId || m.id || '').slice(0,6)}</span>
  </div>
  <p className="text-sm font-black text-zinc-950 truncate">{storeName}</p>
- <p className="text-[11px] text-zinc-950 font-black truncate mt-0.5">{pickupAddr || 'EndereÃ§o da Loja'}</p>
+ <p className="text-[11px] text-zinc-950 font-black truncate mt-0.5">{pickupAddr || 'Endereço da Loja'}</p>
  <div className="flex items-center gap-3 mt-2">
  <span className="text-sm font-black text-yellow-600">R$ {Number((m as any).price || (m as any).total_price || 0).toFixed(2)}</span>
  <span className="text-[9px] text-zinc-950 uppercase font-black">{serviceTypeLabel((m as any).service_type || (m as any).type)}</span>
@@ -6087,14 +6087,14 @@ const handleUpdateStatus = async (newStatus: string) => {
  );
  }
 
- // Sem missÃµes â€” tela vazia
+ // Sem missões — tela vazia
  return (
  <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans'] bg-zinc-50">
  <div className="size-28 rounded-[45px] bg-white border border-zinc-100 flex items-center justify-center mb-8 ">
  <Icon name="route" size={48} className="text-zinc-300" />
  </div>
- <h2 className="text-2xl font-black text-zinc-900 tracking-tighter uppercase mb-2">Sem MissÃµes Ativas</h2>
- <p className="text-sm text-zinc-500 leading-relaxed mb-10 max-w-xs font-medium">VocÃª nÃ£o possui nenhuma corrida em andamento. VÃ¡ ao Dashboard para aceitar novos desafios e lucrar.</p>
+ <h2 className="text-2xl font-black text-zinc-900 tracking-tighter uppercase mb-2">Sem Missões Ativas</h2>
+ <p className="text-sm text-zinc-500 leading-relaxed mb-10 max-w-xs font-medium">Você não possui nenhuma corrida em andamento. Vá ao Dashboard para aceitar novos desafios e lucrar.</p>
  
  <div className="flex flex-col gap-4 w-full max-w-xs">
  <button 
@@ -6134,7 +6134,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  case 'no_local_coleta':
  case 'chegou_coleta': return { label: 'No local de coleta', color: 'text-amber-500', bg: 'bg-amber-500/10', icon: 'location_on', glow: '' };
  case 'preparando':
- case 'no_preparo': return { label: 'Em preparaÃ§Ã£o', color: 'text-purple-500', bg: 'bg-purple-500/10', icon: 'soup_kitchen', glow: '' };
+ case 'no_preparo': return { label: 'Em preparação', color: 'text-purple-500', bg: 'bg-purple-500/10', icon: 'soup_kitchen', glow: '' };
  case 'pronto': return { label: 'Pronto para retirada', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: 'check_circle', glow: '' };
  case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: 'package_2', glow: '' };
  case 'a_caminho': 
@@ -6157,10 +6157,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  const s = (activeMission.status || '').toLowerCase().trim();
 
 
- // CASO TERMINAL: Se a missÃ£o jÃ¡ acabou mas ainda estÃ¡ na tela, o botÃ£o serve para fechar.
+ // CASO TERMINAL: Se a missão já acabou mas ainda está na tela, o botão serve para fechar.
  if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s)) {
  return { 
- label: 'ConcluÃ­do Ã¢â‚¬Â¢ Fechar', 
+ label: 'Concluído ââ‚¬¢ Fechar', 
  action: () => {
  setActiveMission(null);
  localStorage.removeItem('Izi_active_mission');
@@ -6189,10 +6189,10 @@ const handleUpdateStatus = async (newStatus: string) => {
         const diffH = Math.floor(diffMs / (1000 * 60 * 60));
         const diffM = Math.ceil((diffMs % (1000 * 60 * 60)) / (1000 * 60));
         const timeStr = diffH > 0 ? `${diffH}h ${diffM}min` : `${diffM} min`;
-        return { label: `Bloqueado â€” faltam ${timeStr}`, action: () => toastError(`InÃ­cio liberado 1h antes do agendamento (${scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h)`), icon: 'schedule', disabled: true };
+        return { label: `Bloqueado — faltam ${timeStr}`, action: () => toastError(`Início liberado 1h antes do agendamento (${scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h)`), icon: 'schedule', disabled: true };
       }
     }
-    return { label: 'Iniciar MissÃ£o', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
+    return { label: 'Iniciar Missão', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
   }
   return { label: 'Cheguei na Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
   }
@@ -6245,7 +6245,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  localStorage.removeItem('Izi_active_mission');
  setActiveMission(null);
  }
- // Volta para o dashboard (minimiza a missÃ£o)
+ // Volta para o dashboard (minimiza a missão)
  setActiveTab('dashboard');
  }} 
  className="pointer-events-auto size-12 bg-white border border-zinc-200 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
@@ -6334,10 +6334,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </section>
 
- {/* === ENDEREÃ‡OS DE COLETA E ENTREGA === */}
+ {/* === ENDEREÇOS DE COLETA E ENTREGA === */}
  <section className="bg-white border border-zinc-100 rounded-3xl overflow-hidden ">
  <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
- <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em]">Rota da MissÃ£o</h2>
+ <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em]">Rota da Missão</h2>
  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{realTimeRoute?.distanceText || (activeMission.distance_km ? `${parseFloat(activeMission.distance_km).toFixed(1)} km` : '-- km')}</span>
  </div>
 
@@ -6359,12 +6359,12 @@ const handleUpdateStatus = async (newStatus: string) => {
  </p>
  )}
  <p className="text-zinc-600 font-semibold text-[11px] leading-snug break-words">
- {pickupOnly || 'EndereÃ§o de coleta nÃ£o informado'}
+ {pickupOnly || 'Endereço de coleta não informado'}
  </p>
  </div>
  </div>
 
- {/* Paradas intermediÃ¡rias (se houver) */}
+ {/* Paradas intermediárias (se houver) */}
  {(() => {
  let stopsArr = [];
  try {
@@ -6406,7 +6406,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div className="flex-1 min-w-0">
  <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] block mb-0.5">
- {isMobility ? 'Destino' : 'EndereÃ§o de Entrega'}
+ {isMobility ? 'Destino' : 'Endereço de Entrega'}
  </span>
  {(activeMission.receiver_name || activeMission.recipient_name) && (
  <p className="text-zinc-950 font-black text-xs uppercase tracking-tight truncate mb-0.5">
@@ -6414,7 +6414,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </p>
  )}
  <p className="text-zinc-600 font-semibold text-[11px] leading-snug break-words">
- {addressOnly || 'EndereÃ§o de entrega nÃ£o informado'}
+ {addressOnly || 'Endereço de entrega não informado'}
  </p>
  </div>
  </div>
@@ -6423,9 +6423,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  {/* Detalhes da Carga/Passageiro */}
  <section className="space-y-4">
  <div className="flex justify-between items-end px-2">
- <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em]">Detalhes da MissÃ£o</h2>
+ <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em]">Detalhes da Missão</h2>
  <span className={isMobility ? "text-cyan-600 font-black text-[9px] uppercase tracking-widest" : "text-yellow-600 font-black text-[9px] uppercase tracking-widest"}>
- {isMobility ? 'Mobilidade' : 'LogÃ­stica'}
+ {isMobility ? 'Mobilidade' : 'Logística'}
  </span>
  </div>
  
@@ -6466,7 +6466,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  {/* Izi Pay Premium Section */}
  <section className="space-y-4 pb-4">
- <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay Ã¢â‚¬Â¢ Rendimento</h2>
+ <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay ââ‚¬¢ Rendimento</h2>
  <div className="bg-white border border-zinc-100 p-6 rounded-3xl relative overflow-hidden ">
  
  <div className="flex justify-between items-center relative z-10">
@@ -6476,7 +6476,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div>
  <span className="text-zinc-950 font-black text-[11px] uppercase tracking-widest block leading-none">Lucro Real</span>
- <span className="text-zinc-950 text-[9px] font-black uppercase tracking-[0.2em] mt-1 block">LÃ­quido Creditado</span>
+ <span className="text-zinc-950 text-[9px] font-black uppercase tracking-[0.2em] mt-1 block">Líquido Creditado</span>
  </div>
  </div>
  <div className="text-right">
@@ -6491,7 +6491,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="space-y-5">
  <div className="flex justify-between items-center bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
  <div className="flex flex-col">
- <span className="text-zinc-950 font-black text-[8px] uppercase tracking-widest mb-1">MÃ©todo</span>
+ <span className="text-zinc-950 font-black text-[8px] uppercase tracking-widest mb-1">Método</span>
  <span className="text-zinc-950 font-black text-[10px] uppercase">{activeMission.payment_method === 'online' ? 'Liquidado Online' : 'Pagar no Destino'}</span>
  </div>
  <div className="bg-yellow-400/10 px-4 py-2 rounded-xl border border-yellow-400/20 flex items-center gap-2">
@@ -6550,7 +6550,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {/* PREMIUM ACTION DOCK (Fixed at Bottom) */}
  <div className="fixed bottom-0 left-0 w-full p-6 pb-8 bg-gradient-to-t from-zinc-50 via-zinc-50/95 to-transparent z-[200] flex flex-col gap-4">
  {(() => {
- // Para status terminal (concluÃ­do/cancelado), o botÃ£o nunca deve ser bloqueado por isAccepting
+ // Para status terminal (concluído/cancelado), o botão nunca deve ser bloqueado por isAccepting
  const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'];
  const isTerminal = terminalStatuses.includes((activeMission.status || '').toLowerCase().trim());
  const isDisabled = isTerminal ? false : (isAccepting || btn.disabled);
@@ -6579,11 +6579,11 @@ const handleUpdateStatus = async (newStatus: string) => {
  
  {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
  <button 
- onClick={async () => { if (await showConfirm({ message: 'Deseja realmente cancelar esta missÃ£o?' })) handleUpdateStatus('cancelado'); }}
+ onClick={async () => { if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) handleUpdateStatus('cancelado'); }}
  className="w-full h-14 border-2 border-rose-100 bg-rose-50/50 text-rose-500 text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2"
  >
  <Icon name="close" size={18} />
- Cancelar MissÃ£o
+ Cancelar Missão
  </button>
  )}
  </div>
@@ -6595,10 +6595,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  <motion.div key="sos-modal" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-rose-50 flex flex-col items-center justify-center p-8 text-center">
  <div className="size-28 clay-fab-sos rounded-full flex items-center justify-center mb-8 animate-pulse bg-rose-500"><Icon name="emergency_share" className="text-6xl text-white" /></div>
  <h1 className="text-4xl font-black text-zinc-900 uppercase tracking-tight mb-3">SOS Ativado</h1>
- <p className="text-zinc-500 text-sm mb-10 max-w-xs leading-relaxed">Sua localizaÃ§Ã£o estÃ¡ sendo compartilhada com a central Izi.</p>
+ <p className="text-zinc-500 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
  <div className="w-full max-w-sm space-y-4">
  <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-rose-500 text-white rounded-xl flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
- <button onClick={() => { toastSuccess('Apoio mecÃ¢nico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white border border-zinc-100 text-zinc-900 rounded-xl flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio MecÃ¢nico</button>
+ <button onClick={() => { toastSuccess('Apoio mecânico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white border border-zinc-100 text-zinc-900 rounded-xl flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio Mecânico</button>
  <button onClick={() => setIsSOSActive(false)} className="text-zinc-400 font-black uppercase tracking-widest text-sm mt-4">Cancelar</button>
  </div>
  </motion.div>
@@ -6619,7 +6619,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="moped" className="text-primary text-5xl" />
  </div>
  <h1 className="text-4xl font-black text-black tracking-tight uppercase">Izi <span className="text-primary">Entregador</span></h1>
- <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.5em]">{authMode === 'login' ? 'AutenticaÃ§Ã£o do Entregador' : 'Cadastro de Novo Piloto'}</p>
+ <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.5em]">{authMode === 'login' ? 'Autenticação do Entregador' : 'Cadastro de Novo Piloto'}</p>
  </div>
  {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-rose-50 border border-rose-100 rounded-2xl px-5 py-3 text-rose-500 text-xs font-black text-center uppercase tracking-widest">{authError}</motion.div>}
  <div className="space-y-4">
@@ -6698,10 +6698,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-black text-white font-black text-sm uppercase tracking-widest rounded-xl shadow-black/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
  {authLoading ? <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
  </button>
- <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white border border-zinc-200 text-zinc-500 font-black text-[10px] uppercase tracking-widest rounded-xl hover:text-black transition-all ">{authMode === 'login' ? 'Criar nova conta' : 'JÃ¡ tenho conta'}</button>
+ <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white border border-zinc-200 text-zinc-500 font-black text-[10px] uppercase tracking-widest rounded-xl hover:text-black transition-all ">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
  </div>
  </div>
- <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 Ã¢â‚¬Â¢ ConexÃ£o Segura</p>
+ <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 ââ‚¬¢ Conexão Segura</p>
  </motion.div>
  );
  };
@@ -6721,7 +6721,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  const paymentLabel = getPaymentLabel(selectedOrder);
  const needsChange = !isPaid && selectedOrder.change_for > 0;
 
- // Estilos Claymorphic via classes Tailwind inline para garantir consistÃªncia
+ // Estilos Claymorphic via classes Tailwind inline para garantir consistência
  // Estilos Claymorphic Premium para o Tema Claro
  const clayCard = "";
  const clayCardDark = "";
@@ -6769,7 +6769,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="flex items-center gap-2">
  <div className="flex items-center gap-1 bg-yellow-400/10 px-2 py-0.5 rounded-lg border border-yellow-400/20">
  <Icon name="star" size={12} className="text-yellow-600" fill />
- <span className="text-[10px] font-black text-yellow-700 uppercase">NÃ­vel {stats.level}</span>
+ <span className="text-[10px] font-black text-yellow-700 uppercase">Nível {stats.level}</span>
  </div>
  <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Premium</span>
  </div>
@@ -6832,7 +6832,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {item.observation && <span className="text-zinc-400 text-xs line-clamp-1">{item.observation}</span>}
  </div>
  <div className="text-right">
- <span className="text-zinc-400/60 text-[10px] font-bold block uppercase">PreÃ§o</span>
+ <span className="text-zinc-400/60 text-[10px] font-bold block uppercase">Preço</span>
  <span className="text-zinc-900 font-black text-xs">R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',')}</span>
  </div>
  </div>
@@ -6841,10 +6841,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </section>
  
- {/* Resumo Financeiro e OperaÃ§Ã£o Consolidados */}
+ {/* Resumo Financeiro e Operação Consolidados */}
  <section className="space-y-4">
  <div className="flex justify-between items-center px-2">
- <h2 className="text-zinc-400 font-bold text-sm uppercase tracking-widest">Resumo da MissÃ£o</h2>
+ <h2 className="text-zinc-400 font-bold text-sm uppercase tracking-widest">Resumo da Missão</h2>
  <span className="text-yellow-600 font-black text-[10px] uppercase tracking-widest bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20">
  {paymentLabel}
  </span>
@@ -6853,10 +6853,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className={`bg-white ${clayCardDark} rounded-xl p-6 border border-zinc-100 space-y-6 relative overflow-hidden`}>
  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full" />
  
- {/* Saldo da MissÃ£o Principal */}
+ {/* Saldo da Missão Principal */}
  <div className="flex justify-between items-center relative z-10 bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
  <div className="flex flex-col">
- <span className="text-zinc-900 font-black text-xs uppercase tracking-tight">Saldo da MissÃ£o</span>
+ <span className="text-zinc-900 font-black text-xs uppercase tracking-tight">Saldo da Missão</span>
  </div>
  <div className="text-right">
  {(() => {
@@ -6907,7 +6907,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {isPaid || selectedOrder.payment_method === 'online' ? (
  <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4 flex items-center gap-3">
  <Icon name="verified" className="text-emerald-500" />
- <p className="text-emerald-600 text-[10px] font-black uppercase tracking-tight">Pedido Pago via App. NÃ£o cobrar nada.</p>
+ <p className="text-emerald-600 text-[10px] font-black uppercase tracking-tight">Pedido Pago via App. Não cobrar nada.</p>
  </div>
  ) : selectedOrder.payment_method === 'pix' ? (
  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-center justify-between group">
@@ -6938,7 +6938,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </section>
 
 
- {/* LogÃ­stica e Rota */}
+ {/* Logística e Rota */}
  <section className="space-y-4">
  <div className="flex justify-between items-center px-2">
  <h2 className="text-zinc-400 font-bold text-sm uppercase tracking-widest">Rota do Pedido</h2>
@@ -6958,22 +6958,22 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div>
  <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Coleta em</p>
  <p className="text-zinc-900 font-bold text-sm mt-1">{selectedOrder.merchant_name || 'Parceiro Izi'}</p>
- <p className="text-zinc-500 text-xs mt-0.5">{selectedOrder.pickup_address || 'EndereÃ§o de coleta disponÃ­vel na missÃ£o'}</p>
+ <p className="text-zinc-500 text-xs mt-0.5">{selectedOrder.pickup_address || 'Endereço de coleta disponível na missão'}</p>
  </div>
  <div>
  <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Entregar para</p>
  <p className="text-zinc-900 font-bold text-sm mt-1">{selectedOrder.user_name || 'Cliente Izi'}</p>
- <p className="text-zinc-500 text-xs mt-0.5">{selectedOrder.delivery_address || 'EndereÃ§o de entrega'}</p>
+ <p className="text-zinc-500 text-xs mt-0.5">{selectedOrder.delivery_address || 'Endereço de entrega'}</p>
  </div>
  </div>
  </div>
  </div>
  </section>
 
- {/* ObservaÃ§Ãµes e AÃ§Ãµes Group */}
+ {/* Observações e Ações Group */}
  <section className={`bg-white ${clayCard} rounded-[28px] border border-zinc-100 overflow-hidden`}>
  <div className="p-6 space-y-5">
- <h3 className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 px-1">Notas da MissÃ£o</h3>
+ <h3 className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 px-1">Notas da Missão</h3>
  
  {/* Observations */}
  <div className="flex items-start gap-4 p-5 bg-zinc-50 rounded-2xl border border-zinc-100">
@@ -6981,18 +6981,18 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="description" className="text-yellow-600" />
  </div>
  <div className="flex-1">
- <span className="text-zinc-900 font-black text-[11px] uppercase tracking-widest opacity-60">InstruÃ§Ãµes</span>
+ <span className="text-zinc-900 font-black text-[11px] uppercase tracking-widest opacity-60">Instruções</span>
  {(() => {
  const itemNotes = selectedOrder.items
  ?.filter((item: any) => item.observation)
- .map((item: any) => `Ã¢â‚¬Â¢ ${item.name || item.product_name}:\n "${item.observation}"`)
+ .map((item: any) => `ââ‚¬¢ ${item.name || item.product_name}:\n "${item.observation}"`)
  .join('\n\n');
  
  const notesList = [];
- if (selectedOrder.notes) notesList.push(`Ã¢â‚¬Â¢ Geral:\n "${selectedOrder.notes}"`);
+ if (selectedOrder.notes) notesList.push(`ââ‚¬¢ Geral:\n "${selectedOrder.notes}"`);
  if (itemNotes) notesList.push(itemNotes);
  
- const displayNotes = notesList.length > 0 ? notesList.join('\n\n') : 'Sem observaÃ§Ãµes especiais dos produtos.';
+ const displayNotes = notesList.length > 0 ? notesList.join('\n\n') : 'Sem observações especiais dos produtos.';
  
  return (
  <p className="text-zinc-600 text-sm mt-1.5 leading-relaxed whitespace-pre-line">
@@ -7018,7 +7018,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </main>
 
  {/* Bottom Fixed Action Button Container */}
- {activeTab !== 'history' && !['entregue', 'completed', 'finalizado', 'concluido', 'concluÃ­do', 'delivered', 'cancelado', 'cancelled'].includes(selectedOrder.status?.toLowerCase()) && (
+ {activeTab !== 'history' && !['entregue', 'completed', 'finalizado', 'concluido', 'concluído', 'delivered', 'cancelado', 'cancelled'].includes(selectedOrder.status?.toLowerCase()) && (
  <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-white via-white/95 to-transparent z-50">
  <button 
  onClick={() => {
@@ -7089,7 +7089,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  return (
  <div className="w-full h-[100dvh] bg-zinc-50 font-sans overflow-hidden relative">
- {/* Banner de AtivaÃ§Ã£o de Ãudio */}
+ {/* Banner de Ativação de Áudio */}
  {audioBlocked && (
  <motion.div 
  initial={{ y: -100, opacity: 0 }}
@@ -7103,7 +7103,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div>
  <p className="text-zinc-950 text-sm font-black leading-tight">ATIVAR ALERTAS SONOROS</p>
- <p className="text-zinc-900/80 text-[10px] uppercase font-bold tracking-widest mt-0.5">Clique aqui para nÃ£o perder novas vagas!</p>
+ <p className="text-zinc-900/80 text-[10px] uppercase font-bold tracking-widest mt-0.5">Clique aqui para não perder novas vagas!</p>
  </div>
  </div>
  <div className="size-8 rounded-full bg-zinc-950/10 flex items-center justify-center">
@@ -7122,7 +7122,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {isAuthenticated && (
  <>
  <div key="app" className="flex flex-col h-full overflow-hidden bg-zinc-50">
- {/* Popup flutuante de nova chamada â€” sobrepÃµe tudo */}
+ {/* Popup flutuante de nova chamada — sobrepõe tudo */}
  
  <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
  <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
@@ -7213,14 +7213,14 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div className="mt-2 bg-emerald-100/50 px-4 py-1.5 rounded-full border border-emerald-200">
  <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">
- atÃ© {selectedSlot.metadata?.base_deliveries || 10} entregas
+ até {selectedSlot.metadata?.base_deliveries || 10} entregas
  </span>
  </div>
  </div>
  )}
  
  <p className="text-zinc-400 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase leading-relaxed">
- Seu perfil premium foi enviado para anÃ¡lise. Fique atento Ã€Â s suas notificaÃ§Ãµes!
+ Seu perfil premium foi enviado para análise. Fique atento às suas notificações!
  </p>
 
  <button
@@ -7259,7 +7259,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </button>
  <div>
  <h1 className="text-xl font-black text-zinc-900 tracking-tight leading-none mb-1">
- OlÃ¡, <span className="text-yellow-600 font-black">{driverName.split(' ')[0]}</span>
+ Olá, <span className="text-yellow-600 font-black">{driverName.split(' ')[0]}</span>
  </h1>
  <div className="flex items-center gap-1.5">
  <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-500 ' : 'bg-rose-500'}`} />
@@ -7285,8 +7285,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  <main className="flex-1 overflow-y-auto no-scrollbar relative">
  <AnimatePresence mode="wait">
  {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Painel Principal">{renderDashboard()}</LocalErrorBoundary></motion.div>}
- {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="MissÃ£o Ativa">{renderActiveMissionView()}</LocalErrorBoundary></motion.div>}
- {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="HistÃ³rico"><HistoryView history={history} getNetEarnings={getNetEarnings} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></LocalErrorBoundary></motion.div>}
+ {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Missão Ativa">{renderActiveMissionView()}</LocalErrorBoundary></motion.div>}
+ {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Histórico"><HistoryView history={history} getNetEarnings={getNetEarnings} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></LocalErrorBoundary></motion.div>}
  {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Ganhos"><EarningsView stats={stats} onShowBankDetails={() => setShowBankDetails(true)} onShowWithdrawHistory={() => setShowWithdrawHistory(true)} onWithdrawRequest={handleWithdrawRequest} onNavigateToMissions={() => setActiveTab('missions')} /></LocalErrorBoundary></motion.div>}
  {activeTab === 'profile' && (
  <motion.div 
@@ -7318,11 +7318,11 @@ const handleUpdateStatus = async (newStatus: string) => {
  onOpenOverlaySettings={openOverlaySettings}
  onSyncMission={syncMissionWithDB}
  onResetMission={async () => {
- if (await showConfirm({ title: 'Resetar MissÃ£o', message: 'Isso irÃ¡ limpar o cache local da sua missÃ£o atual.', confirmLabel: 'Resetar Agora', danger: true })) {
+ if (await showConfirm({ title: 'Resetar Missão', message: 'Isso irá limpar o cache local da sua missão atual.', confirmLabel: 'Resetar Agora', danger: true })) {
  setActiveMission(null);
  localStorage.removeItem('Izi_active_mission');
  setActiveTab('dashboard');
- showSystemPopup('Reset ConcluÃ­do', 'O cache da missÃ£o foi limpo com sucesso.', 'info');
+ showSystemPopup('Reset Concluído', 'O cache da missão foi limpo com sucesso.', 'info');
  }
  }}
  onSetEditProfileData={setEditProfileData}
@@ -7369,7 +7369,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div className="text-left flex-1">
  <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-0.5">Em Andamento</p>
- <p className="text-sm font-black leading-tight">Retornar Ã€Â  MissÃ£o</p>
+ <p className="text-sm font-black leading-tight">Retornar à  Missão</p>
  </div>
  <Icon name="chevron_right" className="text-emerald-100" />
  </button>
@@ -7410,7 +7410,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div className="flex-1">
  <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 text-white">Modo Offline</p>
- <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">Verifique sua conexÃ£o de rede</p>
+ <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">Verifique sua conexão de rede</p>
  </div>
  </div>
  </motion.div>
@@ -7513,8 +7513,8 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  <div className="flex justify-between items-center py-2">
  <div className="flex flex-col">
- <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">Valor LÃ­quido</span>
- <span className="text-[8px] font-medium text-zinc-400 uppercase tracking-wider">DepÃ³sito imediato via PIX</span>
+ <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">Valor Líquido</span>
+ <span className="text-[8px] font-medium text-zinc-400 uppercase tracking-wider">Depósito imediato via PIX</span>
  </div>
  <span className="text-3xl font-black text-zinc-900">
  R$ {(stats.balance * (1 - (Number(appSettings?.withdrawal_fee_percent ?? 0) / 100))).toFixed(2).replace('.', ',')}
@@ -7528,7 +7528,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="bolt" className="text-white" size={20} />
  </div>
  <p className="text-[9px] text-zinc-900/60 font-bold uppercase tracking-widest leading-relaxed relative z-10">
- Pagamentos processados em atÃ© <span className="text-zinc-900">{appSettings?.withdrawal_period_h ?? 24}h</span> Ãºteis.
+ Pagamentos processados em até <span className="text-zinc-900">{appSettings?.withdrawal_period_h ?? 24}h</span> úteis.
  </p>
  </div>
 
@@ -7603,7 +7603,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  transition={{ delay: 0.3 }}
  className="text-zinc-500 font-bold text-sm mt-4 max-w-xs leading-relaxed"
  >
- Sua solicitaÃ§Ã£o de PIX foi enviada e jÃ¡ aparece no painel administrativo para aprovaÃ§Ã£o.
+ Sua solicitação de PIX foi enviada e já aparece no painel administrativo para aprovação.
  </motion.p>
  
  <motion.div 
@@ -7638,9 +7638,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  <span className="material-symbols-outlined text-yellow-600 text-4xl animate-pulse">payments</span>
  </div>
 
- <h3 className="text-2xl font-black text-zinc-900 uppercase tracking-tighter mb-3">AtenÃ§Ã£o Piloto!</h3>
+ <h3 className="text-2xl font-black text-zinc-900 uppercase tracking-tighter mb-3">Atenção Piloto!</h3>
  <p className="text-zinc-500 font-bold text-sm leading-relaxed mb-10">
- Este pedido ainda <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-4">nÃ£o foi pago</span> via App. 
+ Este pedido ainda <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-4">não foi pago</span> via App. 
  <br />Confirme o recebimento de:
  <span className="block text-zinc-900 text-3xl font-black mt-2 tracking-tighter">
  R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}
@@ -7659,7 +7659,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <span className="material-symbols-outlined text-rose-500">warning</span>
  </div>
  <p className="text-rose-500 text-xs leading-relaxed font-bold">
- Ao confirmar o recebimento em <strong className="uppercase">Dinheiro</strong>, esse valor serÃ¡ descontado do seu saldo. Deseja confirmar?
+ Ao confirmar o recebimento em <strong className="uppercase">Dinheiro</strong>, esse valor será descontado do seu saldo. Deseja confirmar?
  </p>
  </div>
  <div className="flex gap-3">
@@ -7695,7 +7695,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  }}
  className="w-full py-5 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-900 font-black text-sm uppercase tracking-widest hover:bg-zinc-100 transition-all active:scale-95 "
  >
- Recebi via Pix / CartÃ£o
+ Recebi via Pix / Cartão
  </button>
  <button 
  onClick={() => {
@@ -7704,7 +7704,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  }}
  className="w-full py-4 text-rose-500/40 hover:text-rose-500 font-bold text-[10px] uppercase tracking-[0.3em] transition-colors mt-2"
  >
- Ainda nÃ£o recebi
+ Ainda não recebi
  </button>
  </>
  )}
@@ -7757,10 +7757,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  className="space-y-4"
  >
  <h2 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase leading-none text-center">
- ParabÃ©ns! <br />
- <span className="text-yellow-600">MissÃ£o ConcluÃ­da</span>
+ Parabéns! <br />
+ <span className="text-yellow-600">Missão Concluída</span>
  </h2>
- <p className="text-zinc-400 font-bold text-sm tracking-wide uppercase opacity-60">VocÃª acaba de faturar:</p>
+ <p className="text-zinc-400 font-bold text-sm tracking-wide uppercase opacity-60">Você acaba de faturar:</p>
  </motion.div>
 
  <motion.div 
@@ -7769,7 +7769,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  transition={{ delay: 0.4 }}
  className="my-6 w-full max-w-sm px-6 py-8 bg-white border border-zinc-200 rounded-xl relative overflow-hidden"
  >
- <span className="block text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em] mb-2 text-center">Ganho LÃ­quido (Frete)</span>
+ <span className="block text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em] mb-2 text-center">Ganho Líquido (Frete)</span>
  <div className="flex items-center justify-center gap-1">
  <span className="text-2xl font-black text-zinc-300 mt-3">R$</span>
  <span className="text-7xl font-black text-zinc-900 tracking-tighter leading-none">
@@ -7814,7 +7814,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  >
  <p className="text-emerald-400 font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
  <span className="material-symbols-outlined text-xs">account_balance_wallet</span>
- JÃ¡ disponÃ­vel na sua carteira
+ Já disponível na sua carteira
  </p>
 
  <button
@@ -7825,7 +7825,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </button>
  </motion.div>
 
- {/* Detalhe EstÃ©tico Inferior */}
+ {/* Detalhe Estético Inferior */}
  <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-30">
  <div className="w-12 h-1.5 bg-white/10 rounded-full" />
  </div>
@@ -7859,10 +7859,10 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
 
  <div className="text-center space-y-3">
- <h2 className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em]">ParabÃ©ns!</h2>
+ <h2 className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.4em]">Parabéns!</h2>
  <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">VAGA CONFIRMADA</h3>
  <p className="text-xs text-zinc-400 leading-relaxed font-bold px-4">
- VocÃª foi selecionado para a vaga de <span className="text-zinc-900">{approvedSlotData.title}</span> em <span className="text-zinc-900">{approvedSlotData.admin_users?.store_name || 'um novo parceiro'}</span>.
+ Você foi selecionado para a vaga de <span className="text-zinc-900">{approvedSlotData.title}</span> em <span className="text-zinc-900">{approvedSlotData.admin_users?.store_name || 'um novo parceiro'}</span>.
  </p>
  </div>
 
@@ -7906,7 +7906,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {showHelpModal && renderHelpModal()}
  </AnimatePresence>
 
- {/* Popup de NotificaÃ§Ã£o do Sistema Minimalista */}
+ {/* Popup de Notificação do Sistema Minimalista */}
  <AnimatePresence>
  {systemNotification && (
  <motion.div

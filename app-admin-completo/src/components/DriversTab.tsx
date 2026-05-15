@@ -376,13 +376,15 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                  />
               </div>
               <div className="md:col-span-1 space-y-2">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nova Senha</label>
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">
+                   {selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') ? 'Senha de Acesso Atual' : 'Nova Senha'}
+                 </label>
                  <input 
-                   type="password" 
-                   value={selectedDriverStudio.password || ''}
+                   type={selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') ? 'text' : 'password'} 
+                   value={selectedDriverStudio.password !== undefined ? selectedDriverStudio.password : (selectedDriverStudio.plain_password || '')}
                    onChange={e => setSelectedDriverStudio({...selectedDriverStudio, password: e.target.value})}
                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white transition-all shadow-inner"
-                   placeholder="Preencha apenas para alterar/criar"
+                   placeholder={selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') ? "Digite para alterar a senha" : "Defina uma senha de acesso"}
                  />
               </div>
             </div>
@@ -801,7 +803,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              throw new Error('O e-mail é obrigatório para um novo entregador.');
            }
 
-           const driverData = {
+           const driverData: any = {
              id: finalId,
              name: selectedDriverStudio.name,
              email: selectedDriverStudio.email,
@@ -822,6 +824,10 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              doc_vehicle:     selectedDriverStudio.doc_vehicle     || null,
              doc_vehicle_verso: selectedDriverStudio.doc_vehicle_verso || null,
            };
+
+           if (selectedDriverStudio.password) {
+             driverData.plain_password = selectedDriverStudio.password;
+           }
 
          let error;
          const { data: existingDriver } = await supabase.from('drivers_delivery').select('id').eq('id', finalId).maybeSingle();

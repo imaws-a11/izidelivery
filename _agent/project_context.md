@@ -80,3 +80,4 @@ Atualizado: 2026-05-15 (Sessão: Estabilização de Agendamentos e Radar)
 - **Plano 2 (Full-Screen Intent Hybrid)**: Permissão `USE_FULL_SCREEN_INTENT` e flags nativas em `MainActivity.java` (`setShowWhenLocked`) para acordar a tela e mostrar o app em novos pedidos.
 - **Plano 4 (Interactive Overlay)**: Uso de `ForegroundService` com botões de ação dinâmica (Aceitar/Recusar) nas notificações de radar, permitindo aceitação de corridas sem abrir o app.
 - **Auditoria de Encoding**: Varredura completa em todos os 3 módulos (Serviços, Admin, Entregador) para remoção de mojibake (caracteres `Ã§Ã£o`).
+- **Gestão de Entregadores (Dashboard)**: Refatoração do `AdminProvider` para injetar os dados REAIS dos entregadores (`name, phone, vehicle_type, license_plate`) via *JOIN* com a tabela `drivers_delivery`, eliminando campos obsoletos da `orders_delivery` e exibindo essas informações detalhadas, além de data/hora, no `GlobalOrderDetailsModal` para o administrador e lojistas.
