@@ -2033,16 +2033,25 @@ function MainApp() {
  }
 
  // 7. Status de Aprovação e Vínculo
- const active = !!profile.is_active;
- setIsApproved(active);
- localStorage.setItem('izi_driver_approved', active.toString());
- 
- // SE O ENTREGADOR NÃO ESTIVER ATIVO (APROVADO), FORÇA A TELA DE ONBOARDING (RESTRIÇÃO)
- if (!active) {
-   setShowOnboarding(true);
- } else {
-   setShowOnboarding(false);
- }
+   // 7. Status de Aprovação e Vínculo
+  const active = !!profile.is_active;
+  setIsApproved(active);
+  localStorage.setItem('izi_driver_approved', active.toString());
+  
+  // VERIFICAÇÃO DE DOCUMENTAÇÃO COMPLETA (5 DOCUMENTOS)
+  const hasAllDocs = 
+    profile.doc_cnh_frente && 
+    profile.doc_cnh_verso && 
+    profile.doc_vehicle && 
+    profile.doc_vehicle_verso && 
+    profile.doc_residencia;
+
+  // SE O ENTREGADOR NÃO ESTIVER ATIVO OU FALTAR DOCUMENTOS, FORÇA A TELA DE ONBOARDING
+  if (!active || !hasAllDocs) {
+    setShowOnboarding(true);
+  } else {
+    setShowOnboarding(false);
+  }
  
  // Sincroniza Status Online: RESPEITA o LocalStorage primeiro para não derrubar o radar no refresh
  const localWantsOnline = localStorage.getItem('izi_driver_online') === 'true';

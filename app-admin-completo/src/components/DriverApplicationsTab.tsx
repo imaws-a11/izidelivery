@@ -17,12 +17,29 @@ const DriverApplicationsTab = () => {
     setError(null);
     try {
       if (activeTab === 'onboarding') {
-        const { data, error: supabaseError } = await supabase
+        const { data: apps, error: appError } = await supabase
           .from('driver_applications_delivery')
           .select('*')
           .order('created_at', { ascending: false });
-        if (supabaseError) throw supabaseError;
-        setApplications(data || []);
+        
+        if (appError) throw appError;
+
+        // Busca motoristas ativos para marcar quem está apenas atualizando documentos
+        const userIds = apps?.map(a => a.user_id).filter(Boolean) || [];
+        const { data: activeDrivers } = await supabase
+          .from('drivers_delivery')
+          .select('id, is_active')
+          .in('id', userIds)
+          .eq('is_active', true);
+
+        const activeIds = new Set(activeDrivers?.map(d => d.id) || []);
+        
+        const mergedApps = apps?.map(app => ({
+          ...app,
+          is_update: activeIds.has(app.user_id)
+        }));
+
+        setApplications(mergedApps || []);
       } else {
         const { data, error: vError } = await supabase
           .from('driver_vehicle_requests')
@@ -275,10 +292,15 @@ const DriverApplicationsTab = () => {
                  <div className="size-14 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400">
                     <span className="material-symbols-outlined">{app.vehicle_type === 'moto' ? 'moped' : 'directions_car'}</span>
                  </div>
-                 <div>
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{app.full_name}</h3>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{app.full_name}</h3>
+                      {app.is_update && (
+                        <span className="px-2 py-0.5 bg-blue-500 text-white text-[8px] font-black rounded-lg uppercase tracking-widest">Atualização</span>
+                      )}
+                    </div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{app.vehicle_model} • {app.vehicle_plate}</p>
-                 </div>
+                  </div>
               </div>
               <div className="flex items-center gap-6">
                  {getStatusBadge(app.status)}

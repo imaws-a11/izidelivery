@@ -17,8 +17,10 @@ const Icon = ({ name, className, size = 24 }: { name: string, className?: string
 );
 
 export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApproved, onLogout, onClose }) => {
-  const [step, setStep] = useState<'welcome' | 'form' | 'waiting' | 'rejected'>('welcome');
+  const [step, setStep] = useState<'welcome' | 'form' | 'waiting' | 'rejected' | 'update_docs'>('welcome');
   const [loading, setLoading] = useState(true);
+  const [isAlreadyActive, setIsAlreadyActive] = useState(false);
+  const [missingDocs, setMissingDocs] = useState<DocType[]>([]);
   const [savingDraft, setSavingDraft] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -59,18 +61,54 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
         ]);
       };
 
-      // Verifica drivers
-      const driverReq = supabase.from('drivers_delivery').select('id, is_active').eq('id', userId).maybeSingle();
+      // Verifica drivers e documentos obrigatórios
+      const driverReq = supabase
+        .from('drivers_delivery')
+        .select('id, is_active, doc_cnh_frente, doc_cnh_verso, doc_vehicle, doc_vehicle_verso, doc_residencia')
+        .eq('id', userId)
+        .maybeSingle();
       const { data: driver } = await withTimeout(driverReq);
       
-      if (driver?.is_active) {
+      const hasAllDocs = 
+        driver?.doc_cnh_frente && 
+        driver?.doc_cnh_verso && 
+        driver?.doc_vehicle && 
+        driver?.doc_vehicle_verso && 
+        driver?.doc_residencia;
+
+      if (driver?.is_active && hasAllDocs) {
         onApproved();
         return;
       }
 
-      // Verifica candidatura
-      const appReq = supabase.from('driver_applications_delivery').select('*').eq('user_id', userId).maybeSingle();
-      const { data: app } = await withTimeout(appReq);
+      const missing: DocType[] = [];
+      if (!driver?.doc_cnh_frente) missing.push('cnh_front');
+      if (!driver?.doc_cnh_verso) missing.push('cnh_back');
+      if (!driver?.doc_vehicle) missing.push('vehicle_front');
+      if (!driver?.doc_vehicle_verso) missing.push('vehicle_back');
+      if (!driver?.doc_residencia) missing.push('residence');
+      
+      setMissingDocs(missing);
+
+      if (driver?.is_active && missing.length === 0) {
+        onApproved();
+        return;
+      }
+
+      if (driver?.is_active && missing.length > 0) {
+        setIsAlreadyActive(true);
+        // Se o usuário clicar em "Atualizar", vamos levá-lo para update_docs
+      }
+
+      // Verifica candidatura (pega a mais recente caso haja duplicidade)
+      const appReq = supabase
+        .from('driver_applications_delivery')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const { data: apps } = await withTimeout(appReq);
+      const app = apps && apps.length > 0 ? apps[0] : null;
       
       if (app) {
         if (app.status === 'pending' || app.status === 'approved') setStep('waiting');
@@ -318,17 +356,127 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
         )}
 
         {(step === 'waiting' || step === 'rejected') && (
-          <motion.div key={step} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-white min-h-screen">
-            <div className={`size-28 rounded-[2.5rem] flex items-center justify-center mb-10 shadow-2xl ${step === 'waiting' ? 'bg-yellow-100 text-yellow-600 shadow-yellow-100/50' : 'bg-rose-100 text-rose-600 shadow-rose-100/50'}`}>
-              <Icon name={step === 'waiting' ? 'hourglass_empty' : 'error_outline'} size={56} className="font-black" />
+          <motion.div 
+            key={step} 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center p-8 text-center overflow-hidden font-['Plus_Jakarta_Sans']"
+          >
+            {/* Stealth Luxury Background */}
+            <div className="absolute inset-0 bg-white z-0" />
+            <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-yellow-400/5 via-transparent to-zinc-900/5 z-0" />
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-yellow-400/10 blur-[120px] rounded-full" />
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-zinc-900/5 blur-[120px] rounded-full" />
+
+            <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className={`size-32 rounded-[3rem] flex items-center justify-center mb-10 shadow-2xl backdrop-blur-md border border-white/60 ${step === 'waiting' ? 'bg-yellow-400/20 text-yellow-600 shadow-yellow-400/10' : 'bg-rose-500/10 text-rose-500 shadow-rose-500/10'}`}
+              >
+                <Icon name={step === 'waiting' ? 'hourglass_empty' : 'error_outline'} size={64} className="font-black" />
+              </motion.div>
+
+              <h1 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase mb-4 leading-[0.9] flex flex-col">
+                {step === 'waiting' ? (
+                  <>
+                    <span className="text-sm font-black text-yellow-600 tracking-[0.4em] mb-3">Dossiê Izi</span>
+                    Análise em<br/>Andamento
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-black text-rose-600 tracking-[0.4em] mb-3">Atenção</span>
+                    Cadastro<br/>Recusado
+                  </>
+                )}
+              </h1>
+
+              <p className="text-zinc-400 font-bold text-[11px] leading-relaxed mb-16 px-6 uppercase tracking-[0.15em] max-w-xs">
+                {step === 'waiting' ? 'Nossa equipe de inteligência está validando seus documentos. Você receberá uma notificação em breve.' : 'Houve um problema com seus documentos. Por favor, revise os dados e tente novamente.'}
+              </p>
+
+              <div className="w-full space-y-4 px-4">
+                {step === 'rejected' && (
+                  <button 
+                    onClick={() => setStep('form')} 
+                    className="w-full h-20 bg-zinc-900 text-white font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-2xl shadow-zinc-900/30 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    Revisar Dados <Icon name="edit" size={18} />
+                  </button>
+                )}
+
+                {step === 'waiting' && isAlreadyActive && (
+                  <button 
+                    onClick={() => setStep('update_docs')} 
+                    className="w-full h-20 bg-yellow-400 text-zinc-900 font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-2xl shadow-yellow-400/30 active:scale-95 transition-all flex items-center justify-center gap-3 border-2 border-white"
+                  >
+                    Atualizar Documentos <Icon name="upload_file" size={20} />
+                  </button>
+                )}
+
+                <button 
+                  onClick={onLogout} 
+                  className="w-full h-20 bg-white/40 backdrop-blur-md border-2 border-zinc-950/5 text-zinc-950 font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  Sair da Conta <Icon name="logout" size={18} />
+                </button>
+              </div>
             </div>
-            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase mb-4 leading-none">{step === 'waiting' ? <>Análise em<br/>Andamento</> : 'Cadastro Recusado'}</h1>
-            <p className="text-zinc-400 font-bold text-sm leading-relaxed mb-12 px-6 uppercase tracking-wide">
-              {step === 'waiting' ? 'Nossa equipe está validando seus documentos. Você receberá uma notificação em breve.' : 'Houve um problema com seus documentos. Por favor, revise e tente novamente.'}
-            </p>
-            <div className="w-full max-w-xs space-y-4">
-              {step === 'rejected' && <button onClick={() => setStep('form')} className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem] shadow-2xl shadow-zinc-900/20 active:scale-95 transition-all">Tentar Novamente</button>}
-              <button onClick={onLogout} className="w-full h-18 bg-white border-2 border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all">Sair da Conta</button>
+          </motion.div>
+        )}
+
+        {step === 'update_docs' && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="fixed inset-0 z-[60] bg-white overflow-y-auto font-['Plus_Jakarta_Sans']"
+          >
+            <div className="min-h-screen flex flex-col p-8 lg:p-16 max-w-2xl mx-auto">
+              <header className="mb-12 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase leading-none">Atualização<br/>de Dossiê</h2>
+                  <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em] mt-3">Documentação Pendente</p>
+                </div>
+                <button onClick={() => setStep('waiting')} className="size-14 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400"><Icon name="close" /></button>
+              </header>
+
+              <div className="flex-1 space-y-10">
+                <div className="p-8 bg-zinc-900 rounded-[3rem] text-white shadow-2xl shadow-zinc-900/20 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10"><Icon name="security" size={80} /></div>
+                  <h3 className="text-xl font-black uppercase tracking-tight mb-2">Segurança Izi</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest leading-relaxed">
+                    Para mantermos a conformidade com a nova política de segurança, precisamos que você envie apenas os arquivos abaixo.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {missingDocs.map(docSlot => (
+                    <DocUpload 
+                      key={docSlot}
+                      slot={docSlot} 
+                      label={
+                        docSlot === 'cnh_front' ? 'CNH Frente' :
+                        docSlot === 'cnh_back' ? 'CNH Verso' :
+                        docSlot === 'vehicle_front' ? 'CRLV Frente' :
+                        docSlot === 'vehicle_back' ? 'CRLV Verso' : 'Comprovante de Residência'
+                      } 
+                      preview={previews[docSlot]} 
+                      onChange={handleFileChange} 
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-12">
+                <button 
+                  onClick={handleSubmit}
+                  disabled={loading || missingDocs.some(slot => !formData[`document_${slot === 'cnh_front' ? 'cnh' : slot === 'cnh_back' ? 'cnh_verso' : slot === 'vehicle_front' ? 'vehicle' : slot === 'vehicle_back' ? 'vehicle_verso' : 'residence'}` as keyof typeof formData])}
+                  className="w-full h-20 bg-zinc-900 text-white font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-2xl shadow-zinc-900/30 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {loading ? 'Processando...' : 'Enviar Atualização'}
+                </button>
+                <p className="text-center mt-6 text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Sua conta permanecerá ativa enquanto analisamos</p>
+              </div>
             </div>
           </motion.div>
         )}
