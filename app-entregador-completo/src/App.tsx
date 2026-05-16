@@ -680,6 +680,7 @@ function MainApp() {
  const { data: { session } } = await supabase.auth.getSession();
  if (session?.user && isMounted) {
  setDriverId(session.user.id);
+ localStorage.setItem('izi_driver_id', session.user.id);
  setIsAuthenticated(true);
  
  // Sincroniza dados do Auth para os estados locais para evitar campos vazios no refresh
@@ -717,6 +718,7 @@ function MainApp() {
  // Sincroniza sessão para SIGNED_IN, TOKEN_REFRESHED e USER_UPDATED
  if (session?.user) {
  setDriverId(session.user.id);
+ localStorage.setItem('izi_driver_id', session.user.id);
  setIsAuthenticated(true);
  
  const userEmail = session.user.email || '';
@@ -725,8 +727,8 @@ function MainApp() {
  if (!authEmail) setAuthEmail(userEmail);
  if (!authName) setAuthName(name);
 
- // Só recarrega perfil completo em SIGNED_IN (evita re-fetch desnecessário)
- if (event === 'SIGNED_IN') {
+ // Só recarrega perfil completo em SIGNED_IN, INITIAL_SESSION e TOKEN_REFRESHED
+ if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
   await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
  }
  }
@@ -1060,8 +1062,8 @@ function MainApp() {
  const channel = supabase
  .channel(`unread-notifs-${driverId}`)
  .on('postgres_changes', {
- event: '*',
- schema: 'public',
+ event: '*', 
+ schema: 'public', 
  table: 'notifications_delivery',
  filter: `user_id=eq.${driverId}&app_type=eq.driver`
  }, () => {
@@ -1152,8 +1154,8 @@ function MainApp() {
  // 2. Notificação Web Push (Apenas se disponível)
  const servicePreview = getServicePresentation(latest);
  if (!Capacitor.isNativePlatform() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
- new Notification('ðŸš€ Nova Missão Izi!', { 
- body: `${servicePreview.headline} âââ€šÂ¬Â¢ ${servicePreview.pickupText || latest.pickup_address}`, 
+ new Notification('🚀 Nova Missão Izi!', { 
+ body: `${servicePreview.headline} • ${servicePreview.pickupText || latest.pickup_address}`, 
  icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
  });
  }
@@ -1287,7 +1289,17 @@ function MainApp() {
  const [showSlotAppliedSuccess, setShowSlotAppliedSuccess] = useState(false);
  const [showApprovedSlotModal, setShowApprovedSlotModal] = useState(false);
  const [approvedSlotData, setApprovedSlotData] = useState<any>(null);
- const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
+ const [scheduledOrders, setScheduledOrders] = useState<Order[]>(() => {
+    try {
+      const cached = localStorage.getItem('izi_driver_schedules');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem('izi_driver_schedules',
+  'izi_driver_earnings_history',
+  'izi_driver_withdraw_history', JSON.stringify(scheduledOrders));
+  }, [scheduledOrders]);
  const [subTabScheduled, setSubTabScheduled] = useState<'available' | 'confirmed'>('confirmed');
  const [selectedScheduledOrder, setSelectedScheduledOrder] = useState<any | null>(null);
  const [history, setHistory] = useState<Order[]>([]);
@@ -1318,7 +1330,20 @@ function MainApp() {
  const [modalRoutePolyline, setModalRoutePolyline] = useState<string | null>(null);
  const [modalRouteInfo, setModalRouteInfo] = useState<{start: any, end: any} | null>(null);
  const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
- const [stats, setStats] = useState({ 
+   const [stats, setStats] = useState(() => {
+    try {
+      const cached = localStorage.getItem('izi_driver_stats');
+      if (cached) return {
+        balance: 0, today: 0, weekly: 0, monthly: 0, yearly: 0,
+        totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100,
+        performance: [0, 0, 0, 0, 0, 0, 0],
+        weeklyEarnings: [0, 0, 0, 0, 0, 0, 0],
+        monthlyPerformance: Array(12).fill(0),
+        growth: 0,
+        ...JSON.parse(cached)
+      };
+    } catch (e) {}
+    return {
  balance: 0, 
  today: 0, 
  weekly: 0, 
@@ -1333,10 +1358,33 @@ function MainApp() {
  weeklyEarnings: [0, 0, 0, 0, 0, 0, 0],
  monthlyPerformance: Array(12).fill(0),
  growth: 0
- });
+    };
+  });
+
+  useEffect(() => {
+    if (stats && (stats.balance !== 0 || stats.count > 0)) {
+      localStorage.setItem('izi_driver_stats', JSON.stringify(stats));
+    }
+  }, [stats]);
  const [earningsViewTab, setEarningsViewTab] = useState<'week' | 'month' | 'year'>('week');
- const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
- const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
+ const [earningsHistory, setEarningsHistory] = useState<Order[]>(() => {
+    try {
+      const cached = localStorage.getItem('izi_driver_earnings_history');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  useEffect(() => {
+    if (earningsHistory.length > 0) localStorage.setItem('izi_driver_earnings_history', JSON.stringify(earningsHistory));
+  }, [earningsHistory]);
+ const [withdrawHistory, setWithdrawHistory] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('izi_driver_withdraw_history');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  useEffect(() => {
+    if (withdrawHistory.length > 0) localStorage.setItem('izi_driver_withdraw_history', JSON.stringify(withdrawHistory));
+  }, [withdrawHistory]);
  const [isFinanceLoading, setIsFinanceLoading] = useState(false);
  const [isWithdrawLoading, setIsWithdrawLoading] = useState(false);
  const [isSavingPix, setIsSavingPix] = useState(false);
@@ -1482,6 +1530,10 @@ function MainApp() {
  'izi_driver_approved',
  'izi_driver_address',
  'izi_driver_vehicle_model',
+  'izi_driver_stats',
+  'izi_driver_schedules',
+  'izi_driver_earnings_history',
+  'izi_driver_withdraw_history',
  'izi_audio_unlocked',
  'last_izi_broadcast_driver'
  ];
@@ -1797,7 +1849,7 @@ function MainApp() {
  let webWatchId: number | undefined;
 
  const startNativeTracking = async () => {
- // âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬ AMBIENTE NATIVO (APK Android/iOS) âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬
+ // âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬ AMBIENTE NATIVO (APK Android/iOS) âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬
  if (Capacitor.isNativePlatform()) {
  try {
  const permissions = await Geolocation.checkPermissions();
@@ -1828,7 +1880,7 @@ function MainApp() {
  return;
  }
 
- // âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬ AMBIENTE WEB (browser) âââ‚¬Âââ€šÂ¬ usa API nativa do browser âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬
+ // âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬ AMBIENTE WEB (browser) âââ‚¬Â ââ€šÂ¬ usa API nativa do browser âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬
  if (!navigator.geolocation) {
  return;
  }
@@ -1867,7 +1919,7 @@ function MainApp() {
  try {
  const { data: profile, error: profileError } = await supabase
  .from('drivers_delivery')
- .select('name, phone, email, vehicle_type, vehicle_model, license_plate, document_number, bank_info, avatar_url, preferences, is_active, merchant_id')
+ .select('name, phone, email, vehicle_type, vehicle_model, license_plate, document_number, bank_info, avatar_url, preferences, is_active, merchant_id, wallet_balance')
  .eq('id', userId)
  .maybeSingle();
 
@@ -1930,7 +1982,11 @@ function MainApp() {
  if (profile.email) localStorage.setItem('izi_driver_email', profile.email);
  if (profile.document_number) localStorage.setItem('izi_driver_cpf', profile.document_number);
  if (profile.address) localStorage.setItem('izi_driver_address', profile.address);
- if (profile.vehicle_model) localStorage.setItem('izi_driver_vehicle_model', profile.vehicle_model);
+ if (profile.vehicle_model) localStorage.setItem('izi_driver_vehicle_model',
+  'izi_driver_stats',
+  'izi_driver_schedules',
+  'izi_driver_earnings_history',
+  'izi_driver_withdraw_history', profile.vehicle_model);
  
  // 4. Dados Bancários e Vínculos
  if (profile.merchant_id) {
@@ -2004,7 +2060,7 @@ function MainApp() {
 
  localStorage.setItem('izi_driver_approved', active.toString());
 
- refreshFinanceData();
+ refreshFinanceData(userId);
  syncMissionWithDB();
  } catch (e: any) {
  } finally {
@@ -2366,7 +2422,6 @@ function MainApp() {
  : { is_online: false };
  await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
  
- // Se ficou online, força um sync imediato para recuperar missões
  if (nextState) {
  syncMissionWithDB();
   fetchOrdersRef.current(); // Busca pedidos pendentes (waiting_driver) ao ficar online
@@ -2444,51 +2499,36 @@ function MainApp() {
  
  // Auxiliar centralizado para obter token de auth seguro (com refresh se necessário)
  const getSecureToken = useCallback(async () => {
- const sUrl = import.meta.env.VITE_SUPABASE_URL;
- const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
- try {
- const sessionPromise = supabase.auth.getSession();
- const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
- const { data: { session }, error: sessionErr } = await Promise.race([sessionPromise, timeoutPromise]) as any;
- 
- if (sessionErr) {
- if (sessionErr.message.includes("Refresh Token Not Found") || sessionErr.message.includes("invalid_refresh_token")) {
- return sKey;
- }
- }
-
- if (session?.access_token) {
- // Se expira em menos de 1 minuto, forcar refresh
- const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
- if (expiresAt > 0 && expiresAt < Date.now() + 60000) {
- try {
- const { data: { session: refreshed }, error: refreshErr } = await supabase.auth.refreshSession();
- if (refreshErr) {
- return session.access_token; // Retorna o atual mesmo quase expirado se o refresh falhar
- }
- if (refreshed?.access_token) return refreshed.access_token;
- } catch (e) {
- return session.access_token;
- }
- }
- return session.access_token;
- }
- } catch(e) {}
- 
- try {
- const project = (sUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
- const ls = localStorage.getItem(`sb-${project}-auth-token`);
- if (ls) {
- const parsed = JSON.parse(ls);
- const expiresAt = parsed?.expires_at ? parsed.expires_at * 1000 : 0;
- // Só usa o localstorage token se ele for válido
- if (parsed?.access_token && (expiresAt === 0 || expiresAt > Date.now() + 60000)) {
- return parsed.access_token;
- }
- }
- } catch(e) {}
- return sKey;
- }, []);
+    const sUrl = import.meta.env.VITE_SUPABASE_URL;
+    const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    try {
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session && (driverId || localStorage.getItem('izi_driver_id'))) {
+        await new Promise(r => setTimeout(r, 1000));
+        const retry = await supabase.auth.getSession();
+        session = retry.data.session;
+      }
+      if (session?.access_token) {
+        const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+        if (expiresAt > 0 && expiresAt < Date.now() + 60000) {
+          try {
+            const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+            if (refreshed?.access_token) return refreshed.access_token;
+          } catch (e) {}
+        }
+        return session.access_token;
+      }
+    } catch(e) {}
+    try {
+      const project = (sUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
+      const ls = localStorage.getItem(`sb-${project}-auth-token`);
+      if (ls) {
+        const parsed = JSON.parse(ls);
+        if (parsed?.access_token) return parsed.access_token;
+      }
+    } catch(e) {}
+    return sKey;
+  }, [driverId]);
  const loadVehicleRequests = useCallback(async (dId: string) => {
  if (!dId) return;
  try {
@@ -2591,7 +2631,7 @@ function MainApp() {
  
  setShowApprovedSlotModal(true);
 
- toastSuccess("ðŸš€ VAGA CONFIRMADA! Clique para ver os detalhes.");
+ toastSuccess("🚀 VAGA CONFIRMADA! Clique para ver os detalhes.");
  }
  
  // Sincroniza estados após qualquer atualização minha
@@ -2624,7 +2664,7 @@ function MainApp() {
  }
 
  refreshMyApplications();
- refreshFinanceData();
+ refreshFinanceData(driverId);
  }, [isAuthenticated, driverId, refreshMyApplications]);
 
  // Buscar Agendamentos disponíveis e aceitos
@@ -3019,13 +3059,13 @@ function MainApp() {
  try {
  ForegroundService.startForegroundService({
  id: 1001,
- title: "ðŸš€ NOVA ENTREGA DISPONÍVEL!",
- body: `R$ ${Number(o.total_price || 0).toFixed(2)} ââ‚¬Â¢ ${o.pickup_address?.split(',')[0]}`,
+ title: "🚀 NOVA ENTREGA DISPONÍVEL!",
+ body: `R$ ${Number(o.total_price || 0).toFixed(2)} • ${o.pickup_address?.split(',')[0]}`,
  importance: 5, // Importância máxima para aparecer no topo (Heads-up)
  icon: 'notification_icon',
  buttons: [
- { id: 'accept_order', title: 'âÅ“â€¦ ACEITAR AGORA' },
- { id: 'view_radar', title: 'Ã°Å¸â€˜â‚¬ VER DETALHES' }
+ { id: 'accept_order', title: '✅ ACEITAR AGORA' },
+ { id: 'view_radar', title: '👀 VER DETALHES' }
  ],
  extra: {
  orderId: o.id,
@@ -3245,123 +3285,124 @@ function MainApp() {
 
  // Lógica de loop inteligente: 2 rejeições = 30s cooldown, 4 rejeições = permanente
  setDeclinedStats(prev => {
- const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
- const newCount = current.count + 1;
- 
- const newStats = {
- count: newCount,
- lastDecline: Date.now(),
- isPermanent: newCount >= 4
- };
+       const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
+      const newCount = current.count + 1;
+      const newStats = { count: newCount, lastDecline: Date.now(), isPermanent: newCount >= 4 };
+      if (newCount === 2) heardOrderIds.current.delete(targetId);
+      return { ...prev, [targetId]: newStats };
+    });
+    setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
+    toastSuccess('Chamada descartada.');
+  };
 
- if (newCount === 2) {
- heardOrderIds.current.delete(targetId);
- }
+  const refreshFinanceData = useCallback(async (forcedId?: string) => {
+    const targetId = forcedId || driverId;
+    if (!targetId) return;
 
- return { ...prev, [targetId]: newStats };
- });
- 
- // Remove da lista atual para feedback visual imediato
- setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
- 
- toastSuccess(declinedStats[targetId]?.count === 1 ? 'Pedido silenciado por 30s.' : 'Chamada descartada com sucesso.');
- };
+    const currentToken = await getSecureToken();
+    if (currentToken === import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      console.warn("[Finance Sync] Abortado: Usando ANON_KEY. Preservando cache para evitar RLS.");
+      return;
+    }
+    setIsFinanceLoading(true);
 
- const refreshFinanceData = useCallback(async () => {
- if (!driverId) return;
- setIsFinanceLoading(true);
- try {
- const sUrl = import.meta.env.VITE_SUPABASE_URL;
- const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
- 
- const token = await getSecureToken();
+    try {
+      const sUrl = import.meta.env.VITE_SUPABASE_URL;
+      const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const token = await getSecureToken();
+      const headers = { 'apikey': sKey, 'Authorization': `Bearer ${token}` };
 
- const headers = { 'apikey': sKey, 'Authorization': `Bearer ${token}` };
- const apiRequest = (path: string, method = 'GET', body?: any) => 
- iziFetch(`${sUrl}/rest/v1/${path}`, { 
- method, 
- headers: { ...headers, ...(body ? { 'Content-Type': 'application/json' } : {}) },
- body: body ? JSON.stringify(body) : undefined,
- timeoutMs: 10000 
- });
+      const apiSafeRequest = async (path: string) => {
+        try {
+          const res = await iziFetch(`${sUrl}/rest/v1/${path}`, { headers });
+          return res.ok ? await res.json() : null;
+        } catch (e) {
+          console.error(`[API ERROR] ${path}:`, e);
+          return null;
+        }
+      };
 
- // 1. Coleta de dados em paralelo para maior performance
- const [txsRes, drvRes, ordsRes, setsRes, estRes] = await Promise.all([
- apiRequest(`wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`),
- apiRequest(`drivers_delivery?id=eq.${driverId}&select=bank_info,name`),
- apiRequest(`orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado,delivered)&order=updated_at.desc`),
- apiRequest(`app_settings_delivery?limit=1`),
- apiRequest(`establishment_types?is_active=eq.true`)
- ]).catch(() => [null, null, null, null, null]);
+      // Carregamento paralelo com resiliência por rota
+      const [txs, drvData, orders, sets, estTypes] = await Promise.all([
+        apiSafeRequest(`wallet_transactions_delivery?user_id=eq.${targetId}&order=created_at.desc`),
+        apiSafeRequest(`drivers_delivery?id=eq.${targetId}&select=bank_info,name,wallet_balance`),
+        apiSafeRequest(`orders_delivery?driver_id=eq.${targetId}&status=in.(concluido,entregue,finalizado,delivered)&order=updated_at.desc`),
+        apiSafeRequest(`app_settings_delivery?limit=1`),
+        apiSafeRequest(`establishment_types?is_active=eq.true`)
+      ]);
 
- const [txs, drvData, orders, sets, estTypes] = await Promise.all([
- txsRes?.ok ? txsRes.json() : null,
- drvRes?.ok ? drvRes.json() : null,
- ordsRes?.ok ? ordsRes.json() : null,
- setsRes?.ok ? setsRes.json() : null,
- estRes?.ok ? estRes.json() : null
- ]);
+      console.log('[Finance Sync] Data loaded:', { 
+        txs: txs?.length || 0, 
+        profile: drvData?.[0] ? 'OK' : 'FAIL',
+        orders: orders?.length || 0,
+        balance: drvData?.[0]?.wallet_balance 
+      });
+      if (drvData?.[0]) {
+        const d = drvData[0];
+        if (d.bank_info?.pix_key) {
+          setPixKey(d.bank_info.pix_key);
+          localStorage.setItem('izi_driver_pix', d.bank_info.pix_key);
+        }
+        setDriverName(d.name || 'Entregador');
+      }
 
- if (drvData?.[0]) {
- const d = drvData[0];
- if (d.bank_info?.pix_key) { setPixKey(d.bank_info.pix_key); localStorage.setItem('izi_driver_pix', d.bank_info.pix_key); }
- setDriverName(d.name || 'Entregador');
- }
- if (sets?.[0]) setAppSettings(sets[0]);
- if (orders) setHistory(orders);
- if (estTypes) setEstablishmentTypes(estTypes);
+      if (sets?.[0]) setAppSettings(sets[0]);
+      if (orders) setHistory(orders);
+      if (estTypes) setEstablishmentTypes(estTypes);
 
- // 2. Processamento financeiro unificado
- let balance = 0, todaySum = 0, weeklySum = 0, monthlySum = 0, yearlySum = 0, totalGanhos = 0, previousWeeklySum = 0;
- const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
- const startOfWeek = new Date(); 
- const diffDays = (startOfWeek.getDay() === 0 ? 6 : startOfWeek.getDay() - 1);
- startOfWeek.setDate(startOfWeek.getDate() - diffDays);
- startOfWeek.setHours(0, 0, 0, 0);
+      // 2. Processamento financeiro unificado
+      let balance = 0, todaySum = 0, weeklySum = 0, monthlySum = 0, yearlySum = 0, totalGanhos = 0, previousWeeklySum = 0;
+      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+      const startOfWeek = new Date(); 
+      const diffDays = (startOfWeek.getDay() === 0 ? 6 : startOfWeek.getDay() - 1);
+      startOfWeek.setDate(startOfWeek.getDate() - diffDays);
+      startOfWeek.setHours(0, 0, 0, 0);
 
- const startOfPreviousWeek = new Date(startOfWeek);
- startOfPreviousWeek.setDate(startOfPreviousWeek.getDate() - 7);
- 
- const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
- const startOfYear = new Date(); startOfYear.setMonth(0, 1); startOfYear.setHours(0, 0, 0, 0);
+      const startOfPreviousWeek = new Date(startOfWeek);
+      startOfPreviousWeek.setDate(startOfPreviousWeek.getDate() - 7);
+      
+      const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+      const startOfYear = new Date(); startOfYear.setMonth(0, 1); startOfYear.setHours(0, 0, 0, 0);
 
- const weeklyEarnings = [0, 0, 0, 0, 0, 0, 0];
- const monthlyPerformance = Array(12).fill(0);
+      const weeklyEarnings = [0, 0, 0, 0, 0, 0, 0];
+      const monthlyPerformance = Array(12).fill(0);
 
- if (txs) {
- setEarningsHistory(txs.filter((t: any) => t.type !== 'saque'));
- setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
+      if (txs && Array.isArray(txs) && txs.length > 0) {
+        setEarningsHistory(txs.filter((t: any) => t.type !== 'saque'));
+        setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
 
- txs.forEach((t: any) => {
- if (t.type === 'pagamento') return;
- const amount = Number(t.amount);
- const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback', 'loan_deposit', 'credit'].includes(t.type);
- balance = isCredit ? balance + amount : balance - amount;
+        txs.forEach((t: any) => {
+          if (t.type === 'pagamento') return;
+          const amount = Number(t.amount);
+          const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback', 'loan_deposit', 'credit'].includes(t.type);
+          balance = isCredit ? balance + amount : balance - amount;
 
- const isEarning = ['venda', 'vaga_dedicada', 'bonus', 'deposito'].includes(t.type);
- if (isEarning) {
- const tDate = new Date(t.created_at);
- totalGanhos += amount;
+          const isEarning = ['venda', 'vaga_dedicada', 'bonus', 'deposito'].includes(t.type);
+          if (isEarning) {
+            const tDate = new Date(t.created_at);
+            totalGanhos += amount;
+            if (tDate >= startOfDay) todaySum += amount;
+            if (tDate >= startOfWeek) {
+              weeklySum += amount;
+              const day = tDate.getDay();
+              const idx = day === 0 ? 6 : day - 1;
+              weeklyEarnings[idx] += amount;
+            } else if (tDate >= startOfPreviousWeek) {
+              previousWeeklySum += amount;
+            }
+            if (tDate >= startOfMonth) monthlySum += amount;
+            if (tDate >= startOfYear) {
+              yearlySum += amount;
+              const month = tDate.getMonth();
+              monthlyPerformance[month] += amount;
+            }
+          }
+        });
+      } else if (drvData?.[0]?.wallet_balance !== undefined) {
+        // Fallback: usar saldo do perfil se não houver transações
+        balance = Number(drvData[0].wallet_balance);
+      }
 
- if (tDate >= startOfDay) todaySum += amount;
- if (tDate >= startOfWeek) {
- weeklySum += amount;
- const day = tDate.getDay();
- const idx = day === 0 ? 6 : day - 1;
- weeklyEarnings[idx] += amount;
- } else if (tDate >= startOfPreviousWeek) {
- previousWeeklySum += amount;
- }
-
- if (tDate >= startOfMonth) monthlySum += amount;
- if (tDate >= startOfYear) {
- yearlySum += amount;
- const month = tDate.getMonth();
- monthlyPerformance[month] += amount;
- }
- }
- });
- }
 
  const growth = previousWeeklySum > 0 
  ? ((weeklySum - previousWeeklySum) / previousWeeklySum) * 100 
@@ -3385,7 +3426,7 @@ function MainApp() {
  });
  }
 
- const totalXp = (orders?.length || 0) * 15;
+ const totalXp = (orders ? orders.length : stats.count) * 15;
  const levels = [
  { lvl: 1, xp: 0 },
  { lvl: 2, xp: 100 },
@@ -3410,22 +3451,25 @@ function MainApp() {
  }
  }
 
- setStats(prev => ({ 
- ...prev, 
- balance: Number(balance.toFixed(2)), 
- today: Number(todaySum.toFixed(2)), 
- weekly: Number(weeklySum.toFixed(2)), 
- monthly: Number(monthlySum.toFixed(2)),
- yearly: Number(yearlySum.toFixed(2)),
- totalEarnings: Number(totalGanhos.toFixed(2)), 
- count: orders?.length || 0, 
- xp: totalXp,
- level: currentLvl,
- nextXp: nextLvlXp,
- performance,
- weeklyEarnings,
- monthlyPerformance
- }));
+ const finalStats = { 
+    ...stats, 
+    balance: Number(balance.toFixed(2)), 
+    today: Number(todaySum.toFixed(2)), 
+    weekly: Number(weeklySum.toFixed(2)), 
+    monthly: Number(monthlySum.toFixed(2)),
+    yearly: Number(yearlySum.toFixed(2)),
+    totalEarnings: Number(totalGanhos.toFixed(2)), 
+    count: (orders ? orders.length : stats.count), 
+    xp: totalXp,
+    level: currentLvl,
+    nextXp: nextLvlXp,
+    performance,
+    weeklyEarnings,
+    monthlyPerformance,
+    growth
+  };
+  setStats(finalStats);
+  localStorage.setItem('izi_driver_stats', JSON.stringify(finalStats));
 
  if (txs) {
  const todayTxs = txs.filter((t: any) => {
@@ -3533,9 +3577,11 @@ function MainApp() {
  setActiveMission(null);
  localStorage.removeItem('Izi_active_mission');
  } else if (formattedMissions.length === 0) {
- setActiveMission(null);
- localStorage.removeItem('Izi_active_mission');
- }
+    if (orders !== null) {
+      setActiveMission(null);
+      localStorage.removeItem('Izi_active_mission');
+    }
+  }
 
  // Toast removido para evitar spam infinito durante syncs automáticos
 
