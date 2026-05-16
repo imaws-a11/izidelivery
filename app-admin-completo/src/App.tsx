@@ -67,16 +67,26 @@ export default function App() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setAuthError('Por favor, preencha todos os campos.');
+      return;
+    }
+
     setAuthLoading(true);
     setAuthError(null);
     try {
       if (rememberMe) {
-        localStorage.setItem('izi_admin_remember_email', email);
+        localStorage.setItem('izi_admin_remember_email', cleanEmail);
       } else {
         localStorage.removeItem('izi_admin_remember_email');
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email: cleanEmail, 
+        password 
+      });
       if (error) throw error;
     } catch (err: any) {
       setAuthError(err.message || 'Erro ao autenticar');

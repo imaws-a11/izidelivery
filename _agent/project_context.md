@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Resumo Executivo)
-Atualizado: 2026-05-15 (Sessão: Estabilização de Agendamentos e Radar)
+Atualizado: 2026-05-16 (Sessao: Fix Radar Entregas Avulsas via API)
 
 ---
 
@@ -33,17 +33,22 @@ Atualizado: 2026-05-15 (Sessão: Estabilização de Agendamentos e Radar)
 - **Broadcasts e Popups**: Realtime via `broadcast_notifications` (Replica Identity FULL). Som de alerta obrigatório no app do entregador ao receber popups administrativos.
 
 ### 📦 Logística e Izi Entrega Avulsa
-- **Arquitetura**: Reutiliza `orders_delivery` com `service_type = 'entrega_avulsa'`.
+- **Arquitetura**: Reutiliza `orders_delivery` with `service_type = 'entrega_avulsa'`.
 - **Mapeamento**: Entregadores da categoria `'motoboy'` visualizam entregas avulsas como pagas (taxa retida).
 - **Auditoria Financeira & Transparência:**
     *   Implementado pop-up de detalhes de ganho no histórico do entregador, exibindo Valor Bruto, Taxas IZI, Valor Líquido e Forma de Pagamento real.
-    *   **Correção de Bug Crítico (Sincronização de Saldo):** Identificado e corrigido bug onde o App do Entregador registrava transações mas não atualizava a coluna `wallet_balance` na tabela `drivers_delivery`.
+    *   **Monitoramento Premium (Lojista):** O `LiveOrderTracking` e `MerchantOrdersTracking` agora exibem detalhes completos: itens do pedido, resumo financeiro, observações e um card de destaque do entregador com botões de **Ligação Direta** e **WhatsApp**.
+    *   **Feedback de Radar:** Visual dinâmico (ícones animados de Zap/Radar) enquanto o sistema busca pilotos, garantindo ao lojista que o pedido está sendo processado.
     *   **Sincronização Global:** Executada varredura completa no banco de dados para recalcular e sincronizar o saldo de toda a base de entregadores com base no histórico de transações.
 - **Melhorias Estruturais:**
+    - **Encoding & Caracteres Especiais:** Como o ambiente é Windows, sempre verifique se o arquivo está em UTF-8 (sem BOM). Após edições via script ou regex, valide se caracteres como `ç`, `ã` e `õ` não foram corrompidos (mojibake como `Ã§`). Caso ocorra, use o script `fix_encoding.cjs` para restaurar.
+    - **Sintaxe JSX:** Sempre valide o fechamento de tags após edições estruturais no `App.tsx`. Um erro de sintaxe pode causar Erro 500 no Vite.
     *   Ajustada lógica de busca de pedidos por range de UUID para evitar erros 404 em consultas parciais.
     *   Implementada visualização de senha em texto simples (`plain_password`) para suporte administrativo.
     *   Exibição de fotos reais (`avatar_url`) na listagem e edição de entregadores.
-- **Compatibilidade de Tipos (Radar)**: O `service_type` `'shipping'` (usado em envios manuais e agendamentos) DEVE ser mapeado como `'package'` no `normalizeServiceType` do app do entregador para ser visível no radar de veículos compatíveis.
+- **Compatibilidade de Tipos (Radar)**: O `normalizeServiceType` em `lib/utils.ts` DEVE mapear TODOS os `service_type` usados pela API de integracao (incluindo `standalone`, `avulsa`, `avulso`, `shipping`) para tipos canonicos reconhecidos pelo `VEHICLE_COMPATIBILITY`. **Ao adicionar novos tipos na API, ATUALIZAR SEMPRE o normalizeServiceType.**
+- **Toggle Online -> fetchOrders**: Quando o motorista fica online, o `toggleOnline` DEVE chamar `fetchOrdersRef.current()` para popular o radar com pedidos `waiting_driver` pre-existentes. Sem isso, pedidos criados via API antes do toggle ficam invisiveis.
+- **Realtime vs FetchOrders**: Os mapeamentos de campos (`store_name`, `customer`, `pickup_lat`) no handler Realtime (INSERT) DEVEM ser identicos aos do `fetchOrders` para evitar inconsistencias de dados.
 - **Precificação (Novo)**: Implementação de modelo linear contínuo configurado dinamicamente no painel Admin, garantindo paridade com as taxas locais.
 
 ### 📅 Fluxo de Agendamento (Novo: Maio/2026)
@@ -88,4 +93,4 @@ Atualizado: 2026-05-15 (Sessão: Estabilização de Agendamentos e Radar)
 - **Plano 2 (Full-Screen Intent Hybrid)**: Permissão `USE_FULL_SCREEN_INTENT` e flags nativas em `MainActivity.java` (`setShowWhenLocked`) para acordar a tela e mostrar o app em novos pedidos.
 - **Plano 4 (Interactive Overlay)**: Uso de `ForegroundService` com botões de ação dinâmica (Aceitar/Recusar) nas notificações de radar, permitindo aceitação de corridas sem abrir o app.
 - **Auditoria de Encoding**: Varredura completa em todos os 3 módulos (Serviços, Admin, Entregador) para remoção de mojibake (caracteres `Ã§Ã£o`).
-- **Gestão de Entregadores (Dashboard)**: Refatoração do `AdminProvider` para injetar os dados REAIS dos entregadores (`name, phone, vehicle_type, license_plate`) via *JOIN* com a tabela `drivers_delivery`, eliminando campos obsoletos da `orders_delivery` e exibindo essas informações detalhadas, além de data/hora, no `GlobalOrderDetailsModal` para o administrador e lojistas.
+- **Gestão de Entregadores & UX Lojista**: Refatoração do `AdminProvider` e componentes de tracking para injetar os dados REAIS dos entregadores (`name, phone, vehicle_type, license_plate`) via *JOIN* com a tabela `drivers_delivery`. Implementado design Claymorphic e botões de contato direto (Phone/WhatsApp) no monitor de pedidos ativos para garantir visibilidade total ao lojista.

@@ -131,7 +131,8 @@ export const useAuth = () => {
   const handleLogin = async () => {
     setLoginError("");
     setIsLoading(true);
-    if (!loginEmail || !loginPassword) { 
+    const cleanEmail = loginEmail.trim();
+    if (!cleanEmail || !loginPassword) { 
       setLoginError("Preencha email e senha."); 
       setIsLoading(false);
       return; 
@@ -139,7 +140,7 @@ export const useAuth = () => {
     
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
+        email: cleanEmail,
         password: loginPassword,
       });
       if (error) throw error;

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, supabaseUrl } from './lib/supabase';
@@ -544,7 +544,7 @@ const getServicePresentation = (order: any) => {
 
  let summary = '';
  if (itemCount > 0) {
- summary = itemNames.slice(0, 2).join(' ââ‚¬¢ ');
+ summary = itemNames.slice(0, 2).join(' âââ€šÂ¬Â¢ ');
  if (itemCount > 2) summary += ` +${itemCount - 2}`;
  } else if (addressMeta) {
  summary = addressMeta
@@ -671,7 +671,7 @@ function MainApp() {
  }
  }, []);
 
- // --- SINCRONIZAÇÁO E BOOTSTRAP ---
+ // --- SINCRONIZAÃ‡ÁO E BOOTSTRAP ---
  useEffect(() => {
  let isMounted = true;
 
@@ -814,7 +814,7 @@ function MainApp() {
  // Lista de TODAS as missões ativas do entregador (multi-missão)
  const [activeMissions, setActiveMissions] = useState<Order[]>([]);
 
- // Sons não são mais bloqueados por missão ativa — o entregador precisa ouvir novas chamadas sempre
+ // Sons não são mais bloqueados por missão ativa â€” o entregador precisa ouvir novas chamadas sempre
  const activeMissionRef = useRef(activeMission);
  useEffect(() => { activeMissionRef.current = activeMission; }, [activeMission]);
 
@@ -1152,8 +1152,8 @@ function MainApp() {
  // 2. Notificação Web Push (Apenas se disponível)
  const servicePreview = getServicePresentation(latest);
  if (!Capacitor.isNativePlatform() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
- new Notification('🚀 Nova Missão Izi!', { 
- body: `${servicePreview.headline} ââ‚¬¢ ${servicePreview.pickupText || latest.pickup_address}`, 
+ new Notification('ðŸš€ Nova Missão Izi!', { 
+ body: `${servicePreview.headline} âââ€šÂ¬Â¢ ${servicePreview.pickupText || latest.pickup_address}`, 
  icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
  });
  }
@@ -1797,7 +1797,7 @@ function MainApp() {
  let webWatchId: number | undefined;
 
  const startNativeTracking = async () => {
- // ââ€â‚¬ââ€â‚¬ AMBIENTE NATIVO (APK Android/iOS) ââ€â‚¬ââ€â‚¬
+ // âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬ AMBIENTE NATIVO (APK Android/iOS) âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬
  if (Capacitor.isNativePlatform()) {
  try {
  const permissions = await Geolocation.checkPermissions();
@@ -1828,7 +1828,7 @@ function MainApp() {
  return;
  }
 
- // ââ€â‚¬ââ€â‚¬ AMBIENTE WEB (browser) ââ€â‚¬ usa API nativa do browser ââ€â‚¬ââ€â‚¬
+ // âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬ AMBIENTE WEB (browser) âââ‚¬Âââ€šÂ¬ usa API nativa do browser âââ‚¬Âââ€šÂ¬âââ‚¬Âââ€šÂ¬
  if (!navigator.geolocation) {
  return;
  }
@@ -1860,7 +1860,7 @@ function MainApp() {
 
 
 
- // Função centralizada de carregamento de perfil — usada no boot, no resume e no auth change
+ // Função centralizada de carregamento de perfil â€” usada no boot, no resume e no auth change
  const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
  if (!userId) return;
 
@@ -1903,7 +1903,7 @@ function MainApp() {
  return;
  }
 
- // --- SINCRONIZAÇÁO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
+ // --- SINCRONIZAÃ‡ÁO AUTORITATIVA (DB -> STATE -> LOCALSTORAGE) ---
  
  // 1. Nome e Avatar
  const currentName = profile.name || userName || 'Entregador Izi';
@@ -1986,7 +1986,7 @@ function MainApp() {
  isOnlineRef.current = false;
  localStorage.setItem('izi_driver_online', 'false');
  } else {
- // Se tem missão ativa em cache, FORÇAR online para não perder acesso
+ // Se tem missão ativa em cache, FORÃ‡AR online para não perder acesso
  const hasCachedMission = !!localStorage.getItem('Izi_active_mission');
  const shouldBeOnline = localWantsOnline || hasCachedMission;
  
@@ -2042,7 +2042,7 @@ function MainApp() {
  }
  }, [activeTab]);
 
- // SINCRONIZAÇÁO MULTIDISPOSITIVO (Perfil, Status e Vínculo)
+ // SINCRONIZAÃ‡ÁO MULTIDISPOSITIVO (Perfil, Status e Vínculo)
  useEffect(() => {
  if (!isAuthenticated || !driverId) return;
 
@@ -2136,7 +2136,7 @@ function MainApp() {
  });
  }
 
- // 3. System Toast (banner flutuante para tipo 'push' puro — não popup fullscreen)
+ // 3. System Toast (banner flutuante para tipo 'push' puro â€” não popup fullscreen)
  if (notif.type === 'push') {
  setSystemNotification({
  title: notif.title,
@@ -2231,12 +2231,12 @@ function MainApp() {
 
 
  // =====================================================================
- // RESTAURAÇÁO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
+ // RESTAURAÃ‡ÁO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
  // =====================================================================
  useEffect(() => {
  if (!driverId || !isAuthenticated || !isProfileLoaded) return;
 
- // SE O PERFIL ESTÁ EXPLICITAMENTE DESATIVADO, FORÇA OFFLINE.
+ // SE O PERFIL ESTÁ EXPLICITAMENTE DESATIVADO, FORÃ‡A OFFLINE.
  if (isApproved === false) {
  setIsOnline(false);
  localStorage.setItem('izi_driver_online', 'false');
@@ -2255,7 +2255,7 @@ function MainApp() {
  if (typeof ForegroundService !== 'undefined') {
  ForegroundService.startForegroundService({
  id: 1001,
- title: "Izi Entregador: Online âÅ“â€¦",
+ title: "Izi Entregador: Online âÃ…â€œââ‚¬Â¦",
  body: "Buscando novas chamadas em tempo real...",
  importance: 5,
  icon: 'notification_icon'
@@ -2344,7 +2344,7 @@ function MainApp() {
  if (nextState && !activeMission) {
  await ForegroundService.startForegroundService({
  id: 1001,
- title: "Izi Entregador: Online âÅ“â€¦",
+ title: "Izi Entregador: Online âÃ…â€œââ‚¬Â¦",
  body: "Buscando novas chamadas em tempo real...",
  importance: 5,
  icon: 'notification_icon'
@@ -2369,6 +2369,7 @@ function MainApp() {
  // Se ficou online, força um sync imediato para recuperar missões
  if (nextState) {
  syncMissionWithDB();
+  fetchOrdersRef.current(); // Busca pedidos pendentes (waiting_driver) ao ficar online
  }
  } catch (e: any) {
  }
@@ -2590,7 +2591,7 @@ function MainApp() {
  
  setShowApprovedSlotModal(true);
 
- toastSuccess("🚀 VAGA CONFIRMADA! Clique para ver os detalhes.");
+ toastSuccess("ðŸš€ VAGA CONFIRMADA! Clique para ver os detalhes.");
  }
  
  // Sincroniza estados após qualquer atualização minha
@@ -2818,20 +2819,20 @@ function MainApp() {
  const safeId = String(o?.id || '');
  if (!safeId) return null;
  return {
- ...o,
- id: safeId.slice(0, 8).toUpperCase(), 
- realId: safeId, 
- type: o.service_type || 'delivery', 
- origin: o.pickup_address || o.origin || '', 
- destination: o.delivery_address || o.destination || '', 
- price: Number(o.total_price || 0),
- pickup_lat: Number(o.pickup_lat || 0),
- pickup_lng: Number(o.pickup_lng || 0),
- delivery_lat: Number(o.delivery_lat || 0),
- delivery_lng: Number(o.delivery_lng || 0),
- store_name: String(o.merchant_name || o.store_name || 'Loja Parceira'),
- customer: 'Cliente Izi'
- };
+            ...o,
+            id: safeId.slice(0, 8).toUpperCase(), 
+            realId: safeId, 
+            type: o.service_type || 'delivery', 
+            origin: o.pickup_address || o.origin || '', 
+            destination: o.delivery_address || o.destination || '', 
+            price: Number(o.total_price || 0),
+            pickup_lat: Number(o.pickup_lat || o.latitude || 0),
+            pickup_lng: Number(o.pickup_lng || o.longitude || 0),
+            delivery_lat: Number(o.delivery_lat || 0),
+            delivery_lng: Number(o.delivery_lng || 0),
+            store_name: String(o.merchant_name || o.store_name || 'Loja Parceira'),
+            customer: String(o.user_name || o.customer_name || 'Cliente Izi')
+          };
  } catch (e) {
  return null;
  }
@@ -2849,7 +2850,7 @@ function MainApp() {
  const fetchOrdersRef = useRef(fetchOrders);
  useEffect(() => { fetchOrdersRef.current = fetchOrders; }, [fetchOrders]);
 
- // Fetch inicial único — o canal Realtime (linha ~2901) já cuida de atualizações contínuas.
+ // Fetch inicial único â€” o canal Realtime (linha ~2901) já cuida de atualizações contínuas.
  // O polling de 5s foi removido para economizar ~12 re-renders/min e bateria.
  useEffect(() => {
  if (!isAuthenticated || !driverId) return;
@@ -2910,7 +2911,7 @@ function MainApp() {
  const isNowReady = o.preparation_status === 'pronto';
  if (wasPreparing && isNowReady) {
  playIziSound('driver', true);
- toastSuccess('â€â€ O Pedido está PRONTO para coleta!');
+ toastSuccess('ââ‚¬Â ââ‚¬Â  O Pedido está PRONTO para coleta!');
  }
 
  const mission = { 
@@ -2968,8 +2969,8 @@ function MainApp() {
  }
 
  // --- REGRA DE EXCLUSIVIDADE (Realtime) ---
- // Pedido de lojista EXCLUSIVO ââ€ â€™ só o entregador vinculado a esse lojista pode ver
- // Pedido de lojista GLOBAL ââ€ â€™ TODOS os entregadores podem ver
+ // Pedido de lojista EXCLUSIVO âââ‚¬Â ââ‚¬â„¢ só o entregador vinculado a esse lojista pode ver
+ // Pedido de lojista GLOBAL âââ‚¬Â ââ‚¬â„¢ TODOS os entregadores podem ver
  const myMerchantId = localStorage.getItem('izi_driver_merchant_id');
  const orderMerchantId = o.merchant_id ? String(o.merchant_id) : null;
  const isOrderFromExclusiveMerchant = orderMerchantId && (exclusiveMerchantIdsRef.current || []).includes(orderMerchantId);
@@ -3018,13 +3019,13 @@ function MainApp() {
  try {
  ForegroundService.startForegroundService({
  id: 1001,
- title: "🚀 NOVA ENTREGA DISPONÍVEL!",
- body: `R$ ${Number(o.total_price || 0).toFixed(2)} â€¢ ${o.pickup_address?.split(',')[0]}`,
+ title: "ðŸš€ NOVA ENTREGA DISPONÍVEL!",
+ body: `R$ ${Number(o.total_price || 0).toFixed(2)} ââ‚¬Â¢ ${o.pickup_address?.split(',')[0]}`,
  importance: 5, // Importância máxima para aparecer no topo (Heads-up)
  icon: 'notification_icon',
  buttons: [
- { id: 'accept_order', title: 'âœ… ACEITAR AGORA' },
- { id: 'view_radar', title: 'ðŸ‘€ VER DETALHES' }
+ { id: 'accept_order', title: 'âÅ“â€¦ ACEITAR AGORA' },
+ { id: 'view_radar', title: 'Ã°Å¸â€˜â‚¬ VER DETALHES' }
  ],
  extra: {
  orderId: o.id,
@@ -3128,7 +3129,7 @@ function MainApp() {
  const targetId = order.realId || order.id;
  if (!targetId) return;
 
- // 1. ATUALIZAÇÁO OTIMISTA: Feedback Imediato
+ // 1. ATUALIZAÃ‡ÁO OTIMISTA: Feedback Imediato
  const isScheduled = !!order.scheduled_at;
  const newStatus = isScheduled ? 'confirmado' : 'a_caminho_coleta';
  const optimisticMission = { 
@@ -3175,7 +3176,7 @@ function MainApp() {
   'Content-Type': 'application/json'
   };
   
-  // RPC atômica — SELECT FOR UPDATE SKIP LOCKED impede race condition
+  // RPC atômica â€” SELECT FOR UPDATE SKIP LOCKED impede race condition
   const rpcRes = await iziFetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/claim_order`, {
   method: 'POST',
   headers: authHeaders,
@@ -3590,7 +3591,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  if (!paymentConfirmedMode) return;
  }
 
- // 1. ATUALIZAÇÁO OTIMISTA: Feedback Imediato
+ // 1. ATUALIZAÃ‡ÁO OTIMISTA: Feedback Imediato
  const updatedMission = { 
  ...activeMission, 
  status: newStatus.toLowerCase(), 
@@ -3630,7 +3631,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  toastSuccess(`Status: ${newStatus === 'chegou_coleta' ? 'Na Coleta' : newStatus === 'saiu_para_entrega' ? 'Em Rota' : newStatus}`);
  }
 
- // 2. SINCRONIZAÇÁO EM BACKGROUND
+ // 2. SINCRONIZAÃ‡ÁO EM BACKGROUND
  const syncStatus = async () => {
  try {
  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -4005,7 +4006,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  return;
  }
 
- // --- TRAVA DE SEGURANÇA: Verificação de duplicados ---
+ // --- TRAVA DE SEGURANÃ‡A: Verificação de duplicados ---
  const alreadyApplied = myApplications.some(app => String(app.slot_id) === String(slot.id) && app.status !== 'rejected');
  
  if (alreadyApplied) {
@@ -4087,7 +4088,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  setShowSlotAppliedSuccess(true);
  
- // --- ATUALIZAÇÁO OTIMISTA ---
+ // --- ATUALIZAÃ‡ÁO OTIMISTA ---
  const newApp = {
  slot_id: slot.id,
  driver_id: driverId,
@@ -4256,7 +4257,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="flex items-center gap-1.5">
  {!isAccepted && <div className="size-1 rounded-full bg-yellow-500 animate-ping" />}
  <span className={`text-[8px] font-bold uppercase ${isAccepted ? 'opacity-70' : 'text-zinc-400'}`}>
- {isAccepted ? 'VOCÊ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
+ {isAccepted ? 'VOCÃŠ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
  </span>
  </div>
  </div>
@@ -4444,19 +4445,19 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <ul className="space-y-3 pl-2">
  <li className="flex gap-3 text-xs text-zinc-600 font-semibold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
+ <span className="text-yellow-500 font-bold">âââ€šÂ¬Â¢</span> 
  Comparecer ao local com 15 min de antecedência.
  </li>
  <li className="flex gap-3 text-xs text-zinc-600 font-semibold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
+ <span className="text-yellow-500 font-bold">âââ€šÂ¬Â¢</span> 
  Estar com bateria do celular acima de 80%.
  </li>
  <li className="flex gap-3 text-xs text-zinc-600 font-semibold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
+ <span className="text-yellow-500 font-bold">âââ€šÂ¬Â¢</span> 
  Traje profissional e baú limpo.
  </li>
  <li className="flex gap-3 text-xs text-yellow-600 font-bold items-start leading-relaxed uppercase tracking-tight">
- <span className="text-yellow-500 font-bold">ââ‚¬¢</span> 
+ <span className="text-yellow-500 font-bold">âââ€šÂ¬Â¢</span> 
  O início da missão é liberado 1 hora antes do horário agendado.
  </li>
  </ul>
@@ -4502,7 +4503,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <span className="text-yellow-600 font-bold uppercase tracking-widest text-[11px]">Início Bloqueado</span>
  </div>
  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">
-  {(() => { const dMs = oneHourBefore.getTime() - now.getTime(); const dH = Math.floor(dMs / 3600000); const dM = Math.ceil((dMs % 3600000) / 60000); return dH > 0 ? `Liberado 1h antes — faltam ${dH}h ${dM}min` : `Liberado 1h antes — faltam ${dM} min`; })()}
+  {(() => { const dMs = oneHourBefore.getTime() - now.getTime(); const dH = Math.floor(dMs / 3600000); const dM = Math.ceil((dMs % 3600000) / 60000); return dH > 0 ? `Liberado 1h antes â€” faltam ${dH}h ${dM}min` : `Liberado 1h antes â€” faltam ${dM} min`; })()}
  </p>
  </div>
  );
@@ -4521,7 +4522,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  className="w-full h-16 bg-zinc-900 text-white rounded-lg font-bold text-sm uppercase tracking-widest transition-colors flex items-center justify-center gap-3 hover:bg-zinc-800"
  >
  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
- Missão Concluída ââ‚¬¢ Fechar
+ Missão Concluída âââ€šÂ¬Â¢ Fechar
  </button>
  );
  }
@@ -5270,7 +5271,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </header>
 
  <div className="px-6 pt-8 pb-32 space-y-8">
- {/* SEÇÁO 1: VEÍCULO ATIVO */}
+ {/* SEÃ‡ÁO 1: VEÍCULO ATIVO */}
  <div className="space-y-4">
  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículo em Uso</h3>
  <div className="bg-zinc-900 rounded-xl p-6 text-white relative overflow-hidden group">
@@ -5296,7 +5297,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </div>
 
- {/* SEÇÁO 2: OUTROS VEÍCULOS APROVADOS */}
+ {/* SEÃ‡ÁO 2: OUTROS VEÍCULOS APROVADOS */}
  {myVehicles.filter(v => !v.is_active).length > 0 && (
  <div className="space-y-4">
  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Veículos Aprovados</h3>
@@ -5312,7 +5313,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name={v.vehicle_type === 'mototaxi' ? 'two_wheeler' : 'directions_car'} size={20} />
  </div>
  <div className="text-left">
- <p className="text-sm font-black text-zinc-900 leading-none capitalize">{v.vehicle_type} ââ‚¬¢ {v.plate}</p>
+ <p className="text-sm font-black text-zinc-900 leading-none capitalize">{v.vehicle_type} âââ€šÂ¬Â¢ {v.plate}</p>
  <p className="text-[10px] font-bold text-zinc-400 mt-1">{v.model}</p>
  </div>
  </div>
@@ -5325,7 +5326,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  )}
 
- {/* SEÇÁO 3: SOLICITAÇÕES PENDENTES */}
+ {/* SEÃ‡ÁO 3: SOLICITAÃ‡Ã•ES PENDENTES */}
  {myVehicleRequests.length > 0 && (
  <div className="space-y-4">
  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Em Análise</h3>
@@ -5337,7 +5338,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <Icon name="history" size={20} />
  </div>
  <div className="text-left">
- <p className="text-sm font-black text-amber-900 leading-none capitalize">{req.vehicle_type} ââ‚¬¢ {req.plate || 'Bike'}</p>
+ <p className="text-sm font-black text-amber-900 leading-none capitalize">{req.vehicle_type} âââ€šÂ¬Â¢ {req.plate || 'Bike'}</p>
  <p className="text-[10px] font-bold text-amber-600/70 mt-1">{req.model}</p>
  </div>
  </div>
@@ -5392,7 +5393,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </button>
  </div>
  <p className="text-[10px] text-zinc-400 font-bold leading-relaxed bg-blue-50 border border-blue-100 rounded-xl p-4">
- <span className="text-blue-600">ℹ️</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
+ <span className="text-blue-600">â„¹ï¸Â</span> Após o envio, o Admin irá avaliar seu veículo. Quando aprovado, você poderá ativá-lo para receber chamadas compatíveis.
  </p>
  <div className="space-y-3">
  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -6016,7 +6017,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  };
 
  const renderActiveMissionView = () => {
- // TELA DE SELEÇÁO: Se não tem missão selecionada, mostra a lista de missões ativas
+ // TELA DE SELEÃ‡ÁO: Se não tem missão selecionada, mostra a lista de missões ativas
  if (!activeMission) {
  // Se tem missões ativas no array, mostra os cards de seleção
  if (activeMissions.length > 0) {
@@ -6056,7 +6057,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-2 mb-1">
  <span className={`text-[9px] font-black uppercase tracking-widest ${st.color}`}>{st.label}</span>
- <span className="text-[9px] text-zinc-200">ââ‚¬¢</span>
+ <span className="text-[9px] text-zinc-200">âââ€šÂ¬Â¢</span>
  <span className="text-[9px] text-zinc-400 font-bold">#{(m.realId || m.id || '').slice(0,6)}</span>
  </div>
  <p className="text-sm font-black text-zinc-950 truncate">{storeName}</p>
@@ -6088,7 +6089,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  );
  }
 
- // Sem missões — tela vazia
+ // Sem missões â€” tela vazia
  return (
  <motion.div key="active-mission-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans'] bg-zinc-50">
  <div className="size-28 rounded-[45px] bg-white border border-zinc-100 flex items-center justify-center mb-8 ">
@@ -6161,7 +6162,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  // CASO TERMINAL: Se a missão já acabou mas ainda está na tela, o botão serve para fechar.
  if (['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'].includes(s)) {
  return { 
- label: 'Concluído ââ‚¬¢ Fechar', 
+ label: 'Concluído âââ€šÂ¬Â¢ Fechar', 
  action: () => {
  setActiveMission(null);
  localStorage.removeItem('Izi_active_mission');
@@ -6190,7 +6191,7 @@ const handleUpdateStatus = async (newStatus: string) => {
         const diffH = Math.floor(diffMs / (1000 * 60 * 60));
         const diffM = Math.ceil((diffMs % (1000 * 60 * 60)) / (1000 * 60));
         const timeStr = diffH > 0 ? `${diffH}h ${diffM}min` : `${diffM} min`;
-        return { label: `Bloqueado — faltam ${timeStr}`, action: () => toastError(`Início liberado 1h antes do agendamento (${scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h)`), icon: 'schedule', disabled: true };
+        return { label: `Bloqueado â€” faltam ${timeStr}`, action: () => toastError(`Início liberado 1h antes do agendamento (${scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h)`), icon: 'schedule', disabled: true };
       }
     }
     return { label: 'Iniciar Missão', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
@@ -6335,7 +6336,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  </section>
 
- {/* === ENDEREÇOS DE COLETA E ENTREGA === */}
+ {/* === ENDEREÃ‡OS DE COLETA E ENTREGA === */}
  <section className="bg-white border border-zinc-100 rounded-3xl overflow-hidden ">
  <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
  <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em]">Rota da Missão</h2>
@@ -6467,7 +6468,7 @@ const handleUpdateStatus = async (newStatus: string) => {
 
  {/* Izi Pay Premium Section */}
  <section className="space-y-4 pb-4">
- <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay ââ‚¬¢ Rendimento</h2>
+ <h2 className="text-zinc-950 font-black text-[10px] uppercase tracking-[0.4em] px-2">Izi Pay âââ€šÂ¬Â¢ Rendimento</h2>
  <div className="bg-white border border-zinc-100 p-6 rounded-3xl relative overflow-hidden ">
  
  <div className="flex justify-between items-center relative z-10">
@@ -6702,7 +6703,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white border border-zinc-200 text-zinc-500 font-black text-[10px] uppercase tracking-widest rounded-xl hover:text-black transition-all ">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
  </div>
  </div>
- <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 ââ‚¬¢ Conexão Segura</p>
+ <p className="absolute bottom-8 text-[8px] font-black text-zinc-300 uppercase tracking-[0.4em]">Izi v5.0 âââ€šÂ¬Â¢ Conexão Segura</p>
  </motion.div>
  );
  };
@@ -6986,11 +6987,11 @@ const handleUpdateStatus = async (newStatus: string) => {
  {(() => {
  const itemNotes = selectedOrder.items
  ?.filter((item: any) => item.observation)
- .map((item: any) => `ââ‚¬¢ ${item.name || item.product_name}:\n "${item.observation}"`)
+ .map((item: any) => `âââ€šÂ¬Â¢ ${item.name || item.product_name}:\n "${item.observation}"`)
  .join('\n\n');
  
  const notesList = [];
- if (selectedOrder.notes) notesList.push(`ââ‚¬¢ Geral:\n "${selectedOrder.notes}"`);
+ if (selectedOrder.notes) notesList.push(`âââ€šÂ¬Â¢ Geral:\n "${selectedOrder.notes}"`);
  if (itemNotes) notesList.push(itemNotes);
  
  const displayNotes = notesList.length > 0 ? notesList.join('\n\n') : 'Sem observações especiais dos produtos.';
@@ -7134,7 +7135,7 @@ const handleUpdateStatus = async (newStatus: string) => {
         exit={{ opacity: 0 }}
         className="flex flex-col h-full overflow-hidden bg-zinc-50"
       >
- {/* Popup flutuante de nova chamada — sobrepõe tudo */}
+ {/* Popup flutuante de nova chamada â€” sobrepõe tudo */}
  
  <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
  <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
@@ -7198,7 +7199,6 @@ const handleUpdateStatus = async (newStatus: string) => {
  initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
  animate={{ scale: 1, opacity: 1, rotate: 0 }}
  transition={{ type: "spring", damping: 12 }}
- className="size-32 rounded-xl bg-yellow-400 flex items-center justify-center mb-10 relative"
  className="size-36 rounded-full bg-emerald-500 flex items-center justify-center mb-10 relative"
  >
  <Icon name="verified" size={56} className="text-zinc-950" />
@@ -7381,7 +7381,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  </div>
  <div className="text-left flex-1">
  <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mb-0.5">Em Andamento</p>
- <p className="text-sm font-black leading-tight">Retornar à  Missão</p>
+ <p className="text-sm font-black leading-tight">Retornar àÂ  Missão</p>
  </div>
  <Icon name="chevron_right" className="text-emerald-100" />
  </button>
@@ -7428,8 +7428,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  </motion.div>
  )}
  </AnimatePresence>
-
-       {renderBottomNavigation()}
+      </div>
+      {renderBottomNavigation()} 
       {showOnboarding && (
         <OnboardingView 
           userId={driverId || ''} 
