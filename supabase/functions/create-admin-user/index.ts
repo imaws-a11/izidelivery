@@ -15,8 +15,8 @@ function getCorsHeaders(req: Request) {
   }
 }
 
-// Valida o JWT do chamador e garante que ele é admin na tabela admin_users
-async function assertCallerIsAdmin(req: Request): Promise<void> {
+// Valida o JWT do chamador e garante as permissões
+async function assertCallerPermissions(req: Request, targetRole?: string): Promise<void> {
   const authHeader = req.headers.get('authorization') ?? ''
   const jwt = authHeader.replace('Bearer ', '').trim()
 
@@ -32,7 +32,7 @@ async function assertCallerIsAdmin(req: Request): Promise<void> {
   const { data: { user }, error } = await supabaseCaller.auth.getUser()
   if (error || !user) throw new Error('Não autorizado: sessão inválida.')
 
-  // Confere na tabela admin_users se o chamador tem role = 'admin'
+  // Confere na tabela admin_users qual o role do chamador
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -47,7 +47,20 @@ async function assertCallerIsAdmin(req: Request): Promise<void> {
 
   if (adminErr || !adminRow) throw new Error('Não autorizado: usuário não encontrado em admin_users.')
   if (!adminRow.is_active) throw new Error('Não autorizado: conta desativada.')
-  if (adminRow.role !== 'admin') throw new Error('Não autorizado: permissão insuficiente.')
+  
+  if (adminRow.role === 'admin') {
+    return; // Admin absoluto pode tudo
+  }
+
+  if (adminRow.role === 'merchant') {
+    // Lojistas só podem criar/gerenciar accounts do tipo driver
+    if (targetRole !== 'driver') {
+       throw new Error('Não autorizado: lojistas só podem criar e gerenciar perfis de motoboys.')
+    }
+    return;
+  }
+
+  throw new Error('Não autorizado: permissão insuficiente.')
 }
 
 serve(async (req) => {
@@ -58,16 +71,18 @@ serve(async (req) => {
   }
 
   try {
-    // ── GUARD: apenas admins autenticados podem prosseguir ──
-    await assertCallerIsAdmin(req)
+    const bodyText = await req.text()
+    const body = bodyText ? JSON.parse(bodyText) : {}
+    const { email, password, role, metadata, userId, action } = body
+
+    // ── GUARD: Validação de Permissões baseada no perfil e na ação ──
+    await assertCallerPermissions(req, role)
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
-
-    const { email, password, role, metadata, userId, action } = await req.json()
 
     // Caso de deleção
     if (action === 'delete' && userId) {
