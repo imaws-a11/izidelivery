@@ -214,7 +214,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
   }
 
   return (
-    <div className="fixed inset-0 bg-white z-[5500] flex flex-col font-display overflow-y-auto">
+    <div className="fixed inset-0 bg-white z-[6000] flex flex-col font-display overflow-y-auto">
       <AnimatePresence mode="wait">
         {step === 'welcome' && (
           <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-screen">

@@ -355,14 +355,35 @@ const DriverApplicationsTab = () => {
                   </div>
 
                   <div className="lg:col-span-5 space-y-6">
-                    {[{ label: 'CNH (Frente)', url: selectedApp.document_cnh }, { label: 'CRLV (Documento)', url: selectedApp.document_vehicle }].map((doc, idx) => (
+                    {[
+                      { label: 'CNH (Frente)', url: selectedApp.document_cnh },
+                      { label: 'CNH (Verso)', url: selectedApp.document_cnh_verso },
+                      { label: 'CRLV (Frente)', url: selectedApp.document_vehicle },
+                      { label: 'CRLV (Verso)', url: selectedApp.document_vehicle_verso },
+                      { label: 'Comprovante Residência', url: selectedApp.document_residence }
+                    ].map((doc, idx) => (
                       <div key={idx} className="space-y-3">
                         <div className="flex items-center justify-between px-2">
                           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{doc.label}</p>
-                          <a href={doc.url} target="_blank" rel="noreferrer" className="text-[9px] font-black text-primary uppercase underline">Abrir</a>
+                          {doc.url && (
+                            <a href={doc.url} target="_blank" rel="noreferrer" className="text-[9px] font-black text-primary uppercase underline">Abrir</a>
+                          )}
                         </div>
                         <div className="aspect-video bg-slate-100 dark:bg-white/[0.02] rounded-[32px] overflow-hidden border border-slate-100 dark:border-white/5 shadow-inner group">
-                          {doc.url ? <img src={doc.url} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" alt={doc.label} /> : <div className="size-full flex items-center justify-center text-slate-300">Sem foto</div>}
+                          {doc.url ? (
+                            doc.url.toLowerCase().includes('.pdf') ? (
+                              <div className="size-full flex flex-col items-center justify-center gap-2 text-rose-500">
+                                <span className="material-symbols-outlined text-4xl">picture_as_pdf</span>
+                                <span className="text-[10px] font-black uppercase">Documento PDF</span>
+                              </div>
+                            ) : (
+                              <img src={doc.url} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" alt={doc.label} />
+                            )
+                          ) : (
+                            <div className="size-full flex items-center justify-center text-slate-300">
+                              <span className="material-symbols-outlined text-4xl opacity-20">image_not_supported</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

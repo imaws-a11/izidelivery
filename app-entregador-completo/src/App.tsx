@@ -3618,6 +3618,7 @@ function MainApp() {
   }, [driverId, isAuthenticated]);
 
 const handleUpdateStatus = async (newStatus: string) => {
+  if (isAccepting) return;
  if (!activeMission) return;
 
  let missionId = activeMission.realId || activeMission.id;
@@ -4013,24 +4014,23 @@ const handleUpdateStatus = async (newStatus: string) => {
     const performHardReset = () => {
       clearDriverSessionState();
       // Força a remoção de qualquer token preso no localStorage
-      localStorage.removeItem('izi-entregador-auth'); // A chave customizada do Supabase no app entregador!
+      localStorage.removeItem('izi-entregador-auth'); 
       Object.keys(localStorage).forEach(key => {
         if (key.includes('supabase') || key.includes('sb-') || key.includes('izi_') || key.includes('izi-')) {
           localStorage.removeItem(key);
         }
       });
-      // window.location.href = "/" em SPAs não recarrega a página se já estiver em "/". 
-      // Precisamos usar window.location.reload()
       window.location.href = "/";
       window.location.reload();
     };
 
     try {
       setIsLoggingOut(true);
-      // Desloga assíncrono para evitar travamento da UI por instabilidade de rede
+      // Desloga assíncrono para evitar travamento da UI
       supabase.auth.signOut().catch(() => {});
       
-      setTimeout(performHardReset, 800); // Aumentado levemente para dar tempo de ver o design premium
+      // Tempo estendido para apreciação do design premium de saída
+      setTimeout(performHardReset, 1800); 
     } catch (err) {
       console.error("[AUTH] Erro no fluxo de logout:", err);
       performHardReset();
@@ -7209,7 +7209,7 @@ const handleUpdateStatus = async (newStatus: string) => {
         className="flex flex-col h-full overflow-hidden bg-zinc-50"
       >
         {!isProfileLoaded ? (
-          <div className="h-screen flex flex-col items-center justify-center bg-white z-[5000]">
+          <div className="h-screen flex flex-col items-center justify-center bg-white z-[6000]">
             <motion.div 
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
@@ -7222,6 +7222,25 @@ const handleUpdateStatus = async (newStatus: string) => {
           </div>
         ) : (
           <>
+            {showOnboarding ? (
+              <OnboardingView 
+                userId={driverId || ''} 
+                onApproved={() => {
+                  setShowOnboarding(false);
+                  setIsProfileLoaded(true);
+                  toastSuccess('Cadastro aprovado!');
+                  if (driverId) {
+                    loadProfileAndEnforceOnboarding(driverId, authEmail || '', authName || '');
+                  }
+                }} 
+                onLogout={() => {
+                  setShowOnboarding(false);
+                  handleLogout();
+                }}
+                onClose={() => setShowOnboarding(false)}
+              />
+            ) : (
+              <>
             {/* Popup flutuante de nova chamada — sobrepõe tudo */}
             
             <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
@@ -7518,29 +7537,15 @@ const handleUpdateStatus = async (newStatus: string) => {
       </div>
       {renderBottomNavigation()} 
     </>
-  )}
-      {showOnboarding && (
-        <OnboardingView 
-          userId={driverId || ''} 
-          onApproved={() => {
-            setShowOnboarding(false);
-            setIsProfileLoaded(true);
-            toastSuccess('Cadastro aprovado!');
-            if (driverId) {
-              loadProfileAndEnforceOnboarding(driverId, authEmail || '', authName || '');
-            }
-          }} 
-          onLogout={() => {
-            setShowOnboarding(false);
-            handleLogout();
-          }}
-          onClose={() => setShowOnboarding(false)}
-        />
-      )}
-      {renderPendingApprovalModal()}
-    </motion.div>
-  )}
-</AnimatePresence>
+            )}
+            <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
+            <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
+            {renderPendingApprovalModal()}
+          </>
+        )}
+      </motion.div>
+    )}
+  </AnimatePresence>
 
 <AnimatePresence>
   {isLoggingOut && (
@@ -7548,18 +7553,48 @@ const handleUpdateStatus = async (newStatus: string) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/40 backdrop-blur-2xl"
+      className="fixed inset-0 z-[10000] flex flex-col items-center justify-center overflow-hidden"
     >
-      <div className="size-24 rounded-[2.5rem] bg-white shadow-2xl shadow-zinc-200/50 flex items-center justify-center mb-8">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+      {/* Fundo Glassmorphism Premium */}
+      <div className="absolute inset-0 bg-white/60 backdrop-blur-[40px] z-0" />
+      
+      {/* Elementos Decorativos de Fundo */}
+      <div className="absolute top-1/4 left-1/4 size-96 bg-yellow-400/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 size-96 bg-zinc-900/10 blur-[120px] rounded-full animate-pulse" />
+      
+      <div className="relative z-10 flex flex-col items-center text-center px-10">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          className="size-28 rounded-[2.5rem] bg-white border border-zinc-100 shadow-2xl flex items-center justify-center mb-10 relative group"
         >
-          <Icon name="logout" size={32} className="text-zinc-900" />
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 border-2 border-dashed border-yellow-400/30 rounded-[2.5rem]"
+          />
+          <Icon name="logout" size={40} className="text-zinc-900 relative z-10" />
         </motion.div>
+        
+        <motion.h2 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-3xl font-black text-zinc-900 uppercase tracking-tighter mb-3 leading-none"
+        >
+          Saindo da <br />
+          <span className="text-yellow-600">Sua Conta</span>
+        </motion.h2>
+        
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.6em] animate-pulse"
+        >
+          Encerrando sessão com segurança
+        </motion.p>
       </div>
-      <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter mb-2">Encerrando Sessão</h2>
-      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] animate-pulse">Saindo com segurança...</p>
     </motion.div>
   )}
 </AnimatePresence>
