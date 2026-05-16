@@ -122,14 +122,12 @@ export default function DriversTab() {
       // Se já tem os documentos e endereço, não precisa buscar
       if (selectedDriverStudio.doc_cnh_frente && selectedDriverStudio.doc_vehicle && selectedDriverStudio.address) return;
 
-      console.log('[DEBUG] Buscando dados faltantes na candidatura para:', selectedDriverStudio.id);
-      
       try {
+        // Busca candidatura pelo ID do usuário OU pelo e-mail (caso seja um cadastro legado sem user_id)
         const { data: app, error } = await supabase
           .from('driver_applications_delivery')
           .select('*')
-          .eq('user_id', selectedDriverStudio.id)
-          .eq('status', 'approved')
+          .or(`user_id.eq.${selectedDriverStudio.id},email.eq.${selectedDriverStudio.email}`)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -146,7 +144,7 @@ export default function DriversTab() {
             license_plate: prev.license_plate || app.vehicle_plate,
             vehicle_model: prev.vehicle_model || app.vehicle_model,
             vehicle_type: prev.vehicle_type || app.vehicle_type,
-            // Não sobrescrever is_active/status aqui — gerenciado pelo admin via handleUpdateDriverStatus
+            // Importante: Manter o status original do motorista, mas permitir ver os documentos da aplicação
           }));
         }
       } catch (err) {
