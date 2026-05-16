@@ -598,10 +598,7 @@ function MainApp() {
   // Estado de controle de carregamento do perfil - INICIA SEMPRE COMO FALSE para garantir sincronia fresca no F5
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
  const [isLoggingOut, setIsLoggingOut] = useState(false);
- const [showOnboarding, setShowOnboarding] = useState(() => {
-    const approved = localStorage.getItem('izi_driver_approved');
-    return approved === 'false' || approved === null;
-  });
+ const [showOnboarding, setShowOnboarding] = useState(true);
  const [isCardExpanded, setIsCardExpanded] = useState(false);
  const [authEmail, setAuthEmail] = useState(() => localStorage.getItem('izi_driver_email') || '');
  const [authPassword, setAuthPassword] = useState('');
@@ -2037,20 +2034,27 @@ function MainApp() {
   const active = !!profile.is_active;
   setIsApproved(active);
   localStorage.setItem('izi_driver_approved', active.toString());
+  localStorage.setItem('izi_docs_complete', hasAllDocs ? 'true' : 'false');
   
-  // VERIFICAÇÃO DE DOCUMENTAÇÃO COMPLETA (5 DOCUMENTOS)
-  const hasAllDocs = 
+  // VERIFICAÇÃO DE SEGURANÇA (APROVAÇÃO + 5 DOCUMENTOS)
+  const hasAllDocs = !!(
     profile.doc_cnh_frente && 
     profile.doc_cnh_verso && 
     profile.doc_vehicle && 
     profile.doc_vehicle_verso && 
-    profile.doc_residencia;
+    profile.doc_residencia
+  );
 
-  // SE O ENTREGADOR NÃO ESTIVER ATIVO OU FALTAR DOCUMENTOS, FORÇA A TELA DE ONBOARDING
-  if (!active || !hasAllDocs) {
-    setShowOnboarding(true);
-  } else {
+  const isFullyAuthorized = active && hasAllDocs;
+
+  if (isFullyAuthorized) {
     setShowOnboarding(false);
+    localStorage.setItem('izi_driver_approved', 'true');
+    localStorage.setItem('izi_docs_complete', 'true');
+  } else {
+    setShowOnboarding(true);
+    localStorage.setItem('izi_driver_approved', active ? 'true' : 'false');
+    localStorage.setItem('izi_docs_complete', hasAllDocs ? 'true' : 'false');
   }
  
  // Sincroniza Status Online: RESPEITA o LocalStorage primeiro para não derrubar o radar no refresh
@@ -2079,6 +2083,7 @@ function MainApp() {
  }
 
  localStorage.setItem('izi_driver_approved', active.toString());
+  localStorage.setItem('izi_docs_complete', hasAllDocs ? 'true' : 'false');
 
  refreshFinanceData(userId);
  syncMissionWithDB();
