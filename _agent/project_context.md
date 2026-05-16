@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Resumo Executivo)
-Atualizado: 2026-05-16 (Sessao: Hardened Onboarding & Premium UX Transitions)
+Atualizado: 2026-05-16 (Sessao: Hardened Onboarding & Document Audit)
 
 ---
 
@@ -107,3 +107,5 @@ Atualizado: 2026-05-16 (Sessao: Hardened Onboarding & Premium UX Transitions)
 - **Gestão de Entregadores & UX Lojista**: Refatoração do `AdminProvider` e componentes de tracking para injetar os dados REAIS dos entregadores (`name, phone, vehicle_type, license_plate`) via *JOIN* com a tabela `drivers_delivery`. Implementado design Claymorphic e botões de contato direto (Phone/WhatsApp) no monitor de pedidos ativos para garantir visibilidade total ao lojista.
 - **Resiliência de Dados & Hardened UI (Maio/2026)**: Implementada blindagem completa contra perda de dados em refresh (F5). Saldo, histórico de ganhos, histórico de pedidos e agendamentos agora persistem localmente. Adicionada lógica de "Sticky Auth" e trava de onboarding autoritativa: se `showOnboarding` for true, o Dashboard é COMPLETAMENTE omitido do DOM para evitar flickers. Adicionado `z-index: 6000` na OnboardingView e Sincronização. O estado `isProfileLoaded` inicia SEMPRE como `false` para forçar uma sincronização fresca do banco a cada recarregamento, com fallback de 5s para evitar travamentos. Implementada experiência de logout Premium Glassmorphism com timeout de 1.8s para fluidez visual.
 - **Anti-Duplicidade Financeira**: Aplicada trava atômica no registro de transações de ganhos para impedir que uma mesma missão gere múltiplos créditos no saldo do motorista devido a instabilidade de rede ou cliques múltiplos. Realizada limpeza de duplicidades no banco de dados para os usuários afetados.
+- **Auditoria de Documentos (Full-5 Policy)**: O fluxo de aprovação administrativa agora exige e exibe o dossiê completo de 5 documentos (CNH Frente/Verso, CRLV Frente/Verso e Residência). O componente `DriverApplicationsTab` foi blindado para suportar arquivos PDF e imagens simultaneamente, garantindo que nenhum documento enviado fique invisível ao administrador.
+- **Resgate de Candidaturas Órfãs**: Estabelecido protocolo de recuperação de dados onde documentos presentes no storage sem registro correspondente no banco (devido a falhas de rede no final do onboarding) podem ser vinculados manualmente via SQL ou interface administrativa, garantindo que o esforço de envio do motorista não seja perdido.
