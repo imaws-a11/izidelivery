@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, supabaseUrl } from './lib/supabase';
@@ -3954,16 +3954,23 @@ const handleUpdateStatus = async (newStatus: string) => {
     isLoggingOutRef.current = true;
 
     try {
-      await supabase.auth.signOut();
+      // Limpa estado local imediatamente
       clearDriverSessionState();
-      window.location.href = "/";
-      setTimeout(() => window.location.reload(), 100);
+      
+      // Tenta deslogar no backend (assíncrono, sem travar a interface)
+      supabase.auth.signOut().catch(err => console.error("[AUTH] Erro ao deslogar:", err));
+      
+      // Força o redirecionamento
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 100);
     } catch (err) {
-      console.error("[AUTH] Erro no logout:", err);
+      console.error("[AUTH] Erro no fluxo de logout:", err);
       clearDriverSessionState();
       window.location.href = "/";
     }
   }, [clearDriverSessionState]);
+
 
  const renderHeader = () => (
  <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
