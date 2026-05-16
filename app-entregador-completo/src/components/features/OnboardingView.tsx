@@ -255,21 +255,69 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
     <div className="fixed inset-0 bg-white z-[6000] flex flex-col font-display overflow-y-auto">
       <AnimatePresence mode="wait">
         {step === 'welcome' && (
-          <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-screen">
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-              <div className="size-28 bg-yellow-400 rounded-[2.5rem] flex items-center justify-center mb-10 shadow-2xl shadow-yellow-400/20">
-                <Icon name="moped" size={56} className="text-black font-black" />
-              </div>
-              <h1 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase mb-4 leading-none">Seja um<br/>Entregador Izi</h1>
-              <p className="text-zinc-400 font-bold text-sm leading-relaxed mb-12 px-4 uppercase tracking-wide">
-                Sua conta está sincronizada. Comece aqui e termine em qualquer dispositivo.
+          <motion.div 
+            key="welcome" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="flex-1 flex flex-col min-h-screen relative overflow-hidden font-['Plus_Jakarta_Sans']"
+          >
+            {/* Background Stealth Luxury */}
+            <div className="absolute inset-0 bg-white z-0" />
+            <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-yellow-400/5 via-transparent to-zinc-900/5 z-0" />
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-yellow-400/10 blur-[120px] rounded-full" />
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-zinc-900/5 blur-[120px] rounded-full" />
+
+            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center relative z-10">
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="size-32 bg-yellow-400 rounded-[3rem] flex items-center justify-center mb-10 shadow-2xl shadow-yellow-400/20 border border-white/60 relative group"
+              >
+                <div className="absolute inset-0 bg-yellow-300 rounded-[3rem] animate-pulse opacity-40 group-hover:scale-110 transition-transform" />
+                <Icon name="moped" size={64} className="text-black font-black relative z-10" />
+              </motion.div>
+
+              <h1 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase mb-4 leading-[0.9] flex flex-col">
+                <span className="text-sm font-black text-yellow-600 tracking-[0.4em] mb-3">Portal Oficial</span>
+                Seja um<br/>Entregador Izi
+              </h1>
+
+              <p className="text-zinc-400 font-bold text-[11px] leading-relaxed mb-16 px-6 uppercase tracking-[0.15em] max-w-xs">
+                Sua conta está sincronizada em tempo real. Continue sua jornada em qualquer dispositivo.
               </p>
-              <div className="w-full max-w-xs space-y-4">
-                <button onClick={() => setStep('form')} className="w-full h-18 bg-zinc-900 text-white font-black uppercase tracking-[0.2em] rounded-[2rem] shadow-2xl shadow-zinc-900/20 active:scale-95 transition-all">
-                  {previews.cnh_front ? "Continuar Cadastro" : "Começar Cadastro"}
+
+              <div className="w-full max-w-sm space-y-4 px-4">
+                {isAlreadyActive ? (
+                  <button 
+                    onClick={() => setStep('update_docs')} 
+                    className="w-full h-20 bg-yellow-400 text-zinc-950 font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-2xl shadow-yellow-400/30 active:scale-95 transition-all flex items-center justify-center gap-3 border-2 border-white"
+                  >
+                    Atualizar Documentos <Icon name="upload_file" size={22} />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setStep('form')} 
+                    className="w-full h-20 bg-zinc-900 text-white font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-2xl shadow-zinc-900/30 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    {previews.cnh_front ? "Continuar Cadastro" : "Começar Cadastro"} <Icon name="arrow_forward" size={18} />
+                  </button>
+                )}
+                
+                <button 
+                  onClick={onLogout} 
+                  className="w-full h-20 bg-white/40 backdrop-blur-md border-2 border-zinc-950/5 text-zinc-950 font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  Sair da Conta <Icon name="logout" size={18} />
                 </button>
-                <button onClick={onLogout} className="w-full h-18 bg-white border-2 border-zinc-100 text-zinc-400 font-black uppercase tracking-[0.2em] rounded-[2rem] active:scale-95 transition-all">Sair da Conta</button>
               </div>
+            </div>
+
+            {/* Micro-interaction decoration */}
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2">
+              <div className="size-1.5 rounded-full bg-yellow-400" />
+              <div className="size-1.5 rounded-full bg-zinc-200" />
+              <div className="size-1.5 rounded-full bg-zinc-200" />
             </div>
           </motion.div>
         )}
