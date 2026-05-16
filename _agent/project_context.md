@@ -1,5 +1,5 @@
 # IZI Delivery - Contexto Técnico (Resumo Executivo)
-Atualizado: 2026-05-16 (Sessao: Fix Radar Entregas Avulsas via API)
+Atualizado: 2026-05-16 (Sessao: Hardened Onboarding & Premium UX Transitions)
 
 ---
 
@@ -18,6 +18,8 @@ Atualizado: 2026-05-16 (Sessao: Fix Radar Entregas Avulsas via API)
 
 ### 🌐 Resiliência de Rede e Erros (NOVO)
 - **iziFetch**: Wrapper global obrigatório no App do Entregador. Implementa timeout (12s) e Exponential Backoff para mitigar oscilações de 4G/5G.
+- **Sincronização Resiliente (Boot)**: Todas as chamadas de sincronização de perfil e dados críticos no `App.tsx` DEVEM implementar um `Promise.race` com timeout de 5 segundos. Isso garante que o app nunca fique travado na tela de carregamento ("Sincronizando") caso o Supabase demore a responder.
+- **Fluxo Autoritativo de Auth**: A inicialização do app DEVE ser regida exclusivamente pelo listener `onAuthStateChange`. Chamadas manuais de `getSession` no boot (bootstrap) são PROIBIDAS para evitar duplicidade de sincronização e concorrência de dados.
 - **UX de Erro**: Proibido falhas silenciosas. Validar `!response.ok` em fetchs críticos e disparar `toastError`. 
 - **Anti-Concorrência**: Botões de ação (Aceitar, Sacar) DEVEM implementar estados `isLoading/isSubmitting` para evitar cliques duplos e inconsistência de estado.
 - **Encoding UTF-8**: Todos os arquivos DEVEM ser mantidos em UTF-8 sem BOM. Executar `fix_encodings.cjs` em caso de detecção de mojibake (`Ã§Ã£o`).
@@ -27,6 +29,9 @@ Atualizado: 2026-05-16 (Sessao: Fix Radar Entregas Avulsas via API)
 - **Sticky Auth**: Requisições financeiras e de histórico DEVEM aguardar um token de sessão válido. Se o `driverId` estiver presente mas o token for a `ANON_KEY`, a sincronização DEVE ser abortada ou retardada para evitar que o RLS retorne arrays vazios que sobrescrevam o cache local.
 - **Isolamento de Sessão**: O `clearDriverSessionState` DEVE limpar explicitamente todas as chaves `izi_driver_*` no logout para garantir que dados de um motorista não vazem para a próxima sessão no mesmo dispositivo.
 - **Sincronização Atômica**: Atualizações de estado via `setHistory`, `setStats`, etc., DEVEM disparar persistência imediata no `localStorage` via `useEffect` para garantir que o cache reflita sempre a última versão do banco de dados.
+- **Hardened Onboarding**: O acesso ao Dashboard é estritamente condicionado ao carregamento do perfil (`isProfileLoaded`). Se o motorista não estiver ativo (`is_active: false`), ele DEVE ser retido na `OnboardingView` sem possibilidade de bypass via refresh ou navegação.
+- **Opaque UI Guards**: Telas de carregamento de credenciais e restrição de acesso DEVEM ser 100% opacas (`bg-white` ou `bg-zinc-50`) e usar `z-index` extremo (5000+) para impedir que o dashboard seja visível por baixo, evitando a percepção de bug.
+- **Glassmorphism Logout**: O processo de logout deve ser mascarado por uma tela de transição premium com efeito de vidro fosco (`backdrop-blur`) para garantir uma experiência fluida.
 
 ---
 
@@ -100,4 +105,4 @@ Atualizado: 2026-05-16 (Sessao: Fix Radar Entregas Avulsas via API)
 - **Plano 4 (Interactive Overlay)**: Uso de `ForegroundService` com botões de ação dinâmica (Aceitar/Recusar) nas notificações de radar, permitindo aceitação de corridas sem abrir o app.
 - **Auditoria de Encoding**: Varredura completa em todos os 3 módulos (Serviços, Admin, Entregador) para remoção de mojibake (caracteres `Ã§Ã£o`).
 - **Gestão de Entregadores & UX Lojista**: Refatoração do `AdminProvider` e componentes de tracking para injetar os dados REAIS dos entregadores (`name, phone, vehicle_type, license_plate`) via *JOIN* com a tabela `drivers_delivery`. Implementado design Claymorphic e botões de contato direto (Phone/WhatsApp) no monitor de pedidos ativos para garantir visibilidade total ao lojista.
-- **Resiliência de Dados (Entregador)**: Implementada blindagem completa contra perda de dados em refresh (F5). Saldo, histórico de ganhos, histórico de pedidos e agendamentos agora persistem localmente. Adicionada lógica de "Sticky Auth" no `getSecureToken` para prevenir falhas de RLS por atraso na propagação da sessão.
+- **Resiliência de Dados & Hardened UI (Maio/2026)**: Implementada blindagem completa contra perda de dados em refresh (F5). Saldo, histórico de ganhos, histórico de pedidos e agendamentos agora persistem localmente. Adicionada lógica de "Sticky Auth" e trava de onboarding opaca com `z-index: 5000` para garantir que entregadores não-aprovados nunca visualizem o dashboard. O estado `isProfileLoaded` inicia SEMPRE como `false` para forçar uma sincronização fresca do banco a cada recarregamento, com fallback de 5s para evitar travamentos. Implementada experiência de logout Glassmorphism.

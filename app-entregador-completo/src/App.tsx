@@ -594,8 +594,14 @@ function MainApp() {
  const [driverPlate, setDriverPlate] = useState(() => localStorage.getItem('izi_driver_plate') || '');
  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
- const [isApproved, setIsApproved] = useState(() => localStorage.getItem('izi_driver_approved') === 'true');
- const [isProfileLoaded, setIsProfileLoaded] = useState(() => localStorage.getItem('izi_driver_approved') !== null);
+  const [isApproved, setIsApproved] = useState(() => localStorage.getItem('izi_driver_approved') === 'true');
+  // Estado de controle de carregamento do perfil - INICIA SEMPRE COMO FALSE para garantir sincronia fresca no F5
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+ const [isLoggingOut, setIsLoggingOut] = useState(false);
+ const [showOnboarding, setShowOnboarding] = useState(() => {
+    const approved = localStorage.getItem('izi_driver_approved');
+    return approved === 'false' || approved === null;
+  });
  const [isCardExpanded, setIsCardExpanded] = useState(false);
  const [authEmail, setAuthEmail] = useState(() => localStorage.getItem('izi_driver_email') || '');
  const [authPassword, setAuthPassword] = useState('');
@@ -659,7 +665,10 @@ function MainApp() {
  if (data.preferences) {
  const p = data.preferences as any;
  if (p.pref_sound !== undefined) setPrefSoundEnabled(p.pref_sound);
- if (p.pref_vibration !== undefined) setPrefVibrationEnabled(p.pref_vibration);
+ if (p.pref_vibration !== undefined) {
+    setPrefVibrationEnabled(p.pref_vibration);
+    localStorage.setItem('pref_vibration', p.pref_vibration.toString());
+  }
  if (p.pref_nav_app !== undefined) setPrefNavApp(p.pref_nav_app);
  if (p.pref_max_radius !== undefined) setPrefMaxRadius(p.pref_max_radius);
  if (p.pref_vehicle) setPrefVehicleTypes(p.pref_vehicle);
@@ -675,64 +684,42 @@ function MainApp() {
  useEffect(() => {
  let isMounted = true;
 
- const bootstrap = async () => {
- try {
- const { data: { session } } = await supabase.auth.getSession();
- if (session?.user && isMounted) {
- setDriverId(session.user.id);
- localStorage.setItem('izi_driver_id', session.user.id);
- setIsAuthenticated(true);
- 
- // Sincroniza dados do Auth para os estados locais para evitar campos vazios no refresh
- const userEmail = session.user.email || '';
- const name = session.user.user_metadata?.name || userEmail.split('@')[0] || 'Entregador';
- 
- if (!authEmail) setAuthEmail(userEmail);
- if (!authName) setAuthName(name);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
 
- await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
- } else if (isMounted) {
- setIsAuthenticated(false);
- setIsProfileLoaded(true);
- }
- } catch (e) {
- console.error('[BOOTSTRAP] Erro:', e);
- if (isMounted) setIsProfileLoaded(true);
- } finally {
- if (isMounted) setAuthInitLoading(false);
- }
- };
+      console.log(`[AUTH_CHANGE] Evento: ${event}`, session?.user?.id);
 
- bootstrap();
+      if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setDriverId(null);
+        localStorage.removeItem('izi_driver_id');
+        setIsProfileLoaded(true); // Libera para mostrar tela de login
+        setAuthInitLoading(false);
+        return;
+      }
 
- const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
- if (!isMounted) return;
+      // Sincroniza sessão para SIGNED_IN, INITIAL_SESSION, TOKEN_REFRESHED e USER_UPDATED
+      if (session?.user) {
+        setDriverId(session.user.id);
+        localStorage.setItem('izi_driver_id', session.user.id);
+        setIsAuthenticated(true);
+        
+        const userEmail = session.user.email || '';
+        const name = session.user.user_metadata?.name || userEmail.split('@')[0] || 'Entregador';
+        
+        if (!authEmail) setAuthEmail(userEmail);
+        if (!authName) setAuthName(name);
 
- if (event === 'SIGNED_OUT') {
- setIsAuthenticated(false);
- setDriverId(null);
- localStorage.removeItem('izi_driver_id');
- return;
- }
-
- // Sincroniza sessão para SIGNED_IN, TOKEN_REFRESHED e USER_UPDATED
- if (session?.user) {
- setDriverId(session.user.id);
- localStorage.setItem('izi_driver_id', session.user.id);
- setIsAuthenticated(true);
- 
- const userEmail = session.user.email || '';
- const name = session.user.user_metadata?.name || userEmail.split('@')[0] || 'Entregador';
- 
- if (!authEmail) setAuthEmail(userEmail);
- if (!authName) setAuthName(name);
-
- // Só recarrega perfil completo em SIGNED_IN, INITIAL_SESSION e TOKEN_REFRESHED
- if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
-  await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
- }
- }
- });
+        // Dispara a sincronização autoritativa
+        await loadProfileAndEnforceOnboarding(session.user.id, userEmail, name);
+        setAuthInitLoading(false);
+      } else {
+        // Caso não haja sessão (Ex: F5 deslogado)
+        setIsAuthenticated(false);
+        setIsProfileLoaded(true);
+        setAuthInitLoading(false);
+      }
+    });
 
  // Timer de segurança para o Splash
  const safetyTimer = setTimeout(() => {
@@ -1397,7 +1384,6 @@ function MainApp() {
  const [isSavingPix, setIsSavingPix] = useState(false);
  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
  const [showPersonalDataModal, setShowPersonalDataModal] = useState(false);
- const [showOnboarding, setShowOnboarding] = useState(false);
  const [isProfileNotFound, setIsProfileNotFound] = useState(false);
  const [editProfileData, setEditProfileData] = useState({
  name: localStorage.getItem('izi_driver_name') || '',
@@ -1921,17 +1907,30 @@ function MainApp() {
 
 
  // Função centralizada de carregamento de perfil â€” usada no boot, no resume e no auth change
- const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
- if (!userId) return;
+  const loadProfileAndEnforceOnboarding = async (userId: string, userEmail: string, userName: string) => {
+    if (!userId) {
+      setIsProfileLoaded(true);
+      return;
+    }
 
- try {
- const { data: profile, error: profileError } = await supabase
- .from('drivers_delivery')
- .select('name, phone, email, vehicle_type, vehicle_model, license_plate, document_number, bank_info, avatar_url, preferences, is_active, merchant_id, wallet_balance')
- .eq('id', userId)
- .maybeSingle();
+    console.log('[SYNC] Iniciando carregamento de perfil para:', userId);
 
- if (profileError) {
+    try {
+      const profilePromise = supabase
+        .from('drivers_delivery')
+        .select('name, phone, email, vehicle_type, vehicle_model, license_plate, document_number, bank_info, avatar_url, preferences, is_active, merchant_id, wallet_balance')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 5000)
+      );
+
+      console.log('[SYNC] Aguardando resposta do banco...');
+      const result = await Promise.race([profilePromise, timeoutPromise]) as any;
+      const { data: profile, error: profileError } = result;
+
+      if (profileError) {
  console.error('Erro ao carregar perfil:', profileError);
  // Mesmo com erro, tentamos inicializar o formulário com o que temos do Auth
  setEditProfileData(prev => ({
@@ -1990,12 +1989,7 @@ function MainApp() {
  if (profile.email) localStorage.setItem('izi_driver_email', profile.email);
  if (profile.document_number) localStorage.setItem('izi_driver_cpf', profile.document_number);
  if (profile.address) localStorage.setItem('izi_driver_address', profile.address);
- if (profile.vehicle_model) localStorage.setItem('izi_driver_vehicle_model',
-  'izi_driver_stats',
-  'izi_driver_schedules',
-  'izi_driver_earnings_history',
-  'izi_driver_withdraw_history',
-  'izi_driver_orders_history', profile.vehicle_model);
+ if (profile.vehicle_model) localStorage.setItem('izi_driver_vehicle_model', profile.vehicle_model);
  
  // 4. Dados Bancários e Vínculos
  if (profile.merchant_id) {
@@ -2029,8 +2023,8 @@ function MainApp() {
  localStorage.setItem('pref_sound', p.pref_sound.toString());
  }
  if (p.pref_vibration !== undefined) {
- setPrefVibrationEnabled(p.pref_vibration);
- localStorage.setItem('pref_vibration', p.pref_vibration.toString());
+    setPrefVibrationEnabled(p.pref_vibration);
+    localStorage.setItem('pref_vibration', p.pref_vibration.toString());
  }
  if (p.pref_nav_app !== undefined) {
  setPrefNavApp(p.pref_nav_app);
@@ -2041,6 +2035,14 @@ function MainApp() {
  // 7. Status de Aprovação e Vínculo
  const active = !!profile.is_active;
  setIsApproved(active);
+ localStorage.setItem('izi_driver_approved', active.toString());
+ 
+ // SE O ENTREGADOR NÃO ESTIVER ATIVO (APROVADO), FORÇA A TELA DE ONBOARDING (RESTRIÇÃO)
+ if (!active) {
+   setShowOnboarding(true);
+ } else {
+   setShowOnboarding(false);
+ }
  
  // Sincroniza Status Online: RESPEITA o LocalStorage primeiro para não derrubar o radar no refresh
  const localWantsOnline = localStorage.getItem('izi_driver_online') === 'true';
@@ -4024,10 +4026,11 @@ const handleUpdateStatus = async (newStatus: string) => {
     };
 
     try {
+      setIsLoggingOut(true);
       // Desloga assíncrono para evitar travamento da UI por instabilidade de rede
       supabase.auth.signOut().catch(() => {});
       
-      setTimeout(performHardReset, 200);
+      setTimeout(performHardReset, 800); // Aumentado levemente para dar tempo de ver o design premium
     } catch (err) {
       console.error("[AUTH] Erro no fluxo de logout:", err);
       performHardReset();
@@ -7205,10 +7208,24 @@ const handleUpdateStatus = async (newStatus: string) => {
         exit={{ opacity: 0 }}
         className="flex flex-col h-full overflow-hidden bg-zinc-50"
       >
- {/* Popup flutuante de nova chamada â€” sobrepõe tudo */}
- 
- <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
- <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
+        {!isProfileLoaded ? (
+          <div className="h-screen flex flex-col items-center justify-center bg-white z-[5000]">
+            <motion.div 
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="size-20 bg-zinc-900 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl shadow-zinc-900/10"
+            >
+              <Icon name="verified_user" className="text-yellow-400 text-4xl" />
+            </motion.div>
+            <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter mb-1">Izi Delivery</h2>
+            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] animate-pulse">Sincronizando Perfil...</p>
+          </div>
+        ) : (
+          <>
+            {/* Popup flutuante de nova chamada — sobrepõe tudo */}
+            
+            <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
+            <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
  <AnimatePresence>
  {showBankDetails && (
  <BankDetailsModal 
@@ -7500,6 +7517,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  </AnimatePresence>
       </div>
       {renderBottomNavigation()} 
+    </>
+  )}
       {showOnboarding && (
         <OnboardingView 
           userId={driverId || ''} 
@@ -7519,6 +7538,28 @@ const handleUpdateStatus = async (newStatus: string) => {
         />
       )}
       {renderPendingApprovalModal()}
+    </motion.div>
+  )}
+</AnimatePresence>
+
+<AnimatePresence>
+  {isLoggingOut && (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/40 backdrop-blur-2xl"
+    >
+      <div className="size-24 rounded-[2.5rem] bg-white shadow-2xl shadow-zinc-200/50 flex items-center justify-center mb-8">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <Icon name="logout" size={32} className="text-zinc-900" />
+        </motion.div>
+      </div>
+      <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tighter mb-2">Encerrando Sessão</h2>
+      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] animate-pulse">Saindo com segurança...</p>
     </motion.div>
   )}
 </AnimatePresence>
