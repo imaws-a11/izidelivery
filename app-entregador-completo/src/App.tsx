@@ -2030,11 +2030,7 @@ function MainApp() {
  }
 
  // 7. Status de Aprovação e Vínculo
-   // 7. Status de Aprovação e Vínculo
   const active = !!profile.is_active;
-  setIsApproved(active);
-  localStorage.setItem('izi_driver_approved', active.toString());
-  localStorage.setItem('izi_docs_complete', hasAllDocs ? 'true' : 'false');
   
   // VERIFICAÇÃO DE SEGURANÇA (APROVAÇÃO + 5 DOCUMENTOS)
   const hasAllDocs = !!(
@@ -2045,15 +2041,16 @@ function MainApp() {
     profile.doc_residencia
   );
 
-  const isFullyAuthorized = active && hasAllDocs;
+  // LIBERAÇÃO AUTORITATIVA: Se o admin marcou como ativo, ele PODE entrar.
+  const isFullyAuthorized = active; 
 
   if (isFullyAuthorized) {
     setShowOnboarding(false);
     localStorage.setItem('izi_driver_approved', 'true');
-    localStorage.setItem('izi_docs_complete', 'true');
+    localStorage.setItem('izi_docs_complete', hasAllDocs ? 'true' : 'false');
   } else {
     setShowOnboarding(true);
-    localStorage.setItem('izi_driver_approved', active ? 'true' : 'false');
+    localStorage.setItem('izi_driver_approved', 'false');
     localStorage.setItem('izi_docs_complete', hasAllDocs ? 'true' : 'false');
   }
  

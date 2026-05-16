@@ -22,6 +22,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
   const [isAlreadyActive, setIsAlreadyActive] = useState(false);
   const [missingDocs, setMissingDocs] = useState<DocType[]>([]);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [isUpdatePending, setIsUpdatePending] = useState(false);
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -64,7 +65,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
       // Verifica drivers e documentos obrigatórios
       const driverReq = supabase
         .from('drivers_delivery')
-        .select('id, is_active, doc_cnh_frente, doc_cnh_verso, doc_vehicle, doc_vehicle_verso, doc_residencia')
+        .select('id, name, email, phone, address, vehicle_type, vehicle_model, license_plate, is_active, doc_cnh_frente, doc_cnh_verso, doc_vehicle, doc_vehicle_verso, doc_residencia')
         .eq('id', userId)
         .maybeSingle();
       const { data: driver } = await withTimeout(driverReq);
@@ -79,6 +80,27 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
       if (driver?.is_active && hasAllDocs) {
         onApproved();
         return;
+      }
+
+      if (driver) {
+        setPreviews({
+          cnh_front: driver.doc_cnh_frente || null,
+          cnh_back: driver.doc_cnh_verso || null,
+          vehicle_front: driver.doc_vehicle || null,
+          vehicle_back: driver.doc_vehicle_verso || null,
+          residence: driver.doc_residencia || null,
+        });
+
+        // Preenche o formulário com dados existentes para evitar erros de constraint NOT NULL
+        setFormData({
+          full_name: driver.name || '',
+          email: driver.email || '',
+          phone: driver.phone || '',
+          address: driver.address || '',
+          vehicle_type: driver.vehicle_type || 'mototaxi',
+          vehicle_model: driver.vehicle_model || 'N/A',
+          vehicle_plate: driver.license_plate || 'N/A',
+        });
       }
 
       const missing: DocType[] = [];
@@ -97,10 +119,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
       if (driver?.is_active && missing.length > 0) {
         setIsAlreadyActive(true);
-        // Se o usuário clicar em "Atualizar", vamos levá-lo para update_docs
+        setStep('update_docs'); // Direciona direto se já for ativo mas faltar docs
       }
 
-      // Verifica candidatura (pega a mais recente caso haja duplicidade)
+      // Verifica candidatura
       const appReq = supabase
         .from('driver_applications_delivery')
         .select('*')
@@ -111,8 +133,23 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
       const app = apps && apps.length > 0 ? apps[0] : null;
       
       if (app) {
-        if (app.status === 'pending' || app.status === 'approved') setStep('waiting');
-        else if (app.status === 'rejected') setStep('rejected');
+        if (app.status === 'approved' && driver?.is_active) {
+          onApproved();
+          return;
+        }
+        if (app.status === 'pending') {
+          if (driver?.is_active) setIsUpdatePending(true);
+          setStep('waiting');
+          return;
+        }
+        if (app.status === 'rejected') {
+          setStep('rejected');
+          return;
+        }
+      }
+
+      if (app?.status === 'rejected') {
+        setStep('rejected');
         return;
       }
 
@@ -224,6 +261,72 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
       if (error) throw error;
       await supabase.from('users_delivery').update({ onboarding_draft: {} }).eq('id', userId);
       toastSuccess("Cadastro enviado com sucesso!");
+      setStep('waiting');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitUpdate = async () => {
+    // Valida se todos os documentos que faltavam agora estão preenchidos no previews
+    const stillMissing = missingDocs.filter(slot => !previews[slot]);
+    if (stillMissing.length > 0) {
+      toastError("Por favor, anexe os documentos pendentes.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 0. Verifica se já não existe uma candidatura pendente para evitar duplicidade
+      const { data: existing } = await supabase
+        .from('driver_applications_delivery')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existing) {
+        setStep('waiting');
+        setLoading(false);
+        return;
+      }
+
+      // 1. Tenta garantir os dados do perfil se o formData estiver vazio
+      let name = formData.full_name;
+      let email = formData.email;
+      let plate = formData.vehicle_plate;
+
+      if (!name || name === 'Atualização de Dossiê') {
+        const { data: d } = await supabase.from('drivers_delivery').select('name, email, license_plate').eq('id', userId).maybeSingle();
+        if (d) {
+          name = d.name;
+          email = d.email;
+          plate = d.license_plate;
+        }
+      }
+
+      // 2. Atualiza a candidatura (ou cria uma nova de atualização)
+      const { error: appError } = await supabase.from('driver_applications_delivery').insert({
+        user_id: userId,
+        full_name: name || 'Atualização de Dossiê',
+        email: email || '',
+        phone: formData.phone || '',
+        address: formData.address || '',
+        vehicle_type: formData.vehicle_type,
+        vehicle_model: formData.vehicle_model || 'N/A',
+        vehicle_plate: plate || 'N/A',
+        document_cnh: previews.cnh_front,
+        document_cnh_verso: previews.cnh_back,
+        document_vehicle: previews.vehicle_front,
+        document_vehicle_verso: previews.vehicle_back,
+        document_residence: previews.residence,
+        status: 'pending'
+      });
+
+      if (appError) throw appError;
+
+      setIsUpdatePending(true);
+      toastSuccess("Documentos enviados para análise!");
       setStep('waiting');
     } catch (err: any) {
       toastError(err.message);
@@ -453,7 +556,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
                   </button>
                 )}
 
-                {step === 'waiting' && isAlreadyActive && (
+                {step === 'waiting' && isAlreadyActive && !isUpdatePending && (
                   <button 
                     onClick={() => setStep('update_docs')} 
                     className="w-full h-20 bg-yellow-400 text-zinc-900 font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-2xl shadow-yellow-400/30 active:scale-95 transition-all flex items-center justify-center gap-3 border-2 border-white"
@@ -517,8 +620,8 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ userId, onApprov
 
               <div className="mt-12">
                 <button 
-                  onClick={handleSubmit}
-                  disabled={loading || missingDocs.some(slot => !formData[`document_${slot === 'cnh_front' ? 'cnh' : slot === 'cnh_back' ? 'cnh_verso' : slot === 'vehicle_front' ? 'vehicle' : slot === 'vehicle_back' ? 'vehicle_verso' : 'residence'}` as keyof typeof formData])}
+                  onClick={handleSubmitUpdate}
+                  disabled={loading || missingDocs.some(slot => !previews[slot])}
                   className="w-full h-20 bg-zinc-900 text-white font-black uppercase tracking-[0.3em] rounded-[2.5rem] shadow-2xl shadow-zinc-900/30 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
                   {loading ? 'Processando...' : 'Enviar Atualização'}
