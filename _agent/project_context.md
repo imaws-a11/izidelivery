@@ -22,6 +22,12 @@ Atualizado: 2026-05-16 (Sessao: Fix Radar Entregas Avulsas via API)
 - **Anti-Concorrência**: Botões de ação (Aceitar, Sacar) DEVEM implementar estados `isLoading/isSubmitting` para evitar cliques duplos e inconsistência de estado.
 - **Encoding UTF-8**: Todos os arquivos DEVEM ser mantidos em UTF-8 sem BOM. Executar `fix_encodings.cjs` em caso de detecção de mojibake (`Ã§Ã£o`).
 
+### 🚀 PERSISTÊNCIA & RESILIÊNCIA DO ENTREGADOR (NOVO: Maio/2026)
+- **Cache-First (Hydration)**: O App do Entregador DEVE usar `localStorage` como buffer de leitura imediata. Estados críticos (`stats`, `history`, `earningsHistory`, `withdrawHistory`, `scheduledOrders`) devem ser hidratados do cache no `useState` inicial para evitar telas zeradas ("flicker") durante o boot.
+- **Sticky Auth**: Requisições financeiras e de histórico DEVEM aguardar um token de sessão válido. Se o `driverId` estiver presente mas o token for a `ANON_KEY`, a sincronização DEVE ser abortada ou retardada para evitar que o RLS retorne arrays vazios que sobrescrevam o cache local.
+- **Isolamento de Sessão**: O `clearDriverSessionState` DEVE limpar explicitamente todas as chaves `izi_driver_*` no logout para garantir que dados de um motorista não vazem para a próxima sessão no mesmo dispositivo.
+- **Sincronização Atômica**: Atualizações de estado via `setHistory`, `setStats`, etc., DEVEM disparar persistência imediata no `localStorage` via `useEffect` para garantir que o cache reflita sempre a última versão do banco de dados.
+
 ---
 
 ## 🚀 FUNCIONALIDADES CORE & REGRAS DE NEGÓCIO
@@ -94,3 +100,4 @@ Atualizado: 2026-05-16 (Sessao: Fix Radar Entregas Avulsas via API)
 - **Plano 4 (Interactive Overlay)**: Uso de `ForegroundService` com botões de ação dinâmica (Aceitar/Recusar) nas notificações de radar, permitindo aceitação de corridas sem abrir o app.
 - **Auditoria de Encoding**: Varredura completa em todos os 3 módulos (Serviços, Admin, Entregador) para remoção de mojibake (caracteres `Ã§Ã£o`).
 - **Gestão de Entregadores & UX Lojista**: Refatoração do `AdminProvider` e componentes de tracking para injetar os dados REAIS dos entregadores (`name, phone, vehicle_type, license_plate`) via *JOIN* com a tabela `drivers_delivery`. Implementado design Claymorphic e botões de contato direto (Phone/WhatsApp) no monitor de pedidos ativos para garantir visibilidade total ao lojista.
+- **Resiliência de Dados (Entregador)**: Implementada blindagem completa contra perda de dados em refresh (F5). Saldo, histórico de ganhos, histórico de pedidos e agendamentos agora persistem localmente. Adicionada lógica de "Sticky Auth" no `getSecureToken` para prevenir falhas de RLS por atraso na propagação da sessão.

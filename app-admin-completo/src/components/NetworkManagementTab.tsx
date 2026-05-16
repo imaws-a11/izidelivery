@@ -113,21 +113,23 @@ export default function NetworkManagementTab() {
     };
   }, [unifiedList]);
 
+  const glassCard = "bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-white/80 dark:border-white/5 shadow-2xl rounded-[40px] overflow-hidden";
+
   return (
-    <div className="space-y-8 pb-20 italic">
+    <div className="space-y-10 pb-20 font-display animate-in fade-in duration-500">
       {/* HEADER & ACTIONS */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10 px-2">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase mb-2">
+          <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase mb-2 leading-none">
             Gestão de Rede
           </h1>
-          <p className="text-slate-500 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-             <span className="material-symbols-outlined text-sm text-primary">hub</span>
+          <p className="text-slate-900/40 dark:text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] flex items-center gap-3">
+             <span className="material-symbols-outlined text-base text-primary font-black">hub</span>
              Ecossistema Unificado de Lojistas e Parceiros
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-5">
            <button 
              onClick={async () => {
                 const confirm = await window.confirm('Deseja sincronizar as credenciais de todos os lojistas? Isso garantirá que todos consigam fazer login.');
@@ -137,7 +139,6 @@ export default function NetworkManagementTab() {
                 let successCount = 0;
                 let errorCount = 0;
 
-                // Sincronizar apenas quem é Merchant (Lojista)
                 const merchantsOnly = unifiedList.filter(i => i.type !== 'partner_point');
 
                 for (const merchant of merchantsOnly) {
@@ -170,10 +171,10 @@ export default function NetworkManagementTab() {
                   toastSuccess(`${successCount} sincronizados. ${errorCount} falhas.`);
                 }
              }}
-             className="h-16 px-6 bg-slate-900 text-white rounded-[28px] shadow-xl flex items-center gap-3 hover:bg-slate-800 transition-all group"
+             className="h-16 px-8 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-full shadow-xl flex items-center gap-4 hover:bg-slate-50 transition-all group border border-slate-900/5 dark:border-white/5"
              title="Reparar contas de acesso"
           >
-             <span className="material-symbols-outlined font-black group-hover:rotate-180 transition-transform duration-500">sync</span>
+             <span className="material-symbols-outlined font-black group-hover:rotate-180 transition-transform duration-700">sync</span>
              <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block">Sincronizar Acessos</span>
           </button>
 
@@ -191,48 +192,54 @@ export default function NetworkManagementTab() {
                   role: 'merchant'
                 });
              }}
-             className="h-16 px-10 bg-primary text-slate-900 rounded-[28px] shadow-2xl shadow-primary/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all group overflow-hidden relative"
+             className="h-16 px-12 bg-primary text-slate-900 rounded-full shadow-2xl shadow-primary/20 flex items-center gap-4 hover:scale-105 active:scale-95 transition-all group relative overflow-hidden"
           >
              <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none" />
-             <span className="material-symbols-outlined font-black">add_circle</span>
-             <span className="text-[11px] font-black uppercase tracking-[0.2em] italic">Novo Membro</span>
+             <span className="material-symbols-outlined font-black text-2xl">add_circle</span>
+             <span className="text-[11px] font-black uppercase tracking-[0.2em]">Novo Membro</span>
           </button>
         </div>
       </div>
 
       {/* METRICS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 px-2">
         {[
-          { label: 'Total Geral', count: metrics.total, icon: 'groups', color: 'text-slate-600', bg: 'bg-slate-500/10' },
+          { label: 'Total Geral', count: metrics.total, icon: 'groups', color: 'text-slate-900', bg: 'bg-white/40' },
           { label: 'Lojistas Full', count: metrics.full, icon: 'storefront', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
           { label: 'Lojistas Avulso', count: metrics.avulso, icon: 'local_shipping', color: 'text-blue-500', bg: 'bg-blue-500/10' },
           { label: 'Pontos Coleta', count: metrics.points, icon: 'handshake', color: 'text-amber-500', bg: 'bg-amber-500/10' },
         ].map((m, i) => (
-          <motion.div key={i} className={`p-6 rounded-[45px] border border-white/5 ${m.bg} shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px]`}>
-             <div className="size-14 rounded-3xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
-                <span className={`material-symbols-outlined text-2xl font-black ${m.color}`}>{m.icon}</span>
+          <motion.div 
+            key={i} 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className={`p-10 rounded-[48px] border border-white/80 dark:border-white/5 ${m.bg} backdrop-blur-2xl shadow-2xl flex flex-col items-center gap-6 transition-all hover:-translate-y-2`}
+          >
+             <div className="size-16 rounded-[24px] bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-900/5 dark:border-white/10 shadow-lg">
+                <span className={`material-symbols-outlined text-3xl font-black ${m.color}`}>{m.icon}</span>
              </div>
-             <div>
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">{m.count}</h3>
-                <p className={`text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 ${m.color}`}>{m.label}</p>
+             <div className="text-center">
+                <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-3">{m.count}</h3>
+                <p className={`text-[9px] font-black uppercase tracking-[0.3em] opacity-40 ${m.color}`}>{m.label}</p>
              </div>
           </motion.div>
         ))}
       </div>
 
       {/* FILTERS */}
-      <div className="bg-white dark:bg-slate-900/40 backdrop-blur-3xl rounded-[40px] border border-slate-200 dark:border-white/5 p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[48px] border border-white/80 dark:border-white/5 p-8 flex flex-col md:flex-row items-center gap-8 shadow-2xl">
          <div className="flex-1 w-full relative group">
-            <span className="absolute left-6 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+            <span className="absolute left-8 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors font-black">search</span>
             <input 
               type="text"
-              placeholder="Pesquise por nome, e-mail, telefone ou endereço..."
+              placeholder="Pesquise por nome, e-mail, telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-black/20 border-none rounded-[28px] text-sm font-bold focus:ring-2 focus:ring-primary/30 transition-all dark:text-white italic"
+              className="w-full pl-20 pr-10 py-6 bg-slate-900/5 dark:bg-black/20 border-none rounded-full text-sm font-black focus:ring-2 focus:ring-primary/30 transition-all dark:text-white placeholder:opacity-40 uppercase tracking-widest"
             />
          </div>
-         <div className="flex flex-wrap items-center gap-2 p-1 bg-slate-100 dark:bg-black/20 rounded-[32px] border border-slate-200 dark:border-white/5">
+         <div className="flex flex-wrap items-center gap-3 p-2 bg-slate-900/5 dark:bg-black/20 rounded-full border border-slate-900/5 dark:border-white/5">
             {[
               { id: 'all', label: 'Todos', icon: 'list_alt' },
               { id: 'full', label: 'Full', icon: 'storefront' },
@@ -242,11 +249,11 @@ export default function NetworkManagementTab() {
               <button
                 key={f.id}
                 onClick={() => setFilterType(f.id as any)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-[28px] text-[10px] font-black uppercase tracking-widest transition-all ${
-                  filterType === f.id ? 'bg-white dark:bg-slate-800 text-primary shadow-sm scale-105' : 'text-slate-500'
+                className={`flex items-center gap-3 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                  filterType === f.id ? 'bg-slate-900 text-white shadow-2xl scale-105' : 'text-slate-900/40 hover:bg-slate-900/5'
                 }`}
               >
-                <span className="material-symbols-outlined text-sm font-black">{f.icon}</span>
+                <span className="material-symbols-outlined text-base font-black">{f.icon}</span>
                 {f.label}
               </button>
             ))}
@@ -254,81 +261,81 @@ export default function NetworkManagementTab() {
       </div>
 
       {/* UNIFIED TABLE */}
-      <div className="bg-white dark:bg-slate-900 rounded-[54px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-black/10 overflow-hidden relative">
+      <div className={`${glassCard} border border-white/80 dark:border-white/5 shadow-2xl`}>
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 dark:bg-black/20 border-b border-slate-100 dark:border-white/5">
-                <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Estabelecimento</th>
-                <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Tipo / Contrato</th>
-                <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Localização</th>
-                <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 text-center">Status</th>
-                <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 text-right">Ações</th>
+              <tr className="bg-slate-900/5 dark:bg-black/20 border-b border-slate-900/5 dark:border-white/5">
+                <th className="px-12 py-10 text-[9px] font-black uppercase tracking-[0.4em] text-slate-900/40 dark:text-slate-500">Estabelecimento</th>
+                <th className="px-12 py-10 text-[9px] font-black uppercase tracking-[0.4em] text-slate-900/40 dark:text-slate-500">Tipo / Contrato</th>
+                <th className="px-12 py-10 text-[9px] font-black uppercase tracking-[0.4em] text-slate-900/40 dark:text-slate-500">Localização</th>
+                <th className="px-12 py-10 text-[9px] font-black uppercase tracking-[0.4em] text-slate-900/40 dark:text-slate-500 text-center">Status</th>
+                <th className="px-12 py-10 text-[9px] font-black uppercase tracking-[0.4em] text-slate-900/40 dark:text-slate-500 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-white/5 relative z-10">
+            <tbody className="divide-y divide-slate-900/5 dark:divide-white/5">
               <AnimatePresence mode="popLayout">
                 {unifiedList.map((member) => (
-                  <motion.tr key={member.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-slate-50/80 dark:hover:bg-white/5 transition-all group/row">
-                    <td className="px-10 py-7">
-                      <div className="flex items-center gap-5">
-                        <div className="size-16 rounded-3xl bg-primary/20 dark:bg-primary/10 border border-primary/10 flex items-center justify-center overflow-hidden transition-transform group-hover/row:scale-105 shadow-sm">
+                  <motion.tr key={member.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-white/60 dark:hover:bg-white/5 transition-all group/row">
+                    <td className="px-12 py-10">
+                      <div className="flex items-center gap-6">
+                        <div className="size-20 rounded-[32px] bg-white dark:bg-slate-800 border border-slate-900/5 dark:border-white/10 flex items-center justify-center overflow-hidden transition-all group-hover/row:scale-105 shadow-xl">
                            {member.logo ? (
                              <img src={member.logo} className="w-full h-full object-cover" />
                            ) : (
-                             <span className="material-symbols-outlined text-primary text-3xl font-black">
+                             <span className="material-symbols-outlined text-primary text-4xl font-black">
                                 {member.type === 'partner_point' ? 'handshake' : 'storefront'}
                              </span>
                            )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-black text-lg dark:text-white tracking-tighter truncate uppercase italic leading-none mb-2">{member.name}</p>
-                          <p className="text-[10px] font-bold text-slate-500 truncate">{member.phone || member.email}</p>
+                          <p className="font-black text-xl text-slate-900 dark:text-white tracking-tighter truncate uppercase leading-none mb-3">{member.name}</p>
+                          <p className="text-[10px] font-black text-slate-900/40 dark:text-slate-500 truncate uppercase tracking-widest">{member.phone || member.email}</p>
                         </div>
                       </div>
                     </td>
                     
-                    <td className="px-10 py-7">
-                      <div className="flex flex-col gap-1">
-                        <span className={`text-[9px] font-black px-3 py-1 rounded-full border italic uppercase inline-block w-fit ${
-                          member.type === 'merchant_full' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' :
-                          member.type === 'merchant_avulso' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' :
-                          'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                    <td className="px-12 py-10">
+                      <div className="flex flex-col gap-2">
+                        <span className={`text-[9px] font-black px-4 py-1.5 rounded-full border uppercase inline-block w-fit shadow-sm ${
+                          member.type === 'merchant_full' ? 'bg-emerald-500 text-white border-emerald-600' :
+                          member.type === 'merchant_avulso' ? 'bg-blue-500 text-white border-blue-600' :
+                          'bg-amber-500 text-white border-amber-600'
                         }`}>
                           {member.type === 'merchant_full' ? 'Marketplace' : 
-                           member.type === 'merchant_avulso' ? 'Avulso (Logística)' : 
-                           'Ponto de Coleta'}
+                           member.type === 'merchant_avulso' ? 'Avulso Log' : 
+                           'Pickup Point'}
                         </span>
                         {member.commission_percent !== undefined && (
-                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Comissão: {member.commission_percent}%</p>
+                           <p className="text-[9px] font-black text-slate-900 dark:text-slate-400 uppercase tracking-widest mt-1.5 opacity-60">Split: {member.commission_percent}%</p>
                         )}
                       </div>
                     </td>
 
-                    <td className="px-10 py-7">
+                    <td className="px-12 py-10">
                        <div className="max-w-xs">
-                          <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 line-clamp-2">{member.address || 'Endereço não informado'}</p>
-                          <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mt-1 italic">{member.city || 'SÃO PAULO - SP'}</p>
+                          <p className="text-[11px] font-black text-slate-900 dark:text-slate-400 line-clamp-2 uppercase leading-relaxed tracking-tight opacity-80">{member.address || 'Endereço não informado'}</p>
+                          <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em] mt-2">{member.city || 'SÃO PAULO - SP'}</p>
                        </div>
                     </td>
 
-                    <td className="px-10 py-7 text-center">
-                       <div className={`inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10`}>
-                        <div className={`size-2 rounded-full animate-pulse ${
-                          member.status === 'active' ? 'bg-emerald-500' :
-                          member.status === 'suspended' ? 'bg-amber-500' : 'bg-rose-500'
+                    <td className="px-12 py-10 text-center">
+                       <div className={`inline-flex items-center gap-4 px-6 py-3 rounded-full bg-white dark:bg-slate-800 border border-slate-900/5 dark:border-white/10 shadow-lg`}>
+                        <div className={`size-2.5 rounded-full animate-pulse ${
+                          member.status === 'active' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' :
+                          member.status === 'suspended' ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]'
                         }`} />
-                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] italic ${
-                          member.status === 'active' ? 'text-emerald-500' :
-                          member.status === 'suspended' ? 'text-amber-500' : 'text-rose-500'
+                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                          member.status === 'active' ? 'text-emerald-600' :
+                          member.status === 'suspended' ? 'text-amber-600' : 'text-rose-600'
                         }`}>
-                          {member.status === 'active' ? 'Ativo' : member.status === 'suspended' ? 'Suspenso' : 'Inativo'}
+                          {member.status === 'active' ? 'Ativo' : member.status === 'suspended' ? 'Suspenso' : 'Offline'}
                         </span>
                       </div>
                     </td>
 
-                    <td className="px-10 py-7 text-right">
-                      <div className="flex items-center justify-end gap-3 opacity-40 group-hover/row:opacity-100 transition-opacity">
+                    <td className="px-12 py-10 text-right">
+                      <div className="flex items-center justify-end gap-4 opacity-0 group-hover/row:opacity-100 transition-all transform translate-x-4 group-hover/row:translate-x-0">
                          <button 
                            onClick={() => { 
                              if (member.type === 'partner_point') {
@@ -340,10 +347,10 @@ export default function NetworkManagementTab() {
                                setEditType('merchant'); 
                              }
                            }}
-                           className="size-11 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all flex items-center justify-center shadow-sm"
+                           className="size-14 rounded-2xl bg-slate-900 text-white hover:bg-primary hover:text-slate-900 transition-all flex items-center justify-center shadow-xl"
                            title="Acessar Estúdio"
                          >
-                           <span className="material-symbols-outlined text-xl">palette</span>
+                           <span className="material-symbols-outlined text-2xl font-black">palette</span>
                          </button>
                          <button 
                            onClick={() => {
@@ -353,17 +360,17 @@ export default function NetworkManagementTab() {
                                handleUpdateMerchantStatus(member.id, member.is_active ? 'suspended' : 'active');
                              }
                            }}
-                           className="size-11 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center"
+                           className="size-14 rounded-2xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center border border-slate-900/5 dark:border-white/10 shadow-xl"
                            title={member.is_active ? "Suspender" : "Ativar"}
                          >
-                           <span className="material-symbols-outlined text-xl">{member.is_active ? 'do_not_disturb_on' : 'verified'}</span>
+                           <span className="material-symbols-outlined text-2xl font-black">{member.is_active ? 'do_not_disturb_on' : 'verified'}</span>
                          </button>
                          <button 
                            onClick={() => member.type === 'partner_point' ? handleDeletePartner(member.id) : handleDeleteMerchant(member.id)}
-                           className="size-11 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                           className="size-14 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-rose-500/10 shadow-xl"
                            title="Excluir"
                          >
-                           <span className="material-symbols-outlined text-xl">delete</span>
+                           <span className="material-symbols-outlined text-2xl font-black">delete</span>
                          </button>
                       </div>
                     </td>

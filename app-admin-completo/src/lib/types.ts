@@ -304,6 +304,12 @@ export interface MenuCategory {
   parent_id?: string | null;
 }
 
+export interface DistanceRange {
+  from: number;
+  to: number;
+  price: number;
+}
+
 export interface DynamicRatesState {
   peakHours: any[];
   zones: any[];
@@ -319,7 +325,7 @@ export interface DynamicRatesState {
     maxSurge: number;
   };
   baseValues: {
-    [key: string]: string | boolean;
+    [key: string]: string | boolean | DistanceRange[];
     mototaxi_min: string;
     mototaxi_km: string;
     carro_min: string;
@@ -347,6 +353,21 @@ export interface DynamicRatesState {
     aberto_km: string;
     standalone_min: string;
     standalone_km: string;
+    
+    // Tiered Pricing Support
+    food_pricing_mode?: 'simple' | 'tiered';
+    food_ranges?: DistanceRange[];
+    market_pricing_mode?: 'simple' | 'tiered';
+    market_ranges?: DistanceRange[];
+    pharmacy_pricing_mode?: 'simple' | 'tiered';
+    pharmacy_ranges?: DistanceRange[];
+    beverages_pricing_mode?: 'simple' | 'tiered';
+    beverages_ranges?: DistanceRange[];
+    mototaxi_pricing_mode?: 'simple' | 'tiered';
+    mototaxi_ranges?: DistanceRange[];
+    carro_pricing_mode?: 'simple' | 'tiered';
+    carro_ranges?: DistanceRange[];
+    
     isDynamicActive: boolean;
   };
   shippingPriorities: {

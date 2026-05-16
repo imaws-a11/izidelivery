@@ -79,20 +79,28 @@ export default function FinancialTab() {
   }, [allOrders, activeMerchant]);
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="space-y-12 pb-20 font-display animate-in fade-in duration-700">
       {/* Finance Header & Filters */}
-      <div className="flex flex-wrap justify-between items-end gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
-            {(userRole === 'merchant' || isMerchantPreview) ? 'Financeiro da Loja' : 'Relatórios de Faturamento'}
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-base">
+      <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/80 dark:border-white/5 p-12 rounded-[48px] flex flex-col md:flex-row md:items-center justify-between gap-10 relative overflow-hidden group shadow-2xl transition-all duration-700">
+        <div className="absolute -top-32 -right-32 size-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-6 mb-4">
+            <div className="size-16 rounded-[24px] bg-primary flex items-center justify-center shadow-2xl shadow-primary/40 transform -rotate-6 group-hover:rotate-0 transition-transform duration-500">
+               <span className="material-symbols-outlined text-slate-900 text-3xl font-black">finance_chip</span>
+            </div>
+            <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-tight">
+              Ecossistema <span className="text-primary">Financeiro</span>
+            </h1>
+          </div>
+          <p className="text-slate-900/40 dark:text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] ml-1">
             {(userRole === 'merchant' || isMerchantPreview)
-              ? `Acompanhe ganhos e repasses do estabelecimento ${activeMerchant?.store_name}.` 
-              : 'Acompanhe a saúde financeira e o desempenho de vendas da plataforma.'}
+              ? `Performance e repasses do estabelecimento ${activeMerchant?.store_name}` 
+              : 'Gestão de faturamento, comissões e saúde econômica global'}
           </p>
         </div>
-        <div className="flex gap-3">
+
+        <div className="relative z-10 flex flex-wrap gap-5">
           {userRole === 'admin' && !isMerchantPreview && (
             <button 
               onClick={async () => {
@@ -104,75 +112,81 @@ export default function FinancialTab() {
                 }
               }}
               disabled={isSaving}
-              className="flex items-center justify-center rounded-2xl h-12 px-6 bg-emerald-500 text-white hover:brightness-110 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+              className="flex items-center justify-center rounded-full h-16 px-10 bg-emerald-500 text-white hover:scale-105 active:scale-95 text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl shadow-emerald-500/30 disabled:opacity-50"
             >
               {isSaving ? (
-                <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
+                <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin mr-3" />
               ) : (
-                <span className="material-symbols-outlined text-lg mr-2">save</span>
+                <span className="material-symbols-outlined text-xl mr-3 font-black">save</span>
               )}
-              Salvar Alterações
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
             </button>
           )}
-          <button className="flex items-center justify-center rounded-2xl h-12 px-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
-            <span className="material-symbols-outlined text-lg mr-2 text-slate-400">picture_as_pdf</span>
-            Relatório PDF
+          <button className="flex items-center justify-center rounded-full h-16 px-10 bg-white/60 dark:bg-slate-800/60 border border-white/80 dark:border-white/10 hover:bg-white text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-xl backdrop-blur-md">
+            <span className="material-symbols-outlined text-xl mr-3 text-slate-900 dark:text-primary font-black">picture_as_pdf</span>
+            Relatório
           </button>
-          <button className="flex items-center justify-center rounded-2xl h-12 px-6 bg-primary text-slate-900 hover:brightness-110 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20">
-            <span className="material-symbols-outlined text-lg mr-2">download</span>
-            Exportar Dados
+          <button className="flex items-center justify-center rounded-full h-16 px-10 bg-slate-900 dark:bg-primary text-white dark:text-slate-900 hover:scale-105 active:scale-95 text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl shadow-black/20">
+            <span className="material-symbols-outlined text-xl mr-3 font-black">download</span>
+            Exportar
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* KPI Cards - Glass Style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {[
           { 
-            label: 'Vendas Totais (Bruto)', 
+            label: 'Faturamento Bruto', 
             val: `R$ ${(effectiveDashboardData.totalRevenue || 0).toFixed(2).replace('.', ',')}`, 
-            trend: 'Total histórico', 
+            trend: 'Volume Total', 
             icon: 'payments', 
-            color: 'bg-primary/10 text-primary', 
-            trendCol: 'text-slate-500' 
+            color: 'text-slate-900 dark:text-white', 
+            bg: 'bg-white/40'
           },
           { 
             label: 'Pedidos Concluídos', 
             val: effectiveDashboardData.completedOrdersCount || 0, 
             trend: `${(effectiveDashboardData.deliverySuccessRate || 0).toFixed(1)}% de sucesso`, 
             icon: 'check_circle', 
-            color: 'bg-emerald-50 text-emerald-500', 
-            trendCol: 'text-emerald-500' 
+            color: 'text-emerald-500', 
+            bg: 'bg-emerald-500/10'
           },
           { 
-            label: userRole === 'merchant' || isMerchantPreview ? 'Taxas IZI' : 'Comissões Totais', 
+            label: userRole === 'merchant' || isMerchantPreview ? 'Taxas IZI' : 'Comissões IZI', 
             val: `R$ ${(effectiveDashboardData.totalCommission || 0).toFixed(2).replace('.', ',')}`, 
-            trend: userRole === 'merchant' || isMerchantPreview ? 'Comissão da plataforma' : 'Receita da IZI', 
+            trend: 'Revenue Plataforma', 
             icon: 'percent', 
-            color: 'bg-red-50 text-red-500', 
-            trendCol: 'text-red-500' 
+            color: 'text-rose-500', 
+            bg: 'bg-rose-500/10'
           },
           { 
-            label: userRole === 'merchant' || isMerchantPreview ? 'Líquido a Receber' : 'Lucro Líquido', 
+            label: userRole === 'merchant' || isMerchantPreview ? 'Líquido a Receber' : 'Margem Líquida', 
             val: `R$ ${(effectiveDashboardData.netProfit || 0).toFixed(2).replace('.', ',')}`, 
-            trend: 'Saldo disponível', 
+            trend: 'Saldo Consolidado', 
             icon: 'account_balance_wallet', 
-            color: 'bg-blue-50 text-blue-500', 
-            trendCol: 'text-blue-500' 
+            color: 'text-blue-500', 
+            bg: 'bg-blue-500/10'
           },
         ].map((kpi, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-2xl ${kpi.color}`}>
-                <span className="material-symbols-outlined">{kpi.icon}</span>
+          <motion.div 
+            key={i} 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl p-10 rounded-[48px] border border-white/80 dark:border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-2 group"
+          >
+            <div className="flex justify-between items-start mb-8">
+              <div className={`size-16 rounded-[24px] ${kpi.bg} ${kpi.color} flex items-center justify-center border border-white/20 shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+                <span className="material-symbols-outlined text-3xl font-black">{kpi.icon}</span>
               </div>
-              <span className={`text-[10px] font-black uppercase tracking-widest ${kpi.trendCol} flex items-center gap-1`}>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900/40 dark:text-slate-500">
                 {kpi.trend}
               </span>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">{kpi.val}</h3>
-          </div>
+            <p className="text-[10px] font-black text-slate-900 dark:text-slate-400 uppercase tracking-[0.3em] mb-3 opacity-60">{kpi.label}</p>
+            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{kpi.val}</h3>
+          </motion.div>
         ))}
       </div>
 
@@ -181,18 +195,20 @@ export default function FinancialTab() {
         <motion.section 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden mt-8 mb-8"
+          className="bg-slate-900/90 dark:bg-black/80 backdrop-blur-3xl rounded-[48px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden mt-12 mb-12 group"
         >
-          <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
-             <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">hub</span>
-                  Monitor de Split do Ecossistema
+          <div className="p-10 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none" />
+             <div className="relative z-10">
+                <h3 className="text-2xl font-black text-white tracking-tighter uppercase flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary text-3xl animate-pulse">hub</span>
+                  Pulso de Split Financeiro
                 </h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Detalhamento de Repasses e Receita IZI</p>
+                <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.3em] mt-1">Algoritmo de Distribuição em Tempo Real</p>
              </div>
-             <div className="flex gap-2">
-                <div className="px-4 py-2 rounded-xl bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-widest">Faturamento: R$ {effectiveDashboardData.totalRevenue.toLocaleString('pt-BR')}</div>
+             <div className="relative z-10 bg-white/5 border border-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl">
+                <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Faturamento Global: </span>
+                <span className="text-lg font-black text-primary ml-2">R$ {effectiveDashboardData.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
              </div>
           </div>
 
@@ -207,9 +223,9 @@ export default function FinancialTab() {
                   <div className={`size-12 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                      <span className="material-symbols-outlined font-black">{item.icon}</span>
                   </div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
-                  <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter italic">R$ {item.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h4>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1 opacity-60">{item.sub}</p>
+                  <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-1">{item.label}</p>
+                  <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {item.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h4>
+                  <p className="text-[8px] font-bold text-slate-900 uppercase tracking-tight mt-1 opacity-60">{item.sub}</p>
                </div>
              ))}
           </div>
@@ -218,7 +234,7 @@ export default function FinancialTab() {
              <div className="bg-slate-900 dark:bg-black rounded-[24px] p-6 flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5">
                 <div className="flex-1 space-y-2">
                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">Composição da Liquidez</p>
+                      <p className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Composição da Liquidez</p>
                       <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Lucro Estimado: R$ {effectiveDashboardData.ecosystem.netPlatformProfit.toLocaleString('pt-BR')}</p>
                    </div>
                    <div className="h-3 bg-white/5 rounded-full flex overflow-hidden border border-white/5">
@@ -233,8 +249,8 @@ export default function FinancialTab() {
                       <span className="material-symbols-outlined font-black">verified_user</span>
                    </div>
                    <div>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Saldo Bloqueado</p>
-                      <p className="text-sm font-black text-white italic">R$ {(effectiveDashboardData.totalRevenue * 0.05).toLocaleString('pt-BR')} <span className="text-[10px] text-slate-500 font-bold ml-1">(Reserva Cautelar)</span></p>
+                      <p className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Saldo Bloqueado</p>
+                      <p className="text-sm font-black text-white">R$ {(effectiveDashboardData.totalRevenue * 0.05).toLocaleString('pt-BR')} <span className="text-[10px] text-slate-900 font-bold ml-1">(Reserva Cautelar)</span></p>
                    </div>
                 </div>
              </div>
@@ -265,10 +281,10 @@ export default function FinancialTab() {
                
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 group-hover:border-primary/20 transition-all">
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Taxa de Comissão</p>
+                    <p className="text-[10px] font-black text-slate-900 dark:text-slate-900 uppercase tracking-widest mb-2">Taxa de Comissão</p>
                     <div className="flex items-end gap-2">
                       <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{(activeMerchant?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
-                      <span className="text-[10px] font-bold text-slate-400 mb-1.5 whitespace-nowrap">por pedido concluído</span>
+                      <span className="text-[10px] font-bold text-slate-900 mb-1.5 whitespace-nowrap">por pedido concluído</span>
                     </div>
                   </div>
                   
@@ -301,7 +317,7 @@ export default function FinancialTab() {
             <span className="material-symbols-outlined text-primary">history_edu</span>
             Histórico de Pedidos
           </h4>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
             {displayOrders.length} pedidos encontrados
           </span>
         </div>
@@ -309,13 +325,13 @@ export default function FinancialTab() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50">
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data / Hora</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ref</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Bruto</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa IZI</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Líquido</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Data / Hora</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center">Ref</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Cliente</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Valor Bruto</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Taxa IZI</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Líquido</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -328,15 +344,15 @@ export default function FinancialTab() {
                 const clientName = tr.user_name || (tr.user ? tr.user.name : 'Consumidor');
                 return (
                   <tr key={tr.id} className="hover:bg-primary/5 transition-colors group">
-                    <td className="px-8 py-6 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <td className="px-8 py-6 text-xs font-bold text-slate-900 dark:text-slate-900">
                       {new Date(tr.created_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-slate-100 tracking-tight uppercase text-center">
                       #{tr.id.slice(0, 5)}
                     </td>
-                    <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">
+                    <td className="px-8 py-6 text-sm font-bold text-slate-900 dark:text-slate-300 uppercase">
                       <p className="line-clamp-1">{clientName || 'Cliente IZI'}</p>
-                      <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">
+                      <span className="text-[9px] font-black text-slate-900 block uppercase tracking-tighter">
                         {tr.service_type === 'coin_purchase' ? '🛒 App' : tr.service_type === 'entrega_avulsa' ? '📦 Entrega Avulsa' : tr.service_type || 'Pedido'}
                       </span>
                     </td>
@@ -359,7 +375,7 @@ export default function FinancialTab() {
               })}
               {displayOrders.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-8 py-20 text-center text-slate-400 text-sm font-bold">
+                  <td colSpan={7} className="px-8 py-20 text-center text-slate-900 text-sm font-bold">
                     Nenhum pedido encontrado.
                   </td>
                 </tr>
@@ -380,53 +396,58 @@ function StandaloneDeliveriesMonitor() {
 
   return (
     <motion.section 
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden mt-8 mb-8"
+      className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl rounded-[48px] border border-white/80 dark:border-white/5 shadow-2xl overflow-hidden mt-12 mb-12 group"
     >
-      <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-blue-500/5">
-         <div>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-               <span className="material-symbols-outlined text-blue-500 font-fill">local_shipping</span>
+      <div className="p-10 border-b border-white/40 dark:border-white/5 flex items-center justify-between bg-blue-500/5 relative overflow-hidden">
+         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-blue-500/10 transition-all duration-1000" />
+         <div className="relative z-10">
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-4 uppercase tracking-tighter">
+               <span className="material-symbols-outlined text-blue-500 font-black text-3xl">local_shipping</span>
                Monitor de Entregas Avulsas
             </h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Análise Estratégica de Volume e Eficiência por KM</p>
+            <p className="text-[10px] font-black text-slate-900/40 dark:text-slate-500 uppercase tracking-[0.4em] mt-2">Análise Estratégica de Volume e Eficiência por KM</p>
          </div>
-         <div className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase tracking-widest">
+         <div className="relative z-10 px-8 py-4 rounded-full bg-blue-500 text-white shadow-xl shadow-blue-500/20 text-[10px] font-black uppercase tracking-widest">
             {metrics.count} Entregas Realizadas
          </div>
       </div>
-      <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
          {[
             { label: 'Volume Total (Pedidos)', val: metrics.count, sub: 'Chamadas Avulsas', icon: 'numbers', color: 'text-slate-900 dark:text-white' },
             { label: 'Receita Total Avulsa', val: `R$ ${metrics.revenue.toLocaleString('pt-BR')}`, sub: 'Faturamento Bruto', icon: 'payments', color: 'text-emerald-500' },
             { label: 'Kilometragem Total', val: `${metrics.totalDistance.toFixed(1)} KM`, sub: 'Distância Percorrida', icon: 'distance', color: 'text-blue-500' },
             { label: 'Eficiência (Receita / KM)', val: `R$ ${metrics.avgRevenuePerKm.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, sub: 'Ticket Médio por KM', icon: 'query_stats', color: 'text-primary' },
          ].map((item, i) => (
-            <div key={i} className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-all">
-               <div className="size-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 flex items-center justify-center mb-4 text-slate-400">
-                  <span className="material-symbols-outlined font-black text-lg">{item.icon}</span>
+            <div key={i} className="p-8 rounded-[40px] bg-white/60 dark:bg-slate-800/40 border border-white/80 dark:border-white/5 shadow-xl transition-all hover:-translate-y-2 group/card">
+               <div className="size-14 rounded-2xl bg-white dark:bg-slate-900 border border-slate-900/5 dark:border-white/10 flex items-center justify-center mb-6 text-slate-900 dark:text-white shadow-lg group-hover/card:scale-110 transition-transform">
+                  <span className="material-symbols-outlined font-black text-2xl">{item.icon}</span>
                </div>
-               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
-               <h4 className={`text-xl font-black ${item.color} tracking-tight`}>{item.val}</h4>
-               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1 opacity-60">{item.sub}</p>
+               <p className="text-[10px] font-black text-slate-900/40 dark:text-slate-400 uppercase tracking-widest mb-2">{item.label}</p>
+               <h4 className={`text-3xl font-black ${item.color} tracking-tighter leading-none`}>{item.val}</h4>
+               <p className="text-[9px] font-bold text-slate-900/40 dark:text-slate-500 uppercase tracking-tight mt-2">{item.sub}</p>
             </div>
          ))}
       </div>
-      <div className="px-8 pb-8 pt-4">
-         <div className="p-6 rounded-[24px] bg-blue-500/5 border border-blue-500/10 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-               <div className="size-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  <span className="material-symbols-outlined font-black">insights</span>
+      <div className="px-10 pb-10 pt-4">
+         <div className="p-8 rounded-[40px] bg-slate-900 dark:bg-black border border-white/10 flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 blur-3xl pointer-events-none" />
+            <div className="flex items-center gap-8 relative z-10">
+               <div className="size-20 rounded-[28px] bg-blue-500 text-white flex items-center justify-center shadow-2xl shadow-blue-500/40 transform -rotate-12">
+                  <span className="material-symbols-outlined font-black text-4xl">insights</span>
                </div>
                <div>
-                  <p className="text-sm font-black text-slate-900 dark:text-white">Insight Estratégico</p>
-                  <p className="text-xs text-slate-500">Seu ticket por KM está em <span className="font-bold text-blue-500">R$ {metrics.avgRevenuePerKm.toFixed(2)}</span>. Considere ajustar a Taxa por KM nas configurações caso queira otimizar a lucratividade.</p>
+                  <p className="text-xl font-black text-white uppercase tracking-tighter mb-2">Insight Estratégico</p>
+                  <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
+                    Seu ticket por KM está em <span className="font-black text-blue-400">R$ {metrics.avgRevenuePerKm.toFixed(2)}</span>. 
+                    Considere ajustar a Taxa por KM nas configurações caso queira otimizar a lucratividade operacional.
+                  </p>
                </div>
             </div>
             <button 
               onClick={() => setActiveTab('settings')}
-              className="h-10 px-6 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shrink-0"
+              className="h-16 px-12 rounded-full bg-white text-slate-900 text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shrink-0 shadow-2xl relative z-10"
             >
                Ajustar Taxas
             </button>
@@ -537,11 +558,11 @@ function BatchPayoutManager() {
                <span className="material-symbols-outlined text-emerald-500 font-fill">account_balance_wallet</span>
                Conciliação & Liquidação em Lote
             </h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gerencie repasses pendentes de forma consolidada</p>
+            <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-1">Gerencie repasses pendentes de forma consolidada</p>
          </div>
          <div className="flex items-center gap-6">
             <div className="flex flex-col items-end">
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Geral Pendente</span>
+               <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Total Geral Pendente</span>
                <span className="text-xl font-black text-emerald-500">
                   R$ {(pendingByMerchant.reduce((a, b) => a + b.amount, 0) + pendingByPartner.reduce((a, b) => a + b.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                </span>
@@ -558,7 +579,7 @@ function BatchPayoutManager() {
       <div className="p-8 space-y-12">
          {pendingByMerchant.length > 0 && (
            <section>
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                  <span className="size-1.5 rounded-full bg-purple-500"></span>
                  Repasses para Lojistas (Marketplace)
               </h4>
@@ -570,11 +591,11 @@ function BatchPayoutManager() {
                       </div>
                       <div>
                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate pr-8">{item.merchant.store_name}</p>
-                         <p className="text-[10px] font-bold text-slate-400 mt-1">{item.orderIds.length} pedidos pendentes</p>
+                         <p className="text-[10px] font-bold text-slate-900 mt-1">{item.orderIds.length} pedidos pendentes</p>
                       </div>
                       <div className="mt-8 flex items-end justify-between">
                          <div>
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Líquido</p>
+                            <p className="text-[8px] font-black text-slate-900 uppercase tracking-widest mb-1">Valor Líquido</p>
                             <h5 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h5>
                          </div>
                          <button 
@@ -592,7 +613,7 @@ function BatchPayoutManager() {
 
          {pendingByPartner.length > 0 && (
            <section>
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                  <span className="size-1.5 rounded-full bg-orange-500"></span>
                  Repasses para Parceiros (Pontos de Retirada)
               </h4>
@@ -604,11 +625,11 @@ function BatchPayoutManager() {
                       </div>
                       <div>
                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate pr-8">{item.partner.name}</p>
-                         <p className="text-[10px] font-bold text-slate-400 mt-1">{item.orderIds.length} retiradas pendentes</p>
+                         <p className="text-[10px] font-bold text-slate-900 mt-1">{item.orderIds.length} retiradas pendentes</p>
                       </div>
                       <div className="mt-8 flex items-end justify-between">
                          <div>
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Taxas de Retirada</p>
+                            <p className="text-[8px] font-black text-slate-900 uppercase tracking-widest mb-1">Taxas de Retirada</p>
                             <h5 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h5>
                          </div>
                          <button 
@@ -674,14 +695,14 @@ function ManageLoansSection() {
         {[
           { label: 'Total Emprestado', val: `Z ${totalEmprestado.toLocaleString('pt-BR')}`, icon: 'account_balance', color: 'text-emerald-500 bg-emerald-50' },
           { label: 'Montante a Receber', val: `Z ${totalAReceber.toLocaleString('pt-BR', {maximumFractionDigits:0})}`, icon: 'savings', color: 'text-primary bg-primary/10' },
-          { label: 'Inadimplentes', val: inadimplentes, icon: 'warning', color: inadimplentes > 0 ? 'text-red-500 bg-red-50' : 'text-slate-400 bg-slate-50' },
-          { label: 'Aguardando Análise', val: pendentes, icon: 'hourglass_top', color: pendentes > 0 ? 'text-indigo-500 bg-indigo-50 animate-pulse' : 'text-slate-400 bg-slate-50' },
+          { label: 'Inadimplentes', val: inadimplentes, icon: 'warning', color: inadimplentes > 0 ? 'text-red-500 bg-red-50' : 'text-slate-900 bg-slate-50' },
+          { label: 'Aguardando Análise', val: pendentes, icon: 'hourglass_top', color: pendentes > 0 ? 'text-indigo-500 bg-indigo-50 animate-pulse' : 'text-slate-900 bg-slate-50' },
         ].map((k, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[28px] border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className={`size-10 rounded-xl ${k.color} flex items-center justify-center mb-3`}>
               <span className="material-symbols-outlined text-lg">{k.icon}</span>
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{k.label}</p>
+            <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest">{k.label}</p>
             <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight mt-1">{k.val}</p>
           </div>
         ))}
@@ -695,11 +716,11 @@ function ManageLoansSection() {
               <span className="material-symbols-outlined text-emerald-500 font-fill">account_balance</span>
               Estúdio de Empréstimos
             </h4>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-1">
               {loans.length} registros • Juros compostos (Price) • Mora: 1% a.m. • Multa: 2%
             </p>
           </div>
-          <button onClick={fetchLoans} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
+          <button onClick={fetchLoans} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-900 hover:text-primary transition-all shadow-sm">
             <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
           </button>
         </div>
@@ -707,13 +728,13 @@ function ManageLoansSection() {
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50">
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Concedido</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">A Pagar</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Parcelas</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vencimento</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Data</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Cliente</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Concedido</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">A Pagar</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Parcelas</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest">Vencimento</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -723,12 +744,12 @@ function ManageLoansSection() {
                 onClick={() => setSelectedLoan(l)}
                 className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
               >
-                <td className="px-8 py-6 text-xs text-slate-500 font-bold whitespace-nowrap">
+                <td className="px-8 py-6 text-xs text-slate-900 font-bold whitespace-nowrap">
                   {new Date(l.created_at).toLocaleDateString('pt-BR')}
                 </td>
                 <td className="px-8 py-6">
                   <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{l.user?.name || 'Cliente Izi'}</p>
-                  <p className="text-[9px] font-bold text-slate-400">{l.user?.phone || ''}</p>
+                  <p className="text-[9px] font-bold text-slate-900">{l.user?.phone || ''}</p>
                 </td>
                 <td className="px-8 py-6">
                   <p className="text-sm font-black text-emerald-500">Z {parseFloat(l.amount).toLocaleString('pt-BR')}</p>
@@ -737,10 +758,10 @@ function ManageLoansSection() {
                   <p className="text-sm font-black text-slate-900 dark:text-white">Z {(parseFloat(l.amount) * (1 + (parseFloat(l.interest_rate) || 10) / 100)).toLocaleString('pt-BR')}</p>
                 </td>
                 <td className="px-8 py-6">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{l.installments || 1}x</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-300">{l.installments || 1}x</p>
                 </td>
                 <td className="px-8 py-6">
-                  <p className={`text-xs font-bold ${l.status === 'active' && new Date(l.due_date) < new Date() ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'}`}>
+                  <p className={`text-xs font-bold ${l.status === 'active' && new Date(l.due_date) < new Date() ? 'text-red-500' : 'text-slate-800 dark:text-slate-300'}`}>
                     {l.status === 'pending' ? 'Sob Análise' : new Date(l.due_date).toLocaleDateString('pt-BR')}
                   </p>
                 </td>
@@ -917,10 +938,10 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
             </div>
             <div>
               <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Estúdio do Crédito</h2>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">#{loan.id.slice(0,8)}</p>
+              <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest">#{loan.id.slice(0,8)}</p>
             </div>
           </div>
-          <button onClick={onClose} className="size-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400">
+          <button onClick={onClose} className="size-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-900">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -929,12 +950,12 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
           {/* Info do cliente + status */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cliente</p>
+              <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Cliente</p>
               <p className="text-sm font-black text-slate-900 dark:text-white">{loan.user?.name}</p>
-              <p className="text-xs font-bold text-slate-500">{loan.user?.phone}</p>
+              <p className="text-xs font-bold text-slate-900">{loan.user?.phone}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status Atual</p>
+              <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Status Atual</p>
               <span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                 loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
                 loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
@@ -953,7 +974,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                   
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Valor a Liberar (Z)</label>
+                       <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Valor a Liberar (Z)</label>
                        <input 
                          type="number"
                          value={approvedAmount}
@@ -962,7 +983,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                        />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Taxa de Juros (%)</label>
+                       <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Taxa de Juros (%)</label>
                        <input 
                          type="number"
                          value={interestRate}
@@ -974,7 +995,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Parcelas</label>
+                       <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Parcelas</label>
                        <select 
                          value={approvedInstallments}
                          onChange={(e) => setApprovedInstallments(Number(e.target.value))}
@@ -984,7 +1005,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                        </select>
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Vencimento Inicial</label>
+                       <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Vencimento Inicial</label>
                        <input 
                          type="date"
                          value={approvedDueDate}
@@ -996,14 +1017,14 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
 
                   <div className="pt-4 border-t border-white/5 space-y-2 px-2">
                      <div className="flex justify-between items-center">
-                       <p className="text-[10px] font-black text-slate-400 uppercase">Parcela (Price):</p>
+                       <p className="text-[10px] font-black text-slate-900 uppercase">Parcela (Price):</p>
                        <p className="text-lg font-black text-white">
                          {approvedInstallments}x Z {(interestRate > 0 ? Number(approvedAmount) * ((interestRate/100) * Math.pow(1+interestRate/100, approvedInstallments)) / (Math.pow(1+interestRate/100, approvedInstallments) - 1) : Number(approvedAmount) / approvedInstallments).toFixed(2)}
                        </p>
                      </div>
                      <div className="flex justify-between items-center">
-                       <p className="text-[10px] font-black text-slate-400 uppercase">Montante Total:</p>
-                       <p className="text-xl font-black text-emerald-400 italic">
+                       <p className="text-[10px] font-black text-slate-900 uppercase">Montante Total:</p>
+                       <p className="text-xl font-black text-emerald-400">
                          Z {(interestRate > 0 ? Number(approvedAmount) * ((interestRate/100) * Math.pow(1+interestRate/100, approvedInstallments)) / (Math.pow(1+interestRate/100, approvedInstallments) - 1) * approvedInstallments : Number(approvedAmount)).toLocaleString('pt-BR', {maximumFractionDigits: 0})}
                        </p>
                      </div>
@@ -1031,11 +1052,11 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                         <p className="text-2xl font-black">Z {amt.toLocaleString('pt-BR')}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Parcela (Price)</p>
+                        <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-1">Parcela (Price)</p>
                         <p className="text-2xl font-black text-emerald-400">{inst}x {pmt.toFixed(2)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Montante</p>
+                        <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-1">Montante</p>
                         <p className="text-2xl font-black text-emerald-400">Z {totalDue.toFixed(0)}</p>
                       </div>
                     </div>
@@ -1043,16 +1064,16 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                     {/* Grid de datas */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
-                        <span className="material-symbols-outlined text-slate-400 text-lg">calendar_today</span>
+                        <span className="material-symbols-outlined text-slate-900 text-lg">calendar_today</span>
                         <div>
-                          <p className="text-[9px] font-black text-slate-400 uppercase">Contratação</p>
+                          <p className="text-[9px] font-black text-slate-900 uppercase">Contratação</p>
                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(loan.created_at).toLocaleDateString('pt-BR')}</p>
                         </div>
                       </div>
                       <div className={`flex items-center gap-3 p-4 rounded-2xl ${isOverdue ? 'bg-red-50' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
-                        <span className={`material-symbols-outlined text-lg ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>event_busy</span>
+                        <span className={`material-symbols-outlined text-lg ${isOverdue ? 'text-red-500' : 'text-slate-900'}`}>event_busy</span>
                         <div>
-                          <p className="text-[9px] font-black text-slate-400 uppercase">Vencimento 1ª</p>
+                          <p className="text-[9px] font-black text-slate-900 uppercase">Vencimento 1ª</p>
                           <p className={`text-xs font-bold ${isOverdue ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}>{new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
                         </div>
                       </div>
@@ -1060,8 +1081,8 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
 
                     {/* Amortização resumida */}
                     <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/30 space-y-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Amortização (Tabela Price)</p>
-                      <div className="grid grid-cols-5 gap-2 text-[9px] font-black text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 pb-2">
+                      <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Amortização (Tabela Price)</p>
+                      <div className="grid grid-cols-5 gap-2 text-[9px] font-black text-slate-900 uppercase border-b border-slate-200 dark:border-slate-700 pb-2">
                         <span>Nº</span><span>Juros</span><span>Amort.</span><span>Parcela</span><span className="text-right">Saldo</span>
                       </div>
                       {(() => {
@@ -1076,7 +1097,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                               <span className="font-black text-slate-700 dark:text-slate-300">{i}ª</span>
                               <span className="text-red-400 font-bold">{j.toFixed(2)}</span>
                               <span className="text-emerald-500 font-bold">{a.toFixed(2)}</span>
-                              <span className="font-bold text-slate-600">{pmt.toFixed(2)}</span>
+                              <span className="font-bold text-slate-800">{pmt.toFixed(2)}</span>
                               <span className="font-black text-slate-700 dark:text-slate-300 text-right">{saldo.toFixed(2)}</span>
                             </div>
                           );
@@ -1109,8 +1130,8 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
 
                     {/* Regras legais */}
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/20 space-y-0.5">
-                      <p className="text-[8px] font-bold text-slate-400">• Juros compostos (Tabela Price) • CET: {((Math.pow(1+rate,12)-1)*100).toFixed(1)}% a.a.</p>
-                      <p className="text-[8px] font-bold text-slate-400">• Multa: 2% sobre parcela vencida (CDC Art. 52) • Mora: 1% a.m. pro-rata (CC Art. 406)</p>
+                      <p className="text-[8px] font-bold text-slate-900">• Juros compostos (Tabela Price) • CET: {((Math.pow(1+rate,12)-1)*100).toFixed(1)}% a.a.</p>
+                      <p className="text-[8px] font-bold text-slate-900">• Multa: 2% sobre parcela vencida (CDC Art. 52) • Mora: 1% a.m. pro-rata (CC Art. 406)</p>
                     </div>
                   </div>
                 );
@@ -1140,7 +1161,7 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
                 <>
                   <button 
                     onClick={onClose}
-                    className="flex-1 h-14 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                    className="flex-1 h-14 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-900 text-xs font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
                   >
                     Fechar
                   </button>
@@ -1225,7 +1246,7 @@ function PreApprovedLimitsSection() {
                 <span className="material-symbols-outlined font-fill">public</span>
               </div>
               <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Limite Base</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Válido para todos os novos usuários</p>
+              <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-1">Válido para todos os novos usuários</p>
             </div>
             
             <div className="mt-10">
@@ -1239,7 +1260,7 @@ function PreApprovedLimitsSection() {
                   className="bg-transparent text-4xl font-black text-slate-900 dark:text-white outline-none w-full border-b-2 border-slate-100 dark:border-slate-800 focus:border-primary transition-all pb-2 tabular-nums"
                 />
               </div>
-              <p className="text-[9px] text-slate-500 font-bold italic tracking-tight">Alteração reflete instantaneamente para clientes sem limite customizado</p>
+              <p className="text-[9px] text-slate-900 font-bold tracking-tight">Alteração reflete instantaneamente para clientes sem limite customizado</p>
             </div>
           </div>
         </div>
@@ -1365,8 +1386,8 @@ function MasterFinancialControl() {
        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
           <div className="flex justify-between items-center mb-8">
             <div className="flex flex-col gap-1">
-               <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Gateways Ativos</h4>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle de Meios de Pagamento Disponíveis</p>
+               <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Gateways Ativos</h4>
+               <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Controle de Meios de Pagamento Disponíveis</p>
             </div>
             <div className="flex items-center gap-4">
               <button 
@@ -1403,7 +1424,7 @@ function MasterFinancialControl() {
                  }`}
                >
                   <span className={`material-symbols-outlined ${m.color} text-3xl mb-3`}>{m.icon}</span>
-                  <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">{m.label}</span>
+                  <span className="text-[11px] font-black text-slate-800 dark:text-slate-300 uppercase tracking-widest">{m.label}</span>
                   <div className={`mt-3 h-1.5 w-8 rounded-full ${appSettings.paymentmethodsactive?.[m.id] ? 'bg-primary shadow-[0_0_10px_rgba(255,217,0,0.5)]' : 'bg-slate-300'}`} />
                </button>
              ))}
@@ -1418,7 +1439,7 @@ function MasterFinancialControl() {
                   <div className="size-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-100 dark:border-indigo-500/20">
                      <span className="material-symbols-outlined text-xl">percent</span>
                   </div>
-                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Taxa de Serviço Global</span>
+                  <span className="text-[11px] font-black text-slate-900 dark:text-slate-900 uppercase tracking-widest">Taxa de Serviço Global</span>
                </div>
                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
@@ -1427,7 +1448,7 @@ function MasterFinancialControl() {
                    onChange={(e) => handleUpdate('serviceFee', parseFloat(e.target.value))}
                    className="w-12 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
                  />
-                 <span className="text-[11px] text-slate-400 font-black">%</span>
+                 <span className="text-[11px] text-slate-900 font-black">%</span>
                </div>
             </div>
 
@@ -1436,10 +1457,10 @@ function MasterFinancialControl() {
                   <div className="size-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-100 dark:border-emerald-500/20">
                      <span className="material-symbols-outlined text-xl">monetization_on</span>
                   </div>
-                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Valor Moeda (1 Z)</span>
+                  <span className="text-[11px] font-black text-slate-900 dark:text-slate-900 uppercase tracking-widest">Valor Moeda (1 Z)</span>
                </div>
                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
-                 <span className="text-[11px] text-slate-400 font-black">R$</span>
+                 <span className="text-[11px] text-slate-900 font-black">R$</span>
                  <input 
                    type="number" step="0.01"
                    value={globalSettings?.izi_coin_value ?? appSettings.iziCoinRate}
@@ -1460,7 +1481,7 @@ function MasterFinancialControl() {
                   <div className="size-10 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-100 dark:border-amber-500/20">
                      <span className="material-symbols-outlined text-xl">trending_up</span>
                   </div>
-                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Juros Empréstimo</span>
+                  <span className="text-[11px] font-black text-slate-900 dark:text-slate-900 uppercase tracking-widest">Juros Empréstimo</span>
                </div>
                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
@@ -1469,7 +1490,7 @@ function MasterFinancialControl() {
                    onChange={(e) => handleUpdate('loan_interest_rate', parseFloat(e.target.value))}
                    className="w-12 bg-transparent text-sm font-black text-slate-900 dark:text-white outline-none text-right"
                  />
-                 <span className="text-[11px] text-slate-400 font-black">%</span>
+                 <span className="text-[11px] text-slate-900 font-black">%</span>
                </div>
             </div>
           </div>
@@ -1478,14 +1499,14 @@ function MasterFinancialControl() {
        {/* 3. PLAN SUBSCRIPTION FEES CARD */}
        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
           <div className="space-y-5">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-4 italic">Mensalidades dos Planos</p>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] px-2 mb-4">Mensalidades dos Planos</p>
             
             <div className="flex items-center justify-between px-2">
                <div className="flex items-center gap-4">
                   <div className="size-10 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-100 dark:border-blue-500/20">
                      <span className="material-symbols-outlined text-xl">storefront</span>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Market (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Plano Market (R$)</span>
                </div>
                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
@@ -1502,7 +1523,7 @@ function MasterFinancialControl() {
                   <div className="size-10 rounded-2xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-500 border border-purple-100 dark:border-purple-500/20">
                      <span className="material-symbols-outlined text-xl">workspace_premium</span>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Full (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Plano Full (R$)</span>
                </div>
                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
@@ -1519,7 +1540,7 @@ function MasterFinancialControl() {
                   <div className="size-10 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-100 dark:border-orange-500/20">
                      <span className="material-symbols-outlined text-xl">auto_transmission</span>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Avulso (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Plano Avulso (R$)</span>
                </div>
                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
@@ -1536,7 +1557,7 @@ function MasterFinancialControl() {
                   <div className="size-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-100 dark:border-emerald-500/20">
                      <span className="material-symbols-outlined text-xl">handshake</span>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Plano Click & Retire (R$)</span>
+                  <span className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Plano Click & Retire (R$)</span>
                </div>
                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner">
                  <input 
@@ -1566,7 +1587,7 @@ function MasterFinancialControl() {
           
           <div className="space-y-5 relative z-10">
             <div className="flex justify-between items-center group/item">
-               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Taxa de Saque</span>
+               <span className="text-xs font-bold text-slate-900 group-hover:text-slate-200 transition-colors">Taxa de Saque</span>
                <div className="flex items-center gap-3">
                   <input 
                     type="number" step="0.5"
@@ -1579,7 +1600,7 @@ function MasterFinancialControl() {
             </div>
 
             <div className="flex justify-between items-center group/item">
-               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Valor Mínimo</span>
+               <span className="text-xs font-bold text-slate-900 group-hover:text-slate-200 transition-colors">Valor Mínimo</span>
                <div className="flex items-center gap-3">
                   <span className="text-[10px] text-white/30 font-black">R$</span>
                   <input 
@@ -1592,7 +1613,7 @@ function MasterFinancialControl() {
             </div>
 
             <div className="flex justify-between items-center group/item">
-               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Prazo (Horas)</span>
+               <span className="text-xs font-bold text-slate-900 group-hover:text-slate-200 transition-colors">Prazo (Horas)</span>
                <div className="flex items-center gap-3">
                   <input 
                     type="number"
@@ -1605,7 +1626,7 @@ function MasterFinancialControl() {
             </div>
 
             <div className="flex justify-between items-center group/item">
-               <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200 transition-colors">Dia de Pagamento</span>
+               <span className="text-xs font-bold text-slate-900 group-hover:text-slate-200 transition-colors">Dia de Pagamento</span>
                <input 
                  type="text"
                  value={appSettings.withdrawal_day || 'Sexta-feira'}
@@ -1667,7 +1688,7 @@ function WithdrawalRequestsSection() {
           
           let entityInfo: any = null;
           let typeLabel = 'Desconhecido';
-          let typeColor = 'bg-slate-100 text-slate-500';
+          let typeColor = 'bg-slate-100 text-slate-900';
 
           if (driver) {
             entityInfo = {
@@ -1761,17 +1782,17 @@ function WithdrawalRequestsSection() {
     <section className="space-y-6 mb-12">
       <div className="flex items-center justify-between px-2">
         <div>
-          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3 italic uppercase">
+          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3 uppercase">
             <span className="material-symbols-outlined text-primary font-fill">payments</span>
             Fila de Liquidação Financeira
           </h4>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+          <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-1">
             {requests.length} solicitações pendentes de análise e pagamento
           </p>
         </div>
         <button 
           onClick={fetchRequests} 
-          className="size-11 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm active:scale-90"
+          className="size-11 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-900 hover:text-primary transition-all shadow-sm active:scale-90"
         >
           <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
         </button>
@@ -1780,12 +1801,12 @@ function WithdrawalRequestsSection() {
       {loading && requests.length === 0 ? (
         <div className="py-20 flex flex-col items-center gap-4">
           <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizando fila...</p>
+          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Sincronizando fila...</p>
         </div>
       ) : requests.length === 0 ? (
         <div className="bg-slate-50 dark:bg-slate-800/20 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[40px] py-20 flex flex-col items-center gap-3 opacity-60">
           <span className="material-symbols-outlined text-5xl text-slate-300">verified_user</span>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tudo em dia! Nenhuma solicitação pendente.</p>
+          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Tudo em dia! Nenhuma solicitação pendente.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1801,13 +1822,13 @@ function WithdrawalRequestsSection() {
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit ${r.typeColor}`}>
                     {r.typeLabel}
                   </span>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                  <p className="text-[9px] font-bold text-slate-900 uppercase tracking-tight">
                     {new Date(r.created_at).toLocaleString('pt-BR')}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Valor do Saque</p>
-                  <h5 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter italic">
+                  <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-0.5">Valor do Saque</p>
+                  <h5 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
                     R$ {parseFloat(r.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </h5>
                 </div>
@@ -1822,13 +1843,13 @@ function WithdrawalRequestsSection() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate">{r.user?.name || 'Titular Indisponível'}</p>
-                    <p className="text-[10px] font-bold text-slate-400 truncate">{r.user?.contact || 'Sem contato'}</p>
+                    <p className="text-[10px] font-bold text-slate-900 truncate">{r.user?.contact || 'Sem contato'}</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Informação de Pagamento</span>
+                    <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Informação de Pagamento</span>
                     <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">PIX Ativo</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1836,7 +1857,7 @@ function WithdrawalRequestsSection() {
                     <p className="text-xs font-black text-slate-900 dark:text-white break-all select-all">{r.user?.pix_key || 'CHAVE NÃO INFORMADA'}</p>
                   </div>
                   {r.user?.bank && (
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-7 italic">{r.user.bank}</p>
+                    <p className="text-[8px] font-bold text-slate-900 uppercase tracking-widest mt-2 ml-7">{r.user.bank}</p>
                   )}
                 </div>
 
@@ -1851,14 +1872,14 @@ function WithdrawalRequestsSection() {
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer"
                     />
-                    <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover/file:text-primary transition-colors">
+                    <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 group-hover/file:text-primary transition-colors">
                       <span className="material-symbols-outlined text-sm">{receiptFiles[r.id] ? 'check_circle' : 'attach_file'}</span>
                     </div>
                     <div className="flex-1">
                       <p className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-tight">
                         {receiptFiles[r.id] ? receiptFiles[r.id].name : 'Anexar Comprovante'}
                       </p>
-                      <p className="text-[8px] font-bold text-slate-400 uppercase opacity-60">PDF, JPG ou PNG</p>
+                      <p className="text-[8px] font-bold text-slate-900 uppercase opacity-60">PDF, JPG ou PNG</p>
                     </div>
                   </label>
 

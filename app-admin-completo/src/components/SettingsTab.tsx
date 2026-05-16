@@ -97,77 +97,70 @@ export default function SettingsTab() {
   };
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="space-y-10 animate-in fade-in duration-500 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 ml-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <span className="material-symbols-outlined text-primary">settings_applications</span>
+          <div className="flex items-center gap-4 mb-2">
+            <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
+              <span className="material-symbols-outlined text-primary text-2xl font-black">settings_applications</span>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">Configurações Globais</h1>
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight tracking-tighter uppercase">Configurações Globais</h1>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 ml-1">Controles operacionais, financeiros e de notificações da plataforma.</p>
+          <p className="text-[10px] font-black text-slate-900 dark:text-slate-900 uppercase tracking-[0.4em] opacity-60 ml-1">Controles operacionais e financeiros da plataforma</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Auto-save status indicator */}
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-            autoSaveStatus === 'saved' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border border-emerald-200 dark:border-emerald-500/30' :
-            autoSaveStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 border border-amber-200 dark:border-amber-500/30' :
-            autoSaveStatus === 'error' ? 'bg-red-50 dark:bg-red-500/10 text-red-600 border border-red-200 dark:border-red-500/30' :
-            'bg-slate-50 dark:bg-slate-800 text-slate-400 border border-slate-100 dark:border-slate-700'
+          <div className={`flex items-center gap-3 px-6 py-3 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-sm ${
+            autoSaveStatus === 'saved' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
+            autoSaveStatus === 'pending' ? 'bg-amber-500 text-white shadow-amber-500/20' :
+            autoSaveStatus === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
+            'bg-white/60 dark:bg-slate-800 text-slate-900 border border-white/80'
           }`}>
-            <span className={`material-symbols-outlined text-sm ${autoSaveStatus === 'pending' ? 'animate-spin' : ''}`}>
+            <span className={`material-symbols-outlined text-sm font-black ${autoSaveStatus === 'pending' ? 'animate-spin' : ''}`}>
               {autoSaveStatus === 'saved' ? 'check_circle' : autoSaveStatus === 'pending' ? 'sync' : autoSaveStatus === 'error' ? 'error' : 'cloud_done'}
             </span>
-            {autoSaveStatus === 'saved' ? 'Salvo' : autoSaveStatus === 'pending' ? 'Salvando...' : autoSaveStatus === 'error' ? 'Erro ao salvar' : 'Auto-save ativo'}
+            {autoSaveStatus === 'saved' ? 'Sincronizado' : autoSaveStatus === 'pending' ? 'Salvando...' : autoSaveStatus === 'error' ? 'Falha' : 'Cloud Ativo'}
           </div>
           <button
             onClick={() => handleSaveAppSettings()}
             disabled={isSaving}
-            className="px-6 py-3 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
+            className="px-8 py-4 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-full hover:bg-black active:scale-95 transition-all flex items-center gap-3 shadow-2xl disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-base">save</span>
-            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-          </button>
-          <button
-            onClick={() => fetchAppSettings()}
-            className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-base">refresh</span>
-            Recarregar
+            <span className="material-symbols-outlined text-lg">save</span>
+            {isSaving ? 'Gravando...' : 'Salvar Setup'}
           </button>
         </div>
       </div>
 
       {/* Identidade da plataforma */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-          <span className="material-symbols-outlined text-[120px]">store</span>
+      <section className="bg-white/40 backdrop-blur-2xl p-10 rounded-[48px] border border-white/50 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-10 opacity-[0.05] pointer-events-none">
+          <span className="material-symbols-outlined text-[140px]">store</span>
         </div>
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
-            <span className="material-symbols-outlined">storefront</span>
+        <div className="flex items-center gap-5 mb-10 relative z-10">
+          <div className="size-14 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shadow-inner">
+            <span className="material-symbols-outlined text-2xl font-black">storefront</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Identidade da Plataforma</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informações públicas do app</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Branding & Suporte</h2>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest opacity-40">Identidade visual do ecossistema</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Plataforma</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+          <div className="flex flex-col gap-3">
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-6">Nome da Plataforma</label>
             <input
-              className="px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary text-sm font-bold dark:text-white transition-all"
+              className="px-8 py-5 rounded-full bg-white/60 dark:bg-black/20 border border-white/80 dark:border-white/5 focus:ring-2 focus:ring-primary/20 text-sm font-black text-slate-900 dark:text-white transition-all shadow-inner outline-none"
               type="text"
               value={appSettings.appName}
               onChange={(e) => setAppSettings({ ...appSettings, appName: e.target.value })}
             />
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Suporte</label>
+          <div className="flex flex-col gap-3">
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-6">E-mail de Suporte</label>
             <input
-              className="px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary text-sm font-bold dark:text-white transition-all"
+              className="px-8 py-5 rounded-full bg-white/60 dark:bg-black/20 border border-white/80 dark:border-white/5 focus:ring-2 focus:ring-primary/20 text-sm font-black text-slate-900 dark:text-white transition-all shadow-inner outline-none"
               type="email"
               value={appSettings.supportEmail}
               onChange={(e) => setAppSettings({ ...appSettings, supportEmail: e.target.value })}
@@ -177,42 +170,42 @@ export default function SettingsTab() {
       </section>
 
       {/* Operacional & Manutenção */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-rose-50 text-rose-500 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20">
-            <span className="material-symbols-outlined">construction</span>
+      <section className="bg-white/40 backdrop-blur-2xl p-10 rounded-[48px] border border-white/50 shadow-xl">
+        <div className="flex items-center gap-5 mb-10">
+          <div className="size-14 rounded-2xl bg-rose-50 text-rose-500 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20 flex items-center justify-center shadow-inner">
+            <span className="material-symbols-outlined text-2xl font-black">construction</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Manutenção & Alertas</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle global de disponibilidade</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Disponibilidade</h2>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest opacity-40">Status do núcleo operacional</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          <div className={`flex items-center justify-between p-6 rounded-[28px] border transition-all ${appSettings.maintenance_mode ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-2xl ${appSettings.maintenance_mode ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
-                <span className="material-symbols-outlined text-lg">emergency_home</span>
+        <div className="grid grid-cols-1 gap-8">
+          <div className={`flex items-center justify-between p-8 rounded-[40px] border transition-all ${appSettings.maintenance_mode ? 'bg-rose-500 text-white border-rose-600 shadow-xl shadow-rose-500/20' : 'bg-white/60 dark:bg-slate-800 border-white/80 dark:border-slate-700 shadow-inner'}`}>
+            <div className="flex items-center gap-6">
+              <div className={`size-14 rounded-2xl flex items-center justify-center shadow-md ${appSettings.maintenance_mode ? 'bg-white text-rose-500' : 'bg-slate-100 text-slate-400'}`}>
+                <span className="material-symbols-outlined text-2xl font-black">emergency_home</span>
               </div>
               <div>
-                <span className="text-sm font-black text-slate-900 dark:text-white block">Modo Manutenção Global</span>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Se ativado, o app ficará indisponível para pedidos.</p>
+                <span className={`text-lg font-black uppercase tracking-tight block ${appSettings.maintenance_mode ? 'text-white' : 'text-slate-900 dark:text-white'}`}>Modo de Bloqueio Total</span>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${appSettings.maintenance_mode ? 'text-white/80' : 'text-slate-900 opacity-40'}`}>Suspende todos os pedidos na rede imediatamente.</p>
               </div>
             </div>
             <button
               onClick={() => setAppSettings({ ...appSettings, maintenance_mode: !appSettings.maintenance_mode })}
-              className={`w-14 h-8 rounded-full relative transition-all ${appSettings.maintenance_mode ? 'bg-rose-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              className={`w-20 h-10 rounded-full relative transition-all shadow-inner ${appSettings.maintenance_mode ? 'bg-white' : 'bg-slate-200 dark:bg-slate-600'}`}
             >
-              <div className={`absolute top-1.5 size-5 bg-white rounded-full shadow-md transition-all ${appSettings.maintenance_mode ? 'right-1.5' : 'left-1.5'}`}></div>
+              <div className={`absolute top-1.5 size-7 rounded-full shadow-2xl transition-all ${appSettings.maintenance_mode ? 'right-1.5 bg-rose-500' : 'left-1.5 bg-white'}`}></div>
             </button>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Anúncio Global (Banner Superior)</label>
+          <div className="flex flex-col gap-3">
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-6">Anúncio Global (Banner superior no APP)</label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-lg">campaign</span>
+              <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-primary text-2xl font-black">campaign</span>
               <input
-                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary text-sm font-bold dark:text-white"
+                className="w-full pl-16 pr-8 py-5 rounded-full bg-white/60 dark:bg-black/20 border border-white/80 dark:border-white/5 focus:ring-2 focus:ring-primary/20 text-sm font-black text-slate-900 dark:text-white shadow-inner outline-none"
                 type="text"
                 placeholder="Ex: Cupom IZI10 ativo em todo o app!"
                 value={appSettings.global_announcement || ''}
@@ -224,70 +217,70 @@ export default function SettingsTab() {
       </section>
 
       {/* Regras Financeiras IZI Pay */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-          <span className="material-symbols-outlined text-[150px]">payments</span>
+      <section className="bg-white/40 backdrop-blur-2xl p-10 rounded-[48px] border border-white/50 shadow-xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-10 opacity-[0.05] pointer-events-none">
+          <span className="material-symbols-outlined text-[180px]">payments</span>
         </div>
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20">
-            <span className="material-symbols-outlined">qr_code_2</span>
+        <div className="flex items-center gap-5 mb-10 relative z-10">
+          <div className="size-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20 flex items-center justify-center shadow-inner">
+            <span className="material-symbols-outlined text-2xl font-black">qr_code_2</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Ecossistema Financeiro IZI Pay</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Taxas de QR Code e Transferências</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">IZI Pay Gateway</h2>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest opacity-40">Taxas de processamento e liquidação</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-amber-50/50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-1">Comissão IZI Pay (Lojistas %)</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
+          <div className="bg-white/60 border border-white/80 rounded-[40px] p-8 space-y-4 shadow-inner">
+            <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1 ml-4">Fee IZI Pay (Lojistas %)</label>
             <div className="relative">
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-amber-600 focus:ring-2 focus:ring-amber-300 shadow-inner"
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl pl-6 pr-12 py-5 font-black text-3xl text-amber-600 focus:ring-2 focus:ring-amber-300 shadow-sm"
                 type="number" min="0" max="50" step="0.1"
                 value={appSettings.izi_pay_merchant_commission}
                 onChange={(e) => setAppSettings({ ...appSettings, izi_pay_merchant_commission: parseFloat(e.target.value) || 0 })}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 font-black text-sm">%</span>
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-amber-500 font-black text-lg">%</span>
             </div>
-            <p className="text-[9px] font-bold text-amber-700/60 uppercase tracking-widest leading-tight">Retido automaticamente em pagamentos via QR Code/Carteira no balcão.</p>
+            <p className="text-[9px] font-black text-slate-900/60 uppercase tracking-widest leading-relaxed px-4">Retido em transações via QR Code/Carteira no estabelecimento.</p>
           </div>
 
-          <div className="bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest mb-1">Taxa Transferência P2P (R$)</label>
+          <div className="bg-white/60 border border-white/80 rounded-[40px] p-8 space-y-4 shadow-inner">
+            <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1 ml-4">Taxa P2P (Fixo R$)</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-sm">R$</span>
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 font-black text-lg">R$</span>
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-2xl text-blue-600 focus:ring-2 focus:ring-blue-300 shadow-inner"
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl pl-14 pr-6 py-5 font-black text-3xl text-blue-600 focus:ring-2 focus:ring-blue-300 shadow-sm"
                 type="number" min="0" step="0.01"
                 value={appSettings.p2p_transfer_fee}
                 onChange={(e) => setAppSettings({ ...appSettings, p2p_transfer_fee: parseFloat(e.target.value) || 0 })}
               />
             </div>
-            <p className="text-[9px] font-bold text-blue-700/60 uppercase tracking-widest leading-tight">Valor fixo cobrado por transferência entre usuários comuns.</p>
+            <p className="text-[9px] font-black text-slate-900/60 uppercase tracking-widest leading-relaxed px-4">Valor cobrado por transferência instantânea entre usuários.</p>
           </div>
 
-          <div className="bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-1">Taxa de Serviço Global (%)</label>
+          <div className="bg-white/60 border border-white/80 rounded-[40px] p-8 space-y-4 shadow-inner">
+            <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1 ml-4">Taxa Operacional (%)</label>
             <div className="relative">
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-emerald-600 focus:ring-2 focus:ring-emerald-300 shadow-inner"
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl pl-6 pr-12 py-5 font-black text-3xl text-emerald-600 focus:ring-2 focus:ring-emerald-300 shadow-sm"
                 type="number" min="0" max="20" step="0.1"
                 value={appSettings.serviceFee}
                 onChange={(e) => setAppSettings({ ...appSettings, serviceFee: parseFloat(e.target.value) || 0 })}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 font-black text-sm">%</span>
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-emerald-500 font-black text-lg">%</span>
             </div>
-            <p className="text-[9px] font-bold text-emerald-700/60 uppercase tracking-widest leading-tight">Taxa operacional cobrada do cliente final em cada pedido.</p>
+            <p className="text-[9px] font-black text-slate-900/60 uppercase tracking-widest leading-relaxed px-4">Taxa fixa de conveniência aplicada a cada pedido na rede.</p>
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
           {[
-            { key: 'pix', label: 'PIX', icon: 'account_balance' },
-            { key: 'card', label: 'Cartão', icon: 'credit_card' },
-            { key: 'wallet', label: 'Carteira IZI', icon: 'wallet' },
-            { key: 'lightning', label: 'Lightning', icon: 'bolt' }
+            { key: 'pix', label: 'PIX Instantâneo', icon: 'account_balance' },
+            { key: 'card', label: 'Cartão de Crédito', icon: 'credit_card' },
+            { key: 'wallet', label: 'Carteira Digital', icon: 'wallet' },
+            { key: 'lightning', label: 'Lightning Network', icon: 'bolt' }
           ].map((method) => {
             const isActive = appSettings.paymentmethodsactive?.[method.key as keyof typeof appSettings.paymentmethodsactive];
             return (
@@ -300,11 +293,11 @@ export default function SettingsTab() {
                     paymentmethodsactive: { ...current, [method.key]: !isActive }
                   });
                 }}
-                className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${isActive ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-400 grayscale'}`}
+                className={`flex flex-col items-center justify-center gap-4 p-8 rounded-[40px] border transition-all ${isActive ? 'bg-emerald-500 text-white border-emerald-600 shadow-lg' : 'bg-white/40 border-white/80 text-slate-400 grayscale opacity-40 hover:opacity-100 hover:grayscale-0'}`}
               >
-                <span className="material-symbols-outlined text-lg">{method.icon}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest">{method.label}</span>
-                <div className={`ml-auto size-2 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                <span className="material-symbols-outlined text-3xl font-black">{method.icon}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-center">{method.label}</span>
+                <div className={`w-10 h-1.5 rounded-full ${isActive ? 'bg-white/40' : 'bg-slate-300'}`}></div>
               </button>
             );
           })}
@@ -312,27 +305,27 @@ export default function SettingsTab() {
       </section>
 
       {/* Regras IZI Black & Gamificação */}
-      <section className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <span className="material-symbols-outlined text-[150px] text-primary">workspace_premium</span>
+      <section className="bg-slate-900 p-12 rounded-[56px] border border-white/5 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+          <span className="material-symbols-outlined text-[200px] text-primary">workspace_premium</span>
         </div>
-        <div className="flex items-center gap-3 mb-8 relative z-10">
-          <div className="p-3 rounded-2xl bg-primary text-slate-900 border border-primary/20">
-            <span className="material-symbols-outlined">stars</span>
+        <div className="flex items-center gap-6 mb-12 relative z-10">
+          <div className="size-16 rounded-[24px] bg-primary text-slate-900 border border-primary/20 flex items-center justify-center shadow-2xl shadow-primary/20">
+            <span className="material-symbols-outlined text-3xl font-black">stars</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-white tracking-tight">Fidelidade IZI Black</h2>
-            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Configurações do clube de benefícios</p>
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Clube IZI Black</h2>
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Programas de fidelidade de alto nível</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Preço Assinatura (R$)</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+          <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 space-y-4 shadow-inner">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-4">Preço Assinatura</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">R$</span>
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-primary font-black text-lg">R$</span>
               <input
-                className="w-full bg-slate-800 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                className="w-full bg-slate-800 border-none rounded-3xl pl-16 pr-6 py-5 font-black text-3xl text-white focus:ring-2 focus:ring-primary shadow-sm"
                 type="number" step="0.01"
                 value={appSettings.iziBlackFee}
                 onChange={(e) => setAppSettings({ ...appSettings, iziBlackFee: parseFloat(e.target.value) || 0 })}
@@ -340,25 +333,25 @@ export default function SettingsTab() {
             </div>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cashback Base (%)</label>
+          <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 space-y-4 shadow-inner">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-4">Cashback Base</label>
             <div className="relative">
               <input
-                className="w-full bg-slate-800 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                className="w-full bg-slate-800 border-none rounded-3xl pl-6 pr-14 py-5 font-black text-3xl text-white focus:ring-2 focus:ring-primary shadow-sm"
                 type="number" step="0.1"
                 value={appSettings.iziBlackCashback}
                 onChange={(e) => setAppSettings({ ...appSettings, iziBlackCashback: parseFloat(e.target.value) || 0 })}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">%</span>
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-primary font-black text-lg">%</span>
             </div>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mult. Cashback Black</label>
+          <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 space-y-4 shadow-inner">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-4">Mult. Cashback</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">x</span>
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-primary font-black text-lg">x</span>
               <input
-                className="w-full bg-slate-800 border-none rounded-2xl pl-8 pr-4 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                className="w-full bg-slate-800 border-none rounded-3xl pl-12 pr-6 py-5 font-black text-3xl text-white focus:ring-2 focus:ring-primary shadow-sm"
                 type="number" step="0.1"
                 value={appSettings.izi_black_cashback_multiplier}
                 onChange={(e) => setAppSettings({ ...appSettings, izi_black_cashback_multiplier: parseFloat(e.target.value) || 1 })}
@@ -366,12 +359,12 @@ export default function SettingsTab() {
             </div>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mult. XP Black</label>
+          <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 space-y-4 shadow-inner">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-4">Mult. Experiência</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">x</span>
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-primary font-black text-lg">x</span>
               <input
-                className="w-full bg-slate-800 border-none rounded-2xl pl-8 pr-4 py-3.5 font-black text-2xl text-white focus:ring-2 focus:ring-primary shadow-inner"
+                className="w-full bg-slate-800 border-none rounded-3xl pl-12 pr-6 py-5 font-black text-3xl text-white focus:ring-2 focus:ring-primary shadow-sm"
                 type="number" step="0.1"
                 value={appSettings.izi_black_xp_multiplier}
                 onChange={(e) => setAppSettings({ ...appSettings, izi_black_xp_multiplier: parseFloat(e.target.value) || 1 })}
@@ -382,56 +375,56 @@ export default function SettingsTab() {
       </section>
 
       {/* Regras de Entrega & Logística */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-violet-50 text-violet-500 border border-violet-100 dark:bg-violet-500/10 dark:border-violet-500/20">
-            <span className="material-symbols-outlined">local_shipping</span>
+      <section className="bg-white/40 backdrop-blur-2xl p-10 rounded-[48px] border border-white/50 shadow-xl">
+        <div className="flex items-center gap-5 mb-10">
+          <div className="size-14 rounded-2xl bg-violet-50 text-violet-500 border border-violet-100 dark:bg-violet-500/10 dark:border-violet-500/20 flex items-center justify-center shadow-inner">
+            <span className="material-symbols-outlined text-2xl font-black">local_shipping</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Logística & Raio de Entrega</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parâmetros de cobertura global</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Logística & Cobertura</h2>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest opacity-40">Parâmetros de entrega global</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="flex flex-col gap-4">
-            <div className="flex items-end gap-6">
+            <div className="flex items-end gap-8">
               <div className="flex-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">Raio Máximo Global (KM)</label>
+                <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-6 block mb-3">Raio Máximo Global</label>
                 <div className="relative">
                   <input
-                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white pr-14"
+                    className="w-full px-8 py-5 rounded-full bg-white/60 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-black dark:text-white pr-20 shadow-inner outline-none"
                     type="number" min="0.1" max="100" step="0.1"
                     value={appSettings.radius}
                     onChange={(e) => setAppSettings({ ...appSettings, radius: parseFloat(e.target.value) || 1 })}
                   />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">km</span>
+                  <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-900 uppercase opacity-40">km</span>
                 </div>
               </div>
-              <div className="flex flex-col items-center justify-center bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20 rounded-2xl px-8 py-4 min-w-[120px] text-center">
-                <span className="text-3xl font-black text-violet-500">{appSettings.radius}</span>
-                <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">km máx.</span>
+              <div className="flex flex-col items-center justify-center bg-violet-500 text-white rounded-[32px] px-8 py-5 min-w-[140px] text-center shadow-xl shadow-violet-500/20">
+                <span className="text-4xl font-black">{appSettings.radius}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Km Raio</span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Janela de Funcionamento do App</label>
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4">
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-6 block mb-1">Janela de Funcionamento App</label>
+            <div className="flex items-center gap-5">
               <div className="flex-1 relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-amber-500 text-lg">wb_sunny</span>
+                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-amber-500 text-xl font-black">wb_sunny</span>
                 <input
-                  className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white"
+                  className="w-full pl-14 pr-6 py-5 rounded-full bg-white/60 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-black dark:text-white shadow-inner outline-none"
                   type="time"
                   value={appSettings.openingTime}
                   onChange={(e) => setAppSettings({ ...appSettings, openingTime: e.target.value })}
                 />
               </div>
-              <span className="text-[10px] font-black text-slate-300 uppercase">até</span>
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{" >> "}</span>
               <div className="flex-1 relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 text-lg">bedtime</span>
+                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-indigo-500 text-xl font-black">bedtime</span>
                 <input
-                  className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white"
+                  className="w-full pl-14 pr-6 py-5 rounded-full bg-white/60 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-black dark:text-white shadow-inner outline-none"
                   type="time"
                   value={appSettings.closingTime}
                   onChange={(e) => setAppSettings({ ...appSettings, closingTime: e.target.value })}
@@ -443,24 +436,24 @@ export default function SettingsTab() {
       </section>
 
       {/* Regras de Saque */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
-            <span className="material-symbols-outlined">account_balance_wallet</span>
+      <section className="bg-white/40 backdrop-blur-2xl p-10 rounded-[48px] border border-white/50 shadow-xl">
+        <div className="flex items-center gap-5 mb-10">
+          <div className="size-14 rounded-2xl bg-slate-100 text-slate-900 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center shadow-inner">
+            <span className="material-symbols-outlined text-2xl font-black">account_balance_wallet</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Regras de Saque (Withdrawal)</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Política de recebimento para parceiros</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Cashout & Liquidez</h2>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest opacity-40">Regras de retirada para parceiros</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Valor Mínimo (R$)</label>
+          <div className="p-8 rounded-[40px] bg-white/60 border border-white/80 shadow-inner space-y-4">
+            <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 ml-4">Mínimo (R$)</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">R$</span>
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">R$</span>
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-xl focus:ring-2 focus:ring-primary shadow-sm"
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl pl-16 pr-6 py-5 font-black text-2xl focus:ring-2 focus:ring-primary shadow-sm"
                 type="number"
                 value={appSettings.minwithdrawalamount}
                 onChange={(e) => setAppSettings({ ...appSettings, minwithdrawalamount: parseFloat(e.target.value) || 0 })}
@@ -468,36 +461,39 @@ export default function SettingsTab() {
             </div>
           </div>
 
-          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Taxa de Saque (%)</label>
+          <div className="p-8 rounded-[40px] bg-white/60 border border-white/80 shadow-inner space-y-4">
+            <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 ml-4">Taxa (%)</label>
             <div className="relative">
               <input
-                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-xl focus:ring-2 focus:ring-primary shadow-sm"
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl pl-6 pr-14 py-5 font-black text-2xl focus:ring-2 focus:ring-primary shadow-sm"
                 type="number" step="0.1"
                 value={appSettings.withdrawalfeepercent}
                 onChange={(e) => setAppSettings({ ...appSettings, withdrawalfeepercent: parseFloat(e.target.value) || 0 })}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">%</span>
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">%</span>
             </div>
           </div>
 
-          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Dia Oficial</label>
-            <select
-              className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-black text-xs uppercase tracking-widest text-slate-600 focus:ring-2 focus:ring-primary shadow-sm"
-              value={appSettings.withdrawal_day}
-              onChange={(e) => setAppSettings({ ...appSettings, withdrawal_day: e.target.value })}
-            >
-              {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(day => (
-                <option key={day} value={day}>{day}</option>
-              ))}
-            </select>
+          <div className="p-8 rounded-[40px] bg-white/60 border border-white/80 shadow-inner space-y-4">
+            <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 ml-4">Dia Oficial</label>
+            <div className="relative">
+              <select
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-6 font-black text-[10px] uppercase tracking-widest text-slate-900 focus:ring-2 focus:ring-primary shadow-sm appearance-none"
+                value={appSettings.withdrawal_day}
+                onChange={(e) => setAppSettings({ ...appSettings, withdrawal_day: e.target.value })}
+              >
+                {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(day => (
+                  <option key={day} value={day}>{day}</option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-900">expand_more</span>
+            </div>
           </div>
 
-          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Intervalo (Horas)</label>
+          <div className="p-8 rounded-[40px] bg-white/60 border border-white/80 shadow-inner space-y-4">
+            <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 ml-4">Janela (H)</label>
             <input
-              className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-3.5 font-black text-xl focus:ring-2 focus:ring-primary shadow-sm"
+              className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-black text-2xl focus:ring-2 focus:ring-primary shadow-sm"
               type="number"
               value={appSettings.withdrawal_period_h}
               onChange={(e) => setAppSettings({ ...appSettings, withdrawal_period_h: parseInt(e.target.value) || 0 })}
@@ -506,59 +502,36 @@ export default function SettingsTab() {
         </div>
       </section>
 
-      {/* Mercado Pago */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-500/20">
-            <span className="material-symbols-outlined">api</span>
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Gateway Mercado Pago</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configuração das chaves de API</p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chave Pública (Public Key)</label>
-          <input
-            className="px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-yellow-400 text-sm font-bold dark:text-white transition-all font-mono"
-            type="text"
-            placeholder="APP_USR-..."
-            value={appSettings.mercadopago_public_key || ''}
-            onChange={(e) => setAppSettings({ ...appSettings, mercadopago_public_key: e.target.value })}
-          />
-        </div>
-      </section>
-
       {/* Canais de Notificação */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-purple-50 text-purple-500 border border-purple-100 dark:bg-purple-500/10 dark:border-purple-500/20">
-            <span className="material-symbols-outlined">notifications_active</span>
+      <section className="bg-white/40 backdrop-blur-2xl p-10 rounded-[48px] border border-white/50 shadow-xl">
+        <div className="flex items-center gap-5 mb-10">
+          <div className="size-14 rounded-2xl bg-purple-50 text-purple-500 border border-purple-100 dark:bg-purple-500/10 dark:border-purple-500/20 flex items-center justify-center shadow-inner">
+            <span className="material-symbols-outlined text-2xl font-black">notifications_active</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Canais de Notificação Externos</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ativar/Desativar SMS e E-mail</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Engajamento Push</h2>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest opacity-40">Canais de comunicação transacional</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {[
-            { key: 'smsNotifications', label: 'SMS Operacional (Pedidos)', icon: 'sms' },
-            { key: 'emailNotifications', label: 'E-mail Transacional (Faturas)', icon: 'email' },
+            { key: 'smsNotifications', label: 'SMS Transacional (Pedidos)', icon: 'sms' },
+            { key: 'emailNotifications', label: 'E-mail Financeiro (Faturas)', icon: 'email' },
           ].map(({ key, label, icon }) => {
             const isOn = (appSettings as any)[key];
             return (
-              <div key={key} className={`flex items-center justify-between p-6 rounded-[28px] border transition-all ${isOn ? 'bg-primary/[0.03] border-primary/20' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl ${isOn ? 'bg-primary/10' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                    <span className={`material-symbols-outlined ${isOn ? 'text-primary' : 'text-slate-400'}`}>{icon}</span>
+              <div key={key} className={`flex items-center justify-between p-8 rounded-[40px] border transition-all ${isOn ? 'bg-primary/5 border-primary/20 shadow-lg' : 'bg-white/60 dark:bg-slate-800 border-white/80 dark:border-slate-700 shadow-inner'}`}>
+                <div className="flex items-center gap-6">
+                  <div className={`size-14 rounded-2xl flex items-center justify-center shadow-md ${isOn ? 'bg-primary/10 text-primary' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>
+                    <span className="material-symbols-outlined text-2xl font-black">{icon}</span>
                   </div>
-                  <span className="text-sm font-black text-slate-900 dark:text-white">{label}</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{label}</span>
                 </div>
                 <button
                   onClick={() => setAppSettings({ ...appSettings, [key]: !isOn })}
-                  className={`w-14 h-8 rounded-full relative transition-all ${isOn ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`w-16 h-9 rounded-full relative transition-all shadow-inner ${isOn ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
-                  <div className={`absolute top-1.5 size-5 bg-white rounded-full shadow-md transition-all ${isOn ? 'right-1.5' : 'left-1.5'}`}></div>
+                  <div className={`absolute top-1.5 size-6 bg-white rounded-full shadow-2xl transition-all ${isOn ? 'right-1.5' : 'left-1.5'}`}></div>
                 </button>
               </div>
             );
@@ -567,67 +540,64 @@ export default function SettingsTab() {
       </section>
 
       {/* Gerenciamento de Bairros */}
-      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-violet-50 text-violet-500 border border-violet-100 dark:bg-violet-500/10 dark:border-violet-500/20">
-            <span className="material-symbols-outlined">location_city</span>
+      <section className="bg-white/40 backdrop-blur-2xl p-10 rounded-[48px] border border-white/50 shadow-xl">
+        <div className="flex items-center gap-5 mb-10">
+          <div className="size-14 rounded-2xl bg-violet-50 text-violet-500 border border-violet-100 dark:bg-violet-500/10 dark:border-violet-500/20 flex items-center justify-center shadow-inner">
+            <span className="material-symbols-outlined text-2xl font-black">location_city</span>
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Bairros da Cidade</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gerencie os bairros disponíveis para cobertura dos lojistas</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Ecossistema Urbano</h2>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest opacity-40">Mapeamento de bairros e micro-regiões</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-              neighborhoods.filter(n => n.active).length > 0
-                ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-            }`}>
-              {neighborhoods.filter(n => n.active).length} ativos
+          <div className="ml-auto flex items-center gap-4">
+            <span className="px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+              {neighborhoods.filter(n => n.active).length} Ativos
             </span>
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400">
-              {neighborhoods.length} total
+            <span className="px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest bg-slate-900 text-white shadow-lg">
+              {neighborhoods.length} Total
             </span>
           </div>
         </div>
 
         {/* Adicionar Novo Bairro */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-4 mb-10">
           <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">add_location_alt</span>
+            <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-2xl font-black">add_location_alt</span>
             <input
               type="text"
               value={newNeighborhoodName}
               onChange={(e) => setNewNeighborhoodName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddNeighborhood()}
-              placeholder="Nome do novo bairro..."
-              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-400 text-sm font-bold dark:text-white transition-all"
+              placeholder="Nome do novo bairro operacional..."
+              className="w-full pl-16 pr-8 py-5 rounded-full bg-white/60 dark:bg-slate-800 border border-white/80 dark:border-white/5 focus:ring-2 focus:ring-violet-400 text-sm font-black dark:text-white transition-all shadow-inner outline-none"
             />
           </div>
           <button
             onClick={handleAddNeighborhood}
             disabled={neighborhoodSaving || !newNeighborhoodName.trim()}
-            className="px-6 py-4 bg-violet-500 hover:bg-violet-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-violet-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-10 py-5 bg-violet-500 hover:bg-violet-600 text-white font-black text-[10px] uppercase tracking-widest rounded-full shadow-2xl shadow-violet-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
           >
-            <span className="material-symbols-outlined text-base">add</span>
-            Adicionar
+            <span className="material-symbols-outlined text-lg font-black">add</span>
+            Criar Região
           </button>
         </div>
 
         {/* Lista de Bairros */}
         {neighborhoodsLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="size-8 border-4 border-violet-200 border-t-violet-500 rounded-full animate-spin" />
+          <div className="flex flex-col items-center justify-center py-24 gap-6">
+            <div className="size-16 border-4 border-violet-200 border-t-violet-500 rounded-full animate-spin shadow-inner" />
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.5em] opacity-40">Sincronizando Malha Urbana...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {neighborhoods.map((n) => (
               <div
                 key={n.id}
-                className="flex items-center gap-3 p-4 rounded-[24px] bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 transition-all hover:shadow-sm"
+                className={`flex items-center gap-5 p-6 rounded-[32px] border transition-all hover:scale-[1.02] ${n.active ? 'bg-white/60 border-white/80 shadow-md' : 'bg-slate-50/50 border-slate-100 opacity-60 grayscale shadow-inner'}`}
               >
                 {/* Ícone */}
-                <div className="size-10 rounded-2xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-slate-400 text-lg">location_on</span>
+                <div className={`size-14 rounded-[20px] flex items-center justify-center shrink-0 shadow-inner ${n.active ? 'bg-violet-50 text-violet-500' : 'bg-slate-200 text-slate-400'}`}>
+                  <span className="material-symbols-outlined text-2xl font-black">location_on</span>
                 </div>
 
                 {/* Nome + status */}
@@ -642,67 +612,64 @@ export default function SettingsTab() {
                         if (e.key === 'Enter') handleSaveEdit(n.id);
                         if (e.key === 'Escape') setEditingId(null);
                       }}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-violet-300 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-violet-400 outline-none"
+                      className="w-full bg-white dark:bg-slate-900 border-2 border-violet-300 rounded-2xl px-4 py-2 text-sm font-black text-slate-900 dark:text-white focus:ring-4 focus:ring-violet-400/20 outline-none shadow-sm"
                     />
                   ) : (
-                    <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{n.name}</p>
+                    <p className="text-base font-black text-slate-900 dark:text-slate-100 truncate uppercase tracking-tight">{n.name}</p>
                   )}
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${n.active ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      {n.active ? 'Ativo' : 'Inativo'}
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`size-2 rounded-full ${n.active ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-400'}`} />
+                    <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest opacity-40">
+                      {n.active ? 'Região Ativa' : 'Desabilitado'}
                     </p>
                   </div>
                 </div>
 
                 {/* Botões de ação */}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   {editingId === n.id ? (
                     <>
                       <button
                         onClick={() => handleSaveEdit(n.id)}
                         disabled={neighborhoodSaving}
-                        className="size-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all active:scale-95"
+                        className="size-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
                         title="Salvar"
                       >
-                        <span className="material-symbols-outlined text-sm">check</span>
+                        <span className="material-symbols-outlined text-xl font-black">check</span>
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="size-8 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-all active:scale-95"
+                        className="size-10 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-all active:scale-95"
                         title="Cancelar"
                       >
-                        <span className="material-symbols-outlined text-sm">close</span>
+                        <span className="material-symbols-outlined text-xl font-black">close</span>
                       </button>
                     </>
                   ) : (
                     <>
                       <button
                         onClick={() => handleToggleActive(n.id, n.active)}
-                        title={n.active ? 'Desativar' : 'Ativar'}
-                        className={`size-8 rounded-xl flex items-center justify-center transition-all active:scale-95 ${
+                        className={`size-10 rounded-xl flex items-center justify-center transition-all active:scale-95 shadow-sm ${
                           n.active
-                            ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 hover:bg-emerald-100'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200'
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-500 hover:text-white'
+                            : 'bg-slate-100 text-slate-400 hover:bg-emerald-500 hover:text-white'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-sm">
+                        <span className="material-symbols-outlined text-xl font-black">
                           {n.active ? 'toggle_on' : 'toggle_off'}
                         </span>
                       </button>
                       <button
                         onClick={() => { setEditingId(n.id); setEditingName(n.name); }}
-                        className="size-8 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-400 flex items-center justify-center hover:bg-violet-50 hover:text-violet-600 transition-all active:scale-95 border border-slate-100 dark:border-slate-600"
-                        title="Renomear"
+                        className="size-10 rounded-xl bg-white text-slate-400 flex items-center justify-center hover:bg-violet-500 hover:text-white transition-all active:scale-95 border border-slate-100 shadow-sm"
                       >
-                        <span className="material-symbols-outlined text-sm">edit</span>
+                        <span className="material-symbols-outlined text-xl font-black">edit</span>
                       </button>
                       <button
                         onClick={() => handleDeleteNeighborhood(n.id, n.name)}
-                        className="size-8 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 border border-slate-100 dark:border-slate-600"
-                        title="Excluir"
+                        className="size-10 rounded-xl bg-white text-rose-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-95 border border-slate-100 shadow-sm"
                       >
-                        <span className="material-symbols-outlined text-sm">delete</span>
+                        <span className="material-symbols-outlined text-xl font-black">delete</span>
                       </button>
                     </>
                   )}
@@ -710,12 +677,10 @@ export default function SettingsTab() {
               </div>
             ))}
 
-
             {neighborhoods.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-16 gap-4">
-                <span className="material-symbols-outlined text-5xl text-slate-300">location_off</span>
-                <p className="text-slate-400 font-bold text-sm">Nenhum bairro cadastrado</p>
-                <p className="text-slate-300 text-xs">Use o campo acima para adicionar o primeiro bairro</p>
+              <div className="col-span-full flex flex-col items-center justify-center py-32 gap-6 opacity-20">
+                <span className="material-symbols-outlined text-8xl">location_off</span>
+                <p className="text-sm font-black uppercase tracking-[0.5em]">Malha Urbana Vazia</p>
               </div>
             )}
           </div>
