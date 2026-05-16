@@ -1296,13 +1296,19 @@ function MainApp() {
     } catch { return []; }
   });
   useEffect(() => {
-    localStorage.setItem('izi_driver_schedules',
-  'izi_driver_earnings_history',
-  'izi_driver_withdraw_history', JSON.stringify(scheduledOrders));
+    localStorage.setItem('izi_driver_schedules', JSON.stringify(scheduledOrders));
   }, [scheduledOrders]);
  const [subTabScheduled, setSubTabScheduled] = useState<'available' | 'confirmed'>('confirmed');
  const [selectedScheduledOrder, setSelectedScheduledOrder] = useState<any | null>(null);
- const [history, setHistory] = useState<Order[]>([]);
+ const [history, setHistory] = useState<Order[]>(() => {
+    try {
+      const cached = localStorage.getItem('izi_driver_orders_history');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  useEffect(() => {
+    if (history.length > 0) localStorage.setItem('izi_driver_orders_history', JSON.stringify(history));
+  }, [history]);
  const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
  const [showOrderModal, setShowOrderModal] = useState(false);
@@ -1385,6 +1391,7 @@ function MainApp() {
   useEffect(() => {
     if (withdrawHistory.length > 0) localStorage.setItem('izi_driver_withdraw_history', JSON.stringify(withdrawHistory));
   }, [withdrawHistory]);
+
  const [isFinanceLoading, setIsFinanceLoading] = useState(false);
  const [isWithdrawLoading, setIsWithdrawLoading] = useState(false);
  const [isSavingPix, setIsSavingPix] = useState(false);
@@ -1534,6 +1541,7 @@ function MainApp() {
   'izi_driver_schedules',
   'izi_driver_earnings_history',
   'izi_driver_withdraw_history',
+  'izi_driver_orders_history',
  'izi_audio_unlocked',
  'last_izi_broadcast_driver'
  ];
@@ -1986,7 +1994,8 @@ function MainApp() {
   'izi_driver_stats',
   'izi_driver_schedules',
   'izi_driver_earnings_history',
-  'izi_driver_withdraw_history', profile.vehicle_model);
+  'izi_driver_withdraw_history',
+  'izi_driver_orders_history', profile.vehicle_model);
  
  // 4. Dados Bancários e Vínculos
  if (profile.merchant_id) {
