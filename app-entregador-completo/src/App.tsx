@@ -3953,21 +3953,29 @@ const handleUpdateStatus = async (newStatus: string) => {
     setIsProfileNotFound(false);
     isLoggingOutRef.current = true;
 
-    try {
-      // Limpa estado local imediatamente
+    const performHardReset = () => {
       clearDriverSessionState();
+      // Força a remoção de qualquer token preso no localStorage
+      localStorage.removeItem('izi-entregador-auth'); // A chave customizada do Supabase no app entregador!
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('supabase') || key.includes('sb-') || key.includes('izi_') || key.includes('izi-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      // window.location.href = "/" em SPAs não recarrega a página se já estiver em "/". 
+      // Precisamos usar window.location.reload()
+      window.location.href = "/";
+      window.location.reload();
+    };
+
+    try {
+      // Desloga assíncrono para evitar travamento da UI por instabilidade de rede
+      supabase.auth.signOut().catch(() => {});
       
-      // Tenta deslogar no backend (assíncrono, sem travar a interface)
-      supabase.auth.signOut().catch(err => console.error("[AUTH] Erro ao deslogar:", err));
-      
-      // Força o redirecionamento
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 100);
+      setTimeout(performHardReset, 200);
     } catch (err) {
       console.error("[AUTH] Erro no fluxo de logout:", err);
-      clearDriverSessionState();
-      window.location.href = "/";
+      performHardReset();
     }
   }, [clearDriverSessionState]);
 
