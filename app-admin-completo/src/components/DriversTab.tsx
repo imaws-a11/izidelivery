@@ -419,13 +419,26 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">
                    {selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') ? 'Senha de Acesso Atual' : 'Nova Senha'}
                  </label>
-                 <input 
-                   type={selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') ? 'text' : 'password'} 
-                   value={selectedDriverStudio.password !== undefined ? selectedDriverStudio.password : (selectedDriverStudio.plain_password || '')}
-                   onChange={e => setSelectedDriverStudio({...selectedDriverStudio, password: e.target.value})}
-                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white transition-all shadow-inner"
-                   placeholder={selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') ? "Digite para alterar a senha" : "Defina uma senha de acesso"}
-                 />
+                 <div className="relative flex items-center">
+                   <input 
+                     type={selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') ? 'text' : 'password'} 
+                     value={selectedDriverStudio.password !== undefined ? selectedDriverStudio.password : (selectedDriverStudio.plain_password || '')}
+                     onChange={e => setSelectedDriverStudio({...selectedDriverStudio, password: e.target.value})}
+                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl pl-6 pr-14 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white transition-all shadow-inner"
+                     placeholder={selectedDriverStudio.id && !selectedDriverStudio.id.toString().startsWith('new-') && !selectedDriverStudio.plain_password ? "(Senha criptografada - Não visível)" : "Defina uma senha de acesso"}
+                   />
+                   <button
+                     type="button"
+                     title="Gerar Nova Senha"
+                     onClick={() => {
+                       const randomPass = 'izi' + Math.floor(100000 + Math.random() * 900000);
+                       setSelectedDriverStudio({...selectedDriverStudio, password: randomPass});
+                     }}
+                     className="absolute right-4 text-primary hover:text-yellow-600 transition-colors flex items-center justify-center p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700"
+                   >
+                     <span className="material-symbols-outlined text-lg">vpn_key</span>
+                   </button>
+                 </div>
               </div>
             </div>
           </div>
@@ -880,6 +893,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 
            if (selectedDriverStudio.password) {
              driverData.plain_password = selectedDriverStudio.password;
+           } else if (selectedDriverStudio.plain_password) {
+             driverData.plain_password = selectedDriverStudio.plain_password;
            }
 
          let error;

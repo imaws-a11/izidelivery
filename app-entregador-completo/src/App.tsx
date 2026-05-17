@@ -1861,85 +1861,7 @@ function MainApp() {
  };
  }, [isAuthenticated, driverId]);
 
- useEffect(() => {
- if (!isAuthenticated || !driverId) return;
- // Permite GPS se estiver ONLINE ou em uma MISSÁO ATIVA
- if (!isOnline && !activeMission) return;
- 
- const updateLocation = (lat: number, lng: number) => {
- setDriverCoords({ lat, lng });
- // Throttle: atualiza o banco no máximo a cada 15 segundos para não saturar HTTP
- const now = Date.now();
- if (now - lastLocationUpdateRef.current > 15000) {
- lastLocationUpdateRef.current = now;
- supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
- }
- };
-
- let watchId: string | undefined;
- let webWatchId: number | undefined;
-
- const startNativeTracking = async () => {
- // âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬ AMBIENTE NATIVO (APK Android/iOS) âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬
- if (Capacitor.isNativePlatform()) {
- try {
- const permissions = await Geolocation.checkPermissions();
- if (permissions.location !== 'granted') {
- await Geolocation.requestPermissions();
- }
-
- // Posição imediata para agilizar a primeira abertura do mapa
- const pos = await Geolocation.getCurrentPosition({ 
- enableHighAccuracy: true,
- timeout: 20000,
- maximumAge: 10000
- }).catch(() => Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 }));
- 
- if (pos) await updateLocation(pos.coords.latitude, pos.coords.longitude);
-
- // Watch contínuo
- watchId = await Geolocation.watchPosition(
- { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
- (position) => {
- if (position) {
- updateLocation(position.coords.latitude, position.coords.longitude);
- }
- }
- );
- } catch (err) {
- }
- return;
- }
-
- // âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬ AMBIENTE WEB (browser) âââ‚¬Â ââ€šÂ¬ usa API nativa do browser âââ‚¬Â ââ€šÂ¬âââ‚¬Â ââ€šÂ¬
- if (!navigator.geolocation) {
- return;
- }
-
- navigator.geolocation.getCurrentPosition(
- (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
- (err) => {},
- { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
- );
-
- webWatchId = navigator.geolocation.watchPosition(
- (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
- (err) => {},
- { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 }
- );
- };
-
- startNativeTracking();
- 
- return () => {
- if (watchId && Capacitor.isNativePlatform()) {
- Geolocation.clearWatch({ id: watchId });
- }
- if (webWatchId !== undefined) {
- navigator.geolocation.clearWatch(webWatchId);
- }
- };
- }, [isAuthenticated, driverId, isOnline, activeMission]);
+  // Geolocation tracking has been relocated below getSecureToken to ensure secure authentication headers.
 
 
 
@@ -2601,6 +2523,108 @@ function MainApp() {
     } catch(e) {}
     return sKey;
   }, [driverId]);
+
+  // GPS Tracking with highly-reliable secure fetch patches
+  useEffect(() => {
+    if (!isAuthenticated || !driverId) return;
+    if (!isOnline && !activeMission) return;
+    
+    const updateLocation = async (lat: number, lng: number) => {
+      setDriverCoords({ lat, lng });
+      const now = Date.now();
+      if (now - lastLocationUpdateRef.current > 15000) {
+        lastLocationUpdateRef.current = now;
+        try {
+          const sUrl = import.meta.env.VITE_SUPABASE_URL;
+          const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          const token = await getSecureToken();
+          if (token && token !== sKey) {
+            const response = await fetch(`${sUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
+              method: 'PATCH',
+              headers: {
+                'apikey': sKey,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({
+                lat: Number(lat),
+                lng: Number(lng),
+                last_seen_at: new Date().toISOString()
+              })
+            });
+            if (response.ok) {
+              console.log('[GPS] Localizacao atualizada no banco com sucesso:', { lat, lng });
+            } else {
+              const err = await response.text();
+              console.error('[GPS] Falha ao atualizar localizacao:', response.status, err);
+            }
+          }
+        } catch (err) {
+          console.error('[GPS] Erro ao atualizar localizacao:', err);
+        }
+      }
+    };
+
+    let watchId: string | undefined;
+    let webWatchId: number | undefined;
+
+    const startNativeTracking = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const permissions = await Geolocation.checkPermissions();
+          if (permissions.location !== 'granted') {
+            await Geolocation.requestPermissions();
+          }
+
+          const pos = await Geolocation.getCurrentPosition({ 
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 10000
+          }).catch(() => Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 }));
+          
+          if (pos) await updateLocation(pos.coords.latitude, pos.coords.longitude);
+
+          watchId = await Geolocation.watchPosition(
+            { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 },
+            (position) => {
+              if (position) {
+                updateLocation(position.coords.latitude, position.coords.longitude);
+              }
+            }
+          );
+        } catch (err) {
+          console.error('[GPS] Native tracking error:', err);
+        }
+        return;
+      }
+
+      if (!navigator.geolocation) return;
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
+        (err) => console.error('[GPS] Browser current position error:', err),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+      );
+
+      webWatchId = navigator.geolocation.watchPosition(
+        (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
+        (err) => console.error('[GPS] Browser watch error:', err),
+        { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 }
+      );
+    };
+
+    startNativeTracking();
+    
+    return () => {
+      if (watchId && Capacitor.isNativePlatform()) {
+        Geolocation.clearWatch({ id: watchId });
+      }
+      if (webWatchId !== undefined) {
+        navigator.geolocation.clearWatch(webWatchId);
+      }
+    };
+  }, [isAuthenticated, driverId, isOnline, activeMission, getSecureToken]);
  const loadVehicleRequests = useCallback(async (dId: string) => {
  if (!dId) return;
  try {
@@ -3479,10 +3503,36 @@ function MainApp() {
       const monthlyPerformance = Array(12).fill(0);
 
       if (txs && Array.isArray(txs) && txs.length > 0) {
-        setEarningsHistory(txs.filter((t: any) => t.type !== 'saque'));
-        setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
+        // Filter out transactions that belong exclusively to the customer app (izi_coins adjustments)
+        const driverTxs = txs.filter((t: any) => {
+          if (t.metadata && t.metadata.target_app === 'customer') return false;
+          if (t.metadata && t.metadata.target_app === 'driver') return true;
 
-        txs.forEach((t: any) => {
+          // Backwards compatibility for old transactions before target_app existed
+          const desc = (t.description || '').toLowerCase();
+          if (
+            desc.includes('compra de') || 
+            desc.includes('izi coins') || 
+            desc.includes('saldo pré-pago') || 
+            desc.includes('recarga de saldo') ||
+            desc.includes('empréstimo izi') ||
+            desc.includes('quitação total') ||
+            desc.includes('pagamento de empréstimo') ||
+            desc.includes('recebimento izipay') ||
+            // Filter manual customer coin adjustments, keeping driver admin credits
+            (desc.includes('ajuste manual via painel admin') && !desc.includes('crédito administrativo') && !desc.includes('entregador') && !desc.includes('motoboy')) ||
+            desc === 'ajuste administrativo' ||
+            desc === 'crédito izi'
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        setEarningsHistory(driverTxs.filter((t: any) => t.type !== 'saque'));
+        setWithdrawHistory(driverTxs.filter((t: any) => t.type === 'saque'));
+
+        driverTxs.forEach((t: any) => {
           if (t.type === 'pagamento') return;
           const amount = Number(t.amount);
           const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback', 'loan_deposit', 'credit'].includes(t.type);
@@ -7510,7 +7560,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Histórico"><HistoryView history={history} getNetEarnings={getNetEarnings}
   isOnline={isOnline}
   handleToggleOnline={handleToggleOnline} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></LocalErrorBoundary></motion.div>}
- {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Ganhos"><EarningsView stats={stats} onShowBankDetails={() => setShowBankDetails(true)} onShowWithdrawHistory={() => setShowWithdrawHistory(true)} onWithdrawRequest={handleWithdrawRequest} onNavigateToMissions={() => setActiveTab('missions')} /></LocalErrorBoundary></motion.div>}
+ {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Ganhos"><EarningsView stats={stats} earningsHistory={earningsHistory} ordersHistory={history} onShowBankDetails={() => setShowBankDetails(true)} onShowWithdrawHistory={() => setShowWithdrawHistory(true)} onWithdrawRequest={handleWithdrawRequest} onNavigateToMissions={() => setActiveTab('missions')} /></LocalErrorBoundary></motion.div>}
  {activeTab === 'profile' && (
  <motion.div 
  key="prof" 

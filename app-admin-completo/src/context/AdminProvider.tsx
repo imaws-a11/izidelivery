@@ -965,7 +965,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Driver;
             const old = payload.old as Driver;
-            setDriversList(prev => upsertDriverInList(prev, updated));
+            
+            setDriversList(prev => {
+              const nextList = upsertDriverInList(prev, updated);
+              syncDriverStats(nextList);
+              return nextList;
+            });
+
             if (userRole === 'merchant') {
               const currentMID = String(merchantProfileRef.current?.id || '');
               const updatedMID = String(updated.merchant_id || '');
@@ -977,7 +983,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
           } else if (payload.eventType === 'INSERT') {
             const inserted = payload.new as Driver;
-            setDriversList(prev => upsertDriverInList(prev, inserted));
+            
+            setDriversList(prev => {
+              const nextList = upsertDriverInList(prev, inserted);
+              syncDriverStats(nextList);
+              return nextList;
+            });
+
             if (userRole === 'merchant') {
               const currentMID = String(merchantProfileRef.current?.id || '');
               if (String(inserted.merchant_id) === currentMID && !inserted.is_deleted) {
@@ -986,7 +998,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
           } else if (payload.eventType === 'DELETE') {
             const removed = payload.old as Driver;
-            setDriversList(prev => removeDriverFromList(prev, removed.id));
+            
+            setDriversList(prev => {
+              const nextList = removeDriverFromList(prev, removed.id);
+              syncDriverStats(nextList);
+              return nextList;
+            });
+
             if (userRole === 'merchant') {
               const currentMID = String(merchantProfileRef.current?.id || '');
               if (String(removed.merchant_id) === currentMID) {
@@ -994,7 +1012,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }
             }
           }
-          syncDriverStats(driversList);
         }
       )
       .on(
@@ -1905,7 +1922,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         amount,
         type: 'credit',
         description,
-        balance_after: newBalance
+        balance_after: newBalance,
+        metadata: { target_app: 'driver' }
       });
 
       toastSuccess(`Crédito de R$ ${amount.toLocaleString('pt-BR')} aplicado ao entregador!`);

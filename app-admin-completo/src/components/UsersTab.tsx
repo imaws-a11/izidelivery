@@ -105,7 +105,8 @@ export default function UsersTab() {
         amount: diff,
         type: diff >= 0 ? 'credit' : 'debit',
         description: `Ajuste manual via Painel Admin (${walletType === 'add' ? 'Adição' : 'Definição'})`,
-        balance_after: newBalance
+        balance_after: newBalance,
+        metadata: { target_app: 'customer' }
       });
       
       if (insertError) {

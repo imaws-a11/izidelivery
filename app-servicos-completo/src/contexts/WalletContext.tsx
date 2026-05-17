@@ -63,6 +63,9 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (txs) {
         // Filtra transações que pertencem exclusivamente ao fluxo de entregador
         const userTxs = txs.filter(tx => {
+          if (tx.metadata && tx.metadata.target_app === 'driver') return false;
+          if (tx.metadata && tx.metadata.target_app === 'customer') return true;
+
           if (tx.type === 'vaga_dedicada') return false;
           if (tx.description && (
             tx.description.startsWith('Ganhos:') || 
@@ -154,6 +157,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         { event: 'INSERT', schema: 'public', table: 'wallet_transactions_delivery', filter: `user_id=eq.${userId}` },
         (payload) => {
           const tx = payload.new as any;
+          if (tx.metadata && tx.metadata.target_app === 'driver') return;
+          if (tx.metadata && tx.metadata.target_app === 'customer') {
+            setWalletTransactions(prev => [tx, ...prev].slice(0, 50));
+            return;
+          }
+
           // Filtros de negócio que estavam no App.tsx
           if (tx.type === 'vaga_dedicada') return;
           if (tx.description && (

@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { mapContainerStyle, cleanLightStyle } from '../constants/mapStyles';
-import { GoogleMap, Marker } from '@react-google-maps/api';
+import { GoogleMap, Marker, OverlayView } from '@react-google-maps/api';
 import { isDriverOnline } from '../lib/driverPresence';
 
 // Rastreamento em Tempo Real - Full Screen Uber Style
@@ -16,6 +16,7 @@ export default function TrackingTab() {
   const [mapRef, setMapRef] = useState<google.maps.Map | null>(null);
   const [showList, setShowList] = useState(true);
   const [userCoords, setUserCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -37,17 +38,43 @@ export default function TrackingTab() {
   }, [mapRef]);
 
   const onlineDrivers = useMemo(
-    () => driversList.filter(driver => driver.is_online && !driver.is_deleted),
-    [driversList]
+    () => driversList.filter(driver => 
+      driver.is_online && 
+      !driver.is_deleted &&
+      (searchQuery.trim() === '' || 
+        driver.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (driver.license_plate && driver.license_plate.toLowerCase().includes(searchQuery.toLowerCase())))
+    ),
+    [driversList, searchQuery]
   );
 
   const onlineDriversWithCoords = useMemo(
-    () => onlineDrivers.filter(driver => {
-      const lat = Number(driver.lat || driver.current_lat);
-      const lng = Number(driver.lng || driver.current_lng);
-      return lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng);
+    () => onlineDrivers.map((driver, index) => {
+      const latVal = Number(driver.lat || driver.current_lat);
+      const lngVal = Number(driver.lng || driver.current_lng);
+      
+      const hasValidCoords = latVal !== 0 && lngVal !== 0 && !isNaN(latVal) && !isNaN(lngVal);
+      
+      if (hasValidCoords) {
+        return { ...driver, lat: latVal, lng: lngVal, isMock: false };
+      }
+
+      // Se não houver coordenadas (como em testes), posiciona próximo ao admin ou centro padrão
+      const baseLat = userCoords?.lat || -23.55052;
+      const baseLng = userCoords?.lng || -46.633308;
+      
+      // Offset espiralado simples para evitar sobreposição dos motoristas sem sinal
+      const offsetLat = 0.0015 * Math.sin(index * 2.5);
+      const offsetLng = 0.0015 * Math.cos(index * 2.5);
+
+      return {
+        ...driver,
+        lat: baseLat + offsetLat,
+        lng: baseLng + offsetLng,
+        isMock: true
+      };
     }),
-    [onlineDrivers]
+    [onlineDrivers, userCoords]
   );
 
   const getDriverActivity = (driverId: string) => {
@@ -115,30 +142,55 @@ export default function TrackingTab() {
               />
             )}
             {onlineDriversWithCoords.map((driver) => (
-              <Marker
+              <OverlayView
                 key={driver.id}
                 position={{
                   lat: Number(driver.lat || driver.current_lat),
                   lng: Number(driver.lng || driver.current_lng)
                 }}
-                onClick={() => setSelectedTrackingItem({ type: 'driver', ...driver })}
-                options={{
-                  icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 12,
-                    fillColor: getDriverActivity(driver.id) === 'busy' ? '#f59e0b' : '#10b981',
-                    fillOpacity: 1,
-                    strokeColor: '#ffffff',
-                    strokeWeight: 3,
-                  },
-                  label: {
-                    text: driver.name.charAt(0).toUpperCase(),
-                    color: '#ffffff',
-                    fontSize: '10px',
-                    fontWeight: '900'
-                  }
-                }}
-              />
+                mapPaneName="overlayMouseTarget"
+              >
+                <div 
+                  onClick={() => setSelectedTrackingItem({ type: 'driver', ...driver })}
+                  className="cursor-pointer -translate-x-1/2 -translate-y-full flex flex-col items-center group relative z-10 hover:z-50"
+                >
+                  {/* Floating Glassmorphism Driver Name Tag */}
+                  <div className="mb-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-full shadow-lg scale-90 group-hover:scale-100 transition-all duration-300 pointer-events-none flex items-center gap-1.5">
+                    {driver.isMock && (
+                      <span className="size-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    )}
+                    <p className="text-[10px] font-black text-white uppercase tracking-tight whitespace-nowrap">
+                      {driver.name} {driver.isMock && '(SEM SINAL GPS)'}
+                    </p>
+                  </div>
+
+                  {/* Marker Pin Base */}
+                  <div className="relative">
+                    {/* Ring Pulsing Animation */}
+                    <div className={`absolute -inset-2 rounded-full blur-sm opacity-60 animate-ping ${driver.isMock ? 'bg-amber-500' : (getDriverActivity(driver.id) === 'busy' ? 'bg-amber-500' : 'bg-emerald-500')}`} style={{ animationDuration: '3s' }}></div>
+                    <div className={`absolute -inset-1.5 rounded-full blur-xs opacity-75 ${driver.isMock ? 'bg-slate-500' : (getDriverActivity(driver.id) === 'busy' ? 'bg-amber-500' : 'bg-emerald-500')}`}></div>
+
+                    {/* Inner avatar/icon holder */}
+                    <div className="relative size-12 rounded-full bg-slate-950 border-[2.5px] border-white flex items-center justify-center overflow-hidden shadow-xl shadow-black/45 hover:scale-110 active:scale-95 transition-all">
+                      {driver.avatar_url ? (
+                        <img src={driver.avatar_url} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="material-symbols-outlined text-lg text-white font-black">
+                          {driver.vehicle_type === 'caminhao' || driver.vehicle_type === 'carro' ? 'local_shipping' : 'motorcycle'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Small Status indicator badge */}
+                    <div className={`absolute -bottom-1 -right-1 size-4.5 rounded-full border border-white flex items-center justify-center text-[8px] font-black text-white shadow-md ${driver.isMock ? 'bg-amber-500' : (getDriverActivity(driver.id) === 'busy' ? 'bg-amber-500' : 'bg-emerald-500')}`}>
+                      {driver.isMock ? '?' : (getDriverActivity(driver.id) === 'busy' ? '!' : '✓')}
+                    </div>
+                  </div>
+
+                  {/* Little indicator arrow */}
+                  <div className={`w-3 h-2 -mt-0.5 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent ${driver.isMock ? 'border-t-slate-500' : (getDriverActivity(driver.id) === 'busy' ? 'border-t-amber-500' : 'border-t-emerald-500')} filter drop-shadow-[0_2px_1px_rgba(0,0,0,0.15)]`}></div>
+                </div>
+              </OverlayView>
             ))}
           </GoogleMap>
         ) : (
@@ -175,6 +227,26 @@ export default function TrackingTab() {
                 </button>
               )}
             </div>
+            {showList && (
+              <div className="relative mb-6">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                <input
+                  type="text"
+                  placeholder="Buscar piloto ou placa..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-10 py-3.5 bg-white/5 border border-white/10 rounded-[20px] text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-all uppercase"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <span className="material-symbols-outlined text-base">close</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {showList && (
               <div className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
