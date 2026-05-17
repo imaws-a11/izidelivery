@@ -79,7 +79,8 @@ serve(async (req) => {
       throw new Error("O parâmetro target_type é obrigatório ('all', 'users', 'drivers')")
     }
 
-    let tokens: string[] = []
+    let driverTokens: string[] = []
+    let userTokens: string[] = []
 
     if (target_type === 'drivers' || target_type === 'all') {
       const { data: driversData } = await supabase
@@ -88,7 +89,7 @@ serve(async (req) => {
         .not('push_token', 'is', null)
 
       if (driversData) {
-        tokens = tokens.concat(driversData.map((d: any) => d.push_token).filter(Boolean))
+        driverTokens = driversData.map((d: any) => d.push_token).filter(Boolean)
       }
     }
 
@@ -99,13 +100,14 @@ serve(async (req) => {
         .not('push_token', 'is', null)
 
       if (usersData) {
-        tokens = tokens.concat(usersData.map((d: any) => d.push_token).filter(Boolean))
+        userTokens = usersData.map((d: any) => d.push_token).filter(Boolean)
       }
     }
 
-    tokens = [...new Set(tokens)]
+    driverTokens = [...new Set(driverTokens)]
+    userTokens = [...new Set(userTokens)]
 
-    if (tokens.length === 0) {
+    if (driverTokens.length === 0 && userTokens.length === 0) {
       return new Response(
         JSON.stringify({ success: true, message: 'Nenhum push_token nativo encontrado. Transmissão via Web/Realtime concluída.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -119,26 +121,58 @@ serve(async (req) => {
       )
     }
 
-    const payload = {
-      notification: {
-        title: title || 'Notificação Izi',
-        body: message || '',
-        ...(image_url && { image: image_url })
-      },
-      android: {
+    let successCount = 0
+    let failureCount = 0
+
+    if (driverTokens.length > 0) {
+      const driverPayload = {
         notification: {
-          channelId: 'izi_notifications',
-          priority: 'high',
-          sound: 'default'
-        }
-      },
-      data: data || { context: 'broadcast' },
-      tokens,
+          title: title || 'Notificação Izi',
+          body: message || '',
+          ...(image_url && { image: image_url })
+        },
+        android: {
+          notification: {
+            channelId: 'izi_mission_channel',
+            priority: 'high',
+            sound: 'mission_call',
+            defaultVibrateTimings: true
+          }
+        },
+        data: data || { context: 'broadcast' },
+        tokens: driverTokens,
+      }
+      console.log(`[broadcast-push] Enviando para ${driverTokens.length} motoristas...`)
+      const response = await admin.messaging().sendEachForMulticast(driverPayload)
+      successCount += response.successCount
+      failureCount += response.failureCount
     }
 
-    console.log(`[broadcast-push] Enviando para ${tokens.length} tokens...`)
-    const response = await admin.messaging().sendEachForMulticast(payload)
-    console.log(`[broadcast-push] Resultado: ${response.successCount} sucessos, ${response.failureCount} falhas.`)
+    if (userTokens.length > 0) {
+      const userPayload = {
+        notification: {
+          title: title || 'Notificação Izi',
+          body: message || '',
+          ...(image_url && { image: image_url })
+        },
+        android: {
+          notification: {
+            channelId: 'izi_notifications',
+            priority: 'high',
+            sound: 'notification_izi',
+            defaultVibrateTimings: true
+          }
+        },
+        data: data || { context: 'broadcast' },
+        tokens: userTokens,
+      }
+      console.log(`[broadcast-push] Enviando para ${userTokens.length} usuários...`)
+      const response = await admin.messaging().sendEachForMulticast(userPayload)
+      successCount += response.successCount
+      failureCount += response.failureCount
+    }
+
+    console.log(`[broadcast-push] Resultado final: ${successCount} sucessos, ${failureCount} falhas.`)
 
     // PERSISTÊNCIA NO HISTÓRICO EM LOTE (IN-APP SYNC)
     try {
@@ -185,7 +219,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent: response.successCount, failed: response.failureCount }),
+      JSON.stringify({ success: true, sent: successCount, failed: failureCount }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: any) {

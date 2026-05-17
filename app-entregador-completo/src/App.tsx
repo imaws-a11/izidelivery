@@ -1770,9 +1770,9 @@ function MainApp() {
 
  if (Capacitor.getPlatform() === 'android') {
  await PushNotifications.createChannel({
- id: 'izi_notifications',
- name: 'Notificações IZI',
- description: 'Canal principal de notificações do IZI Delivery',
+ id: 'izi_mission_channel',
+ name: 'Chamadas de Entrega',
+ description: 'Canal principal de chamadas para entregadores',
  sound: 'mission_call',
  importance: 5,
  visibility: 1,
@@ -2755,9 +2755,9 @@ function MainApp() {
  });
 
  PushNotifications.createChannel({
- id: 'izi_notifications',
- name: 'Notificações IZI',
- description: 'Canal principal de notificações do IZI Delivery',
+ id: 'izi_mission_channel',
+ name: 'Chamadas de Entrega',
+ description: 'Canal principal de chamadas para entregadores',
  importance: 5, // Max importance para banner
  visibility: 1,
  sound: 'mission_call',

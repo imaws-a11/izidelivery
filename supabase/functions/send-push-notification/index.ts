@@ -78,9 +78,10 @@ serve(async (req) => {
           },
           android: {
             notification: {
-              channelId: 'izi_notifications',
+              channelId: 'izi_mission_channel',
               priority: 'high',
-              sound: 'default'
+              sound: 'mission_call',
+              defaultVibrateTimings: true
             }
           },
           data: data || { context: "geral" },
@@ -129,6 +130,14 @@ serve(async (req) => {
       notification: {
         title: title || 'Izi Delivery',
         body: body || 'Você tem uma nova atualização.'
+      },
+      android: {
+        notification: {
+          channelId: driver_id ? 'izi_mission_channel' : 'izi_notifications',
+          priority: 'high',
+          sound: driver_id ? 'mission_call' : 'notification_izi',
+          defaultVibrateTimings: true
+        }
       },
       data: data || { context: "geral" },
       token: targetToken,
