@@ -785,10 +785,17 @@ function MainApp() {
  const [orders, setOrders] = useState<Order[]>([]);
  
  // Estatísticas de rejeição para lógica de loop inteligente (2x = cooldown 30s, 4x = bloqueio permanente)
- const [declinedStats, setDeclinedStats] = useState<Record<string, { count: number, lastDecline: number, isPermanent: boolean }>>({});
+ const [declinedStats, setDeclinedStats] = useState<Record<string, { count: number, lastDecline: number, isPermanent: boolean }>>(() => {
+   try { return JSON.parse(localStorage.getItem('Izi_declined_stats') || '{}'); } catch { return {}; }
+ });
+ const declinedStatsRef = useRef(declinedStats);
 
- // Sincronizar stats com localStorage
+ // IDs de pedidos finalizados por ESTE motoboy (nunca reaparecem)
+ const completedByMeRef = useRef<Set<string>>(new Set());
+
+ // Sincronizar stats com localStorage e ref
  useEffect(() => {
+ declinedStatsRef.current = declinedStats;
  localStorage.setItem('Izi_declined_stats', JSON.stringify(declinedStats));
  }, [declinedStats]);
 
@@ -1074,8 +1081,22 @@ function MainApp() {
  const isFirstLoad = useRef(true);
 
  // Timer de now removido (performance: causava re-render completo a cada 10s sem utilidade)
- // visibleOrders simplificado: referência direta sem useMemo desnecessário
- const visibleOrders = orders;
+ // visibleOrders: filtra pedidos recusados (cooldown 3s, bloqueio permanente após 3 recusas)
+ const visibleOrders = useMemo(() => {
+   const now = Date.now();
+   return orders.filter(o => {
+     const targetId = o.realId || o.id;
+     // Nunca mostrar pedido já finalizado por este motoboy
+     if (completedByMeRef.current.has(targetId)) return false;
+     const stats = declinedStats[targetId];
+     if (!stats) return true;
+     // Bloqueio permanente após 3 recusas
+     if (stats.isPermanent) return false;
+     // Cooldown de 3 segundos entre recusas
+     if (now - stats.lastDecline < 3000) return false;
+     return true;
+   });
+ }, [orders, declinedStats]);
 
  const announcedOrderIds = useRef<Set<string>>(new Set());
 
@@ -2856,6 +2877,15 @@ function MainApp() {
  const hasDriver = o.driver_id && String(o.driver_id).trim() !== '' && String(o.driver_id).trim() !== String(driverId).trim();
  if (hasDriver) return false;
 
+ // PROTEÇÃO DE LOJISTA (Regra de Ouro)
+ // Pedidos originados em lojas/lojistas com status iniciais aguardando aceite do lojista NÃO aparecem no radar.
+ // Só aparecem no radar após o lojista aceitar (status 'waiting_driver').
+ const isWaitingMerchant = ['waiting_merchant', 'novo', 'paid', 'pago', 'pendente_pagamento', 'pendente', 'pending'].includes(rawStatus);
+ if (isWaitingMerchant) {
+   const isStoreDelivery = ['restaurant', 'market', 'pharmacy', 'water_gas', 'petshop'].includes(o.service_type) || o.merchant_id;
+   if (isStoreDelivery) return false;
+ }
+
  // FILTRO DE COMPATIBILIDADE DE VEÍCULO
  // Evita que motos vejam fretes, etc.
  const myV = driverVehicle?.toLowerCase() || 'moto';
@@ -2958,6 +2988,8 @@ function MainApp() {
  const terminalStatuses = ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered', 'rejected', 'recusado'];
  
  if (terminalStatuses.includes(status)) {
+ // Marcar como finalizado por este motoboy (nunca reaparece no radar)
+ completedByMeRef.current.add(o.id);
  // Limpa a missão selecionada se for esta
  if (currentMission && (currentMission.realId === o.id || currentMission.id === o.id)) {
  setActiveMission(null);
@@ -3045,8 +3077,17 @@ function MainApp() {
  }
  }
 
- const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
- if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
+ // Checar se este pedido foi recusado (sistema unificado via declinedStatsRef)
+ const dStats = declinedStatsRef.current[o.id];
+ if (dStats) {
+   // Bloqueio permanente após 3 recusas
+   if (dStats.isPermanent) return;
+   // Cooldown de 3 segundos
+   if (Date.now() - dStats.lastDecline < 3000) return;
+ }
+
+ // Nunca re-exibir pedido já finalizado por este motoboy
+ if (completedByMeRef.current.has(o.id)) return;
  
  const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
  if (financialTypes.includes(o.service_type)) return;
@@ -3300,22 +3341,27 @@ function MainApp() {
  }, [handleAccept]);
 
  const handleDecline = (order: Order) => {
- const targetId = order.realId || order.id;
- 
- // Parar o som imediatamente ao recusar
- stopIziSounds();
+   const targetId = order.realId || order.id;
+   
+   // Parar o som imediatamente ao recusar
+   stopIziSounds();
 
- // Lógica de loop inteligente: 2 rejeições = 30s cooldown, 4 rejeições = permanente
- setDeclinedStats(prev => {
-       const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
-      const newCount = current.count + 1;
-      const newStats = { count: newCount, lastDecline: Date.now(), isPermanent: newCount >= 4 };
-      if (newCount === 2) heardOrderIds.current.delete(targetId);
-      return { ...prev, [targetId]: newStats };
-    });
-    setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
-    toastSuccess('Chamada descartada.');
-  };
+   // Lógica de loop inteligente: recusa com cooldown de 3s, bloqueio permanente após 3 recusas
+   setDeclinedStats(prev => {
+     const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
+     const newCount = current.count + 1;
+     const newStats = { count: newCount, lastDecline: Date.now(), isPermanent: newCount >= 3 };
+     // Limpar do anunciados para permitir re-toque após cooldown (se não permanente)
+     if (!newStats.isPermanent) heardOrderIds.current.delete(targetId);
+     return { ...prev, [targetId]: newStats };
+   });
+
+   if ((declinedStatsRef.current[targetId]?.count || 0) + 1 >= 3) {
+     toastSuccess('Pedido bloqueado permanentemente.');
+   } else {
+     toastSuccess('Chamada descartada. Reaparecerá em 3s.');
+   }
+ }
 
   const refreshFinanceData = useCallback(async (forcedId?: string) => {
     const targetId = forcedId || driverId;

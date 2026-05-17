@@ -117,6 +117,18 @@ interface AppContextData {
   // Mobilidade e Etapas
   mobilityStep: number;
   setMobilityStep: (step: number) => void;
+
+  // Order Feedback
+  shopRating: number;
+  setShopRating: (rating: number) => void;
+  driverRating: number;
+  setDriverRating: (rating: number) => void;
+  fbComment: string;
+  setFbComment: (comment: string) => void;
+  fbIsSubmitting: boolean;
+  setFbIsSubmitting: (submitting: boolean) => void;
+  activeOrderId: string | null;
+  setActiveOrderId: (id: string | null) => void;
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -214,6 +226,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
   const [nearbyDriversCount, setNearbyDriversCount] = useState(0);
   const [mobilityStep, setMobilityStep] = useState(1);
+
+  // Order Feedback
+  const [shopRating, setShopRating] = useState(0);
+  const [driverRating, setDriverRating] = useState(0);
+  const [fbComment, setFbComment] = useState("");
+  const [fbIsSubmitting, setFbIsSubmitting] = useState(false);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
 
   const [marketConditions, setMarketConditions] = useState({
     demand: 1.0,
@@ -870,7 +889,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       handleConfirmMobility,
       selectedCard, setSelectedCard, walletBalance, setWalletBalance, iziCoins, setIziCoins,
       paymentMethod, setPaymentMethod, triggerCartAnimation, cartAnimations,
-      mobilityStep, setMobilityStep, handleResumePayment
+      mobilityStep, setMobilityStep, handleResumePayment,
+      shopRating, setShopRating, driverRating, setDriverRating, fbComment, setFbComment, fbIsSubmitting, setFbIsSubmitting, activeOrderId, setActiveOrderId
     }}>
       {children}
     </AppContext.Provider>
