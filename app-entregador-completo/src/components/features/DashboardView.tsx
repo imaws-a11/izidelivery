@@ -38,7 +38,9 @@ export const DashboardView = React.memo(({
   setShowOnboarding,
   setShowOrderModal,
   getServicePresentation,
-  getNetEarnings
+  getNetEarnings,
+  isOnline = false,
+  handleToggleOnline
 }: any) => {
   const [isCardExpanded, setIsCardExpanded] = useState(false);
   const [pullY, setPullY] = useState(0);
@@ -376,7 +378,66 @@ export const DashboardView = React.memo(({
               <h3 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">Novos Pedidos</h3>
             </div>
             <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar -mx-6 px-6">
-              {filteredOrders.map((order: any) => {
+              {filteredOrders.length === 0 ? (
+                <div className="w-full flex flex-col items-center justify-center py-10 px-4 bg-white rounded-3xl border border-zinc-100 shadow-xl shadow-zinc-200/20">
+                  {!isOnline ? (
+                    // Estado Offline
+                    <div className="flex flex-col items-center text-center max-w-sm">
+                      <div className="size-20 rounded-3xl bg-rose-50 flex items-center justify-center mb-6 relative">
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                          <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 border-2 border-white" />
+                        </span>
+                        <Icon name="wifi_off" className="text-rose-500 text-4xl" />
+                      </div>
+                      <h4 className="text-zinc-900 font-black text-lg uppercase tracking-tight mb-2">Conexão Pausada</h4>
+                      <p className="text-zinc-500 text-xs font-bold leading-relaxed mb-6 uppercase tracking-widest">
+                        Você está offline. Fique online para começar a receber pedidos e missões exclusivas em tempo real!
+                      </p>
+                      <button
+                        onClick={handleToggleOnline}
+                        className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl active:scale-95 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+                      >
+                        <Icon name="wifi" size={16} />
+                        Ficar Online Agora
+                      </button>
+                    </div>
+                  ) : (
+                    // Estado Online (Radar Sonar ativo!)
+                    <div className="flex flex-col items-center text-center max-w-sm">
+                      <div className="size-24 flex items-center justify-center mb-6 relative">
+                        {/* Círculos pulsantes do Radar */}
+                        <motion.div
+                          animate={{ scale: [1, 2.2], opacity: [0.6, 0] }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
+                          className="absolute size-12 rounded-full border-2 border-yellow-400/30"
+                        />
+                        <motion.div
+                          animate={{ scale: [1, 1.7], opacity: [0.6, 0] }}
+                          transition={{ duration: 2.5, repeat: Infinity, delay: 0.8, ease: "easeOut" }}
+                          className="absolute size-12 rounded-full border-2 border-yellow-400/20"
+                        />
+                        <motion.div
+                          animate={{ scale: [1, 1.3], opacity: [0.6, 0] }}
+                          transition={{ duration: 2.5, repeat: Infinity, delay: 1.6, ease: "easeOut" }}
+                          className="absolute size-12 rounded-full border-2 border-yellow-400/10"
+                        />
+                        {/* Centro do Radar */}
+                        <div className="size-16 rounded-full bg-yellow-400/10 flex items-center justify-center border border-yellow-400/25 relative z-10">
+                          <Icon name="explore" className="text-yellow-600 text-3xl animate-[spin_8s_linear_infinite]" />
+                        </div>
+                      </div>
+                      <h4 className="text-zinc-900 font-black text-lg uppercase tracking-tight mb-2 flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Radar Izi Ativo
+                      </h4>
+                      <p className="text-zinc-500 text-xs font-bold leading-relaxed uppercase tracking-widest">
+                        Buscando novas chamadas na sua região em tempo real... Mantenha o app aberto ou em background para receber chamadas instantâneas!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                filteredOrders.map((order: any) => {
                 if (!order) return null;
                 const isAvulsa = String(order.service_type || order.type || '').toLowerCase() === 'entrega_avulsa';
                 const presentation = getServicePresentation(order);
@@ -520,7 +581,7 @@ export const DashboardView = React.memo(({
                   </motion.div>
                 );
               })
-              }
+              )}
             </div>
           </section>
 

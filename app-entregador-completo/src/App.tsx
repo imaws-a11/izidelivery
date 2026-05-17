@@ -1166,9 +1166,24 @@ function MainApp() {
  });
  }
 
-   // 3. PLANO 2: Overlay Full-Screen (reaativado com proteções)
+   // 3. PLANO 2: Overlay Full-Screen (reativado com proteções)
   if (!overlayOrderRef.current) {
     setOverlayOrder(latest);
+  }
+
+  // Forçar abertura do app/tela se estiver minimizado/em background
+  if (Capacitor.isNativePlatform()) {
+    try {
+      if (typeof ForegroundService !== 'undefined') {
+        ForegroundService.checkManageOverlayPermission().then(async (status) => {
+          if (status.granted) {
+            await ForegroundService.moveToForeground();
+          }
+        });
+      }
+    } catch (e) {
+      console.error('[OVERLAY FOREGROUND] Erro ao forçar app para primeiro plano:', e);
+    }
   }
  
  }
@@ -2445,9 +2460,18 @@ function MainApp() {
  try {
  if (typeof ForegroundService !== 'undefined') {
  if (nextState && !activeMission) {
+ // Verificar e solicitar permissão SYSTEM_ALERT_WINDOW (Sobreposição)
+ const overlayStatus = await ForegroundService.checkManageOverlayPermission();
+ if (!overlayStatus.granted) {
+ toastSuccess("Ative o Izi Entregador nas configurações para sobrepor outros apps e receber novos pedidos!");
+ setTimeout(async () => {
+ await ForegroundService.requestManageOverlayPermission();
+ }, 2000);
+ }
+
  await ForegroundService.startForegroundService({
  id: 1001,
- title: "Izi Entregador: Online âÃ…â€œââ‚¬Â¦",
+ title: "Izi Entregador: Online ✅",
  body: "Buscando novas chamadas em tempo real...",
  importance: 5,
  icon: 'notification_icon'
@@ -4295,7 +4319,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  return true;
  }).map((item) => {
  const isActive = activeTab === item.id;
- const hasPendingOrders = item.id === 'active_mission' && orders.length > 0 && !activeMission;
+ const hasPendingOrders = item.id === 'active_mission' && visibleOrders.length > 0 && !activeMission;
 
  return (
  <button
@@ -4339,7 +4363,7 @@ const handleUpdateStatus = async (newStatus: string) => {
  <span className="absolute -top-1 -right-1 flex h-4 w-4">
  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
  <span className="relative inline-flex rounded-full h-4 w-4 bg-yellow-500 border-2 border-white flex items-center justify-center">
- <span className="text-[7px] text-zinc-900 font-black">{orders.length}</span>
+ <span className="text-[7px] text-zinc-900 font-black">{visibleOrders.length}</span>
  </span>
  </span>
  )}
