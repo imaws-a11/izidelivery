@@ -137,16 +137,18 @@ interface IziPayViewProps {
   onDeposit?: (amount: number, method: string) => void;
 }
 
-const QuickAction = ({ icon, label, onClick, color = "bg-zinc-50", active = false }: any) => (
+const QuickAction = ({ icon, label, onClick, active = false }: any) => (
   <motion.button 
     whileTap={{ scale: 0.92 }}
     onClick={onClick}
-    className="flex flex-col items-center gap-3 group"
+    className="flex flex-col items-center gap-2 group"
   >
-    <div className={`size-16 ${active ? 'bg-zinc-900 shadow-xl scale-110' : color} rounded-[24px] flex items-center justify-center shadow-[10px_10px_20px_rgba(0,0,0,0.05),-5px_-5px_15px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(255,255,255,0.5)] group-active:shadow-inner transition-all border ${active ? 'border-zinc-800' : 'border-white/40'}`}>
-      <span className={`material-symbols-rounded text-2xl font-black ${active ? 'text-yellow-400' : 'text-zinc-900'}`}>{icon}</span>
+    <div className={`size-12 ${active ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-white/5 hover:bg-white/10 border border-white/10'} backdrop-blur-md rounded-xl flex items-center justify-center active:scale-95 transition-all`}>
+      <div className={`size-5 flex items-center justify-center ${active ? 'text-black' : 'text-white'}`}>
+        {icon}
+      </div>
     </div>
-    <span className={`text-[10px] font-black uppercase tracking-[0.1em] ${active ? 'text-zinc-900' : 'text-zinc-500'} group-hover:text-black transition-colors`}>{label}</span>
+    <span className={`text-[9px] font-black uppercase tracking-[0.08em] ${active ? 'text-yellow-400' : 'text-white/60'} group-hover:text-white transition-colors`}>{label}</span>
   </motion.button>
 );
 
@@ -156,7 +158,7 @@ const TransactionItem = ({ title, date, amount, icon, color }: any) => {
     : title;
 
   return (
-    <div className="flex items-center justify-between p-5 hover:bg-zinc-50 transition-all rounded-[28px] border border-transparent hover:border-zinc-100 group">
+    <div className="flex items-center justify-between p-4 hover:bg-zinc-100/40 transition-all rounded-2xl border border-transparent hover:border-zinc-200/20 group">
       <div className="flex items-center gap-5">
         <div className={`size-12 rounded-2xl ${color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
           <span className="material-symbols-rounded text-xl font-black">{icon}</span>
@@ -521,14 +523,15 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
-      className="pb-32"
+      className="pb-32 font-bold"
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
-      <header className="bg-zinc-900 px-6 pt-32 pb-32 rounded-b-[60px] relative shadow-2xl overflow-hidden">
+      <header className="bg-zinc-900 px-6 pt-24 pb-8 rounded-b-[40px] relative shadow-xl overflow-hidden font-bold">
         {/* Ambient background effects */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/20 blur-[100px] rounded-full -mr-32 -mt-32" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 blur-[80px] rounded-full -ml-24 -mb-24" />
         
-        <div className="flex items-center justify-between mb-10 relative z-10">
+        <div className="flex items-center justify-between mb-8 relative z-10">
           <div className="flex items-center gap-4">
             <motion.button 
               whileTap={{ scale: 0.9 }} 
@@ -544,104 +547,131 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[48px] shadow-[0_30px_60px_rgba(0,0,0,0.3)] relative z-20 border border-white/20">
+        <div className="bg-white/10 backdrop-blur-lg p-6 rounded-3xl relative z-20 border border-white/10">
             {/* Design Consolidado com Duas Carteiras */}
-            <div className="space-y-6">
+            <div className="space-y-5">
                <div className="space-y-1">
                   <div className="flex items-center gap-2 ml-1">
-                      <p className="text-zinc-500 font-black text-[10px] uppercase tracking-[0.2em]">Patrimônio Total (BRL)</p>
-                      <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="text-zinc-400">
+                      <p className="text-white/60 font-black text-[9px] uppercase tracking-[0.2em]">Patrimônio Total (BRL)</p>
+                      <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="text-white/40 hover:text-white/80">
                          <span className="material-symbols-rounded text-sm">{isBalanceVisible ? 'visibility' : 'visibility_off'}</span>
                       </button>
                   </div>
-                  <h2 className="text-4xl font-black text-zinc-900 tracking-tighter">
+                  <h2 className="text-3xl font-black text-white tracking-tighter">
                      {isBalanceVisible ? `R$ ${(balance + (coins * iziCoinValue)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••••"}
                   </h2>
                </div>
 
-               <div className="grid grid-cols-2 gap-4">
-                  {/* Card Dinheiro (Consolidado) */}
-                  <div className="bg-zinc-50 p-5 rounded-[32px] border border-zinc-100 flex flex-col gap-2">
-                     <div className="flex items-center gap-2">
-                        <div className="size-6 rounded-lg bg-emerald-500 flex items-center justify-center">
-                           <span className="material-symbols-rounded text-white text-[14px]">payments</span>
-                        </div>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Saldo em R$</span>
+               <div className="grid grid-cols-2 gap-4 border-t border-b border-white/5 py-4 my-2">
+                  {/* Card Dinheiro */}
+                  <div className="flex flex-col gap-1 border-r border-white/5 pr-4">
+                     <div className="flex items-center gap-1.5 opacity-80">
+                        <span className="material-symbols-rounded text-emerald-400 text-xs">payments</span>
+                        <span className="text-[9px] font-black text-white/50 uppercase tracking-wider">Dinheiro</span>
                      </div>
-                     <p className="text-xl font-black text-zinc-900 tracking-tighter">
-                        {isBalanceVisible ? `R$ ${(balance + (coins * iziCoinValue)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••"}
+                     <p className="text-xl font-black text-white tracking-tighter leading-none mt-1">
+                        {isBalanceVisible ? `R$ ${(balance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "••••"}
                      </p>
-                     <span className="text-[7px] font-black text-zinc-400 uppercase tracking-tighter">Valor Total Disponível</span>
                   </div>
 
-                  {/* Card Izi Coins */}
-                  <div className="bg-zinc-900 p-5 rounded-[32px] border border-zinc-800 flex flex-col gap-2 shadow-xl">
-                     <div className="flex items-center gap-2">
-                        <div className="size-6 rounded-lg bg-yellow-400 flex items-center justify-center">
-                           <span className="material-symbols-rounded text-black text-[14px] fill-1">stars</span>
-                        </div>
-                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Moedas</span>
+                  {/* Card Moedas */}
+                  <div className="flex flex-col gap-1 pl-2">
+                     <div className="flex items-center gap-1.5 opacity-80">
+                        <span className="material-symbols-rounded text-yellow-400 text-xs fill-1">stars</span>
+                        <span className="text-[9px] font-black text-white/50 uppercase tracking-wider">Moedas</span>
                      </div>
-                     <div className="flex flex-col">
-                        <p className="text-xl font-black text-white tracking-tighter leading-none">
-                           {isBalanceVisible ? coins.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : "••••"}
-                        </p>
-                        <span className="text-[8px] font-black text-yellow-400/50 uppercase tracking-widest mt-1">Izi Coins</span>
-                     </div>
+                     <p className="text-xl font-black text-white tracking-tighter leading-none mt-1">
+                        {isBalanceVisible ? coins.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : "••••"}
+                     </p>
                   </div>
                </div>
 
-               {/* Cotação Informativa Destaque - Compacto */}
-               <div className="bg-yellow-400 rounded-[24px] p-3 flex items-center justify-between shadow-lg shadow-yellow-400/10 border border-yellow-300">
-                  <div className="flex items-center gap-3">
-                     <div className="size-8 rounded-xl bg-black flex items-center justify-center">
-                        <span className="material-symbols-rounded text-yellow-400 text-base font-black">currency_exchange</span>
+               {/* Cotação Informativa Destaque - Sem Fundo */}
+               <div className="flex items-center justify-between py-1 px-1 mt-2">
+                  <div className="flex items-center gap-2.5">
+                     <div className="size-7 rounded-xl flex items-center justify-center">
+                        <span className="material-symbols-rounded text-yellow-400 text-sm font-black">currency_exchange</span>
                      </div>
                      <div>
-                        <p className="text-[8px] font-black text-black/40 uppercase tracking-widest leading-none mb-0.5">Cotação Garantida</p>
-                        <p className="text-xs font-black text-black uppercase tracking-tighter">1 IZI = R$ {iziCoinValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} BRL</p>
+                        <p className="text-[8px] font-black text-yellow-400/70 uppercase tracking-wider leading-none mb-0.5">Cotação Garantida</p>
+                        <p className="text-[11px] font-black text-white uppercase tracking-tighter">1 IZI = R$ {iziCoinValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} BRL</p>
                      </div>
                   </div>
-                  <div className="bg-black/5 px-2 py-1 rounded-lg flex items-center gap-1.5">
-                     <span className="material-symbols-rounded text-black text-[14px]">trending_up</span>
-                     <span className="text-[9px] font-black text-black uppercase">Estável</span>
+                  <div className="flex items-center gap-1.5">
+                     <span className="material-symbols-rounded text-yellow-400 text-[11px]">trending_up</span>
+                     <span className="text-[8px] font-black text-yellow-400 uppercase">Estável</span>
                   </div>
                </div>
             </div>
           
-          <div className="flex gap-4 mt-10">
+          <div className="flex gap-4 mt-6">
             <motion.button 
               whileTap={{ scale: 0.96 }}
               onClick={() => setSubView("deposit")}
-              className="flex-1 bg-yellow-400 text-black h-16 rounded-[24px] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-yellow-400/20 border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1 transition-all"
+              className="flex-1 bg-yellow-400 text-black h-13 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all"
             >
               Depositar
             </motion.button>
             <motion.button 
               whileTap={{ scale: 0.96 }}
               onClick={() => setSubView("loan")}
-              className="flex-1 bg-zinc-900 text-white h-16 rounded-[24px] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-zinc-900/20"
+              className="flex-1 bg-white/10 text-white border border-white/10 h-13 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all"
             >
               Izi Crédito
             </motion.button>
           </div>
         </div>
+
+        {/* Quick Actions inside the header - clean without card background */}
+        <div className="mt-6 flex items-center justify-between px-4 relative z-20">
+          <QuickAction 
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="size-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 15h.008v.008H15V15Zm0 3h.008v.008H15V18Zm-3-3h.008v.008H12V15Zm0 3h.008v.008H12V18Zm-3-3h.008v.008H9V15Zm0 3h.008v.008H9V18Zm3-6h.008v.008H12V12Zm3 0h.008v.008H15V12Zm-6 0h.008v.008H9V12Zm9 3h.008v.008H18V15Zm0 3h.008v.008H18V18Zm0-6h.008v.008H18V12Zm-9 9h.008v.008H9V21Zm3 0h.008v.008H12V21Zm3 0h.008v.008H15V21Zm3 0h.008v.008H18V21Z" />
+              </svg>
+            } 
+            label="Escanear" 
+            onClick={() => setSubView("scan")} 
+          />
+          <QuickAction 
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="size-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+              </svg>
+            } 
+            label="Enviar" 
+            onClick={() => setSubView("send")} 
+          />
+          <QuickAction 
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="size-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18a2.25 2.25 0 0 1-2.25 2.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+            } 
+            label="Meu QR" 
+            onClick={() => setSubView("my_qr")} 
+          />
+          <QuickAction 
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="size-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+            } 
+            label="Extrato" 
+            onClick={() => setSubView("statement")} 
+          />
+        </div>
       </header>
 
-      <main className="px-6 -mt-12 space-y-12 relative z-30">
-        <section className="bg-white rounded-[48px] p-8 shadow-xl border border-zinc-100 flex items-center justify-between gap-2">
-          <QuickAction icon="qr_code_scanner" label="Escanear" onClick={() => setSubView("scan")} />
-          <QuickAction icon="send" label="Enviar" onClick={() => setSubView("send")} />
-          <QuickAction icon="qr_code_2" label="Meu QR" onClick={() => setSubView("my_qr")} />
-          <QuickAction icon="receipt_long" label="Extrato" onClick={() => setSubView("statement")} />
-        </section>
+      <main className="px-6 pt-8 space-y-8 relative z-30">
 
         <section>
-          <div className="flex items-center justify-between mb-6 px-4">
-            <h3 className="text-xl font-black text-zinc-900 tracking-tight uppercase">Atividades</h3>
-            <button className="text-zinc-500 font-black text-[10px] uppercase tracking-widest hover:text-black transition-colors">Ver histórico completo</button>
+          <div className="flex items-center justify-between mb-4 px-4">
+            <h3 className="text-lg font-black text-zinc-900 tracking-tight uppercase">Atividades</h3>
+            <button className="text-zinc-500 font-black text-[9px] uppercase tracking-widest hover:text-black transition-colors">Ver histórico</button>
           </div>
-          <div className="bg-white rounded-[48px] p-3 shadow-xl border border-zinc-100 space-y-1">
+          <div className="bg-zinc-50/30 border border-zinc-100/80 rounded-3xl p-2 space-y-1">
             {walletTransactions.length > 0 ? (
               walletTransactions.slice(0, 5).map((tx, idx) => (
                 <TransactionItem 
@@ -694,43 +724,43 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 space-y-10 pt-6 pb-40">
-        <div className="p-8 bg-zinc-50 rounded-[40px] border border-zinc-100 shadow-inner">
-          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 ml-1">Destinatário</p>
+        <div className="p-6 bg-zinc-50/40 border border-zinc-200/30 rounded-2xl">
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 ml-1">Destinatário</p>
           <div className="flex items-center gap-4">
-             <div className="size-12 rounded-2xl bg-zinc-900 flex items-center justify-center shrink-0">
-                <span className="material-symbols-rounded text-yellow-400">person</span>
+             <div className="size-11 rounded-xl bg-zinc-950 flex items-center justify-center shrink-0">
+                <span className="material-symbols-rounded text-yellow-400 text-lg">person</span>
              </div>
              <input 
                autoFocus={!recipientData}
                placeholder="E-mail, CPF ou @usuário" 
                value={recipientData ? recipientData.name : manualRecipient}
                onChange={(e) => setManualRecipient(e.target.value)}
-               className="flex-1 bg-transparent text-xl font-black outline-none placeholder:text-zinc-300" 
+               className="flex-1 bg-transparent text-lg font-black outline-none placeholder:text-zinc-300" 
              />
              {recipientData && (
-                <button onClick={() => setRecipientData(null)} className="size-8 rounded-full bg-zinc-200 flex items-center justify-center">
+                <button onClick={() => setRecipientData(null)} className="size-8 rounded-full bg-zinc-250 flex items-center justify-center">
                    <span className="material-symbols-rounded text-xs">close</span>
                 </button>
              )}
           </div>
         </div>
 
-        <div className="p-8 bg-zinc-50 rounded-[40px] border border-zinc-100 shadow-inner">
-          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 ml-1">Valor da Transferência</p>
+        <div className="p-6 bg-zinc-50/40 border border-zinc-200/30 rounded-2xl">
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 ml-1">Valor da Transferência</p>
           <div className="flex items-baseline gap-3">
-            <span className="text-2xl font-black text-zinc-400">R$</span>
+            <span className="text-xl font-black text-zinc-400">R$</span>
             <input 
               autoFocus={!!recipientData}
               type="number" 
               placeholder="0,00" 
               value={sendAmount}
               onChange={(e) => setSendAmount(e.target.value)}
-              className="flex-1 bg-transparent text-6xl font-black outline-none text-zinc-900 tracking-tighter" 
+              className="flex-1 bg-transparent text-5xl font-black outline-none text-zinc-900 tracking-tighter" 
             />
           </div>
-          <div className="mt-6 flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-             <span className="text-zinc-500">Saldo em Carteira</span>
-             <span className="text-zinc-900">R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+          <div className="mt-4 flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
+             <span className="text-zinc-400">Saldo em Carteira</span>
+             <span className="text-zinc-800">R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
 
@@ -739,7 +769,7 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
              <button 
                key={val} 
                onClick={() => setSendAmount(val.toString())}
-               className={`h-16 rounded-3xl border font-black text-sm shadow-sm active:scale-95 transition-all ${sendAmount === val.toString() ? 'bg-yellow-400 border-yellow-400 text-black' : 'bg-white border-zinc-100 text-zinc-600'}`}
+               className={`h-12 rounded-xl border font-black text-xs transition-all ${sendAmount === val.toString() ? 'bg-zinc-950 border-zinc-950 text-white' : 'bg-zinc-50/40 border-zinc-200/30 text-zinc-650'}`}
              >
                + R$ {val}
              </button>
@@ -747,12 +777,12 @@ export const IziPayView: React.FC<IziPayViewProps> = ({
         </div>
       </div>
 
-      <div className="fixed bottom-0 inset-x-0 p-8 bg-white/80 backdrop-blur-xl border-t border-zinc-50">
+      <div className="fixed bottom-0 inset-x-0 p-6 bg-white/80 backdrop-blur-xl border-t border-zinc-100">
         <motion.button 
           whileTap={{ scale: 0.98 }}
           disabled={isProcessing || !recipientData || !sendAmount || parseFloat(sendAmount) <= 0}
           onClick={handleTransfer}
-          className={`w-full h-20 rounded-[32px] font-black uppercase tracking-widest shadow-2xl transition-all ${isProcessing || !recipientData || !sendAmount ? 'bg-zinc-200 text-zinc-400' : 'bg-zinc-900 text-white shadow-zinc-900/20'}`}
+          className={`w-full h-14 rounded-2xl font-black uppercase tracking-widest transition-all ${isProcessing || !recipientData || !sendAmount ? 'bg-zinc-200 text-zinc-400' : 'bg-zinc-900 text-white shadow-lg shadow-zinc-900/10'}`}
         >
           {isProcessing ? "Processando..." : "Confirmar Envio"}
         </motion.button>

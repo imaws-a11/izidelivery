@@ -17,9 +17,21 @@ export const OrderFeedbackView = () => {
     fbIsSubmitting,
     setFbIsSubmitting,
     setUserXP,
-    showToast,
+    toastSuccess,
+    toastWarning,
+    toastError,
     activeOrderId
   } = useApp();
+
+  const showToast = (message: string, type: 'success' | 'warning' | 'error') => {
+    if (type === 'success') {
+      toastSuccess(message);
+    } else if (type === 'warning') {
+      toastWarning(message);
+    } else {
+      toastError ? toastError(message) : toastWarning(message);
+    }
+  };
 
   const handleSubmit = async () => {
     if (shopRating === 0 || driverRating === 0) { 

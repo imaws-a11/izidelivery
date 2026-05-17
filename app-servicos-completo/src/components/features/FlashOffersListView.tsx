@@ -86,23 +86,22 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
                     navigateSubView("exclusive_offer");
                   }
                 }}
-                className={`relative bg-zinc-50 border ${story.isRedeemed ? 'opacity-50 grayscale' : 'border-zinc-100'} rounded-[40px] p-8 flex items-center gap-6 cursor-pointer group active:scale-[0.97] transition-all shadow-sm hover:shadow-xl hover:shadow-zinc-100 overflow-hidden`}
+                className={`relative ${story.isRedeemed ? 'opacity-60 grayscale bg-zinc-100/40' : 'bg-zinc-50/70 hover:bg-white/80'} border border-zinc-200/50 backdrop-blur-md rounded-[20px] p-6 flex items-center gap-5 cursor-pointer group active:scale-[0.97] transition-all overflow-hidden`}
               >
                 <div className="relative size-28 rounded-3xl overflow-hidden shrink-0 shadow-lg border border-white">
                    <img src={story.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" alt={story.name} />
                 </div>
                 
-                <div className="flex-1 min-w-0">
-                   <div className="flex items-center gap-2 mb-2">
-                       <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest truncate max-w-[120px]">{story.merchant}</span>
-                       <div className="size-1 rounded-full bg-zinc-200" />
-                       {/* Timer com variante izi-flash */}
-                       <DigitalTimer targetDate={story.offer.expires_at} size="sm" variant="izi-flash" />
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                   <div>
+                      <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest truncate max-w-[120px]">{story.merchant}</span>
+                      </div>
+                      
+                      <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter leading-tight truncate mb-2 group-hover:text-yellow-600 transition-colors">{story.name}</h3>
                    </div>
                    
-                   <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter leading-tight truncate mb-3 group-hover:text-yellow-600 transition-colors">{story.name}</h3>
-                   
-                   <div className="flex items-center gap-3">
+                   <div className="flex items-center gap-3 mb-3">
                        <div className="bg-yellow-400 px-4 py-1.5 rounded-2xl shadow-sm">
                           <span className="text-xl font-black text-black tracking-tighter leading-none">R$ {story.finalPrice}</span>
                        </div>
@@ -110,9 +109,15 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
                          <span className="text-xs text-zinc-400 line-through font-bold">R$ {story.originalPrice}</span>
                        )}
                    </div>
+
+                   {story.offer.expires_at && (
+                     <div className="w-full mt-1">
+                       <DigitalTimer targetDate={story.offer.expires_at} createdDate={story.offer.created_at} size="sm" variant="izi-flash" />
+                     </div>
+                   )}
                 </div>
 
-                <div className={`size-14 rounded-3xl ${story.isRedeemed ? 'bg-zinc-200' : 'bg-black'} flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-lg`}>
+                <div className={`size-14 rounded-3xl ${story.isRedeemed ? 'bg-zinc-200' : 'bg-black'} flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-lg shrink-0`}>
                      <span className={`material-symbols-rounded font-black text-2xl ${story.isRedeemed ? 'text-zinc-400' : 'text-yellow-400'}`}>{story.isRedeemed ? 'check' : 'bolt'}</span>
                 </div>
 

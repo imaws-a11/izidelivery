@@ -18,7 +18,7 @@ export const IziBlackPurchaseView = () => {
   } = useApp();
   const { userId } = useAuth();
 
-  const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment">("info");
+  const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment">("payment");
   const [cpf, setCpf] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cartao");
@@ -63,8 +63,8 @@ export const IziBlackPurchaseView = () => {
     return (
       <div className="absolute inset-0 z-50 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-24">
         <header className="sticky top-0 z-[100] px-5 py-4 bg-black border-b border-white/5 flex items-center gap-4">
-          <button onClick={() => setIziBlackStep("info")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
-            <span className="material-symbols-outlined">arrow_back</span>
+          <button onClick={() => setSubView("izi_black_card")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center active:scale-95 transition-all">
+            <span className="material-symbols-outlined text-white">arrow_back</span>
           </button>
           <h1 className="text-sm font-black uppercase tracking-widest">Pagamento</h1>
         </header>

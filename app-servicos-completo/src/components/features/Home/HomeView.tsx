@@ -547,24 +547,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
                             <div 
                               key={i} 
                               onClick={() => setSubView("flash_offers")}
-                              className="snap-center shrink-0 w-[85vw] h-56 rounded-[44px] overflow-hidden shadow-2xl border border-zinc-100 relative bg-zinc-900"
+                              className="snap-center shrink-0 w-[72vw] h-48 rounded-[20px] overflow-hidden border border-white/10 relative bg-zinc-950/40 cursor-pointer active:scale-[0.98] transition-all"
                             >
-                                <img src={f.product_image || f.admin_users?.store_logo} className="size-full object-cover opacity-60" alt="Promo" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-8 flex flex-col justify-end">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span className="bg-yellow-400 text-black text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Oferta Flash</span>
-                                      <span className="text-white/60 text-[9px] font-bold uppercase tracking-widest truncate">{f.admin_users?.store_name}</span>
-                                      {f.expires_at && (
-                                      <div className="ml-auto">
-                                            <DigitalTimer targetDate={f.expires_at} size="sm" variant="izi-flash" />
-                                          </div>
-                                      )}
+                                <img src={f.product_image || f.admin_users?.store_logo} className="size-full object-cover opacity-50 absolute inset-0 -z-10" alt="Promo" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/20 p-5 flex flex-col justify-end backdrop-blur-[2px]">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className="bg-yellow-400 text-black text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm shadow-yellow-400/20">Oferta Flash</span>
+                                      <span className="text-white/80 text-[9px] font-black uppercase tracking-widest truncate">{f.admin_users?.store_name}</span>
                                     </div>
-                                    <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight line-clamp-1">{f.product_name || f.title}</h4>
-                                    <div className="flex items-center gap-3 mt-2">
-                                      <span className="text-yellow-400 text-xl font-black tracking-tighter">R$ {Number(f.discounted_price).toFixed(2).replace('.', ',')}</span>
-                                      <span className="text-white/40 text-xs line-through font-bold">R$ {Number(f.original_price).toFixed(2).replace('.', ',')}</span>
+                                    <h4 className="text-lg font-black text-white uppercase tracking-tighter leading-tight line-clamp-1">{f.product_name || f.title}</h4>
+                                    <div className="flex items-center gap-3 mt-1 mb-3">
+                                      <span className="text-yellow-400 text-base font-black tracking-tighter">R$ {Number(f.discounted_price).toFixed(2).replace('.', ',')}</span>
+                                      <span className="text-white/40 text-[10px] line-through font-bold">R$ {Number(f.original_price).toFixed(2).replace('.', ',')}</span>
                                     </div>
+                                    {f.expires_at && (
+                                      <DigitalTimer targetDate={f.expires_at} createdDate={f.created_at} size="sm" variant="izi-flash" />
+                                    )}
                                 </div>
                             </div>
                           ))}

@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface DigitalTimerProps {
   targetDate: string;
+  createdDate?: string;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'dark' | 'light' | 'premium-red';
+  variant?: 'dark' | 'light' | 'premium-red' | 'izi-flash';
 }
 
 const getBoxStyle = (variant: string, isUrgent: boolean) => {
   if (variant === 'izi-flash') {
-    return `bg-gradient-to-br from-yellow-500 via-orange-500 to-red-600 border border-yellow-300 shadow-[0_0_20px_rgba(234,179,8,0.6),inset_0_2px_10px_rgba(255,255,255,0.4)] relative overflow-hidden before:absolute before:inset-0 before:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMSIvPgo8L3N2Zz4=')] before:opacity-30 ${isUrgent ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''}`;
+    return `bg-gradient-to-br from-yellow-500 via-orange-500 to-red-600 border border-yellow-300 shadow-[0_0_20px_rgba(234,179,8,0.6),inset_0_2px_10px_rgba(255,255,255,0.4)] relative overflow-hidden ${isUrgent ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''}`;
   }
   if (variant === 'premium-red') {
     return `bg-[#1a0505] border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4),inset_0_0_20px_rgba(239,68,68,0.2)] backdrop-blur-xl relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent before:z-0 ${isUrgent ? 'animate-pulse' : ''}`;
@@ -34,7 +35,7 @@ const getSeparatorStyle = (variant: string) => {
   return 'text-zinc-400';
 };
 
-const DigitBox = ({ value, label, current, variant, isUrgent }: { value: string, label: string, current: any, variant: 'dark' | 'light' | 'premium-red', isUrgent: boolean }) => (
+const DigitBox = ({ value, label, current, variant, isUrgent }: { value: string, label: string, current: any, variant: 'dark' | 'light' | 'premium-red' | 'izi-flash', isUrgent: boolean }) => (
   <div className="flex flex-col items-center gap-1.5">
     <div className={`${current.box} ${getBoxStyle(variant, isUrgent)} rounded-lg sm:rounded-xl flex items-center justify-center`}>
       <AnimatePresence mode="popLayout">
@@ -45,13 +46,11 @@ const DigitBox = ({ value, label, current, variant, isUrgent }: { value: string,
           exit={{ y: -20, opacity: 0, scale: 0.8, rotateX: 45 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.8 }}
           className={`${current.text} font-black ${getTextStyle(variant)} tracking-tighter z-10 flex items-center justify-center w-full h-full transform-gpu`}
-          style={{ fontFamily: "'Inter', sans-serif" }} // Fonte limpa e tech
+          style={{ fontFamily: "'Inter', sans-serif" }}
         >
           {value}
         </motion.span>
       </AnimatePresence>
-      
-      {/* Linha reflexiva de centro simulando split-flap */}
       <div className="absolute top-1/2 left-0 right-0 h-px bg-black/20 z-20 mix-blend-overlay"></div>
     </div>
     {label && (
@@ -62,28 +61,93 @@ const DigitBox = ({ value, label, current, variant, isUrgent }: { value: string,
   </div>
 );
 
-export const DigitalTimer: React.FC<DigitalTimerProps> = ({ targetDate, size = 'md', variant = 'dark' }) => {
+export const DigitalTimer: React.FC<DigitalTimerProps> = ({ targetDate, createdDate, size = 'md', variant = 'dark' }) => {
   const [timeLeft, setTimeLeft] = useState({ h: '00', m: '00', s: '00', totalHours: 0 });
+  const [percentage, setPercentage] = useState(100);
+  const [timeLabel, setTimeLabel] = useState('');
 
   useEffect(() => {
     const calculate = () => {
-      const diff = new Date(targetDate).getTime() - Date.now();
-      if (diff <= 0) return { h: '00', m: '00', s: '00', totalHours: 0 };
+      const start = createdDate ? new Date(createdDate).getTime() : new Date(targetDate).getTime() - 2 * 60 * 60 * 1000;
+      const end = new Date(targetDate).getTime();
+      const now = Date.now();
+
+      const total = end - start;
+      const elapsed = now - start;
+
+      let pct = 100;
+      if (total > 0) {
+        pct = Math.max(0, Math.min(100, 100 - (elapsed / total) * 100));
+      }
+
+      const diff = end - now;
+      if (diff <= 0) {
+        return { h: '00', m: '00', s: '00', totalHours: 0, pct: 0, label: 'Expirado' };
+      }
 
       const totalHours = Math.floor(diff / (1000 * 60 * 60));
       const h = totalHours.toString().padStart(2, '0');
       const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
       const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-      return { h, m, s, totalHours };
+
+      let label = '';
+      if (totalHours > 0) {
+        label = `${totalHours}h ${m}m`;
+      } else if (parseInt(m) > 0) {
+        label = `${m}m ${s}s`;
+      } else {
+        label = `${s}s`;
+      }
+
+      return { h, m, s, totalHours, pct, label };
     };
 
     const timer = setInterval(() => {
-      setTimeLeft(calculate());
+      const res = calculate();
+      setTimeLeft({ h: res.h, m: res.m, s: res.s, totalHours: res.totalHours });
+      setPercentage(res.pct);
+      setTimeLabel(res.label);
     }, 1000);
 
-    setTimeLeft(calculate());
+    const initial = calculate();
+    setTimeLeft({ h: initial.h, m: initial.m, s: initial.s, totalHours: initial.totalHours });
+    setPercentage(initial.pct);
+    setTimeLabel(initial.label);
+
     return () => clearInterval(timer);
-  }, [targetDate]);
+  }, [targetDate, createdDate]);
+
+  if (variant === 'izi-flash') {
+    // Elegant neon bar with subtle pulsing glow
+    const barGlow = percentage < 20 
+      ? 'rgba(239, 68, 68, 0.8)' // vibrant red
+      : 'rgba(234, 179, 8, 0.9)'; // yellow gold
+
+    const remainingColor = percentage < 20 ? 'text-red-500' : 'text-yellow-400';
+
+    return (
+      <div className="w-full space-y-2 mt-auto">
+        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest leading-none">
+          <span className="text-white/60">Tempo restante</span>
+          <span className={`${remainingColor} font-mono tracking-normal animate-pulse`}>
+            {timeLabel}
+          </span>
+        </div>
+        <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden border border-white/5 p-[1px] backdrop-blur-md relative shadow-inner">
+          <motion.div
+            className={`h-full rounded-full ${percentage < 20 ? 'bg-gradient-to-r from-red-500 to-rose-600' : 'bg-gradient-to-r from-yellow-400 via-orange-400 to-amber-500'}`}
+            style={{
+              width: `${percentage}%`,
+              boxShadow: `0 0 10px ${barGlow}, 0 0 20px ${barGlow}`
+            }}
+            initial={{ width: 0 }}
+            animate={{ width: `${percentage}%` }}
+            transition={{ type: 'spring', stiffness: 80, damping: 15 }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   const sizes = {
     sm: { box: 'w-7 h-8 sm:w-8 sm:h-9', text: 'text-sm sm:text-base', label: 'text-[5px] sm:text-[6px]' },
@@ -92,7 +156,6 @@ export const DigitalTimer: React.FC<DigitalTimerProps> = ({ targetDate, size = '
   };
 
   const current = sizes[size];
-  // Urgência = menos de 1 hora
   const isUrgent = variant === 'premium-red' && timeLeft.totalHours < 1;
 
   return (
