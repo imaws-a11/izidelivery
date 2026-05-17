@@ -136,8 +136,10 @@ const NotificationsTab = () => {
 
       if (error) throw error;
 
+      let pushResult = '';
+
       if (notifType === 'push' || notifType === 'both') {
-        const { error: fnError } = await supabase.functions.invoke('broadcast-push', {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('broadcast-push', {
           body: {
             target_type: target,
             title,
@@ -145,14 +147,29 @@ const NotificationsTab = () => {
             image_url: imageUrl || null
           }
         });
-        if (fnError) console.error('Erro ao disparar broadcast push:', fnError);
+        
+        if (fnError) {
+          console.error('Erro ao disparar broadcast push:', fnError);
+          pushResult = `\n⚠️ Push FCM falhou: ${fnError.message || 'Erro na Edge Function'}`;
+        } else if (fnData) {
+          if (fnData.warning) {
+            pushResult = `\n⚠️ ${fnData.warning}`;
+          } else if (fnData.sent !== undefined) {
+            pushResult = `\n📱 Push entregue: ${fnData.sent} dispositivos | ${fnData.failed || 0} falhas`;
+          } else if (fnData.message) {
+            pushResult = `\nℹ️ ${fnData.message}`;
+          }
+        }
       }
+
+      // Notificação Realtime (via broadcast_notifications) já foi disparada pelo INSERT acima.
+      // O push FCM é um bônus para dispositivos nativos.
 
       setTitle('');
       setMessage('');
       setImageUrl('');
       fetchHistory();
-      alert('Notificação disparada com sucesso!');
+      alert(`✅ Transmissão disparada com sucesso!\n\n📡 Notificação In-App: Entregue via Realtime${pushResult}`);
     } catch (err: any) {
       alert('Erro ao enviar: ' + err.message);
     } finally {

@@ -258,6 +258,28 @@ const DriverApplicationsTab = () => {
     }
   };
 
+  const handleDelete = async (appId: string) => {
+    if (!confirm('Deseja realmente excluir permanentemente este registro de candidatura? Esta ação é irreversível.')) return;
+
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('driver_applications_delivery')
+        .delete()
+        .eq('id', appId);
+
+      if (error) throw error;
+      alert('Registro excluído permanentemente com sucesso.');
+      fetchData();
+      setSelectedApp(null);
+    } catch (err: any) {
+      alert('Erro ao excluir: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved': return <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-black uppercase tracking-widest">Aprovado</span>;
@@ -362,9 +384,14 @@ const DriverApplicationsTab = () => {
 
                     <div className="pt-6 flex items-center gap-4">
                       {selectedApp.status === 'rejected' ? (
-                        <button disabled={actionLoading} onClick={() => handleReactivate(selectedApp.id)} className="flex-1 h-20 bg-amber-500 text-white rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-amber-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-3 hover:bg-amber-600">
-                          {actionLoading ? 'Processando...' : <>Reativar Candidatura <span className="material-symbols-outlined text-sm">refresh</span></>}
-                        </button>
+                        <>
+                          <button disabled={actionLoading} onClick={() => handleReactivate(selectedApp.id)} className="flex-[2] h-20 bg-amber-500 text-white rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-amber-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-3 hover:bg-amber-600">
+                            {actionLoading ? 'Processando...' : <>Reativar Candidatura <span className="material-symbols-outlined text-sm">refresh</span></>}
+                          </button>
+                          <button disabled={actionLoading} onClick={() => handleDelete(selectedApp.id)} className="flex-1 h-20 bg-rose-50 dark:bg-rose-500/10 text-rose-500 rounded-[32px] font-black uppercase text-[10px] tracking-[0.2em] transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-1 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-transparent hover:border-rose-200">
+                            {actionLoading ? '...' : <><span className="material-symbols-outlined text-xl">delete_forever</span> Excluir</>}
+                          </button>
+                        </>
                       ) : (
                         <>
                           <button disabled={actionLoading || selectedApp.status !== 'pending'} onClick={() => handleApprove(selectedApp)} className="flex-1 h-20 bg-emerald-500 text-white rounded-[32px] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-emerald-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-3">
