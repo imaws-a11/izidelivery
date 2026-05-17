@@ -7239,7 +7239,6 @@ const handleUpdateStatus = async (newStatus: string) => {
                 onApproved={() => {
                   setShowOnboarding(false);
                   setIsProfileLoaded(true);
-                  toastSuccess('Cadastro aprovado!');
                   if (driverId) {
                     loadProfileAndEnforceOnboarding(driverId, authEmail || '', authName || '');
                   }
