@@ -31,6 +31,7 @@ import { normalizeServiceType, cleanAddressText, formatCurrency } from './lib/ut
 import { iziFetch } from './lib/iziFetch';
 import PersonalDataModal from './components/features/PersonalDataModal';
 import BankDetailsModal from './components/features/BankDetailsModal';
+import IncomingOrderOverlay, { OverlayErrorBoundary } from './components/features/IncomingOrderOverlay';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -788,7 +789,8 @@ function MainApp() {
  const [declinedStats, setDeclinedStats] = useState<Record<string, { count: number, lastDecline: number, isPermanent: boolean }>>(() => {
    try { return JSON.parse(localStorage.getItem('Izi_declined_stats') || '{}'); } catch { return {}; }
  });
- const declinedStatsRef = useRef(declinedStats);
+  const declinedStatsRef = useRef(declinedStats);
+  const [cooldowns, setCooldowns] = useState<Record<string, boolean>>({});
 
  // IDs de pedidos finalizados por ESTE motoboy (nunca reaparecem)
  const completedByMeRef = useRef<Set<string>>(new Set());
@@ -1079,24 +1081,23 @@ function MainApp() {
  // Vigilante de Som (Padrão Lojista - Alta Confiabilidade)
  const heardOrderIds = useRef<Set<string>>(new Set());
  const isFirstLoad = useRef(true);
+ const [overlayOrder, setOverlayOrder] = useState<any>(null);
+ const overlayOrderRef = useRef<any>(null);
+ useEffect(() => { overlayOrderRef.current = overlayOrder; }, [overlayOrder]);
 
- // Timer de now removido (performance: causava re-render completo a cada 10s sem utilidade)
  // visibleOrders: filtra pedidos recusados (cooldown 3s, bloqueio permanente após 3 recusas)
- const visibleOrders = useMemo(() => {
-   const now = Date.now();
-   return orders.filter(o => {
-     const targetId = o.realId || o.id;
-     // Nunca mostrar pedido já finalizado por este motoboy
-     if (completedByMeRef.current.has(targetId)) return false;
-     const stats = declinedStats[targetId];
-     if (!stats) return true;
-     // Bloqueio permanente após 3 recusas
-     if (stats.isPermanent) return false;
-     // Cooldown de 3 segundos entre recusas
-     if (now - stats.lastDecline < 3000) return false;
-     return true;
-   });
- }, [orders, declinedStats]);
+  const visibleOrders = useMemo(() => {
+    return orders.filter(o => {
+      const targetId = o.realId || o.id;
+      // Nunca mostrar pedido já finalizado por este motoboy
+      if (completedByMeRef.current.has(targetId)) return false;
+      const stats = declinedStats[targetId];
+      if (stats?.isPermanent) return false;
+      // Cooldown de 3 segundos ativo
+      if (cooldowns[targetId]) return false;
+      return true;
+    });
+  }, [orders, declinedStats, cooldowns]);
 
  const announcedOrderIds = useRef<Set<string>>(new Set());
 
@@ -1165,8 +1166,11 @@ function MainApp() {
  });
  }
 
- // 3. Overlay nativo removido temporariamente a pedido do usuário
- // A permissão continua existindo, mas o popup nativo não será mais desenhado.
+   // 3. PLANO 2: Overlay Full-Screen (reaativado com proteções)
+  if (!overlayOrderRef.current) {
+    setOverlayOrder(latest);
+  }
+ 
  }
  }, [visibleOrders, isAuthenticated, isOnline]);
 
@@ -3340,21 +3344,35 @@ function MainApp() {
  handleAcceptRef.current = handleAccept;
  }, [handleAccept]);
 
- const handleDecline = (order: Order) => {
-   const targetId = order.realId || order.id;
-   
-   // Parar o som imediatamente ao recusar
-   stopIziSounds();
+  const handleDecline = (order: Order) => {
+    const targetId = order.realId || order.id;
+    
+    // Parar o som imediatamente ao recusar
+    stopIziSounds();
 
-   // Lógica de loop inteligente: recusa com cooldown de 3s, bloqueio permanente após 3 recusas
-   setDeclinedStats(prev => {
-     const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
-     const newCount = current.count + 1;
-     const newStats = { count: newCount, lastDecline: Date.now(), isPermanent: newCount >= 3 };
-     // Limpar do anunciados para permitir re-toque após cooldown (se não permanente)
-     if (!newStats.isPermanent) heardOrderIds.current.delete(targetId);
-     return { ...prev, [targetId]: newStats };
-   });
+    // Lógica de loop inteligente: recusa com cooldown de 3s, bloqueio permanente após 3 recusas
+    setDeclinedStats(prev => {
+      const current = prev[targetId] || { count: 0, lastDecline: 0, isPermanent: false };
+      const newCount = current.count + 1;
+      const newStats = { count: newCount, lastDecline: Date.now(), isPermanent: newCount >= 3 };
+      
+      if (!newStats.isPermanent) {
+        // Limpar de todos os rastreadores de anúncio para forçar re-anúncio/re-toque completo
+        announcedOrderIds.current.delete(targetId);
+        heardOrderIds.current.delete(targetId);
+        
+        // Ativar cooldown reativo de 3 segundos
+        setCooldowns(c => ({ ...c, [targetId]: true }));
+        setTimeout(() => {
+          setCooldowns(c => {
+            const updated = { ...c };
+            delete updated[targetId];
+            return updated;
+          });
+        }, 3000);
+      }
+      return { ...prev, [targetId]: newStats };
+    });
 
    if ((declinedStatsRef.current[targetId]?.count || 0) + 1 >= 3) {
      toastSuccess('Pedido bloqueado permanentemente.');
@@ -8154,7 +8172,27 @@ const handleUpdateStatus = async (newStatus: string) => {
  {renderBroadcastPopup()}
  </AnimatePresence>
  
- {renderSystemPopup()}
+   {renderSystemPopup()}
+
+  {/* PLANO 2: Overlay Full-Screen para novos pedidos */}
+  <OverlayErrorBoundary onError={() => setOverlayOrder(null)}>
+    <IncomingOrderOverlay
+      order={overlayOrder}
+      onAccept={(order) => {
+        setOverlayOrder(null);
+        handleAccept(order);
+      }}
+      onDismiss={() => {
+        setOverlayOrder(null);
+        // Registrar como recusa no sistema unificado
+        if (overlayOrder) {
+          handleDecline(overlayOrder);
+        }
+      }}
+      getServicePresentation={getServicePresentation}
+      getNetEarnings={getNetEarnings}
+    />
+  </OverlayErrorBoundary>
 
 
  </div>
