@@ -3373,8 +3373,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     handleSaveAppSettings,
     handleUpdateMerchantProfile,
     fetchMerchantFinance, handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance,
-    partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal, handleSettlePayout,
-    handleApplyCredit, handleApplyMerchantCredit, handleApplyDriverCredit
+    partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal, handleSettlePayout
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
