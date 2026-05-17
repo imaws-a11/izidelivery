@@ -2083,6 +2083,7 @@ function MainApp() {
 
   // LIBERAÇÃO AUTORITATIVA: Se o admin marcou como ativo, ele PODE entrar.
   const isFullyAuthorized = active; 
+  setIsApproved(isFullyAuthorized);
 
   if (isFullyAuthorized) {
     setShowOnboarding(false);
@@ -4508,6 +4509,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  setShowOrderModal={setShowOrderModal}
  getServicePresentation={getServicePresentation}
  getNetEarnings={getNetEarnings}
+  isOnline={isOnline}
+  handleToggleOnline={handleToggleOnline}
  />
  );
 
@@ -4748,6 +4751,8 @@ const handleUpdateStatus = async (newStatus: string) => {
  setSubTabScheduled={setSubTabScheduled}
  setSelectedScheduledOrder={setSelectedScheduledOrder}
  getNetEarnings={getNetEarnings}
+  isOnline={isOnline}
+  handleToggleOnline={handleToggleOnline}
  serviceTypeLabel={serviceTypeLabel}
  />
  );
@@ -7502,7 +7507,9 @@ const handleUpdateStatus = async (newStatus: string) => {
  <AnimatePresence mode="wait">
  {activeTab === 'dashboard' && <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Painel Principal">{renderDashboard()}</LocalErrorBoundary></motion.div>}
  {activeTab === 'active_mission' && <motion.div key="active_miss" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Missão Ativa">{renderActiveMissionView()}</LocalErrorBoundary></motion.div>}
- {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Histórico"><HistoryView history={history} getNetEarnings={getNetEarnings} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></LocalErrorBoundary></motion.div>}
+ {activeTab === 'history' && <motion.div key="hist" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Histórico"><HistoryView history={history} getNetEarnings={getNetEarnings}
+  isOnline={isOnline}
+  handleToggleOnline={handleToggleOnline} serviceTypeLabel={serviceTypeLabel} onSelectOrder={(order: any) => { setSelectedOrder(order); setShowOrderModal(true); }} /></LocalErrorBoundary></motion.div>}
  {activeTab === 'earnings' && <motion.div key="earn" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full flex flex-col flex-1"><LocalErrorBoundary featureName="Ganhos"><EarningsView stats={stats} onShowBankDetails={() => setShowBankDetails(true)} onShowWithdrawHistory={() => setShowWithdrawHistory(true)} onWithdrawRequest={handleWithdrawRequest} onNavigateToMissions={() => setActiveTab('missions')} /></LocalErrorBoundary></motion.div>}
  {activeTab === 'profile' && (
  <motion.div 
@@ -8215,6 +8222,8 @@ const handleUpdateStatus = async (newStatus: string) => {
       }}
       getServicePresentation={getServicePresentation}
       getNetEarnings={getNetEarnings}
+  isOnline={isOnline}
+  handleToggleOnline={handleToggleOnline}
     />
   </OverlayErrorBoundary>
 
