@@ -13,12 +13,22 @@ export default function IntegrationsTab() {
 
   // Fetch keys for the current merchant
   const fetchKeys = async () => {
-    if (userRole !== 'merchant' || !merchantProfile?.merchant_id) return;
+    if (userRole !== 'merchant') return;
     setLoading(true);
+    
+    // Get active user ID directly from Supabase Auth to bypass any local storage cache issues
+    const { data: { user } } = await supabase.auth.getUser();
+    const activeMerchantId = user?.id || merchantProfile?.id;
+    
+    if (!activeMerchantId) {
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('merchant_api_keys')
       .select('*')
-      .eq('merchant_id', merchantProfile.merchant_id)
+      .eq('merchant_id', activeMerchantId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -40,13 +50,23 @@ export default function IntegrationsTab() {
     }
     setGenerating(true);
     
+    // Get active user ID directly from Supabase Auth to guarantee perfect RLS policy compliance
+    const { data: { user } } = await supabase.auth.getUser();
+    const activeMerchantId = user?.id || merchantProfile?.id;
+
+    if (!activeMerchantId) {
+      toastError('Erro ao identificar o lojista logado.');
+      setGenerating(false);
+      return;
+    }
+    
     // Generate a secure random token
     const randomToken = `sk_izi_${crypto.randomUUID().replace(/-/g, '')}${Math.random().toString(36).substring(2, 10)}`;
 
     const { error } = await supabase
       .from('merchant_api_keys')
       .insert({
-        merchant_id: merchantProfile?.merchant_id,
+        merchant_id: activeMerchantId,
         api_key: randomToken,
         label: newLabel.trim()
       });
