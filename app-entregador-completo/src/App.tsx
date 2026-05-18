@@ -1713,6 +1713,8 @@ function MainApp() {
  'cartao_credito': 'Cartão de Crédito',
  'cartao_debito': 'Cartão de Débito',
  'maquininha': 'Cartão (Maquininha)',
+  'cartao': 'Cartão (Débito/Crédito)',
+  'bitcoin_lightning': '⚡ Bitcoin Lightning',
  'wallet': 'Carteira Izi',
  'not_required': 'Não requerido'
  };

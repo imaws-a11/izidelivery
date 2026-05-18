@@ -28,8 +28,30 @@ export default function MyStoreTab() {
     merchantProfile, 
     setMerchantProfile, 
     isSaving,
-    setIsSaving
+    setIsSaving,
+    handleUpdateMerchantProfile
   } = useAdmin();
+
+  const [profileData, setProfileData] = useState({
+    store_name: merchantProfile?.store_name || '',
+    email: merchantProfile?.email || '',
+    document: merchantProfile?.document || '',
+    store_phone: merchantProfile?.store_phone || '',
+    pix_key: merchantProfile?.bank_info?.pix_key || ''
+  });
+
+  useEffect(() => {
+    if (merchantProfile) {
+      setProfileData({
+        store_name: merchantProfile.store_name || '',
+        email: merchantProfile.email || '',
+        document: merchantProfile.document || '',
+        store_phone: merchantProfile.store_phone || '',
+        pix_key: merchantProfile.bank_info?.pix_key || ''
+      });
+    }
+  }, [merchantProfile]);
+
 
   const [localRadius, setLocalRadius] = useState(merchantProfile?.delivery_radius || 0);
   const [coverageMode, setCoverageMode] = useState<'radius' | 'neighborhoods'>(
@@ -360,6 +382,126 @@ export default function MyStoreTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-10">
           
+          {/* DADOS CADASTRAIS & FINANCEIROS (MIGRADO DE PERFIL) */}
+          <section className="bg-transparent border border-slate-200 dark:border-slate-800 p-10 rounded-[56px] shadow-sm relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col gap-6 font-display">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="size-14 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
+                  <span className="material-symbols-outlined text-2xl font-black">badge</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-905 dark:text-white uppercase tracking-tight">Dados Gerais & Recebimentos</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Gerencie os dados cadastrais da sua conta e a chave de recebimento PIX</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Nome / Razão Social</label>
+                  <input 
+                    type="text"
+                    value={profileData.store_name}
+                    onChange={(e) => setProfileData({ ...profileData, store_name: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-5 font-black text-sm text-slate-700 dark:text-white focus:border-primary outline-none transition-all shadow-inner"
+                    placeholder="Nome do seu estabelecimento"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">E-mail Comercial</label>
+                  <input 
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-5 font-black text-sm text-slate-700 dark:text-white focus:border-primary outline-none transition-all shadow-inner"
+                    placeholder="exemplo@comercial.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Documento (CPF ou CNPJ)</label>
+                  <input 
+                    type="text"
+                    value={profileData.document}
+                    onChange={(e) => setProfileData({ ...profileData, document: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-5 font-black text-sm text-slate-700 dark:text-white focus:border-primary outline-none transition-all shadow-inner"
+                    placeholder="00.000.000/0001-00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Telefone de Contato</label>
+                  <input 
+                    type="text"
+                    value={profileData.store_phone}
+                    onChange={(e) => setProfileData({ ...profileData, store_phone: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-5 font-black text-sm text-slate-700 dark:text-white focus:border-primary outline-none transition-all shadow-inner"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Chave PIX (E-mail, CPF, CNPJ ou Celular)</label>
+                  <div className="relative flex items-center">
+                    <span className="material-symbols-outlined absolute left-6 text-slate-400">qr_code</span>
+                    <input 
+                      type="text"
+                      value={profileData.pix_key}
+                      onChange={(e) => setProfileData({ ...profileData, pix_key: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[28px] pl-16 pr-6 py-5 font-black text-base text-slate-700 dark:text-white focus:border-amber-400 outline-none transition-all shadow-inner"
+                      placeholder="Chave para transferências e saques"
+                    />
+                  </div>
+                  <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mt-1 ml-4">Esta chave PIX será utilizada para todas as transferências de saldo e saques</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <button 
+                  onClick={async () => {
+                    const updatedBankInfo = {
+                      ...(merchantProfile?.bank_info || {}),
+                      pix_key: profileData.pix_key
+                    };
+
+                    const updates = {
+                      store_name: profileData.store_name,
+                      email: profileData.email,
+                      document: profileData.document,
+                      store_phone: profileData.store_phone,
+                      bank_info: updatedBankInfo
+                    };
+
+                    try {
+                      if (handleUpdateMerchantProfile) {
+                        await handleUpdateMerchantProfile(updates);
+                        toastSuccess('Perfil e Chave PIX salvos com sucesso!');
+                      } else {
+                        throw new Error('Função de salvamento não encontrada');
+                      }
+                    } catch (e: any) {
+                      toastError('Erro ao salvar: ' + e.message);
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="px-10 py-5 bg-primary hover:bg-primary/90 text-slate-900 font-black rounded-3xl shadow-xl shadow-primary/10 uppercase tracking-widest text-[10px] transition-all flex items-center gap-3 disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="size-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-lg">check_circle</span>
+                      Salvar Cadastro
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </section>
+
           {/* ENDEREÇO & LOCALIZAÇÃO */}
           <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
              <div className="relative z-10 flex flex-col gap-6">

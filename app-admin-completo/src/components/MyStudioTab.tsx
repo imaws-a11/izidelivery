@@ -238,6 +238,12 @@ export default function MyStudioTab() {
   }, [userRole, fetchProducts, fetchMenuCategories, fetchPromotions, fetchMerchantFinance]);
 
   React.useEffect(() => {
+    if (userRole === 'merchant' && merchantProfile?.subscription_plan === 'avulso' && activePreviewTab === 'info') {
+      setActivePreviewTab('financial');
+    }
+  }, [userRole, merchantProfile, activePreviewTab, setActivePreviewTab]);
+
+  React.useEffect(() => {
     if (activePreviewTab === 'financial') {
       fetchMerchantFinance();
     }
@@ -257,7 +263,7 @@ export default function MyStudioTab() {
         ].filter(t => {
           if (userRole === 'merchant') {
             if (merchantProfile?.subscription_plan === 'avulso') {
-              return ['info', 'financial', 'access'].includes(t.id);
+              return ['financial', 'access'].includes(t.id);
             }
             if (merchantProfile?.subscription_plan === 'click_retire') {
               return ['info', 'financial', 'access'].includes(t.id);

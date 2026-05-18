@@ -240,7 +240,6 @@ export default function App() {
                        <NavTab id="live_tracking" icon="monitoring" label="Rastreio" />
                        <NavTab id="my_studio" icon="storefront" label="Meu Estúdio" />
                        <NavTab id="financial" icon="account_balance_wallet" label="Financeiro" />
-                       <NavTab id="merchant_profile" icon="person" label="Perfil" />
                        <NavTab id="settings" icon="settings" label="Config" />
                        <NavTab id="integrations" icon="api" label="Integrações" />
                      </>
@@ -252,7 +251,7 @@ export default function App() {
                         {merchantProfile?.subscription_plan !== 'click_retire' && (
                           <NavTab id="order_center" icon="local_shipping" label="Central de Pedidos" />
                         )}
-                        <NavTab id="merchant_profile" icon="person" label="Perfil" />
+
                         <NavTab id="settings" icon="settings" label="Config" />
                         <NavTab id="integrations" icon="api" label="Integrações" />
                      </>
