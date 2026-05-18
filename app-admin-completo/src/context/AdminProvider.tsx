@@ -944,6 +944,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               if (payload.eventType === 'INSERT' && isNewOrWaiting) {
                 playIziSound('merchant');
                 toastInfo(`🔔 Novo Pedido Recebido! (#${updatedOrder.id.slice(0, 8).toUpperCase()})`);
+              } else if (payload.eventType === 'INSERT' && updatedOrder.status === 'draft' && updatedOrder.origin === 'whatsapp') {
+                playIziSound('merchant');
+                toastInfo(`🤖 Rascunho de WhatsApp IA Recebido! (${updatedOrder.customer_name})`);
+                setDraftStandaloneOrder(updatedOrder);
               } else if (isStatusUpdate && updatedOrder.status === 'waiting_merchant') {
                 playIziSound('merchant');
                 toastInfo(`🔔 Pedido Aguardando Aprovação! (#${updatedOrder.id.slice(0, 8).toUpperCase()})`);
