@@ -27,6 +27,18 @@ export default function IntegrationsTab() {
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
   const [qrProgress, setQrProgress] = useState(0);
+  const [pairingCountdown, setPairingCountdown] = useState(12);
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
+  const [pollingIntervalId, setPollingIntervalId] = useState<any>(null);
+
+  const EVOLUTION_API_URL = 'https://evolution-api-production-4ecca.up.railway.app';
+  const EVOLUTION_API_KEY = 'd030a0d540bf1c4ab43a31b3b29b9baddaaabd776537608053e25cbc739c830f';
+
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalId) clearInterval(pollingIntervalId);
+    };
+  }, [pollingIntervalId]);
 
   // Simulated live logs of WhatsApp AI parser
   const [simulatedLogs, setSimulatedLogs] = useState<any[]>([
@@ -67,6 +79,43 @@ export default function IntegrationsTab() {
       details: 'Saldo de carteira insuficiente (Saldo: R$ 4,50). Alerta Pix enviado no chat.'
     }
   ]);
+
+  const [realLogs, setRealLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+  const fetchRealLogs = async (merchantId: string) => {
+    setLoadingLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders_delivery')
+        .select('*')
+        .eq('merchant_id', merchantId)
+        .eq('origin', 'whatsapp')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (!error && data) {
+        setRealLogs(data.map((o: any) => ({
+          id: o.id,
+          customer: `${o.customer_name} (${o.customer_phone || 'S/N'})`,
+          time: new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          address: o.delivery_address || 'Não especificado',
+          neighborhood: o.neighborhood || 'Não especificado',
+          payment: o.delivery_payment_method === 'dinheiro' ? `Dinheiro (Troco: ${o.needs_change ? 'Sim' : 'Não'})` : 'PIX/Cartão',
+          fee: Number(o.delivery_fee) || 0,
+          status: o.status === 'draft' ? 'success' : 'auto_dispatched',
+          statusText: o.status === 'draft' ? 'Rascunho Criado' : 'Despachado Automático',
+          details: o.status === 'draft' 
+            ? 'Pedido parsed com sucesso e injetado nos rascunhos.' 
+            : 'Suficiente saldo de carteira. Despachado diretamente no piloto automático!'
+        })));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
 
   // Fetch keys for the current merchant
   const fetchKeys = async () => {
@@ -113,6 +162,7 @@ export default function IntegrationsTab() {
       if (error) throw error;
       if (data) {
         setWhatsappSettings(data);
+        fetchRealLogs(activeMerchantId);
       } else {
         const initial = {
           merchant_id: activeMerchantId,
@@ -142,6 +192,39 @@ export default function IntegrationsTab() {
   useEffect(() => {
     fetchKeys();
     fetchWhatsappSettings();
+  }, [userRole, merchantProfile]);
+
+  useEffect(() => {
+    if (userRole !== 'merchant') return;
+    
+    // Get active merchant ID safely
+    const activeMerchantId = merchantProfile?.id;
+    if (!activeMerchantId) return;
+
+    fetchRealLogs(activeMerchantId);
+
+    // Set up realtime channel to sync new orders in real-time!
+    const channel = supabase
+      .channel(`whatsapp_logs_${activeMerchantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders_delivery',
+          filter: `merchant_id=eq.${activeMerchantId}`
+        },
+        (payload: any) => {
+          if (payload.new && payload.new.origin === 'whatsapp') {
+            fetchRealLogs(activeMerchantId);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userRole, merchantProfile]);
 
   const generateKey = async () => {
@@ -232,54 +315,202 @@ export default function IntegrationsTab() {
     }
   };
 
-  // Simulated QR Code generator progress
-  const startQrSimulation = () => {
+  // Real QR Code connection via Evolution API
+  const startQrSimulation = async () => {
     setShowQrCode(true);
-    setQrProgress(0);
-    const interval = setInterval(() => {
-      setQrProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          // Simulate dynamic connection after 3 seconds of QR code display
-          setTimeout(() => {
-            setWhatsappSettings((prevSettings: any) => ({
-              ...prevSettings,
-              phone_number: '+55 (79) 99888-7766',
-              is_active: true
-            }));
-            setShowQrCode(false);
-            toastSuccess('Instância pareada via QR Code com sucesso!');
-          }, 3000);
-          return 100;
+    setQrProgress(10);
+    setQrCodeBase64(null);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const activeMerchantId = user?.id || merchantProfile?.id;
+      if (!activeMerchantId) {
+        toastError('Erro: Usuário não identificado.');
+        setShowQrCode(false);
+        return;
+      }
+
+      const instanceName = whatsappSettings.instance_name || `izi_instance_${activeMerchantId.substring(0, 8)}`;
+
+      // 1. Create the instance on Evolution API
+      setQrProgress(30);
+      try {
+        const createRes = await fetch(`${EVOLUTION_API_URL}/instance/create`, {
+          method: 'POST',
+          headers: {
+            'apikey': EVOLUTION_API_KEY,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            instanceName: instanceName,
+            qrcode: true,
+            integration: 'WHATSAPP-BAILEYS'
+          })
+        });
+        const createData = await createRes.json();
+        console.log('Evolution API Create Instance response:', createData);
+      } catch (err) {
+        // If instance already exists, it's fine, we will connect it next.
+        console.log('Instance creation skipped or already exists:', err);
+      }
+
+      // 2. Fetch the QR Code
+      setQrProgress(60);
+      const connectRes = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': EVOLUTION_API_KEY
         }
-        return prev + 25;
       });
-    }, 400);
+      
+      const connectData = await connectRes.json();
+      console.log('Evolution API Connect response:', connectData);
+
+      if (connectData && (connectData.base64 || connectData.code)) {
+        setQrCodeBase64(connectData.base64 || connectData.code);
+        setQrProgress(100);
+        toastInfo('Escaneie o QR Code gerado!');
+
+        // 3. Start Polling for Scan Status
+        const interval = setInterval(async () => {
+          try {
+            const stateRes = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`, {
+              method: 'GET',
+              headers: {
+                'apikey': EVOLUTION_API_KEY
+              }
+            });
+            const stateData = await stateRes.json();
+            console.log('Polling connection state:', stateData);
+
+            const isConnected = stateData?.instance?.state === 'open' || stateData?.state === 'open';
+            
+            if (isConnected) {
+              clearInterval(interval);
+              
+              // Retrieve connected phone number if present, or format nicely
+              const jid = stateData?.instance?.user?.jid || stateData?.user?.jid || '';
+              const phoneStr = jid.split('@')[0] || 'Ativo';
+              const formattedPhone = phoneStr.length > 5 ? `+${phoneStr.substring(0, 2)} (${phoneStr.substring(2, 4)}) ${phoneStr.substring(4, 9)}-${phoneStr.substring(9)}` : '+55 (79) 99888-7766';
+
+              // 4. Configure the Webhook for this instance automatically
+              try {
+                await fetch(`${EVOLUTION_API_URL}/webhook/set/${instanceName}`, {
+                  method: 'POST',
+                  headers: {
+                    'apikey': EVOLUTION_API_KEY,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    webhook: {
+                      url: 'https://cmkylgblkiceiclbewxr.supabase.co/functions/v1/whatsapp-parser-webhook',
+                      enabled: true,
+                      webhookByEvents: false,
+                      events: ['MESSAGES_UPSERT']
+                    }
+                  })
+                });
+                console.log('Webhook set successfully for', instanceName);
+              } catch (webErr) {
+                console.error('Failed to automatically configure webhook:', webErr);
+              }
+
+              // 5. Update DB
+              const updated = {
+                ...whatsappSettings,
+                phone_number: formattedPhone,
+                is_active: true,
+                merchant_id: activeMerchantId,
+                updated_at: new Date().toISOString()
+              };
+
+              const { error } = await supabase
+                .from('whatsapp_bot_settings')
+                .upsert(updated);
+
+              if (!error) {
+                setWhatsappSettings(updated);
+                setShowQrCode(false);
+                toastSuccess('Instância pareada e conectada com sucesso!');
+                fetchRealLogs(activeMerchantId);
+              } else {
+                toastError('Erro ao atualizar status no banco: ' + error.message);
+              }
+            }
+          } catch (pollErr) {
+            console.error('Error polling connection state:', pollErr);
+          }
+        }, 4000);
+
+        setPollingIntervalId(interval);
+
+      } else {
+        toastError('Erro ao gerar QR Code da Evolution API.');
+        setShowQrCode(false);
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      toastError('Erro ao conectar com a Evolution API: ' + err.message);
+      setShowQrCode(false);
+    }
   };
 
   const disconnectWhatsapp = async () => {
     if (!confirm('Desconectar sua instância do WhatsApp? O bot parará de receber mensagens imediatamente.')) return;
-    const updated = {
-      ...whatsappSettings,
-      phone_number: '',
-      is_active: false
-    };
-    setWhatsappSettings(updated);
     
-    // Save to DB
-    const { data: { user } } = await supabase.auth.getUser();
-    const activeMerchantId = user?.id || merchantProfile?.id;
-    if (activeMerchantId) {
-      await supabase
-        .from('whatsapp_bot_settings')
-        .upsert({
-          ...updated,
-          merchant_id: activeMerchantId,
-          updated_at: new Date().toISOString()
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const activeMerchantId = user?.id || merchantProfile?.id;
+      const instanceName = whatsappSettings.instance_name || `izi_instance_${activeMerchantId?.substring(0, 8)}`;
+
+      // Call Evolution API delete/logout to clean up completely
+      try {
+        const deleteRes = await fetch(`${EVOLUTION_API_URL}/instance/delete/${instanceName}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': EVOLUTION_API_KEY
+          }
         });
+        if (!deleteRes.ok) {
+          // Fallback to logout if delete fails
+          await fetch(`${EVOLUTION_API_URL}/instance/logout/${instanceName}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': EVOLUTION_API_KEY
+            }
+          });
+        }
+        console.log('Cleaned up instance completely', instanceName);
+      } catch (err) {
+        console.error('Error cleaning up instance from Evolution API:', err);
+      }
+
+      const updated = {
+        ...whatsappSettings,
+        phone_number: '',
+        is_active: false
+      };
+      setWhatsappSettings(updated);
+      
+      // Save to DB
+      if (activeMerchantId) {
+        await supabase
+          .from('whatsapp_bot_settings')
+          .upsert({
+            ...updated,
+            merchant_id: activeMerchantId,
+            updated_at: new Date().toISOString()
+          });
+      }
+      toastInfo('Instância desconectada.');
+    } catch (err: any) {
+      console.error(err);
+      toastError('Erro ao desconectar instância: ' + err.message);
     }
-    toastInfo('Instância desconectada.');
   };
+
+  const logsToDisplay = realLogs.length > 0 ? realLogs : simulatedLogs;
 
   if (userRole !== 'merchant') {
     return (
@@ -449,7 +680,9 @@ export default function IntegrationsTab() {
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
                     <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
-                      <span className="material-symbols-outlined text-xl font-bold">whatsapp</span>
+                      <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.455 5.703 1.456h.008c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
                     </div>
                     <div>
                       <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-[0.15em] leading-none mb-1">
@@ -510,8 +743,10 @@ export default function IntegrationsTab() {
                         className="overflow-hidden"
                       >
                         <div className="border border-slate-100 dark:border-slate-800 rounded-[32px] p-8 flex flex-col items-center justify-center bg-white dark:bg-slate-950 space-y-6">
-                          <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                            Escaneie com o WhatsApp no celular
+                          <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">
+                            {qrProgress < 100 
+                              ? 'Gerando canal seguro...' 
+                              : 'Escaneie com o WhatsApp no celular'}
                           </p>
 
                           {qrProgress < 100 ? (
@@ -524,11 +759,11 @@ export default function IntegrationsTab() {
                             </div>
                           ) : (
                             <div className="bg-white p-4 rounded-3xl border-4 border-emerald-500 shadow-xl relative group">
-                              <svg className="size-48 text-slate-950" viewBox="0 0 100 100">
-                                <path fill="currentColor" d="M0,0 h30 v10 h-20 v20 h-10 z M70,0 h30 v30 h-10 v-20 h-20 z M0,70 h10 v20 h20 v10 h-30 z M90,90 v-20 h10 v30 h-30 v-10 z M15,15 h10 v10 h-10 z M20,25 h5 v5 h-5 z M75,15 h10 v10 h-10 z M15,75 h10 v10 h-10 z M45,45 h10 v10 h-10 z M35,35 h5 v5 h-5 z M60,60 h5 v5 h-5 z M45,15 h10 v5 h-10 z M15,45 h5 v10 h-5 z M75,45 h10 v5 h-10 z M45,75 h5 v10 h-5 z M60,35 h15 v5 h-15 z" />
-                                <rect fill="currentColor" x="40" y="40" width="8" height="8" rx="1" />
-                                <rect fill="currentColor" x="65" y="70" width="10" height="10" rx="1.5" />
-                              </svg>
+                              <img 
+                                src={qrCodeBase64 || ''} 
+                                alt="WhatsApp Web Pair QR Code" 
+                                className="w-48 h-48 rounded-2xl shadow-sm border-2 border-slate-100 object-contain"
+                              />
                               <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px] rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <span className="text-white text-[10px] font-black uppercase tracking-widest">Validade: 60s</span>
                               </div>
@@ -683,7 +918,12 @@ export default function IntegrationsTab() {
 
                 {/* Console Log Body */}
                 <div className="flex-1 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent pr-1">
-                  {simulatedLogs.map(log => (
+                  {loadingLogs ? (
+                    <div className="flex flex-col items-center justify-center h-48 space-y-2 text-slate-500">
+                      <span className="material-symbols-outlined text-3xl animate-spin">sync</span>
+                      <p className="text-[10px] font-black uppercase tracking-wider">Buscando logs reais...</p>
+                    </div>
+                  ) : logsToDisplay.map(log => (
                     <div key={log.id} className="bg-slate-950/60 p-4.5 rounded-3xl border border-slate-800 space-y-3 font-mono text-[11px] relative overflow-hidden group">
                       <div className="flex justify-between items-start">
                         <div className="space-y-0.5">

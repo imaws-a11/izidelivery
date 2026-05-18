@@ -19,7 +19,38 @@ Deno.serve(async (req) => {
     )
 
     const body = await req.json()
-    const { instance_name, message, sender_phone, sender_name } = body
+    console.log("Receiving webhook payload:", JSON.stringify(body))
+
+    let instance_name = body.instance_name
+    let message = body.message
+    let sender_phone = body.sender_phone
+    let sender_name = body.sender_name
+
+    // Detect and parse Evolution API webhook structure (messages.upsert)
+    if (body.event === 'messages.upsert' && body.data) {
+      instance_name = body.instance;
+      sender_name = body.data.pushName || 'Cliente WhatsApp';
+      
+      const remoteJid = body.data.key?.remoteJid || '';
+      sender_phone = remoteJid.split('@')[0] || '';
+      
+      // Extract text content from message object
+      const msgObj = body.data.message;
+      if (msgObj) {
+        message = msgObj.conversation || 
+                  msgObj.extendedTextMessage?.text || 
+                  msgObj.imageMessage?.caption || 
+                  '';
+      }
+      
+      // If it's from me (outgoing message from the bot itself), ignore to prevent infinite loops!
+      if (body.data.key?.fromMe) {
+        return new Response(JSON.stringify({ success: true, message: 'Ignored outgoing message from bot itself' }), {
+          status: 200,
+          headers: corsHeaders
+        })
+      }
+    }
 
     if (!message) {
       return new Response(JSON.stringify({ success: false, error: 'Message content is required' }), {
@@ -51,9 +82,54 @@ Deno.serve(async (req) => {
 
     const merchantId = settings.merchant_id
 
+    // Check if there is an order created in the last 15 minutes to decide if we send the welcome message
+    const cleanPhone = (sender_phone || '').replace(/\D/g, '')
+    let shouldSendWelcome = false
+    
+    if (cleanPhone && settings.welcome_message) {
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+      const { data: recentOrders, error: recentError } = await supabaseClient
+        .from('orders_delivery')
+        .select('id')
+        .eq('merchant_id', merchantId)
+        .eq('customer_phone', sender_phone)
+        .gt('created_at', fifteenMinutesAgo)
+        .limit(1)
+
+      if (!recentError && (!recentOrders || recentOrders.length === 0)) {
+        shouldSendWelcome = true
+      }
+    }
+
+    if (shouldSendWelcome && settings.welcome_message) {
+      console.log(`Sending welcome message to ${sender_phone} for instance ${instance_name}`);
+      await sendWhatsAppMessage(instance_name, sender_phone, settings.welcome_message);
+    }
+
     // 2. Parse details using AI Parser (Mock / NLP regex extractor fallback)
     // We parse Name, Phone, Address, Neighborhood, Reference Point, Payment Method and Change
     const parsedData = parseMessageWithAI(message, sender_name, sender_phone, settings.ai_instructions)
+
+    // Se não há um endereço detectado na mensagem, consideramos que é apenas uma conversa informal ou saudação.
+    // Não criamos rascunho de pedido neste caso.
+    if (parsedData.delivery_address === 'Endereço não informado') {
+      const normalizedMsg = message.trim().toLowerCase();
+      const greetings = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'quero pedir', 'como funciona', 'ajuda', 'menu', 'cardapio', 'cardápio'];
+      const isGreeting = greetings.some(g => normalizedMsg.startsWith(g) || normalizedMsg === g);
+      
+      if (isGreeting && !shouldSendWelcome && settings.welcome_message) {
+        await sendWhatsAppMessage(instance_name, sender_phone, settings.welcome_message);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        mode: 'greeting',
+        message: 'Mensagem de saudação ou incompleta. Rascunho não gerado para evitar duplicações vazias.'
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
     // 3. Geocode / Calculate estimated delivery fee
     // We retrieve the dynamic zones for the merchant to check for zone matching
@@ -104,6 +180,13 @@ Deno.serve(async (req) => {
         .insert(orderPayload)
 
       if (insertError) throw insertError
+
+      // Send WhatsApp confirmation back to the customer
+      await sendWhatsAppMessage(
+        instance_name,
+        sender_phone,
+        `Anotado! Recebemos o seu pedido (${trackingCode}). O nosso atendente já está revisando no painel e logo você receberá a confirmação!`
+      );
 
       return new Response(JSON.stringify({
         success: true,
@@ -160,6 +243,13 @@ Deno.serve(async (req) => {
           .insert(orderPayload)
 
         const randomPixKey = `00020101021226830014br.gov.bcb.pix2561api.mercadopago.com/v1/payments/ticket/123456789/qr_code5204000053039865405${estimatedFee.toFixed(2)}5802BR5912IZI_DELIVERY6009SAO_PAULO62070503***6304`
+
+        // Send WhatsApp confirmation asking for recharge
+        await sendWhatsAppMessage(
+          instance_name,
+          sender_phone,
+          `Atenção: A carteira pré-paga da loja está temporariamente sem saldo para o envio de R$ ${estimatedFee.toFixed(2).replace('.', ',')}. Por favor, realize a recarga rápida via chave Pix abaixo para liberar o envio imediato:\n\n${randomPixKey}`
+        );
 
         return new Response(JSON.stringify({
           success: false,
@@ -222,6 +312,13 @@ Deno.serve(async (req) => {
 
       if (insertError) throw insertError
 
+      // Send WhatsApp confirmation back to the customer with tracking code
+      await sendWhatsAppMessage(
+        instance_name,
+        sender_phone,
+        `Sucesso! Seu pedido foi confirmado e o motoboy já está sendo chamado pelo sistema IZI. Acompanhe em tempo real pelo link: https://izidelivery.com/track/${trackingCode}`
+      );
+
       // Trigger Push Notification to Drivers in category 'motoboy'
       try {
         await supabaseClient.functions.invoke('broadcast-push', {
@@ -260,36 +357,163 @@ Deno.serve(async (req) => {
 
 // --- Robust AI Parser Fallback ---
 function parseMessageWithAI(message: string, senderName: string, senderPhone: string, aiInstructions: string) {
-  // Mocking detailed extraction based on input formats
-  // E.g. Carlos | Av. Paulista 1500 | Bela Vista | Pix | R$ 12,50
-  const normalized = message.toLowerCase()
+  const normalized = message.toLowerCase();
 
-  // Standard extractions using regex for structured templates
-  const nameMatch = message.match(/(?:nome|cliente):\s*([^\n]+)/i)
-  const addressMatch = message.match(/(?:endereço|rua|local):\s*([^\n]+)/i)
-  const neighborhoodMatch = message.match(/(?:bairro):\s*([^\n]+)/i)
-  const paymentMatch = message.match(/(?:pagamento|forma):\s*([^\n]+)/i)
-  const changeMatch = message.match(/(?:troco):\s*([^\n]+)/i)
-  const itemsMatch = message.match(/(?:pedido|itens):\s*([^\n]+)/i)
+  // 1. EXTRAÇÃO DE NOME
+  let extractedName = senderName || 'Cliente WhatsApp';
+  const nameMatch = message.match(/(?:nome|cliente|meu nome é):\s*([^\n]+)/i);
+  if (nameMatch) {
+    extractedName = nameMatch[1].trim();
+  } else {
+    // Tenta encontrar padrões como "me chamo [Nome]" ou "sou o [Nome]"
+    const namePattern = message.match(/(?:me chamo|me chamo de|sou o|sou a|aqui é o|aqui é a)\s+([A-ZÀ-ÿ][a-zÀ-ÿ]+(?:\s+[A-ZÀ-ÿ][a-zÀ-ÿ]+)?)/i);
+    if (namePattern) {
+      extractedName = namePattern[1].trim();
+    }
+  }
 
-  const extractedName = nameMatch ? nameMatch[1].trim() : senderName || 'Cliente WhatsApp'
-  const extractedPhone = senderPhone || ''
-  const extractedAddress = addressMatch ? addressMatch[1].trim() : 'Endereço não informado'
-  const extractedNeighborhood = neighborhoodMatch ? neighborhoodMatch[1].trim() : 'Jardins'
-  const extractedPayment = paymentMatch ? paymentMatch[1].trim() : 'pix'
-  const extractedNeedsChange = changeMatch ? changeMatch[1].toLowerCase().includes('sim') || changeMatch[1].toLowerCase().includes('troco') : false
-  const extractedItems = itemsMatch ? itemsMatch[1].trim() : 'Entrega Avulsa'
+  // 2. EXTRAÇÃO DE ENDEREÇO
+  let extractedAddress = 'Endereço não informado';
+  const addressMatch = message.match(/(?:endereço|rua|local|entregar em|entrega|enviar para):\s*([^\n]+)/i);
+  if (addressMatch) {
+    extractedAddress = addressMatch[1].trim();
+  } else {
+    // Tenta encontrar palavras chaves de endereço na mensagem
+    const streetRegex = /(?:rua|av\.|avenida|alameda|travessa|estrada|rodovia|praça)\s+[A-ZÀ-ÿ0-9\s,.-]+?\d+/i;
+    const foundStreet = message.match(streetRegex);
+    if (foundStreet) {
+      extractedAddress = foundStreet[0].trim();
+    } else {
+      // Tenta pegar linhas que parecem endereço (ex: contendo número no final)
+      const lines = message.split('\n');
+      for (const line of lines) {
+        if (/\d+/.test(line) && (line.toLowerCase().includes('rua') || line.toLowerCase().includes('av') || line.toLowerCase().includes('bairro') || line.toLowerCase().includes('nº') || line.toLowerCase().includes('número') || line.toLowerCase().includes('numero'))) {
+          extractedAddress = line.trim();
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. EXTRAÇÃO DE BAIRRO
+  let extractedNeighborhood = 'Jardins'; // Default ou detectado
+  const neighborhoodMatch = message.match(/(?:bairro):\s*([^\n]+)/i);
+  if (neighborhoodMatch) {
+    extractedNeighborhood = neighborhoodMatch[1].trim();
+  } else {
+    // Tenta achar "bairro [Nome]" ou "no [Nome]"
+    const neighMatch = message.match(/(?:bairro|no bairro|bairro do|bairro da)\s+([A-ZÀ-ÿa-z0-9\s]+?)(?:\s*[-|]|\s*\n|$)/i);
+    if (neighMatch) {
+      extractedNeighborhood = neighMatch[1].trim();
+    }
+  }
+
+  // 4. EXTRAÇÃO DE FORMA DE PAGAMENTO
+  let extractedPayment = 'loja'; // Default
+  if (normalized.includes('pix')) {
+    extractedPayment = 'pix';
+  } else if (normalized.includes('cartao') || normalized.includes('cartão') || normalized.includes('credito') || normalized.includes('débito') || normalized.includes('debito')) {
+    extractedPayment = 'cartao';
+  } else if (normalized.includes('dinheiro') || normalized.includes('em espécie') || normalized.includes('especie')) {
+    extractedPayment = 'dinheiro';
+  }
+
+  // 5. EXTRAÇÃO DE TROCO
+  let extractedNeedsChange = false;
+  let needsChangeAmount = '';
+  const changeMatch = message.match(/(?:troco|troco para):\s*([^\n]+)/i);
+  if (changeMatch) {
+    extractedNeedsChange = true;
+    needsChangeAmount = changeMatch[1].trim();
+  } else {
+    const trocoRegex = /(?:troco para|troco p\/)\s*(?:r\$)?\s*(\d+(?:[.,]\d{2})?)/i;
+    const trocoFound = message.match(trocoRegex);
+    if (trocoFound) {
+      extractedNeedsChange = true;
+      needsChangeAmount = trocoFound[1].trim();
+    }
+  }
+
+  // 6. EXTRAÇÃO DE ITENS / DETALHES DO PEDIDO
+  let extractedItems = 'Entrega Avulsa';
+  const itemsMatch = message.match(/(?:pedido|itens|item|conteúdo|conteudo):\s*([^\n]+)/i);
+  if (itemsMatch) {
+    extractedItems = itemsMatch[1].trim();
+  } else {
+    // Se a mensagem for longa e tiver múltiplos itens por linha ou detalhes, tenta extrair
+    const lines = message.split('\n').map(l => l.trim()).filter(Boolean);
+    const itemLines = lines.filter(l => /^\d+\s*x|^\d+\s+-|^-|^\*/.test(l));
+    if (itemLines.length > 0) {
+      extractedItems = itemLines.join(', ');
+    } else {
+      // Se não achar linhas estruturadas, mas o texto for grande, tenta usar o início do texto
+      if (message.length > 15) {
+        extractedItems = message.length > 60 ? message.substring(0, 57) + '...' : message;
+      }
+    }
+  }
+
+  // 7. EXTRAÇÃO DE VALOR TOTAL
+  let extractedTotal = 0.00;
+  const totalMatch = message.match(/(?:total|valor|preço|preco):\s*(?:r\$)?\s*(\d+(?:[.,]\d{2})?)/i);
+  if (totalMatch) {
+    extractedTotal = parseFloat(totalMatch[1].replace(',', '.'));
+  } else {
+    // Tenta achar qualquer padrão de R$ valor
+    const moneyMatch = message.match(/(?:r\$)\s*(\d+(?:[.,]\d{2})?)/i);
+    if (moneyMatch) {
+      extractedTotal = parseFloat(moneyMatch[1].replace(',', '.'));
+    }
+  }
 
   return {
     customer_name: extractedName,
-    customer_phone: extractedPhone,
+    customer_phone: senderPhone || '',
     delivery_address: extractedAddress,
     neighborhood: extractedNeighborhood,
     reference_point: 'Identificado via WhatsApp Chatbot',
-    payment_method: extractedPayment.includes('dinheiro') ? 'dinheiro' : 'loja',
+    payment_method: extractedPayment,
     needs_change: extractedNeedsChange,
+    change_amount: needsChangeAmount,
     items: extractedItems,
     notes: aiInstructions,
-    total_price: 50.00
+    total_price: extractedTotal > 0 ? extractedTotal : 0.00
+  };
+}
+
+// --- Helper to Send WhatsApp Messages via Evolution API ---
+async function sendWhatsAppMessage(instanceName: string, toPhone: string, text: string) {
+  const EVOLUTION_API_URL = 'https://evolution-api-production-4ecca.up.railway.app';
+  const EVOLUTION_API_KEY = 'd030a0d540bf1c4ab43a31b3b29b9baddaaabd776537608053e25cbc739c830f';
+
+  // Sanitiza o telefone para garantir formato limpo ou JID completo
+  const cleanPhone = toPhone.replace(/\D/g, '');
+  if (!cleanPhone) return;
+  const jid = toPhone.includes('@') ? toPhone : `${cleanPhone}@s.whatsapp.net`;
+
+  try {
+    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'apikey': EVOLUTION_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        number: jid,
+        text: text,
+        delay: 1000,
+        linkPreview: false
+      })
+    });
+    
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`Error sending message via Evolution API (${response.status}):`, errText);
+    } else {
+      const data = await response.json();
+      console.log(`Successfully sent message to ${jid}:`, JSON.stringify(data));
+    }
+  } catch (err) {
+    console.error('Failed to send WhatsApp message via Evolution API:', err);
   }
 }
