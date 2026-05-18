@@ -15,13 +15,16 @@ import {
   XCircle,
   Play,
   CreditCard,
-  Wallet
+  Wallet,
+  Phone,
+  MessageCircle,
+  Clock,
+  Eye,
+  ChevronRight
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
 import { toastSuccess, toastError } from '../lib/useToast';
-
-type OrderStatusGroup = 'pending' | 'preparing' | 'ready' | 'shipped' | 'history';
 
 export default function OrderCenterTab() {
   const { 
@@ -29,15 +32,15 @@ export default function OrderCenterTab() {
     merchantProfile, 
     fetchAllOrders,
     isLoadingList,
-    myDriversList
+    setSelectedOrder
   } = useAdmin();
 
-  const [activeTab, setActiveTab] = useState<OrderStatusGroup>('pending');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [localProcessingId, setLocalProcessingId] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // Auto-refresh a cada 30s
+  // Auto-refresh a cada 15s para máxima resiliência
   useEffect(() => {
-    const timer = setInterval(() => fetchAllOrders(undefined, true), 30000);
+    const timer = setInterval(() => fetchAllOrders(undefined, true), 15000);
     return () => clearInterval(timer);
   }, [fetchAllOrders]);
 
@@ -48,24 +51,40 @@ export default function OrderCenterTab() {
     return allOrders.filter((o: any) => String(o.merchant_id) === String(mId));
   }, [allOrders, merchantProfile]);
 
-  // Agrupamento de pedidos por status
+  // Agrupamento de pedidos por status em tempo real
   const groups = useMemo(() => {
     return {
-      pending: merchantOrders.filter(o => ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado', 'agendado', 'scheduled'].includes(o.status)),
-      preparing: merchantOrders.filter(o => o.status === 'preparando' || (o.preparation_status === 'preparando' && o.status !== 'concluido' && o.status !== 'cancelado')),
-      ready: merchantOrders.filter(o => (o.status === 'pronto' || o.preparation_status === 'pronto' || o.status === 'waiting_driver') && !['picked_up', 'em_rota', 'concluido', 'cancelado'].includes(o.status)),
-      shipped: merchantOrders.filter(o => ['accepted', 'picked_up', 'em_rota', 'a_caminho', 'a_caminho_coleta', 'chegou_coleta', 'no_local_coleta'].includes(o.status)),
-      history: merchantOrders.filter(o => ['concluido', 'delivered', 'cancelado'].includes(o.status)).slice(0, 20)
+      pending: merchantOrders.filter(o => 
+        ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado', 'agendado', 'scheduled'].includes(o.status)
+      ),
+      preparing: merchantOrders.filter(o => 
+        o.status === 'preparando' || 
+        (o.preparation_status === 'preparando' && o.status !== 'concluido' && o.status !== 'cancelado')
+      ),
+      ready: merchantOrders.filter(o => 
+        (o.status === 'pronto' || o.preparation_status === 'pronto' || o.status === 'waiting_driver') && 
+        !['picked_up', 'em_rota', 'concluido', 'cancelado'].includes(o.status)
+      ),
+      shipped: merchantOrders.filter(o => 
+        ['accepted', 'picked_up', 'em_rota', 'a_caminho', 'a_caminho_coleta', 'chegou_coleta', 'no_local_coleta', 'delivering'].includes(o.status)
+      ),
+      history: merchantOrders.filter(o => 
+        ['concluido', 'delivered', 'cancelado'].includes(o.status)
+      ).slice(0, 20)
     };
   }, [merchantOrders]);
 
-  const currentOrders = groups[activeTab];
-
   const handleAction = async (id: string, newStatus: string, preparationStatus?: string) => {
-    setIsProcessing(true);
+    setLocalProcessingId(id);
     try {
       const payload: any = { status: newStatus };
       if (preparationStatus) payload.preparation_status = preparationStatus;
+
+      // Se for confirmação manual de pagamento em pendentes
+      if (newStatus === 'preparando' && preparationStatus === 'preparando') {
+        payload.payment_status = 'approved';
+        payload.paid_at = new Date().toISOString();
+      }
 
       const { error } = await supabase
         .from('orders_delivery')
@@ -78,243 +97,545 @@ export default function OrderCenterTab() {
     } catch (err: any) {
       toastError('Erro ao atualizar pedido: ' + err.message);
     } finally {
-      setIsProcessing(false);
+      setLocalProcessingId(null);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const s = status?.toLowerCase();
-    if (['novo', 'waiting_merchant', 'agendado', 'scheduled'].includes(s)) return { label: s === 'agendado' || s === 'scheduled' ? 'Agendado' : 'Novo', color: s === 'agendado' || s === 'scheduled' ? 'bg-indigo-500' : 'bg-orange-500' };
-    if (s === 'preparando') return { label: 'Produção', color: 'bg-amber-500' };
-    if (s === 'pronto' || s === 'waiting_driver') return { label: 'Pronto', color: 'bg-emerald-500' };
-    if (['picked_up', 'em_rota', 'delivering'].includes(s)) return { label: 'Em Rota', color: 'bg-blue-500' };
-    if (s === 'concluido' || s === 'delivered') return { label: 'Concluído', color: 'bg-zinc-400' };
-    if (s === 'cancelado') return { label: 'Cancelado', color: 'bg-rose-500' };
-    return { label: status, color: 'bg-zinc-400' };
+  const getElapsedTime = (createdAt: string) => {
+    const diffMs = Date.now() - new Date(createdAt).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Agora';
+    if (diffMins < 60) return `${diffMins} min atrás`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h atrás`;
+    return new Date(createdAt).toLocaleDateString('pt-BR');
   };
 
-  const getDriverInfo = (driverId: string) => {
-    if (!driverId) return null;
-    return myDriversList.find(d => d.id === driverId);
+  const getOrderTypeBadge = (serviceType: string) => {
+    const s = serviceType?.toLowerCase();
+    if (['entrega_avulsa', 'avulsa', 'standalone', 'motoboy'].includes(s)) {
+      return { label: 'Entrega Avulsa', style: 'bg-amber-500/10 text-amber-600 border border-amber-500/20' };
+    }
+    if (['takeout', 'balcao', 'retirada'].includes(s)) {
+      return { label: 'Retirada', style: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' };
+    }
+    return { label: 'Delivery Normal', style: 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20' };
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 pb-24 font-display">
-      {/* Header Estilizado */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white dark:bg-zinc-900 p-8 rounded-[40px] border border-zinc-100 dark:border-zinc-800 shadow-sm">
+    <div className="w-full mx-auto space-y-8 pb-24 font-display text-slate-900 dark:text-white px-2">
+      {/* Header Estilizado Luxury White */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white dark:bg-zinc-950 p-8 rounded-[36px] border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm">
         <div>
-          <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tighter uppercase">Central de Pedidos</h1>
-          <p className="text-[10px] font-bold text-primary uppercase tracking-[0.3em] mt-1">Torre de Controle em Tempo Real</p>
+          <h1 className="text-3xl font-black text-slate-950 dark:text-white tracking-tight uppercase flex items-center gap-3">
+            <span className="p-2 rounded-2xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+              <ShoppingBag className="size-6" />
+            </span>
+            Central de Pedidos
+          </h1>
+          <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] mt-2">Torre de Controle de Fluxo Realtime</p>
         </div>
 
-        <div className="flex items-center gap-4">
-           <button 
-             onClick={() => fetchAllOrders()}
-             className="h-14 px-6 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center gap-3 hover:bg-black hover:text-white transition-all group font-bold text-[10px] uppercase tracking-widest"
-           >
-             <RefreshCcw className={`size-4 ${isLoadingList ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-             Atualizar Painel
-           </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsHistoryOpen(true)}
+            className="h-13 px-5 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/60 flex items-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 hover:border-indigo-500/30 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95"
+          >
+            <History className="size-4" />
+            Ver Histórico
+          </button>
+          <button 
+            onClick={() => fetchAllOrders()}
+            disabled={isLoadingList}
+            className="h-13 px-5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center gap-2 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-100 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCcw className={`size-4 ${isLoadingList ? 'animate-spin' : ''}`} />
+            Sincronizar
+          </button>
         </div>
       </header>
 
-      {/* Tabs de Navegação de Fluxo */}
-      <nav className="flex flex-wrap gap-3 p-2 bg-zinc-100/50 dark:bg-white/5 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
-        {[
-          { id: 'pending', label: 'Pendentes', icon: Bell, count: groups.pending.length, color: 'text-orange-500' },
-          { id: 'preparing', label: 'Produção', icon: UtensilsCrossed, count: groups.preparing.length, color: 'text-amber-500' },
-          { id: 'ready', label: 'Prontos', icon: PackageCheck, count: groups.ready.length, color: 'text-emerald-500' },
-          { id: 'shipped', label: 'Em Rota', icon: Truck, count: groups.shipped.length, color: 'text-blue-500' },
-          { id: 'history', label: 'Recentes', icon: History, count: groups.history.length, color: 'text-zinc-400' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as OrderStatusGroup)}
-            className={`flex-1 min-w-[140px] h-16 rounded-[24px] flex items-center justify-center gap-3 transition-all font-bold text-[10px] uppercase tracking-widest ${activeTab === tab.id ? 'bg-white dark:bg-zinc-800 shadow-sm border border-zinc-200 dark:border-zinc-700 text-black dark:text-white' : 'text-zinc-400 hover:text-zinc-600'}`}
-          >
-            <tab.icon className={`size-4 ${activeTab === tab.id ? tab.color : 'text-zinc-300'}`} />
-            {tab.label}
-            {tab.count > 0 && <span className={`ml-1 px-2 py-0.5 rounded-full text-[8px] ${activeTab === tab.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-zinc-200 text-zinc-500'}`}>{tab.count}</span>}
-          </button>
-        ))}
-      </nav>
+      {/* Grid Kanban principal de 4 colunas - Ocupação Total */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full items-start">
+        
+        {/* COLUNA 1: PENDENTES */}
+        <div className="flex flex-col bg-zinc-50/50 dark:bg-zinc-900/30 rounded-[32px] p-5 border border-zinc-200/40 dark:border-zinc-800/40 shadow-sm h-full">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                <Bell className="size-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-zinc-200">Pendentes</h3>
+                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Aguardando aceite</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-orange-500 text-white text-[10px] font-black">{groups.pending.length}</span>
+          </div>
 
-      {/* Grid de Pedidos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-        <AnimatePresence mode="popLayout">
-          {currentOrders.length === 0 ? (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-20"
-            >
-               <Inbox className="size-16 stroke-[1px]" />
-               <p className="text-sm font-bold uppercase tracking-widest mt-4">Nenhum pedido nesta fase</p>
-            </motion.div>
-          ) : (
-            currentOrders.map((order: any) => (
-              <motion.div 
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                key={order.id}
-                className="bg-white dark:bg-zinc-900 p-8 rounded-[40px] border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden"
-              >
-                <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-5 blur-3xl ${getStatusBadge(order.status).color}`} />
-
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`size-2 rounded-full ${getStatusBadge(order.status).color} animate-pulse`} />
-                      <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{getStatusBadge(order.status).label}</span>
-                    </div>
-                    <h3 className="text-2xl font-extrabold text-black dark:text-white tracking-tighter uppercase">#DT-{order.id.slice(0, 8).toUpperCase()}</h3>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total</p>
-                    <p className="text-xl font-extrabold text-primary">R$ {Number(order.total_price || 0).toFixed(2).replace('.', ',')}</p>
-                  </div>
+          <div className="space-y-4 max-h-[calc(100vh-270px)] overflow-y-auto pr-1 custom-scrollbar min-h-[150px]">
+            <AnimatePresence mode="popLayout">
+              {groups.pending.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center opacity-30 bg-white dark:bg-zinc-900/20 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                  <Inbox className="size-8 stroke-[1px] text-zinc-400 mb-2" />
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Sem novos pedidos</p>
                 </div>
-
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-start gap-4 p-4 rounded-3xl bg-zinc-50 dark:bg-white/5 border border-zinc-100/50 dark:border-white/5">
-                    <MapPin className="size-5 text-zinc-400 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                       <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Endereço de Entrega</p>
-                       <p className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 line-clamp-2 leading-relaxed uppercase">
-                         {order.delivery_address?.split('|')[0]}
-                       </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between px-4">
-                    <div className="flex items-center gap-4">
-                      <User className="size-5 text-zinc-400" />
+              ) : (
+                groups.pending.map((order: any) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className="bg-white dark:bg-zinc-950 p-5 rounded-3xl border border-zinc-200/60 dark:border-zinc-850 shadow-sm hover:shadow-md hover:border-indigo-500/20 transition-all cursor-pointer relative group overflow-hidden"
+                  >
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Cliente</p>
-                        <p className="text-xs font-bold text-black dark:text-white uppercase tracking-tighter">{order.user_name || 'Usuário Izi'}</p>
-                      </div>
-                    </div>
-                    {order.payment_method && (
-                      <div className="flex flex-col items-end">
-                        <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Pagamento</p>
-                        <div className="flex items-center gap-1.5 text-zinc-500">
-                          {order.payment_method?.toLowerCase() === 'pix' ? <Wallet className="size-3" /> : <CreditCard className="size-3" />}
-                          <span className="text-[10px] font-bold uppercase">{order.payment_method}</span>
+                        <h4 className="text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors uppercase">
+                          #DT-{order.id.slice(0, 8).toUpperCase()}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] text-zinc-400 font-bold">
+                          <Clock className="size-3 text-zinc-300" />
+                          {getElapsedTime(order.created_at)}
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Itens do Pedido */}
-                <div className="mb-8 px-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Itens do Pedido</p>
-                    <span className="text-[9px] font-bold text-zinc-300 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded-full">{Array.isArray(order.items) ? order.items.length : 0} unid</span>
-                  </div>
-                  <div className="space-y-2">
-                    {Array.isArray(order.items) ? order.items.slice(0, 3).map((item: any, idx: number) => (
-                      <div key={idx} className="flex justify-between items-center text-[10px] font-bold text-zinc-500">
-                        <span className="truncate flex-1 pr-4 uppercase">{item.name || item.product_name}</span>
-                        <span className="text-black dark:text-white">{item.quantity}x</span>
+                      <div className="text-right">
+                        <span className={`inline-block px-2 py-0.5 rounded-md text-[8px] font-black ${getOrderTypeBadge(order.service_type).style}`}>
+                          {getOrderTypeBadge(order.service_type).label}
+                        </span>
                       </div>
-                    )) : <p className="text-[10px] font-bold text-zinc-400">Ver detalhes na comanda</p>}
-                    {Array.isArray(order.items) && order.items.length > 3 && (
-                      <p className="text-[9px] font-bold text-primary uppercase mt-2">+ {order.items.length - 3} outros itens</p>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Ações Rápidas por Fase */}
-                <div className="grid grid-cols-2 gap-3">
-                  {activeTab === 'pending' && (
-                    <>
-                      <button 
-                        disabled={isProcessing}
+                    <div className="space-y-1.5 my-3">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Cliente</span>
+                        <span className="font-extrabold text-slate-800 dark:text-zinc-200 max-w-[130px] truncate uppercase">{order.user_name || 'Cliente Izi'}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Valor</span>
+                        <span className="font-extrabold text-slate-950 dark:text-white">R$ {Number(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+
+                    {/* Itens do Pedido */}
+                    {Array.isArray(order.items) && (
+                      <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-900 space-y-1">
+                        {order.items.slice(0, 2).map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-[10px] text-zinc-500 font-bold">
+                            <span className="truncate flex-1 pr-3 uppercase">{item.name || item.product_name || 'Produto'}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-[9px] text-zinc-600 dark:text-zinc-400 font-black">{item.quantity}x</span>
+                          </div>
+                        ))}
+                        {order.items.length > 2 && (
+                          <p className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase mt-1">
+                            + {order.items.length - 2} outros itens
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Ações rápidas */}
+                    <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-900" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        disabled={localProcessingId === order.id}
                         onClick={() => handleAction(order.id, 'cancelado')}
-                        className="h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-[9px] font-bold uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                        className="h-10 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-rose-500 hover:text-white dark:hover:bg-rose-600 hover:border-rose-500 text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 transition-all active:scale-95 disabled:opacity-50"
                       >
                         <XCircle className="size-3" />
                         Recusar
                       </button>
-                      <button 
-                        disabled={isProcessing}
+                      <button
+                        disabled={localProcessingId === order.id}
                         onClick={() => handleAction(order.id, 'preparando', 'preparando')}
-                        className="h-14 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-[9px] font-bold uppercase tracking-widest hover:bg-primary hover:text-black transition-all flex items-center justify-center gap-2"
+                        className="h-10 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 shadow-sm hover:shadow active:scale-95 transition-all disabled:opacity-50"
                       >
                         <Play className="size-3 fill-current" />
                         Aceitar
                       </button>
-                    </>
-                  )}
-                  {activeTab === 'preparing' && (
-                    <button 
-                      disabled={isProcessing}
-                      onClick={() => handleAction(order.id, 'waiting_driver', 'pronto')}
-                      className="col-span-2 h-14 rounded-2xl bg-emerald-500 text-white text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle2 className="size-4" />
-                      Marcar como Pronto
-                    </button>
-                  )}
-                  {activeTab === 'ready' && (
-                    <div className="col-span-2 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                          <Truck className="size-5 text-emerald-500 animate-bounce" />
-                          <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Aguardando Coleta</span>
-                       </div>
-                       <button 
-                         onClick={() => fetchAllOrders(undefined, true)}
-                         className="text-[9px] font-bold text-emerald-700 underline uppercase"
-                       >
-                         Ver Mapa
-                       </button>
                     </div>
-                  )}
-                  {activeTab === 'shipped' && (
-                    <div className="col-span-2 space-y-3">
-                       {getDriverInfo(order.driver_id) && (
-                         <div className="flex items-center gap-3 p-3 rounded-2xl bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10">
-                            <div className="size-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center overflow-hidden">
-                               {getDriverInfo(order.driver_id)?.avatar_url ? (
-                                 <img src={getDriverInfo(order.driver_id)?.avatar_url} className="w-full h-full object-cover" />
-                               ) : (
-                                 <User className="size-4 text-blue-500" />
-                               )}
-                            </div>
-                            <div className="flex-1">
-                               <p className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">Entregador</p>
-                               <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">{getDriverInfo(order.driver_id)?.name}</p>
-                            </div>
-                         </div>
-                       )}
-                       <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                             <Truck className="size-5 text-blue-500" />
-                             <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">Pedido em Entrega</span>
-                          </div>
-                       </div>
-                    </div>
-                  )}
-                  {activeTab === 'history' && (
-                    <div className="col-span-2 p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                          <ShoppingBag className="size-5 text-zinc-400" />
-                          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Pedido Finalizado</span>
-                       </div>
-                       <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full uppercase ${order.status === 'cancelado' ? 'bg-rose-100 text-rose-500' : 'bg-emerald-100 text-emerald-500'}`}>
-                          {order.status === 'cancelado' ? 'Cancelado' : 'Entregue'}
-                       </span>
-                    </div>
-                  )}
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* COLUNA 2: EM PRODUÇÃO */}
+        <div className="flex flex-col bg-zinc-50/50 dark:bg-zinc-900/30 rounded-[32px] p-5 border border-zinc-200/40 dark:border-zinc-800/40 shadow-sm h-full">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                <UtensilsCrossed className="size-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-zinc-200">Em Produção</h3>
+                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Sendo preparado</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-amber-500 text-white text-[10px] font-black">{groups.preparing.length}</span>
+          </div>
+
+          <div className="space-y-4 max-h-[calc(100vh-270px)] overflow-y-auto pr-1 custom-scrollbar min-h-[150px]">
+            <AnimatePresence mode="popLayout">
+              {groups.preparing.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center opacity-30 bg-white dark:bg-zinc-900/20 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                  <Inbox className="size-8 stroke-[1px] text-zinc-400 mb-2" />
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Nenhum pedido em produção</p>
                 </div>
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
+              ) : (
+                groups.preparing.map((order: any) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className="bg-white dark:bg-zinc-950 p-5 rounded-3xl border border-zinc-200/60 dark:border-zinc-850 shadow-sm hover:shadow-md hover:border-indigo-500/20 transition-all cursor-pointer relative group overflow-hidden"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors uppercase">
+                          #DT-{order.id.slice(0, 8).toUpperCase()}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] text-zinc-400 font-bold">
+                          <Clock className="size-3 text-zinc-300 animate-pulse" />
+                          {getElapsedTime(order.created_at)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`inline-block px-2 py-0.5 rounded-md text-[8px] font-black ${getOrderTypeBadge(order.service_type).style}`}>
+                          {getOrderTypeBadge(order.service_type).label}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 my-3">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Cliente</span>
+                        <span className="font-extrabold text-slate-800 dark:text-zinc-200 max-w-[130px] truncate uppercase">{order.user_name || 'Cliente Izi'}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Valor</span>
+                        <span className="font-extrabold text-slate-950 dark:text-white">R$ {Number(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+
+                    {/* Itens do Pedido */}
+                    {Array.isArray(order.items) && (
+                      <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-900 space-y-1">
+                        {order.items.slice(0, 2).map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-[10px] text-zinc-500 font-bold">
+                            <span className="truncate flex-1 pr-3 uppercase">{item.name || item.product_name || 'Produto'}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-[9px] text-zinc-600 dark:text-zinc-400 font-black">{item.quantity}x</span>
+                          </div>
+                        ))}
+                        {order.items.length > 2 && (
+                          <p className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase mt-1">
+                            + {order.items.length - 2} outros itens
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Ações rápidas */}
+                    <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-900" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        disabled={localProcessingId === order.id}
+                        onClick={() => handleAction(order.id, 'waiting_driver', 'pronto')}
+                        className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm hover:shadow active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="size-4" />
+                        Pronto para Coleta
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* COLUNA 3: PRONTOS */}
+        <div className="flex flex-col bg-zinc-50/50 dark:bg-zinc-900/30 rounded-[32px] p-5 border border-zinc-200/40 dark:border-zinc-800/40 shadow-sm h-full">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <PackageCheck className="size-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-zinc-200">Prontos</h3>
+                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Aguardando retirada</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-emerald-500 text-white text-[10px] font-black">{groups.ready.length}</span>
+          </div>
+
+          <div className="space-y-4 max-h-[calc(100vh-270px)] overflow-y-auto pr-1 custom-scrollbar min-h-[150px]">
+            <AnimatePresence mode="popLayout">
+              {groups.ready.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center opacity-30 bg-white dark:bg-zinc-900/20 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                  <Inbox className="size-8 stroke-[1px] text-zinc-400 mb-2" />
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Nenhum pedido pronto</p>
+                </div>
+              ) : (
+                groups.ready.map((order: any) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className="bg-white dark:bg-zinc-950 p-5 rounded-3xl border border-zinc-200/60 dark:border-zinc-850 shadow-sm hover:shadow-md hover:border-indigo-500/20 transition-all cursor-pointer relative group overflow-hidden"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors uppercase">
+                          #DT-{order.id.slice(0, 8).toUpperCase()}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] text-zinc-400 font-bold">
+                          <Clock className="size-3 text-zinc-300" />
+                          Pronto {getElapsedTime(order.created_at)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`inline-block px-2 py-0.5 rounded-md text-[8px] font-black ${getOrderTypeBadge(order.service_type).style}`}>
+                          {getOrderTypeBadge(order.service_type).label}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 my-3">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Cliente</span>
+                        <span className="font-extrabold text-slate-800 dark:text-zinc-200 max-w-[130px] truncate uppercase">{order.user_name || 'Cliente Izi'}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Valor</span>
+                        <span className="font-extrabold text-slate-950 dark:text-white">R$ {Number(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+
+                    {/* Estado de Coleta / Entregador */}
+                    <div className="mt-4 p-3 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                        <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Aguardando Coleta</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* COLUNA 4: EM ROTA */}
+        <div className="flex flex-col bg-zinc-50/50 dark:bg-zinc-900/30 rounded-[32px] p-5 border border-zinc-200/40 dark:border-zinc-800/40 shadow-sm h-full">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                <Truck className="size-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-zinc-200">Em Rota</h3>
+                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Saiu para entrega</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-blue-500 text-white text-[10px] font-black">{groups.shipped.length}</span>
+          </div>
+
+          <div className="space-y-4 max-h-[calc(100vh-270px)] overflow-y-auto pr-1 custom-scrollbar min-h-[150px]">
+            <AnimatePresence mode="popLayout">
+              {groups.shipped.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center opacity-30 bg-white dark:bg-zinc-900/20 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                  <Inbox className="size-8 stroke-[1px] text-zinc-400 mb-2" />
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Nenhum pedido em trânsito</p>
+                </div>
+              ) : (
+                groups.shipped.map((order: any) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className="bg-white dark:bg-zinc-950 p-5 rounded-3xl border border-zinc-200/60 dark:border-zinc-850 shadow-sm hover:shadow-md hover:border-indigo-500/20 transition-all cursor-pointer relative group overflow-hidden"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors uppercase">
+                          #DT-{order.id.slice(0, 8).toUpperCase()}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] text-zinc-400 font-bold">
+                          <Clock className="size-3 text-zinc-300 animate-pulse" />
+                          Em rota {getElapsedTime(order.created_at)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`inline-block px-2 py-0.5 rounded-md text-[8px] font-black ${getOrderTypeBadge(order.service_type).style}`}>
+                          {getOrderTypeBadge(order.service_type).label}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 my-3">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Cliente</span>
+                        <span className="font-extrabold text-slate-800 dark:text-zinc-200 max-w-[130px] truncate uppercase">{order.user_name || 'Cliente Izi'}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-zinc-400 uppercase">Valor</span>
+                        <span className="font-extrabold text-slate-950 dark:text-white">R$ {Number(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+
+                    {/* Informações Reais do Entregador com Join */}
+                    {order.driver_name ? (
+                      <div className="mt-4 bg-blue-50/50 dark:bg-blue-500/5 rounded-2xl p-3 flex items-center justify-between border border-blue-100 dark:border-blue-900/30" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-3">
+                          <div className="size-9 rounded-xl bg-white dark:bg-zinc-800 border border-blue-100 dark:border-blue-950 overflow-hidden shadow-sm flex items-center justify-center shrink-0">
+                            {order.driver_avatar ? (
+                              <img src={order.driver_avatar} className="w-full h-full object-cover" />
+                            ) : (
+                              <User size={16} className="text-blue-500" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-tight truncate max-w-[100px]">{order.driver_name}</p>
+                            <p className="text-[8px] font-bold text-blue-400/70 uppercase tracking-widest truncate max-w-[100px]">
+                              {order.driver_vehicle || 'Motoboy'} • {order.driver_plate || 'S/ Placa'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5">
+                          {order.driver_phone && (
+                            <>
+                              <a 
+                                href={`tel:${order.driver_phone}`}
+                                className="size-7 rounded-full bg-white dark:bg-zinc-800 text-blue-600 flex items-center justify-center hover:scale-105 transition-all shadow-sm border border-blue-100 dark:border-blue-900/50"
+                                title="Ligar para o Entregador"
+                              >
+                                <Phone size={12} />
+                              </a>
+                              <a 
+                                href={`https://wa.me/55${order.driver_phone.replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="size-7 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:scale-105 transition-all shadow-sm"
+                                title="WhatsApp do Entregador"
+                              >
+                                <MessageCircle size={12} />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 bg-amber-50/50 dark:bg-amber-500/5 rounded-2xl p-3 flex items-center gap-3 border border-amber-100 dark:border-amber-500/10">
+                        <div className="size-7 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-base text-amber-600 animate-pulse">progress_activity</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest leading-none">Buscando Piloto</p>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
       </div>
+
+      {/* GAVETA LATERAL DE HISTÓRICO RECENTE */}
+      <AnimatePresence>
+        {isHistoryOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsHistoryOpen(false)}
+              className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm"
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 h-screen w-full max-w-md bg-white dark:bg-zinc-950 z-[120] shadow-2xl flex flex-col border-l border-zinc-200/50 dark:border-zinc-800/50"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-zinc-100 dark:border-zinc-900 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-3">
+                  <History className="size-5 text-indigo-500" />
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Histórico Recente</h3>
+                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Últimos 20 pedidos finalizados</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsHistoryOpen(false)}
+                  className="size-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-rose-500 transition-colors"
+                >
+                  <XCircle className="size-5" />
+                </button>
+              </div>
+
+              {/* Lista de Pedidos */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                {groups.history.length === 0 ? (
+                  <div className="py-20 text-center opacity-30">
+                    <Inbox className="size-12 mx-auto stroke-[1px]" />
+                    <p className="text-xs font-black uppercase tracking-widest mt-4">Nenhum pedido finalizado recentemente</p>
+                  </div>
+                ) : (
+                  groups.history.map((order: any) => (
+                    <div
+                      key={order.id}
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setIsHistoryOpen(false);
+                      }}
+                      className="group bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-3xl border border-zinc-200/30 dark:border-zinc-800/30 hover:border-indigo-500/20 transition-all cursor-pointer flex justify-between items-start"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`size-1.5 rounded-full ${order.status === 'cancelado' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                          <h4 className="text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors uppercase">
+                            #DT-{order.id.slice(0, 8).toUpperCase()}
+                          </h4>
+                        </div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{order.user_name || 'Cliente Izi'}</p>
+                        <p className="text-[9px] text-zinc-400 font-bold">{new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                      <div className="text-right space-y-2">
+                        <p className="text-xs font-black text-slate-900 dark:text-white">R$ {Number(order.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                          order.status === 'cancelado' 
+                            ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                        }`}>
+                          {order.status === 'cancelado' ? 'Cancelado' : 'Entregue'}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
