@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { isDriverOnline } from '../lib/driverPresence';
 
@@ -6,8 +7,12 @@ export default function MyDriversTab() {
   const {
     myDriversList,
     setSelectedDriverStudio,
+    editingItem,
     setEditingItem,
+    editType,
     setEditType,
+    isSaving,
+    handleUpdateMyDriver,
     handleDeleteMyDriver,
     merchantProfile,
     handleUpdateDispatchSettings
@@ -191,6 +196,158 @@ export default function MyDriversTab() {
           </div>
         </div>
       </div>
+
+      {/* Edit Modal (Glassmorphism Minimalist) */}
+      <AnimatePresence>
+        {editingItem && editType === 'my_driver' && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 text-slate-900">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => { setEditingItem(null); setEditType(null); }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[40px] p-10 shadow-2xl border border-slate-100 dark:border-slate-800 relative z-10 overflow-hidden font-sans"
+            >
+              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 -mr-20 -mt-20 rounded-full blur-3xl"></div>
+              
+              <div className="flex justify-between items-center mb-8 relative z-10">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">Frota Própria</p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                    {editingItem.id ? 'Editar Motoboy' : 'Cadastrar Motoboy'}
+                  </h2>
+                </div>
+                <button 
+                  onClick={() => { setEditingItem(null); setEditType(null); }} 
+                  className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors"
+                >
+                  <span className="material-symbols-outlined text-2xl">close</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateMyDriver} className="space-y-5 relative z-10">
+                {/* Nome */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Nome do Motoboy</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingItem.name || ''}
+                    onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
+                    placeholder="Ex: Carlos Silva"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
+                  />
+                </div>
+
+                {/* Telefone */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Telefone / WhatsApp</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingItem.phone || ''}
+                    onChange={e => setEditingItem({ ...editingItem, phone: e.target.value })}
+                    placeholder="(00) 99999-9999"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
+                  />
+                </div>
+
+                {/* E-mail e Senha (apenas na criação) */}
+                {!editingItem.id && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-4">E-mail de Acesso</label>
+                      <input
+                        type="email"
+                        required
+                        value={editingItem.email || ''}
+                        onChange={e => setEditingItem({ ...editingItem, email: e.target.value })}
+                        placeholder="motoboy@exemplo.com"
+                        className="w-full bg-primary/5 border border-primary/10 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-4">Senha de Acesso</label>
+                      <input
+                        type="password"
+                        required
+                        value={editingItem.password || ''}
+                        onChange={e => setEditingItem({ ...editingItem, password: e.target.value })}
+                        placeholder="Mínimo 6 dígitos"
+                        className="w-full bg-primary/5 border border-primary/10 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Veículo e Placa */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Veículo</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingItem.vehicle_type || ''}
+                      onChange={e => setEditingItem({ ...editingItem, vehicle_type: e.target.value })}
+                      placeholder="Ex: Honda CG 160"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Placa</label>
+                    <input
+                      type="text"
+                      value={editingItem.license_plate || ''}
+                      onChange={e => setEditingItem({ ...editingItem, license_plate: e.target.value.toUpperCase() })}
+                      placeholder="ABC-1234"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Status da Conta */}
+                <div className="flex items-center gap-4 p-5 bg-slate-50 dark:bg-slate-950 rounded-[24px] border border-slate-100 dark:border-slate-800 mt-2">
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-slate-800 dark:text-slate-200">Status da Conta</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Habilita ou desativa o acesso ao app</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, is_active: !editingItem.is_active })}
+                    className={`w-14 h-8 rounded-full relative transition-colors ${editingItem.is_active ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                  >
+                    <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${editingItem.is_active ? 'left-7' : 'left-1'}`}></div>
+                  </button>
+                </div>
+
+                {/* Ações */}
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingItem(null); setEditType(null); }}
+                    className="w-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-3xl py-4 font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="w-full bg-primary text-slate-900 rounded-3xl py-4 font-black uppercase tracking-widest hover:brightness-105 transition-all shadow-xl shadow-primary/20 disabled:opacity-50 text-xs"
+                  >
+                    {isSaving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

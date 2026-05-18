@@ -14,6 +14,7 @@ import PromotionStudio from './PromotionStudio';
 import { AddressSearchInput } from './AddressSearchInput';
 import MerchantMapSelector from './MerchantMapSelector';
 import PartnerStudio from './PartnerStudio';
+import WalletHistoryTab from './WalletHistoryTab';
 import { GMAPS_KEY } from '../config';
 
 
@@ -1920,99 +1921,7 @@ export default function MyStudioTab() {
 </div>
 {/* --- Merchant: Financeiro --- */}
 {activeTab === 'financial' && userRole === 'merchant' && (
-  <div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800 p-8">
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <span className="material-symbols-outlined text-3xl text-emerald-500">account_balance_wallet</span>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Meu Financeiro</h1>
-        </div>
-        <p className="text-slate-500 dark:text-slate-400">Controle seus ganhos, solicitações de saque e histórico de vendas.</p>
-      </div>
-      <button 
-        onClick={() => handleRequestWithdrawal(merchantBalance, merchantProfile?.bank_info?.pix_key || '')}
-        className="flex items-center gap-2 bg-emerald-500 text-white px-8 py-4 rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
-      >
-        <span className="material-symbols-outlined">payments</span>
-        Solicitar Saque
-      </button>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div className="md:col-span-1 space-y-6">
-        <section className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 -mr-20 -mt-20 rounded-full blur-3xl"></div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saldo Disponível</p>
-          <h2 className="text-5xl font-black tracking-tighter mb-8">R$ {merchantBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 rounded-3xl bg-white/5 border border-white/10">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saque Mínimo</span>
-              <span className="font-black text-emerald-400">R$ {(appSettings.minwithdrawalamount ?? 0).toFixed(2).replace('.', ',')}</span>
-            </div>
-            <div className="flex justify-between items-center p-4 rounded-3xl bg-white/5 border border-white/10">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Taxa de Saque</span>
-              <span className="font-black">{(appSettings.withdrawalfeepercent ?? 0)} %</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-white dark:bg-slate-900 rounded-[40px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <h3 className="text-lg font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">pie_chart</span>
-            Regras Atuais
-          </h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center text-sm">
-              <span className="font-bold text-slate-500">Sua Comissão (Líquido)</span>
-              <span className="font-black text-slate-900 dark:text-white">{100 - (merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
-            </div>
-            <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
-              <div className="h-full bg-emerald-500" style={{ width: `${100 - (merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%` }}></div>
-              <div className="h-full bg-slate-300 dark:bg-slate-700" style={{ width: `${(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%` }}></div>
-            </div>
-            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-              <span>Taxa sobre Venda</span>
-              <span>{(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="md:col-span-2">
-        <section className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden h-full">
-          <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
-            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3">
-              <span className="material-symbols-outlined text-emerald-500">history</span>
-              Ãšltimas Vendas
-            </h3>
-            <button className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Exportar CSV</button>
-          </div>
-          <div className="divide-y divide-slate-50 dark:divide-slate-800">
-            {allOrders.filter(o => o.status === 'concluido').slice(0, 8).map((o, i) => (
-              <div key={i} className="flex items-center justify-between px-8 py-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-slate-400">shopping_bag</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-900 dark:text-white tracking-tight">Pedido #DT-{o.id.slice(0, 4).toUpperCase()}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(o.created_at).toLocaleDateString()} â€¢ {new Date(o.created_at).toLocaleTimeString().slice(0, 5)}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-emerald-500">+ R$ {o.total_price.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Via {o.payment_method || 'Cartão'}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </div>
-  </div>
-</div>
+  <WalletHistoryTab />
 )}
 
       {/* Edit Modals */}

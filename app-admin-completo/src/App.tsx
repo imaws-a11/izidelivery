@@ -217,6 +217,7 @@ export default function App() {
                        <NavTab id="dashboard" icon="dashboard" label="Métricas" />
                        <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
                        <NavTab id="live_tracking" icon="monitoring" label="Rastreio" />
+                        <NavTab id="order_center" icon="local_shipping" label="Central de Pedidos" />
                        <NavTab id="my_studio" icon="inventory_2" label="Minha Loja" />
                        <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
                      </>
@@ -248,10 +249,9 @@ export default function App() {
                    {/* Tabs comuns (exceto avulso que é ultra restrito) */}
                    {merchantProfile?.subscription_plan !== 'avulso' && (
                      <>
-                        {merchantProfile?.subscription_plan !== 'click_retire' && (
-                          <NavTab id="order_center" icon="local_shipping" label="Central de Pedidos" />
-                        )}
+                        
 
+                        <NavTab id="financial" icon="account_balance_wallet" label="Financeiro" />
                         <NavTab id="settings" icon="settings" label="Config" />
                         <NavTab id="integrations" icon="api" label="Integrações" />
                      </>
@@ -332,8 +332,7 @@ export default function App() {
               {(activeTab === 'my_studio' && userRole === 'merchant') && <MyStudioTab initialTab="info" />}
               {activeTab === 'categories' && userRole === 'admin' && <TaxonomyCenter initialMode="assignment" />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
-              {activeTab === 'financial' && userRole === 'merchant' && merchantProfile?.subscription_plan === 'avulso' && <WalletHistoryTab />}
-              {activeTab === 'financial' && userRole === 'merchant' && merchantProfile?.subscription_plan !== 'avulso' && <MyStudioTab initialTab="financial" />}
+              {activeTab === 'financial' && userRole === 'merchant' && <WalletHistoryTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}
               {activeTab === 'support' && <SupportTab />}
               {activeTab === 'notifications' && <NotificationsTab />}
